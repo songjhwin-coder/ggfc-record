@@ -326,7 +326,7 @@ input[type=password],input[type=text],input[type=date],select{width:100%;font:in
   .tournament-head{display:block;text-align:center}
   .tournament-meta{margin-top:5px;text-align:center}
   .tournament-rounds{grid-auto-columns:minmax(205px,86vw);padding:10px}
-  .league-team-grid{grid-template-columns:repeat(2,minmax(0,1fr));padding:10px;gap:8px}
+  .league-team-grid{grid-template-columns:repeat(3,minmax(0,1fr));padding:10px;gap:8px}
   .league-zone-title{font-size:19px}
   .league-symbol{width:46px;height:46px;font-size:20px}
   .league-team-card{padding:12px 7px}
@@ -590,7 +590,7 @@ code{border-radius:1px;background:#e8edf3}
   nav.tabs button{font-size:13px;padding:11px 12px}
   .head h2{font-size:27px}
   .card{padding:17px 14px}
-  .league-team-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .league-team-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
   .league-team-card:nth-child(3n){border-right:1px solid #e5e8ed}
   .league-team-card:nth-child(2n){border-right:0}
   .league-zone-title{font-size:21px}
@@ -853,7 +853,7 @@ code{border-radius:5px;background:#eee7f0}
   .head{border-radius:14px;padding:20px 18px}.head h2{font-size:28px}
   .card{padding:17px 14px;border-radius:13px}
   .ranking-card:before{margin:-17px -14px 15px}
-  .league-team-grid{grid-template-columns:repeat(2,minmax(0,1fr));padding:9px;gap:8px}
+  .league-team-grid{grid-template-columns:repeat(3,minmax(0,1fr));padding:9px;gap:8px}
   .league-team-card:nth-child(2n),.league-team-card:nth-child(3n){border-right:1px solid #e6dfe8!important}
   .league-zone-title{font-size:22px}
   .league-zone-head{justify-content:center;text-align:center}
@@ -1594,7 +1594,7 @@ body.admin-mode .admin-only-chem-pair{display:block!important}
 .ggfc-player-card-national{font-size:34px;line-height:1;margin-bottom:9px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
 .ggfc-player-card-club{width:72px;height:72px;background:transparent center/contain no-repeat;filter:drop-shadow(0 2px 5px rgba(0,0,0,.8));display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:900;text-align:center}
 .ggfc-player-card-photo-wrap{position:absolute;top:100px;right:35px;width:225px;height:225px;z-index:5}
-.ggfc-player-card-photo{width:100%;height:100%;object-fit:cover;-webkit-mask-image:radial-gradient(circle at center,#000 60%,transparent 100%);mask-image:radial-gradient(circle at center,#000 60%,transparent 100%);filter:contrast(1.1) saturate(1.1)}
+.ggfc-player-card-photo{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover;-webkit-mask-image:radial-gradient(circle at center,#000 60%,transparent 100%);mask-image:radial-gradient(circle at center,#000 60%,transparent 100%);filter:contrast(1.1) saturate(1.1)}
 .ggfc-player-card-photo-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:72px;font-weight:900;color:rgba(255,255,255,.68);background:radial-gradient(circle,rgba(255,255,255,.2),transparent 70%);border-radius:50%}
 .ggfc-player-card-name{position:absolute;top:370px;left:20px;width:calc(100% - 40px);padding-bottom:10px;border-bottom:2px solid rgba(255,255,255,.15);text-align:center;font-size:2.4rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#fff;z-index:20;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ggfc-player-card-name::after{content:"";position:absolute;bottom:-2px;left:0;width:100%;height:2px;background:linear-gradient(90deg,transparent,#ff005a,transparent)}
@@ -1620,14 +1620,15 @@ body.admin-mode .admin-only-chem-pair{display:block!important}
 .ggfc-player-hex-panel.visible .ggfc-player-hex-container{opacity:1;transform:translate(-50%,-50%) scale(1)}
 .ggfc-player-radar{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center}
 .ggfc-player-hex-grid{
-  position:absolute;width:260px;height:260px;clip-path:polygon(50% 0%,93.3% 25%,93.3% 75%,50% 100%,6.7% 75%,6.7% 25%);
-  background-color:rgba(100,200,255,.05);opacity:0;transform:scale(.84) rotate(-4deg);transform-origin:center;
+  position:absolute;left:50%;top:50%;width:260px;height:260px;clip-path:polygon(50% 0%,93.3% 25%,93.3% 75%,50% 100%,6.7% 75%,6.7% 25%);
+  background-color:rgba(100,200,255,.05);background-position:center;background-size:100% 100%;background-repeat:no-repeat;
+  opacity:0;transform:translate(-50%,-50%) scale(.84) rotate(-4deg);transform-origin:center;
   transition:opacity .75s ease,transform .75s cubic-bezier(.175,.885,.32,1.275);
   background-image:url("data:image/svg+xml,%3Csvg width='260' height='260' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='rgba(150,220,255,0.38)' stroke-width='0.5'%3E%3Cpath d='M50 50 L50 0'/%3E%3Cpath d='M50 50 L93.3 25'/%3E%3Cpath d='M50 50 L93.3 75'/%3E%3Cpath d='M50 50 L50 100'/%3E%3Cpath d='M50 50 L6.7 75'/%3E%3Cpath d='M50 50 L6.7 25'/%3E%3Cpolygon points='50 25,71.65 37.5,71.65 62.5,50 75,28.35 62.5,28.35 37.5'/%3E%3Cpolygon points='50 12.5,82.475 31.25,82.475 68.75,50 87.5,17.525 68.75,17.525 31.25'/%3E%3C/g%3E%3C/svg%3E");
   filter:drop-shadow(0 0 6px rgba(100,200,255,.38));
 }
-.ggfc-player-hex-panel.visible .ggfc-player-hex-grid{opacity:1;transform:scale(1) rotate(0)}
-.ggfc-player-hex-svg{position:absolute;width:260px;height:260px;z-index:2;overflow:visible;pointer-events:none}
+.ggfc-player-hex-panel.visible .ggfc-player-hex-grid{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(0)}
+.ggfc-player-hex-svg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:260px;height:260px;z-index:2;overflow:visible;pointer-events:none}
 #playerCardHexShape{opacity:0;transform-origin:center;will-change:points,opacity,stroke-dashoffset}
 #playerCardHexShape.drawing,#playerCardHexShape.complete{opacity:1}
 #playerCardHexShape.complete{animation:ggfc-hex-finish .35s ease-out}
@@ -1826,36 +1827,26 @@ body.admin-mode .admin-only-chem-pair{display:block!important}
 @media(max-width:600px){.rep-admin-grid{grid-template-columns:1fr}.rep-admin-segment-dates{grid-template-columns:1fr}.rep-half-tools{align-items:stretch}.rep-half-tools .record-field{width:100%}}
 
 
-/* ===== 대시보드 랭킹 배치 =====
-   1열: 득점랭킹 / 2열: 출석률랭킹 / 3열: 팀순위 → 개인순위 → 팀파울순위 */
-.dashboard-ranking-grid{
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
-  gap:18px;
-  align-items:start;
+/* V3.18.3: equal ranking halves, followed by a wider team column. */
+.dashboard-ranking-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:18px;align-items:stretch}
+.dashboard-ranking-side{display:grid;grid-template-columns:minmax(0,1.45fr) repeat(2,minmax(0,1fr))!important;gap:18px;align-items:start;margin-top:18px;min-width:0}
+.dashboard-ranking-grid>.card,.dashboard-ranking-side>.card{width:100%;min-width:0}
+.dashboard-ranking-grid .export-section-head,.dashboard-ranking-side .export-section-head{flex-wrap:wrap;gap:8px}
+.dashboard-ranking-grid .sec-t,.dashboard-ranking-side .sec-t{font-size:18px;line-height:1.4}
+.dashboard-ranking-side .sec-t{font-size:16px}
+.dashboard-ranking-grid .tablewrap,.dashboard-ranking-side .tablewrap{overflow-x:auto}
+.dashboard-ranking-side th{white-space:normal;word-break:keep-all;line-height:1.5}
+.dashboard-ranking-side th,.dashboard-ranking-side td{padding:10px 6px}
+.dashboard-ranking-side td{font-size:13px}
+#dashTeamPointRank .team-chip{white-space:normal;overflow-wrap:anywhere;gap:5px}
+#dashTeamPointRank .team-logo-sm{width:22px;height:22px}
+#dashTeamPointRank .rep-point{padding:3px 6px}
+@media(max-width:1100px){
+  .dashboard-ranking-side{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  #exportTeamPointSection{grid-column:1/-1}
 }
-.dashboard-ranking-side{
-  display:grid !important;
-  grid-template-columns:1fr !important;
-  gap:18px;
-  min-width:0;
-  align-content:start;
-}
-#exportScorerSection,
-#exportAttendanceRankSection,
-#exportTeamPointSection,
-#exportPlayerPointSection,
-#exportTeamFoulSection{
-  width:100%;
-  min-width:0;
-}
-@media (max-width:900px){
-  .dashboard-ranking-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
-  .dashboard-ranking-side{grid-column:1 / -1 !important;grid-template-columns:1fr !important;}
-}
-@media (max-width:700px){
-  .dashboard-ranking-grid{grid-template-columns:1fr !important;}
-  .dashboard-ranking-side{grid-column:auto !important;grid-template-columns:1fr !important;}
+@media(max-width:700px){
+  .dashboard-ranking-grid,.dashboard-ranking-side{grid-template-columns:minmax(0,1fr)!important}
 }
 
 /* ===== 팀 기록: 일자별 누적 승점 그래프 / 팀별 고정 색상 ===== */
@@ -1943,9 +1934,9 @@ body.admin-mode .admin-only-chem-pair{display:block!important}
 
 
 /* ===== V3.2 좌측 사이드바 / 선수검색 자동완성 / 상승선수 ===== */
-:root{--ggfc-sidebar-w:226px;--ggfc-header-h:106px}
+:root{--ggfc-sidebar-w:226px}
 .ggfc-sidebar{
-  position:fixed;left:0;top:var(--ggfc-header-h);bottom:0;width:var(--ggfc-sidebar-w);
+  position:fixed;left:0;top:0;bottom:0;width:var(--ggfc-sidebar-w);
   z-index:18;background:linear-gradient(180deg,#37003c 0%,#4b0753 48%,#240129 100%);
   border-right:1px solid rgba(255,255,255,.12);overflow-y:auto;overflow-x:hidden;
   padding:18px 14px 24px;box-shadow:10px 0 30px rgba(55,0,60,.18)
@@ -2020,7 +2011,7 @@ body>main>section.view{max-width:1120px;margin-left:auto;margin-right:auto}
 .cloud-status{margin:0 0 20px;padding:13px 16px;border:1px solid #c6dfd4;border-radius:12px;background:#eef9f3;color:#22583e;font-size:13px;line-height:1.6;overflow-wrap:anywhere}
 .cloud-status[data-state=pending]{background:#fff7e7;border-color:#efd6a5;color:#785624}.cloud-status[data-state=error]{background:#fff1f1;border-color:#e4b7bc;color:#8b2837}
 .cloud-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.cloud-actions:has(> :not([hidden])){display:flex}.cloud-actions:has(> [hidden]):not(:has(> :not([hidden]))){display:none}
-.mobile-only{display:none}.member-more{display:none}.member-admin{display:none}body.admin-mode .member-admin{display:block}
+.mobile-only{display:none}
 .member-cards{gap:12px}.member-card{background:white;border:1px solid #e5dfe9;border-radius:16px;padding:16px;color:#291d32;box-shadow:0 3px 12px #32133d06}
 .member-card header{display:flex;align-items:center;justify-content:space-between;gap:12px}.member-card strong{font-size:18px}.member-card p{margin:5px 0 0;font-size:12px;color:#726378}.member-label{font-size:12px;white-space:nowrap;background:#f1edf7;border-radius:8px;padding:7px 9px;color:#573866}
 .member-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin:15px 0 0;background:#f8f6fa;border-radius:12px;padding:6px}
@@ -2030,8 +2021,6 @@ body>main>section.view{max-width:1120px;margin-left:auto;margin-right:auto}
 .ggfc-mobile{--ggfc-sidebar-w:0px;overflow-x:clip}.ggfc-mobile body{padding-bottom:calc(82px + env(safe-area-inset-bottom));min-width:0;background:#f6f3f8}
 .ggfc-mobile #ggfcSidebar{display:none}.ggfc-mobile body>main{padding:16px 12px 20px!important;margin:0 auto!important;width:100%;max-width:760px;box-sizing:border-box;min-width:0}
 .ggfc-mobile .mobile-only{display:block}.ggfc-mobile .member-cards{display:grid}.ggfc-mobile #playerTable,.ggfc-mobile .ability-table-wrap{display:none}
-.ggfc-mobile .topbar{position:relative;z-index:20}.ggfc-mobile .epl-main-inner{padding:12px 14px!important;min-height:0;gap:12px;flex-wrap:wrap}.ggfc-mobile .epl-shop-brand{min-width:0}.ggfc-mobile .brand-t{font-size:25px}.ggfc-mobile .brand-s{font-size:9px;letter-spacing:2px}.ggfc-mobile .header-brand-logo{width:42px;height:42px;min-width:42px}
-.ggfc-mobile .epl-main-actions{width:100%;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px}.ggfc-mobile .epl-main-actions #compFilter{flex:1;min-width:120px;max-width:none}.ggfc-mobile #lockBadge{font-size:11px}.ggfc-mobile #lockBtn{font-size:12px;padding:8px 10px;min-height:44px}
 .ggfc-mobile .head{margin:8px 0 16px;display:block}.ggfc-mobile .head h2{font-size:25px}.ggfc-mobile .head p{font-size:12px;line-height:1.6;margin-top:6px}.ggfc-mobile .card{padding:15px 12px;border-radius:14px;min-width:0}.ggfc-mobile .cloud-status{font-size:12px;margin-bottom:16px}
 .ggfc-mobile .row{flex-wrap:wrap;min-width:0}.ggfc-mobile .grid,.ggfc-mobile .grid2,.ggfc-mobile .grid3,.ggfc-mobile .grid-2,.ggfc-mobile .grid-3{grid-template-columns:minmax(0,1fr)!important}.ggfc-mobile .grid>*{min-width:0}
 .ggfc-mobile input,.ggfc-mobile select,.ggfc-mobile textarea{font-size:16px;max-width:100%;min-width:0;min-height:44px}.ggfc-mobile button,.ggfc-mobile .btn{min-height:44px;touch-action:manipulation}.ggfc-mobile label{max-width:100%}
@@ -2040,7 +2029,6 @@ body>main>section.view{max-width:1120px;margin-left:auto;margin-right:auto}
 .ggfc-mobile .ability-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ggfc-mobile .ability-kpi{padding:12px}.ggfc-mobile .ability-kpi .v{font-size:19px;overflow-wrap:anywhere}.ggfc-mobile .ability-half-head{display:block}.ggfc-mobile .ability-half-compare{margin:8px 0 12px}.ggfc-mobile .ability-half-meta{line-height:1.6}.ggfc-mobile .ability-riser-list{grid-template-columns:1fr}
 .ggfc-mobile .member-nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));position:fixed;bottom:0;left:0;right:0;padding:7px 8px calc(7px + env(safe-area-inset-bottom));background:#fff;box-shadow:0 -3px 20px #32133d12;border-top:1px solid #e7dfea;z-index:900}
 .member-nav button{display:flex;align-items:center;flex-direction:column;justify-content:center;gap:3px;background:transparent;border:0;border-radius:12px;color:#8c7a95;font-size:11px;font-weight:700;font-family:inherit;padding:7px 0;min-height:52px}.member-nav button span{font-size:22px;line-height:1.1}.member-nav button.on{background:#efe7f5;color:#4d2369}
-.ggfc-mobile .member-more{display:flex;flex-direction:column;position:fixed;bottom:calc(79px + env(safe-area-inset-bottom));left:12px;right:12px;max-width:580px;margin:0 auto;padding:15px;background:white;border:1px solid #ddcde4;border-radius:18px;box-shadow:0 -10px 45px #32133d24;z-index:901;max-height:65dvh;overflow:auto}.member-more>button,.member-more>a{padding:13px 10px;text-align:left;color:#43234f;background:#f8f5fa;border:0;border-radius:9px;margin:3px 0;font-size:14px;text-decoration:none}.member-more-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}.member-more p{font-size:11px;color:#8a7e90;margin:12px 4px 0}
 .ggfc-mobile .mask{padding:12px}.ggfc-mobile .modal{width:100%;max-height:85dvh;overflow:auto}.ggfc-mobile #playerCardMask{padding:0}.ggfc-mobile .player-card-dialog{width:100%!important;max-width:760px!important;height:auto;max-height:100dvh;border-radius:0!important;padding:16px 12px calc(25px + env(safe-area-inset-bottom))!important;overflow:auto;overscroll-behavior:contain}
 .ggfc-mobile .player-card-upper{display:flex!important;flex-direction:column;align-items:center;gap:20px}.ggfc-mobile .player-card-upper>*{min-width:0!important;max-width:100%;width:100%}.ggfc-mobile .player-card-history-controls{flex-wrap:wrap}.ggfc-mobile .player-card-history-controls label{flex:1 1 130px}.ggfc-mobile .player-card-history-inspect{flex-wrap:wrap}.ggfc-mobile .player-card-history-legend{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.ggfc-mobile .player-card-history-legend button{min-width:0;padding:8px 5px}.ggfc-mobile #playerCardClose{position:sticky;top:0;z-index:3;min-width:44px}
 .ggfc-mobile .toast{bottom:calc(90px + env(safe-area-inset-bottom));max-width:calc(100% - 24px);white-space:normal;line-height:1.5}.ggfc-mobile .chem-search-wrap{min-width:0;width:100%}.ggfc-mobile .chem-detail-layout{display:block}
@@ -2056,3 +2044,78 @@ body>main>section.view{max-width:1120px;margin-left:auto;margin-right:auto}
 /* Password-only admin dialog */
 .password-label{display:block;margin:16px 0 8px;font-size:14px;font-weight:700;color:#40224e}
 .password-field{display:flex;align-items:stretch;gap:8px}.password-field input{flex:1;min-width:0;border:1px solid #cbbbd4;border-radius:10px;padding:12px;font-size:16px;min-height:46px}.password-field button{min-width:58px;min-height:46px}.password-field input:focus{outline:2px solid #755089;outline-offset:1px}#adminLoginForm .err{overflow-wrap:anywhere;line-height:1.6}
+
+/* V3.18.2: equal thirds for each league on a phone; export posters retain their layout. */
+.ggfc-mobile #mainContent .league-team-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:8px 6px}
+.ggfc-mobile #mainContent .league-team-card{min-width:0;padding:12px 4px;border-radius:10px}
+.ggfc-mobile #mainContent .league-crest{width:42px;height:42px;margin:0 auto 9px;font-size:15px}
+.ggfc-mobile #mainContent .league-team-name{font-size:clamp(12px,3.5vw,16px);line-height:1.35}
+.ggfc-mobile #mainContent .league-team-wdl,.ggfc-mobile #mainContent .league-team-goals{font-size:clamp(10px,2.8vw,12px);letter-spacing:-.025em;line-height:1.6}
+.ggfc-mobile #mainContent .league-team-rule{margin:8px 0}
+.member-card header>div:first-child{min-width:0}
+.member-card .player-face-chip{gap:9px;text-align:left}
+.member-card .player-face{width:40px;height:40px}
+.member-card .player-face-name{font-size:17px;font-weight:850;overflow-wrap:anywhere}
+
+/* V3.18.3: full-height sidebar, including former header controls. */
+.ggfc-sidebar{display:flex;flex-direction:column;gap:20px;overscroll-behavior:contain}
+.sidebar-header{flex:none;padding:0 0 18px;border-bottom:1px solid #ffffff26}
+.sidebar-brand{display:flex;align-items:center;gap:10px;min-width:0;padding:3px 2px 18px}
+.sidebar-brand-copy{min-width:0}
+.ggfc-sidebar .header-brand-logo{width:44px;height:44px;min-width:44px;background:#fff;border-radius:11px;padding:5px}
+.ggfc-sidebar .brand-t{font-size:27px;line-height:1.1;font-weight:950;letter-spacing:-.045em;color:#fff;overflow-wrap:anywhere}
+.ggfc-sidebar .brand-s{display:block;font-size:9px;line-height:1.5;letter-spacing:.12em;color:#e0cde5;margin-top:5px}
+.sidebar-controls{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+.sidebar-controls label{font-size:11px;font-weight:750;color:#ddcde4}
+.sidebar-controls .select,.sidebar-controls .btn{width:100%;max-width:100%;min-width:0;min-height:42px;font-size:13px;border-radius:10px}
+.sidebar-controls #lockBadge{justify-self:start;font-size:11px;background:#ffffff12;border:1px solid #ffffff26;color:#ede0f1}
+.sidebar-controls #lockBadge.open{background:#d7ffe9;color:#185839}
+.sidebar-controls .btn{background:#ffffff14;color:#fff;border-color:#ffffff40}
+.sidebar-controls .btn:hover{background:#ffffff26}
+.ggfc-sidebar nav.tabs{flex:none;background:transparent;border:0;box-shadow:none}
+.sidebar-footer{display:flex;flex-direction:column;gap:12px;margin-top:auto;padding:16px 6px 0;border-top:1px solid #ffffff26;font-size:10px;line-height:1.6;color:#c5accd}
+.sidebar-footer a{color:#eee1f3;font-size:13px;min-height:44px;padding:10px 0}
+.sidebar-close{align-self:flex-end;flex:none;border:1px solid #ffffff40;border-radius:9px;color:#fff;background:#ffffff14;padding:8px 12px;font:inherit;font-size:13px}
+.sidebar-close span{font-size:20px;margin-left:8px}
+.sidebar-backdrop{display:none}
+.ggfc-mobile #ggfcSidebar{display:flex;top:0;bottom:0;width:min(300px,calc(100vw - 40px));padding:calc(12px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));gap:14px;z-index:1001;visibility:hidden;transform:translateX(-105%);pointer-events:none}
+.ggfc-mobile .sidebar-open #ggfcSidebar{visibility:visible;transform:translateX(0);pointer-events:auto}
+.ggfc-mobile .sidebar-open{overflow:hidden}
+.ggfc-mobile .sidebar-backdrop{display:block;position:fixed;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;border-radius:0;background:#16091e80;z-index:1000;touch-action:none}
+.ggfc-mobile .ggfc-sidebar nav.tabs button{min-height:48px;align-items:center;font-size:14px}
+.ggfc-mobile .ggfc-sidebar .sidebar-icon{width:30px;height:30px;font-size:10px}
+.ggfc-mobile .sidebar-controls .select{font-size:16px}
+.ggfc-sidebar :focus-visible{outline:2px solid #00ff85;outline-offset:3px}
+@media print{.ggfc-sidebar,.sidebar-backdrop{display:none!important}body>main{padding-left:0!important}}
+
+/* Relative results use the same scale as the ranking tables. */
+.headtohead-table{font-size:13px;min-width:760px}
+.headtohead-table th,.headtohead-table td{font-size:13px;padding:11px 9px;line-height:1.5}
+.headtohead-table thead th:first-child{width:140px;padding-left:12px}
+.headtohead-table tbody th{padding-left:12px}
+.headtohead-team-head,.headtohead-row-team{font-size:13px;gap:6px;min-height:36px}
+.headtohead-team-head img,.headtohead-row-team img{width:28px;height:28px}
+.headtohead-team-head .h2h-fallback,.headtohead-row-team .h2h-fallback{width:28px;height:28px;font-size:9px}
+.headtohead-cell:not(.diagonal){font-size:13px;font-weight:750}
+.ggfc-mobile .headtohead-table th,.ggfc-mobile .headtohead-table td,.ggfc-mobile .headtohead-cell:not(.diagonal){font-size:12px}
+
+/* Match MOM names always stay directly below their own score. */
+.fixture-score-center{min-width:0;text-align:center}
+.fixture-mom{display:flex;flex-direction:column;align-items:center;gap:3px;margin-top:9px;font-size:12px;line-height:1.4;font-weight:750;color:#5b4467}
+.fixture-mom-label{font-size:10px;letter-spacing:.07em;padding:2px 6px;border-radius:5px;background:#f2e9fa;color:#694276;line-height:1.3}
+.fixture-mom-name{display:block;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.empty-mom .fixture-mom-name{color:#918494;font-weight:500;font-size:11px}
+#mainContent .fixture-score-row{grid-template-columns:minmax(0,1fr) 42px minmax(64px,.9fr) 42px minmax(0,1fr);gap:7px;padding-left:6px;padding-right:6px}
+#mainContent .fixture-score-value{min-width:0;font-size:22px}
+#mainContent .fixture-logo-wrap{width:42px;height:42px}
+#mainContent .fixture-team-logo{width:40px;height:40px}
+#mainContent .fixture-logo-fallback{width:38px;height:38px}
+#mainContent .fixture-team-name{font-size:14px;overflow-wrap:anywhere}
+.ggfc-mobile #mainContent .fixture-score-row{grid-template-columns:minmax(0,1fr) 28px minmax(62px,.85fr) 28px minmax(0,1fr);gap:4px;padding-left:2px;padding-right:2px}
+.ggfc-mobile #mainContent .fixture-logo-wrap,.ggfc-mobile #mainContent .fixture-team-logo,.ggfc-mobile #mainContent .fixture-logo-fallback{width:28px;height:28px}
+.ggfc-mobile #mainContent .fixture-team-name{font-size:12px}
+.ggfc-mobile #mainContent .fixture-score-value{font-size:20px}
+.ggfc-mobile #mainContent .fixture-mom{font-size:11px}
+.summary-poster .fixture-score-center .fixture-score-value{min-width:0}
+.summary-poster .fixture-mom{font-size:9px;line-height:1.25;gap:2px;margin-top:5px}
+.summary-poster .fixture-mom-label,.summary-poster .empty-mom .fixture-mom-name{font-size:8px}

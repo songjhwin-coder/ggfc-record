@@ -275,7 +275,7 @@ const SCHEMA = {
       engName:pick(o,"영문이름","영문명","English Name","ENG NAME","ENG"),
       pos:pick(o,"포지션","POS","Position"),
       memo:pick(o,"비고","메모"),
-      photo:pick(o,"사진(URL)","사진URL","사진","프로필(URL)","프로필URL","이미지(URL)","이미지URL","Photo") }) },
+      photo:readPlayerPhotoCell(o) }) },
   specials:{ name:"스페셜 기록", head:"날짜,선수,구분,내용",
     sample:"2026-06-30,김철수,우승,2026 상반기 리그 우승\n2026-06-30,이영호,MVP,상반기 MVP",
     map:o=>({ date:normDate(pick(o,"날짜","일자")), player:pick(o,"선수","이름"), type:pick(o,"구분","종류")||"기록", memo:pick(o,"내용","비고","메모") }) }
@@ -452,8 +452,30 @@ function dateStyleSet(stylesDoc){
   });
   return set;
 }
+function isPlayerPhotoHeader(value){
+  const key=String(value||'').normalize('NFKC').replace(/[\s()_\-]/g,'').toLowerCase();
+  return /^(?:(?:선수)?사진|프로필(?:사진)?|이미지|photo|image|profilephoto)(?:url|링크|주소|link)?$/.test(key);
+}
+function photoFormulaArgument(value){
+  // Read only a literal URL or a same-sheet cell reference. Never execute formulas.
+  const match=String(value||'').trim().match(/^=?(?:_xlfn\.)?(?:HYPERLINK|IMAGE)\s*\(\s*(?:"((?:[^"]|"")*)"|(\$?[A-Z]+\$?\d+))\s*(?=[,;)])/i);
+  return match?{url:match[1]===undefined?null:match[1].replace(/""/g,'"'),ref:(match[2]||'').replace(/\$/g,'').toUpperCase()}:null;
+}
+function readPlayerPhotoCell(row){
+  for(const [key,value] of Object.entries(row)){
+    if(!isPlayerPhotoHeader(key)||!String(value??'').trim())continue;
+    const formula=photoFormulaArgument(value);
+    return formula?.url??String(value).trim();
+  }
+  return '';
+}
+function workbookHeaderRowIndex(rows){
+  // Draft workbooks sometimes have a title row above the column headings.
+  const draft=rows.findIndex(row=>row.some(isPlayerPhotoHeader)&&row.some(value=>/^(선수|선수명|이름|성명)$/u.test(String(value).replace(/\s/g,''))));
+  return draft>=0?draft:rows.findIndex(row=>row.some(value=>String(value).trim()));
+}
 function sheetRows(doc, shared, dateStyles, hyperlinks={}){
-  const photoLinks=[];
+  const cells=new Map();
   const rows=[];
   [...doc.getElementsByTagName("row")].forEach(r=>{
     const arr=[];
@@ -471,20 +493,29 @@ function sheetRows(doc, shared, dateStyles, hyperlinks={}){
       }
       arr[ci]=v;
       const formula=c.getElementsByTagName("f")[0];
-      const fm=formula && formula.textContent.match(/^(?:_xlfn\.)?HYPERLINK\s*\(\s*"((?:[^"]|"")*)"/i);
-      const href=hyperlinks[c.getAttribute("r")] || (fm ? fm[1].replace(/""/g,'"') : '');
-      if(href) photoLinks.push({row:rows.length,col:ci,href});
+      const address=String(c.getAttribute('r')||'').replace(/\$/g,'').toUpperCase();
+      cells.set(address,{row:rows.length,col:ci,value:v,formula:formula?.textContent||'',href:hyperlinks[address]||''});
     });
     for(let i=0;i<arr.length;i++) if(arr[i]===undefined) arr[i]="";
     rows.push(arr);
   });
-  const header=rows.find(r=>r.some(v=>String(v).trim()))||[];
-  const photoColumns=new Set(header.map((v,i)=>/^(?:사진|프로필|이미지)(?:\(?URL\)?)?$|^photo(?:url)?$/i.test(String(v).replace(/\s/g,''))?i:-1));
-  photoLinks.forEach(x=>{if(photoColumns.has(x.col) && rows[x.row]!==header) rows[x.row][x.col]=x.href;});
+  const headerIndex=workbookHeaderRowIndex(rows),header=rows[headerIndex]||[];
+  const photoColumns=new Set(header.map((v,i)=>isPlayerPhotoHeader(v)?i:-1));
+  const resolve=(cell,seen=new Set())=>{
+    if(!cell||seen.has(cell)||seen.size>=8)return '';
+    if(cell.href)return cell.href;
+    const arg=photoFormulaArgument(cell.formula);
+    if(arg){
+      if(arg.url!==null)return arg.url;
+      seen.add(cell);return resolve(cells.get(arg.ref),seen);
+    }
+    return String(cell.value??'').trim();
+  };
+  cells.forEach(cell=>{if(cell.row>headerIndex&&photoColumns.has(cell.col))rows[cell.row][cell.col]=resolve(cell);});
   return rows;
 }
 function rowsToObjects(rows){
-  const clean=rows.filter(r=>r.some(c=>String(c).trim()!==""));
+  const clean=rows.slice(Math.max(0,workbookHeaderRowIndex(rows))).filter(r=>r.some(c=>String(c).trim()!==""));
   if(clean.length<2) return [];
   const head=clean[0].map(h=>String(h).trim());
   return clean.slice(1).map(r=>{ const o={}; head.forEach((h,i)=>{ if(h) o[h]=String(r[i]??"").trim(); }); return o; });
@@ -492,7 +523,7 @@ function rowsToObjects(rows){
 function detectKind(name, headers){
   const nm=String(name||""); const h=headers.join(",");
   /* 선수명단 Draft는 기존 선수명단과 별도 시트여도 선수 기본정보를 안전하게 병합한다. */
-  if(/draft/i.test(nm) && /선수|이름/.test(h)) return "rosterDraft";
+  if(/draft/i.test(nm) && /선수|이름|성명/.test(h)) return "rosterDraft";
   if(/명단|로스터|엔트리/.test(nm)) return "roster";
   if(/연도|시즌|년도/.test(h) && /선수|이름/.test(h) && !/상대팀|홈팀|원정팀|경기/.test(h)) return "roster";
   if(/상대팀/.test(h) && /선수1|선수 1|선수|득점자/.test(h)) return "unified";
@@ -2015,7 +2046,7 @@ function renderAbility(){
       : (cmp.latest?(cmp.previous?'최근 '+cmp.latest+' / 비교 '+cmp.previous:'최근 '+cmp.latest+' / 비교일 없음'):'기록 없음');
     const table=rows.length?'<div class="tablewrap ability-table-wrap"><table class="ability-table"><thead><tr><th>선수</th><th>팀</th><th>평가</th><th>시스템</th><th>OVR</th><th>PAC</th><th>SHO</th><th>PAS</th><th>DRI</th><th>DEF</th><th>PHY</th><th>출석R</th><th>누적 결석R</th><th>기준R</th><th>골</th><th>도움</th><th>개인파울</th><th>선방</th><th>MOM</th><th>승점</th><th>Career 누적 결석감점</th></tr></thead><tbody>'+rows.map(r=>{
       const p=prevMap[r.player]||null, abs=r.absence||{rounds:0,penalty:{}}, ap=abs.penalty||{};
-      return '<tr><td>'+playerCardLink(r.player,'<b>'+esc(r.player)+'</b>',Object.assign({},r.info,{asOf:r.cutoffDate,allCompetitions:true}))+'</td><td>'+(r.team?teamChip(r.team):'<span class="muted">—</span>')+'</td><td><span class="ability-status '+(r.measured?'':'unassessed')+'">'+(r.measured?'SB '+esc(r.sbDate):'SB 미평가')+'</span></td>'+ 
+      return '<tr><td>'+playerCardLink(r.player,playerFaceChip(r.player,false,r.info?.year||abilityYear),Object.assign({},r.info,{asOf:r.cutoffDate,allCompetitions:true}))+'</td><td>'+(r.team?teamChip(r.team):'<span class="muted">—</span>')+'</td><td><span class="ability-status '+(r.measured?'':'unassessed')+'">'+(r.measured?'SB '+esc(r.sbDate):'SB 미평가')+'</span></td>'+ 
         '<td><span class="ability-mode compare">Round+결석감점</span></td><td><b>'+abilityScoreWithDelta(r.ovr,p&&p.ovr)+'</b></td><td>'+abilityScoreWithDelta(r.pac,p&&p.pac)+'</td><td>'+abilityScoreWithDelta(r.sho,p&&p.sho)+'</td><td>'+abilityScoreWithDelta(r.pas,p&&p.pas)+'</td><td>'+abilityScoreWithDelta(r.dri,p&&p.dri)+'</td><td>'+abilityScoreWithDelta(r.def,p&&p.def)+'</td><td>'+abilityScoreWithDelta(r.phy,p&&p.phy)+'</td>'+ 
         '<td>'+r.summary.att+'</td><td>'+num(abs.rounds)+'</td><td><b>'+num(r.summary.att+num(abs.rounds))+' / '+num(r.summary.progress)+'R</b></td><td>'+r.summary.g+'</td><td>'+r.summary.a+'</td><td>'+r.summary.f+'</td><td>'+r.summary.sv+'</td><td>'+r.summary.mom+'</td><td>'+r.summary.pts+'</td><td><span class="ability-growth negative">SHO '+fmtGrowth(num(ap.sho))+' · PAS '+fmtGrowth(num(ap.pas))+' · DRI '+fmtGrowth(num(ap.dri))+' · DEF '+fmtGrowth(num(ap.def))+' · PHY '+fmtGrowth(num(ap.phy))+'</span></td></tr>';
     }).join('')+'</tbody></table></div>':'<div class="empty">'+label+' 선수 데이터가 없습니다.</div>';
@@ -2258,7 +2289,7 @@ function openPlayerCard(player,query){
   const roster=playerCardRoster(name,cardInfo)||{};
   const stat=playerCardCurrentStats(name,cardInfo);
   const team=stat.mainTeam&&stat.mainTeam!=="-"?stat.mainTeam:(roster.team||"");
-  const photo=normalizePlayerPhotoUrl(roster.photo||"");
+  const photo=roster.photo||"";
   const tLogo=teamLogo(team), hLogo=headerLogo();
   const pos=String(roster.pos||"").trim()||"PLAYER";
   const displayName=String(roster.engName||"").trim()||name;
@@ -2277,11 +2308,14 @@ function openPlayerCard(player,query){
   renderPlayerCardPerformance(name,stat,playerCardCutoff,cardInfo);
 
   const photoWrap=$("#playerCardPhotoWrap");
+  photoWrap.title='';delete photoWrap.dataset.photoState;
   photoWrap.innerHTML='<div class="ggfc-player-card-photo-fallback">'+esc(playerInitials(name))+'</div>';
-  if(photo){
+  if(normalizePlayerPhotoUrl(photo)){
     const img=document.createElement('img');img.className='ggfc-player-card-photo';
-    img.alt=name+' 선수 사진';img.decoding='async';
-    img.addEventListener('error',()=>img.remove(),{once:true});img.src=photo;
+    img.alt=name+' 선수 사진';img.decoding='async';img.referrerPolicy='no-referrer';
+    img.dataset.playerPhotoSource=photo;img.dataset.photoIndex='0';
+    img.addEventListener('error',()=>handlePlayerPhotoError(img));
+    img.src=playerPhotoCandidates(photo)[0];
     photoWrap.appendChild(img);
   }
 
@@ -2403,11 +2437,21 @@ function fixtureLogoHtml(team){
   const logo=teamLogo(team);
   return logo?'<img class="fixture-team-logo" src="'+logo+'" alt="'+esc(teamDisplayName(team))+' 로고">':'<span class="fixture-logo-fallback" aria-hidden="true">'+teamInitials(team)+'</span>';
 }
+function fixtureMomHtml(m){
+  // 경기 ID가 같은 실제 MOM 기록만 표시한다. 중복 행은 이름을 한 번만 보여 준다.
+  const matchId=String(m.id??'').trim();
+  const names=[...new Set((DB.moms||[])
+    .filter(r=>matchId && String(r.id??'').trim()===matchId && num(r.mom)>0)
+    .map(r=>String(r.player||'').trim())
+    .filter(name=>name && !isOwnGoalPlayer(name)))];
+  return '<div class="fixture-mom'+(names.length?'':' empty-mom')+'"><span class="fixture-mom-label">MOM</span>'+
+    (names.length?names.map(name=>'<span class="fixture-mom-name">'+esc(name)+'</span>').join(''):'<span class="fixture-mom-name">미등록</span>')+'</div>';
+}
 function fixtureScoreRow(m,homeSc,awaySc,variant){
   return '<div class="fixture-score-row '+(variant||'')+'">'+
     '<div class="fixture-team-copy home"><div class="fixture-team-name">'+esc(teamDisplayName(m.home))+'</div><div class="fixture-team-scorers'+(homeSc?'':' none')+'">'+(homeSc||'득점자 없음')+'</div></div>'+
     '<div class="fixture-logo-wrap">'+fixtureLogoHtml(m.home)+'</div>'+
-    '<div class="fixture-score-value">'+num(m.hs)+' <span>-</span> '+num(m.as)+'</div>'+
+    '<div class="fixture-score-center"><div class="fixture-score-value">'+num(m.hs)+' <span>-</span> '+num(m.as)+'</div>'+fixtureMomHtml(m)+'</div>'+
     '<div class="fixture-logo-wrap">'+fixtureLogoHtml(m.away)+'</div>'+
     '<div class="fixture-team-copy away"><div class="fixture-team-name">'+esc(teamDisplayName(m.away))+'</div><div class="fixture-team-scorers'+(awaySc?'':' none')+'">'+(awaySc||'득점자 없음')+'</div></div>'+
   '</div>';
@@ -3459,7 +3503,7 @@ function renderRecentMatches(){
   ];
   const standingHtml=teamStandingGroupedHtml(list);
   const byDate=dates.map(d=>({date:d,items:list.filter(m=>normDate(m.date)===d).sort((a,b)=>String(a.no||"").localeCompare(String(b.no||""),undefined,{numeric:true}))}));
-  box.innerHTML='<div class="record-analysis-note"><b>'+esc(info.label)+'</b>의 경기 결과를 누적 집계합니다. 승점은 승 3점·무 1점·패 0점이며, 몰수패가 입력된 팀은 점수와 관계없이 패배·상대팀은 승리로 계산합니다. 경기일별 상세에는 A·B구장 결과, 팀별 득점자와 출석 명단이 표시됩니다. 참석수는 같은 날짜·같은 팀·같은 선수의 중복 출전을 1회로 계산합니다.</div>'+ 
+  box.innerHTML='<div class="record-analysis-note"><b>'+esc(info.label)+'</b>의 경기 결과를 누적 집계합니다. 승점은 승 3점·무 1점·패 0점이며, 몰수패가 입력된 팀은 점수와 관계없이 패배·상대팀은 승리로 계산합니다. 경기일별 상세에는 A·B구장 결과, 팀별 득점자, 스코어 아래의 MOM 선수와 출석 명단이 표시됩니다. 참석수는 같은 날짜·같은 팀·같은 선수의 중복 출전을 1회로 계산합니다.</div>'+ 
     '<div class="record-summary-grid">'+summaries.map(x=>'<div class="record-summary-item"><div class="l">'+esc(x.l)+'</div><div class="v">'+x.v+'</div><div class="s">'+esc(x.s||'—')+'</div></div>').join('')+'</div>'+ 
     '<div class="record-export-section" id="exportTeamStandingSection"><div class="record-period-head"><div class="sec-t">팀 순위 및 누적 기록</div><div class="record-period-label">'+esc(info.start||'')+(info.end&&info.end!==info.start?' ~ '+esc(info.end):'')+'</div><button class="btn sm section-export-btn" type="button" data-export-target="exportTeamStandingSection" data-export-name="팀순위_누적기록" data-export-ignore>이미지 저장</button></div>'+ 
     '<div class="tablewrap record-standing-table">'+standingHtml+'</div></div>'+ 
@@ -3644,13 +3688,13 @@ function renderPlayer(){
   const ps=queryPlayerStats(list).sort((a,b)=>String(a.player||"").localeCompare(String(b.player||""),"ko-KR"));
   $("#playerTable").innerHTML=tbl(
     [{t:"선수"},{t:"주 소속"},{t:"출석",n:1},{t:"출석률",n:1},{t:"승",n:1},{t:"무",n:1},{t:"패",n:1},{t:"승률",n:1},{t:"득점",n:1},{t:"어시스트",n:1},{t:"개인파울",n:1},{t:"선방",n:1},{t:"MOM",n:1},{t:"승점",n:1}],
-    ps.map(p=>[playerCardLink(p.player,'<b>'+esc(p.player)+'</b>',info),'<span class="muted">'+teamChip(p.mainTeam)+'</span>',p.att,'<b>'+p.attendanceRate+'%</b>',p.w,p.d,p.l,p.winRate+'%',p.g,p.a||0,p.f||0,p.sv||0,p.mom||0,'<b>'+p.pts+'</b>'])
+    ps.map(p=>[playerCardLink(p.player,playerFaceChip(p.player,false,info.year),info),'<span class="muted">'+teamChip(p.mainTeam)+'</span>',p.att,'<b>'+p.attendanceRate+'%</b>',p.w,p.d,p.l,p.winRate+'%',p.g,p.a||0,p.f||0,p.sv||0,p.mom||0,'<b>'+p.pts+'</b>'])
   );
   if($("#memberPlayerCards")) $("#memberPlayerCards").innerHTML=mobilePlayerCards(ps,info);
   const rs=queryRosterStats(list);
   $("#rosterTable").innerHTML=rs.length?tbl(
     [{t:"연도"},{t:"팀"},{t:"등번호",n:1},{t:"선수"},{t:"포지션"},{t:"출석",n:1},{t:"팀 경기",n:1},{t:"출석률",n:1},{t:"득점",n:1},{t:"비고"}],
-    rs.map(r=>[esc(r.year||"—"),'<span class="muted">'+teamChip(r.team)+'</span>',esc(r.no||""),playerCardLink(r.player,'<b>'+esc(r.player)+'</b>',info),esc(r.pos||""),r.att,r.teamGames,'<b>'+r.rate+'%</b>','<b>'+r.g+'</b>','<span class="muted">'+esc(r.memo||"")+'</span>']))
+    rs.map(r=>[esc(r.year||"—"),'<span class="muted">'+teamChip(r.team)+'</span>',esc(r.no||""),playerCardLink(r.player,playerFaceChip(r.player,false,r.year||info.year),info),esc(r.pos||""),r.att,r.teamGames,'<b>'+r.rate+'%</b>','<b>'+r.g+'</b>','<span class="muted">'+esc(r.memo||"")+'</span>']))
     :'<div class="empty">선택한 조회 구간에 표시할 선수명단이 없습니다.</div>';
   const specials=DB.specials.filter(x=>{const d=normDate(x.date);return d&&(!info.start||d>=info.start)&&(!info.end||d<=info.end);}).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
   $("#specialTable").innerHTML=tbl([{t:"날짜"},{t:"선수"},{t:"구분"},{t:"내용"}],specials.map(x=>[esc(x.date),playerCardLink(x.player,'<b>'+esc(x.player)+'</b>',info),'<span class="pill">'+esc(x.type)+'</span>',esc(x.memo)]));
@@ -3675,11 +3719,16 @@ function pairStats(a,b){
 function normalizePlayerPhotoUrl(src){
   let v=String(src||'').trim().replace(/&amp;/g,'&').replace(/^['"]|['"]$/g,'').trim();
   if(!v)return '';
+  const formula=photoFormulaArgument(v);
+  if(formula){if(formula.url===null)return '';v=formula.url.trim();}
+  if(/^=|^#(?:VALUE!|REF!|N\/A|NAME\?|SPILL!|BLOCKED!)/i.test(v))return '';
   if(/^data:image\/(?:png|jpe?g|webp|gif);base64,/i.test(v))return v;
   if(/^www\./i.test(v))v='https://'+v;
   // Accept repository-relative images; reject executable, local, and unknown URL schemes.
   if(/^[a-z][a-z0-9+.-]*:/i.test(v) && !/^https?:/i.test(v))return '';
   if(/[\u0000-\u001f\u007f]/.test(v))return '';
+  if(!/^https?:|^\/\//i.test(v)&&!/[\/]|\.(?:png|jpe?g|webp|gif|avif|svg)(?:[?#]|$)/i.test(v))return '';
+  if(v.includes('\\'))return '';
   try{
     const u=new URL(v,location.href);
     if(!['https:','http:'].includes(u.protocol) || u.username || u.password)return '';
@@ -3687,9 +3736,13 @@ function normalizePlayerPhotoUrl(src){
       const p=u.pathname.split('/');
       if(p[3]==='blob' && p.length>=6){u.hostname='raw.githubusercontent.com';p.splice(3,1);u.pathname=p.join('/');}
     }
-    if(u.hostname==='drive.google.com'){
+    if(u.hostname==='drive.google.com'||u.hostname==='www.drive.google.com'){
       const m=u.pathname.match(/\/file\/d\/([^/]+)/), id=m?m[1]:u.searchParams.get('id');
-      if(id)return 'https://drive.google.com/uc?export=view&id='+encodeURIComponent(id);
+      if(!id||!/^[\w-]+$/.test(id))return '';
+      const image=new URL('https://drive.google.com/thumbnail');
+      image.searchParams.set('id',id);image.searchParams.set('sz','w800');
+      const key=u.searchParams.get('resourcekey');if(key)image.searchParams.set('resourcekey',key);
+      return image.href;
     }
     if(u.hostname==='dropbox.com'||u.hostname==='www.dropbox.com'){
       u.searchParams.delete('dl');u.searchParams.set('raw','1');
@@ -3698,21 +3751,37 @@ function normalizePlayerPhotoUrl(src){
   }catch(e){return '';}
 }
 
-function playerPhoto(name){
-  const nm=String(name||"").trim();
-  let rows=DB.roster.filter(r=>String(r.player||"").trim()===nm && String(r.photo||"").trim());
-  if(chemYear!=="ALL"){
-    const exact=rows.find(r=>String(r.year||"").trim()===chemYear);
-    if(exact) return normalizePlayerPhotoUrl(exact.photo);
-  }
-  rows=rows.slice().sort((a,b)=>String(b.year||"").localeCompare(String(a.year||""),undefined,{numeric:true}));
-  return rows.length?normalizePlayerPhotoUrl(rows[0].photo):"";
+function playerPhotoCandidates(source){
+  const first=normalizePlayerPhotoUrl(source);if(!first)return [];
+  const urls=[first];
+  try{
+    const u=new URL(first);
+    if(u.hostname==='drive.google.com'&&u.searchParams.has('id')){
+      const backup=new URL('https://drive.google.com/uc');
+      backup.searchParams.set('export','view');backup.searchParams.set('id',u.searchParams.get('id'));
+      const key=u.searchParams.get('resourcekey');if(key)backup.searchParams.set('resourcekey',key);
+      urls.push(backup.href);
+    }
+  }catch(e){}
+  return [...new Set(urls)];
 }
-function playerFaceChip(name,large){
-  const nm=String(name||""), photo=playerPhoto(nm);
+function handlePlayerPhotoError(img){
+  const sources=playerPhotoCandidates(img.dataset.playerPhotoSource||'');
+  const next=(Number(img.dataset.photoIndex)||0)+1;
+  if(next<sources.length){img.dataset.photoIndex=String(next);img.src=sources[next];return;}
+  const wrapper=img.parentElement||img.parentNode;
+  if(wrapper){wrapper.title='사진을 불러오지 못했습니다. 사진 링크와 공개 설정을 확인해 주세요.';wrapper.dataset.photoState='unavailable';}
+  img.remove();
+}
+function playerPhoto(name,year=chemYear){
+  const row=selectPlayerRoster(name,year==='ALL'?'':year);
+  return normalizePlayerPhotoUrl(row?.photo||'');
+}
+function playerFaceChip(name,large,year=chemYear){
+  const nm=String(name||""), photo=playerPhoto(nm,year);
   const initial=esc(Array.from(nm.replace(/\s+/g,"")).slice(0,1).join("")||"선");
-  return '<span class="player-face-chip'+(large?' large':'')+'"><span class="player-face"><span class="player-face-fallback">'+initial+'</span>'+
-    (photo?'<img src="'+esc(photo)+'" alt="'+esc(nm)+'" onerror="this.remove()">':'')+'</span><span class="player-face-name">'+esc(nm)+'</span></span>';
+  const image=photo?'<img src="'+esc(photo)+'" data-player-photo-source="'+esc(photo)+'" data-photo-index="0" alt="'+esc(nm)+' 선수 사진" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="handlePlayerPhotoError(this)">':'';
+  return '<span class="player-face-chip'+(large?' large':'')+'"><span class="player-face"><span class="player-face-fallback">'+initial+'</span>'+image+'</span><span class="player-face-name">'+esc(nm)+'</span></span>';
 }
 
 function monthlyPlayerStats(player){
@@ -4148,6 +4217,7 @@ function goTab(v){
   $$("#tabs button").forEach(x=>x.classList.toggle("on",x===b));
   $$("section.view").forEach(s=>s.classList.toggle("on", s.id==="v-"+v));
   syncMobileNav(v);
+  if(typeof closeMemberSidebar==='function') closeMemberSidebar(true);
   if(activeView!==v)renderActiveView(v);
 }
 $("#tabs").onclick = e=>{ const b=e.target.closest("button"); if(!b) return;
@@ -4689,9 +4759,11 @@ function setAdmin(v){
   }
 
   renderAll();
-  if(typeof syncGgfcSidebarTop==='function') requestAnimationFrame(syncGgfcSidebarTop);
 }
-$("#lockBtn").onclick=()=>GGFC.loginOrLogout();
+$("#lockBtn").onclick=()=>{
+  if(typeof closeMemberSidebar==='function') closeMemberSidebar(true);
+  GGFC.loginOrLogout();
+};
 $("#pwCancel").onclick=()=>GGFC.closeLogin();
 $("#adminLoginForm").onsubmit=e=>{e.preventDefault();GGFC.signIn();};
 $("#pwShow").onclick=()=>GGFC.togglePassword();
@@ -5201,14 +5273,6 @@ if(displayNameReset) displayNameReset.onclick=()=>{
   DB.settings.display={brandTitle:"GGFC",leagueA:"슈퍼리그",leagueB:"챌린지리그"};
   save(); renderAll(); toast("기본 표시명으로 복원했습니다.");
 };
-
-/* ---------- sidebar position sync ---------- */
-function syncGgfcSidebarTop(){
-  const h=document.querySelector('.topbar');
-  if(h) document.documentElement.style.setProperty('--ggfc-header-h',Math.max(70,h.offsetHeight)+'px');
-}
-window.addEventListener('resize',syncGgfcSidebarTop);
-requestAnimationFrame(syncGgfcSidebarTop);
 
 /* ---------- boot ---------- */
 load();setAdmin(false);renderAll();
