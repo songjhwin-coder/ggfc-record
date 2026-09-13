@@ -1,4 +1,4 @@
-/* GGFC 3.18.3: One password field; server-side Firebase password verification. */
+/* GGFC 3.18.4: One password field; server-side Firebase password verification. */
 const GGFC = (() => {
   const ADMIN_LOGIN_ID='ggfc-admin@example.com';
   let loginBusy=false;
@@ -60,7 +60,7 @@ const GGFC = (() => {
     fields.forEach(k=>(['roster','soccerbee'].includes(k)?players:records)[k]=clean[k]);
     const encoded=transformKeys({records,players,settings:clean.settings});
     // The reserved Firebase .sv sentinel must reach the SDK unchanged.
-    encoded.meta={version:'3.18.3',revision,updatedBy:uid,savedAt:timestamp,keyEncoding:'base64url-v1'};
+    encoded.meta={version:'3.18.4',revision,updatedBy:uid,savedAt:timestamp,keyEncoding:'base64url-v1'};
     return encoded;
   }
   function cacheKey(){return 'ggfc-v318-public:'+String((window.GGFC_CONFIG||{}).databaseURL||'');}
@@ -335,4 +335,4 @@ const GGFC = (() => {
   }
   return {get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving;},canEdit,normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,signIn,loginOrLogout,closeLogin,togglePassword};
 })();
-window.GGFC_VERSION='3.18.3';
+window.GGFC_VERSION='3.18.4';

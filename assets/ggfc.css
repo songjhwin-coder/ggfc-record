@@ -2119,3 +2119,168 @@ body>main>section.view{max-width:1120px;margin-left:auto;margin-right:auto}
 .summary-poster .fixture-score-center .fixture-score-value{min-width:0}
 .summary-poster .fixture-mom{font-size:9px;line-height:1.25;gap:2px;margin-top:5px}
 .summary-poster .fixture-mom-label,.summary-poster .empty-mom .fixture-mom-name{font-size:8px}
+
+/* V3.18.4 — K League portal inspired navy / red / white presentation.
+   GGFC branding, club colours and ability-series colours keep their meaning. */
+:root{
+  --kl-navy:#061f44;--kl-navy-light:#153963;--kl-red:#df2037;--kl-blue:#245a93;
+  --text:#202b3a;--text2:#687382;--muted:#687382;--canvas:#fff;--soft:#f2f3f6;
+  --surface2:#edf0f4;--border:#dce1e8;--line:#dce1e8;--blue:#245a93;--blue-soft:#edf3fa;
+  --purple:#061f44;--pl-purple:#061f44;--pl-purple-2:#153963;--pl-purple-3:#041630;
+  --pl-green:#df2037;--pl-cyan:#7bb1df;--pl-pink:#df2037;--pl-lilac:#edf1f6;
+  --red:#df2037;--red-soft:#fff0f2;--green:#188251;--green-soft:#ecf7f0;
+  --radius:6px;--radius-lg:8px;--shadow:0 3px 12px #061f440a;
+}
+html,body,.ggfc-mobile body{background:#f2f3f6;color:var(--text)}
+body{font-family:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic","Segoe UI",Arial,sans-serif;letter-spacing:-.025em}
+body:before{display:none}
+.ggfc-sidebar{background:var(--kl-navy);box-shadow:4px 0 14px #061f440c;border:0}
+.sidebar-header{border-bottom-color:#ffffff24}
+.sidebar-brand{padding-top:7px;padding-bottom:22px}
+.ggfc-sidebar .brand-t{font-size:28px;font-style:normal;letter-spacing:-.05em}
+.ggfc-sidebar .brand-s{color:#bbc9dc;font-size:9px;letter-spacing:.16em}
+.ggfc-sidebar .header-brand-logo{border-radius:5px}
+.sidebar-controls label,.sidebar-footer{color:#c2cddd}
+.sidebar-controls .select,.sidebar-controls .btn,.sidebar-close{border-radius:5px}
+.sidebar-controls .select{background-color:#fff;color:var(--kl-navy);border-color:#fff}
+.sidebar-controls .btn{background:#17365f;border-color:#456084;color:#fff}
+.sidebar-controls .btn:hover{background:#254b78;border-color:#6483a6}
+.sidebar-controls #lockBadge{background:#ffffff10;border-color:#ffffff22;color:#dae4f1}
+.sidebar-controls #lockBadge.open{background:#ecf7f0;color:#216540}
+.ggfc-sidebar nav.tabs button{border-radius:5px;font-weight:750;color:#d6deea}
+.ggfc-sidebar nav.tabs button.on{background:#ffffff12;border-left-color:var(--kl-red);color:#fff}
+.ggfc-sidebar nav.tabs button:hover{background:#ffffff0e}
+.sidebar-icon{border-radius:4px;background:#ffffff0b;border-color:#ffffff22;color:#b6c5d9}
+.ggfc-sidebar nav.tabs button.on .sidebar-icon{background:#fff;border-color:#fff;color:var(--kl-navy)}
+.sidebar-group-title,.sidebar-admin-title{color:#a5b5cc;letter-spacing:.16em}
+.ggfc-sidebar :focus-visible{outline-color:#a8cdf1}
+.sidebar-footer{letter-spacing:.02em}
+
+.head{padding:24px 26px;border-radius:6px;background:var(--kl-navy);box-shadow:none;border-left:4px solid var(--kl-red)}
+.head:before{content:"GGFC MATCH CENTRE";font-size:10px;color:#bccce2;letter-spacing:.17em}
+.head:after{border-radius:0;width:170px;height:180px;right:-45px;top:-45px;border:25px solid #ffffff07;transform:rotate(35deg)}
+.head h2{font-size:30px;font-weight:850;letter-spacing:-.045em}
+.head p{color:#cfdaea;line-height:1.6}
+.card,.ggfc-mobile .card{border-color:var(--border);border-radius:7px;background:#fff;box-shadow:var(--shadow)}
+.card:hover{border-color:#cbd3df}
+.sec-t,.dashboard-block-title .sec-t{color:var(--kl-navy);font-weight:800}
+.dashboard-block-title{border-bottom:2px solid var(--kl-red)}
+.dashboard-block-title .sec-t{font-size:21px}
+.dashboard-block-note,.record-query-note,.record-period-label,.ranking-note{color:var(--text2);line-height:1.65}
+.dashboard-result-date{color:var(--kl-navy)}
+.dashboard-ranking-grid .ranking-card,.dashboard-ranking-side .ranking-card{position:relative}
+.ranking-card:before,.ranking-card:nth-child(1):before,.ranking-card:nth-child(2):before,.ranking-card:nth-child(3):before{position:absolute;inset:0 0 auto;height:3px;margin:0;background:var(--kl-navy)}
+.dashboard-ranking-grid .ranking-card:first-child:before{background:var(--kl-red)}
+.ranking-basis{margin:2px 0 12px;padding:9px 10px;border-left:3px solid var(--kl-red);background:#f2f5f9;color:#42556f;font-size:11px;line-height:1.7;overflow-wrap:anywhere}
+.record-period-head{flex-wrap:wrap;border-bottom-color:var(--kl-navy)}
+.record-period-heading{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;min-width:0}
+.record-round-range{display:inline-block;padding:3px 8px;border:1px solid #cfd8e5;border-radius:4px;background:#eef3f9;color:var(--kl-navy);font-size:12px;font-weight:800;line-height:1.5;letter-spacing:0;vertical-align:middle}
+.record-period-label{margin-left:auto}
+.rep-point{border-radius:4px;background:var(--kl-navy);color:#fff}
+.rep-point.zero{background:#edf0f4;color:#758091}
+.rep-breakdown,.rep-segment-card,.record-season-panel,.record-summary-item,.record-export-section{border-color:var(--border)}
+.rep-segment-card,.record-analysis-note,.record-query,.record-season-panel,.dashboard-secondary-query{background:#f6f8fb;color:#4e6075;border-color:var(--border);border-radius:6px}
+.record-query{border-left:3px solid var(--kl-navy)}
+.record-summary-item:before{background:var(--kl-red)}
+.record-field>label,.record-season-title,.rep-breakdown summary{color:#3b4e67}
+.record-summary-item .v,.record-season-title,.record-attendance-title{color:var(--kl-navy)}
+.record-inline-fields input,.record-range-fields select,.record-field input,.record-field select{border-radius:5px}
+.select,.btn,input[type=password],input[type=text],input[type=date],select{border-color:#cdd5e0;border-radius:5px;background-color:#fff;color:#233b5a}
+.btn:hover{border-color:#7c96b8;background:#f1f5fa}
+.btn.primary{background:var(--kl-navy);border-color:var(--kl-navy);color:#fff}
+.btn.primary:hover{background:#153963;border-color:#153963}
+.btn:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #3878bb;outline-offset:2px}
+.tablewrap{border-color:var(--border);border-radius:5px}
+th{background:#edf1f6;color:#374d69;border-bottom:1px solid #d6dee9}
+td{color:#28374b;border-bottom-color:#e6ebf1}
+tbody tr:nth-child(even) td{background:#f8fafc}
+tbody tr:hover td{background:#eef4fa}
+.rank{border-radius:4px;background:#eef2f7;color:#617087}
+.rank.top{background:var(--kl-navy);color:#fff}
+tr:nth-child(1) .rank.top{background:var(--kl-red);color:#fff}
+.team-league-standing thead th{background:#edf1f6;color:#374d69}
+.team-league-standing .league-standing-cell{background:#f6f8fb!important;border-color:#dce3ec}
+.team-league-standing .league-b-start td{border-top-color:#d1dae7}
+.headtohead-table thead th,.headtohead-table tbody th{color:var(--kl-navy)}
+.headtohead-cell{color:#28374b}
+.headtohead-team-head .h2h-fallback,.headtohead-row-team .h2h-fallback{background:var(--kl-navy)}
+
+.league-zone{border-radius:6px;box-shadow:none;border-color:var(--border)}
+.league-zone.a{border-top:4px solid var(--kl-red)}
+.league-zone.b{border-top:4px solid var(--kl-blue)}
+.league-zone-head,.league-zone.a .league-zone-head,.league-zone.b .league-zone-head{min-height:104px;background:var(--kl-navy)!important;color:#fff!important}
+.league-zone-title{font-size:24px;font-weight:800}
+.league-team-grid{background:#f6f8fb}
+.league-team-card,.league-team-card:nth-child(3n){border-color:#dfe5ed!important;border-radius:5px}
+.league-team-card:hover{border-color:#b4c4d9!important;transform:none;background:#f9fbfe}
+.league-team-name{color:var(--kl-navy)}
+.league-team-wdl,.league-team-goals{color:#46566c}
+.league-team-rule{background:#e0e6ee}
+.league-rule-note{background:#eef3fa;color:#405875;border-radius:5px}
+.ground-panel{border-radius:6px;border-color:#d8e0eb;box-shadow:none}
+.ground-title{background:var(--kl-navy);font-size:16px;font-weight:800}
+.comp-title{border-radius:4px;background:#eef2f7;color:#4c617e}
+.ground-match{border-bottom-color:#e0e6ef}
+.match{border-color:var(--border);border-radius:6px;box-shadow:none}
+.fixture-team-name,.fixture-score-value{color:var(--kl-navy)}
+.fixture-team-scorers{color:#68788d}
+.fixture-logo-fallback{color:var(--kl-navy);background:#edf2f8;border-radius:5px}
+.fixture-mom{color:#435a76}
+.fixture-mom-label{background:#fff0f2;color:#b31c30;border-radius:3px}
+.record-day{border-color:var(--border);border-radius:6px}
+.record-day summary{background:#edf2f8;color:var(--kl-navy)}
+.record-day-meta{color:#63738a}
+.record-attendance,.record-attendance-item,.record-attendance-league{border-color:#dce3ed;background:#fff}
+.record-attendance-league-title{background:#edf2f8;color:var(--kl-navy)}
+
+/* Detail crests: desktop image 40 -> 60px, phone image 28 -> 42px. */
+#mainContent .record-day .fixture-score-row{grid-template-columns:minmax(0,1fr) 63px minmax(64px,.9fr) 63px minmax(0,1fr)}
+#mainContent .record-day .fixture-logo-wrap{width:63px;height:63px}
+#mainContent .record-day .fixture-team-logo{width:60px;height:60px}
+#mainContent .record-day .fixture-logo-fallback{width:57px;height:57px;font-size:14px}
+@media(max-width:1100px){#mainContent .ground-grid{grid-template-columns:minmax(0,1fr)}}
+.ggfc-mobile #mainContent .record-day .fixture-score-row{grid-template-columns:minmax(0,1fr) minmax(68px,.85fr) minmax(0,1fr);grid-template-rows:auto auto;align-items:start;gap:8px 6px}
+.ggfc-mobile #mainContent .record-day .fixture-logo-wrap,.ggfc-mobile #mainContent .record-day .fixture-team-logo,.ggfc-mobile #mainContent .record-day .fixture-logo-fallback{width:42px;height:42px}
+.ggfc-mobile #mainContent .record-day .fixture-logo-wrap{justify-self:center}
+.ggfc-mobile #mainContent .record-day .fixture-logo-wrap:nth-child(2){grid-column:1;grid-row:1}
+.ggfc-mobile #mainContent .record-day .fixture-logo-wrap:nth-child(4){grid-column:3;grid-row:1}
+.ggfc-mobile #mainContent .record-day .fixture-score-center{grid-column:2;grid-row:1/3;align-self:start;padding-top:7px}
+.ggfc-mobile #mainContent .record-day .fixture-team-copy.home{grid-column:1;grid-row:2;text-align:center}
+.ggfc-mobile #mainContent .record-day .fixture-team-copy.away{grid-column:3;grid-row:2;text-align:center}
+.ggfc-mobile #mainContent .record-day .fixture-team-scorers{font-size:11px}
+.ggfc-mobile #mainContent .record-day .ground-content{padding:8px 6px}
+.ggfc-mobile #mainContent .record-day .ground-match{margin:0;padding:14px 3px}
+.summary-poster .fixture-score-row{grid-template-columns:minmax(0,1fr) 57px 54px 57px minmax(0,1fr)}
+.summary-poster .fixture-logo-wrap{width:57px;height:57px}
+.summary-poster .fixture-team-logo{width:48px;height:48px}
+.summary-poster .fixture-logo-fallback{width:45px;height:45px}
+.summary-poster .record-round-range{font-size:10px}
+
+.calhead .m,.day .d{color:var(--kl-navy)}
+.day{border-color:#dce3ed;border-radius:5px}
+.day.has{background:#eef4fb;border-color:#c9d9eb}
+.day.sel{border-color:var(--kl-navy);box-shadow:inset 0 0 0 1px var(--kl-navy);background:#e4edf8}
+.day .tag{background:var(--kl-red);color:#fff}
+.ability-kpi,.ability-half-section,.member-card,.monthly-summary-item,.monthly-chart-wrap,.ability-riser-item{border-color:var(--border);border-radius:6px;box-shadow:none}
+.ability-kpi .v,.ability-half-title,.member-ovr,.ability-riser-name{color:var(--kl-navy)}
+.ability-half-head,.ability-kpi,.ability-riser-item,.member-metrics{background:#f5f7fa}
+.ability-half-meta,.ability-half-compare,.ability-riser-sub,.member-card p,.member-card-foot,.member-metrics dt{color:#6a788c}
+.ability-riser-delta{background:#fff0f2;color:#be263b}
+.member-label{border-radius:4px;color:#375475;background:#ecf2fa}
+.member-search input{border-color:#cbd6e4;border-radius:5px}
+.member-metrics dd{color:var(--kl-navy)}
+.ggfc-mobile .head{padding:20px 18px;border-radius:5px}
+.ggfc-mobile .head h2{font-size:25px}
+.ggfc-mobile .member-nav{border-color:#dce3ed;box-shadow:0 -2px 12px #061f440a}
+.member-nav button{color:#6d7d94;border-radius:5px}
+.member-nav button.on{background:#edf2f8;color:var(--kl-navy);box-shadow:inset 0 2px var(--kl-red)}
+.ggfc-mobile #mainContent .league-team-card{border-radius:5px}
+.player-card-dialog{border-color:#193c69}
+.player-card-link:hover{color:var(--kl-blue)}
+.chem-suggestions{border-color:#c9d4e3;box-shadow:0 10px 22px #061f4414}
+.chem-suggestion-btn{color:#35506f}
+.chem-suggestion-btn:hover,.chem-suggestion-btn.active{background:#edf3fa;color:var(--kl-navy)}
+.mask{background:#06172bbb}
+.modal{border-color:#d0d9e7;border-radius:8px}
+.password-label{color:var(--kl-navy)}
+.toast{background:var(--kl-navy);color:#fff;border-radius:6px}
