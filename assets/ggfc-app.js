@@ -2957,7 +2957,15 @@ function renderDashboardPeriodControls(){
     if(startEl){startEl.innerHTML=opts||'<option value="">경기일 없음</option>';startEl.value=kind==="ranking"?rankingRangeStart:h2hRangeStart;}
     if(endEl){endEl.innerHTML=opts||'<option value="">경기일 없음</option>';endEl.value=kind==="ranking"?rankingRangeEnd:h2hRangeEnd;}
     const rangeOnly=$$(kind==="ranking"?".ranking-range-only":".h2h-range-only"); rangeOnly.forEach(el=>el.style.display=info.mode==="RANGE"?"block":"none");
-    const note=$("#"+prefix+"RangeNote"); if(note) note.innerHTML='<b>'+esc(info.label)+'</b> · '+info.list.length+'경기 · DB 최종일 기준 기본조회 · 상단 대회 필터 '+(comp==="ALL"?'전체 대회':'「'+esc(comp)+'」')+' 적용';
+    const note=$("#"+prefix+"RangeNote");
+    if(note){
+      if(kind==="ranking"){
+        const scope=halfTeamRankingInfo(info);
+        note.textContent=scope.label+' · '+scope.list.length+'경기 · 모든 랭킹은 정규·인터리그 반기 전체 누적 · 구간·대회 필터로 누적값을 제한하지 않습니다.';
+      }else{
+        note.innerHTML='<b>'+esc(info.label)+'</b> · '+info.list.length+'경기 · DB 최종일 기준 기본조회 · 상단 대회 필터 '+(comp==="ALL"?'전체 대회':'「'+esc(comp)+'」')+' 적용';
+      }
+    }
   };
   render("ranking"); render("h2h");
 }
@@ -3397,8 +3405,9 @@ function sharedRanks(list,valueFn){
   });
 }
 function renderDashboardQueryRankings(info){
-  info=info||rankingQueryInfo();
-  const list=info.list||[], period=rankingHalfPeriodLabel(info)+" · "+list.length+"경기 기준";
+  // 모든 랭킹은 팀 순위와 동일한 시즌·반기 전체 기록으로 계산한다.
+  info=halfTeamRankingInfo(info||rankingQueryInfo());
+  const list=info.list||[], period=info.label+" · "+list.length+"경기 기준";
   if($("#dashScorerQueryNote")) $("#dashScorerQueryNote").textContent=period+" · 득점이 같으면 출전 횟수가 적은 선수가 우선입니다.";
   if($("#dashAttendanceQueryNote")) $("#dashAttendanceQueryNote").textContent=period+" · 출석률은 주 소속팀 경기 수 대비 선수 출석 횟수입니다.";
 
