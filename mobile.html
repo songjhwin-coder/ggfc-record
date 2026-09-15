@@ -212,7 +212,7 @@
       <div id="dashRecent"></div>
     </div>
     <div class="record-query dashboard-secondary-query" id="rankingPeriodQuery">
-      <div class="record-season-title">랭킹 조회기간 <span class="muted" style="font-size:11px">득점 · 출석률 · 개인 · 팀파울 / 팀 순위는 해당 반기 전체 누적</span></div>
+      <div class="record-season-title">랭킹 조회기간 <span class="muted" style="font-size:11px">득점 · 출석률 · 팀 · 개인 · 팀파울 모두 해당 반기 전체 누적</span></div>
       <div class="dashboard-period-grid">
         <div class="record-field"><label for="rankingRangeMode">조회 구간</label><select id="rankingRangeMode"><option value="SEASON">시즌 전체</option><option value="H1">상반기</option><option value="H2">하반기</option><option value="RANGE">기간 지정</option></select></div>
         <div class="record-field"><label for="rankingRangeYear">시즌</label><select id="rankingRangeYear"></select></div>
@@ -225,12 +225,12 @@
     <div class="dashboard-ranking-grid" aria-label="득점 및 출석률 랭킹">
       <div class="card ranking-card" id="exportScorerSection">
         <div class="export-section-head"><div class="sec-t">득점 랭킹 TOP 20</div><button class="btn sm section-export-btn" type="button" data-export-target="exportScorerSection" data-export-name="득점랭킹" data-export-ignore>이미지 저장</button></div>
-        <div class="note ranking-note admin-ranking-note" id="dashScorerQueryNote">조회 구간의 기록만 집계하며, 득점이 같으면 출전 횟수가 적은 선수가 우선입니다.</div>
+        <div class="note ranking-note admin-ranking-note" id="dashScorerQueryNote">해당 반기 전체 기록을 집계하며, 득점이 같으면 출전 횟수가 적은 선수가 우선입니다.</div>
         <div class="tablewrap" id="dashScorers"></div>
       </div>
       <div class="card ranking-card" id="exportAttendanceRankSection">
         <div class="export-section-head"><div class="sec-t">출석률 랭킹 TOP 20</div><button class="btn sm section-export-btn" type="button" data-export-target="exportAttendanceRankSection" data-export-name="출석률랭킹" data-export-ignore>이미지 저장</button></div>
-        <div class="note ranking-note admin-ranking-note" id="dashAttendanceQueryNote">조회 구간의 주 소속팀 경기 수 대비 선수 출석 횟수로 계산합니다.</div>
+        <div class="note ranking-note admin-ranking-note" id="dashAttendanceQueryNote">해당 반기 전체의 주 소속팀 경기 수 대비 선수 출석 횟수로 계산합니다.</div>
         <div class="tablewrap" id="dashAttendanceRank"></div>
       </div>
     </div>
@@ -244,12 +244,12 @@
         </div>
         <div class="card ranking-card ranking-card-compact" id="exportPlayerPointSection">
           <div class="export-section-head"><div class="sec-t">개인 순위 (누적 승점)</div><button class="btn sm section-export-btn" type="button" data-export-target="exportPlayerPointSection" data-export-name="개인순위" data-export-ignore>이미지 저장</button></div>
-          <div class="note ranking-note admin-ranking-note" id="dashPlayerPointQueryNote">선수가 실제 출석한 경기 결과의 승점을 누적합니다.</div>
+          <div class="note ranking-note admin-ranking-note" id="dashPlayerPointQueryNote">해당 반기에 선수가 실제 출석한 경기 결과의 승점을 누적합니다.</div>
           <div class="tablewrap" id="dashPlayerPointRank"></div>
         </div>
         <div class="card ranking-card ranking-card-compact" id="exportTeamFoulSection">
           <div class="export-section-head"><div class="sec-t">팀 파울 순위</div><button class="btn sm section-export-btn" type="button" data-export-target="exportTeamFoulSection" data-export-name="팀파울순위" data-export-ignore>이미지 저장</button></div>
-          <div class="note ranking-note admin-ranking-note" id="dashTeamFoulQueryNote">조회 구간의 누적 파울이 적은 팀부터 표시합니다.</div>
+          <div class="note ranking-note admin-ranking-note" id="dashTeamFoulQueryNote">해당 반기 전체의 누적 파울이 적은 팀부터 표시합니다.</div>
           <div class="tablewrap" id="dashTeamFoulRank"></div>
         </div>
     </div>
@@ -820,5 +820,5 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="assets/ggfc-sync.js?v=3.18.4"></script>
 <script src="assets/ggfc-mobile.js?v=3.18.4"></script>
-<script src="assets/ggfc-app.js?v=3.18.4"></script>
+<script src="assets/ggfc-app.js?v=3.18.4-half-rankings-1"></script>
 </body></html>
