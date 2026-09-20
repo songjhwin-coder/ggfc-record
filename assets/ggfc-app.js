@@ -1014,9 +1014,9 @@ function chemMatches(){
   return matches().filter(m=> chemYear==="ALL" || String(m.date||"").slice(0,4)===chemYear );
 }
 function chemPlayers(){
-  const ids=new Set(chemMatches().map(m=>m.id)), s=new Set();
-  DB.attendance.forEach(r=>{ if(ids.has(r.id) && r.player) s.add(r.player); });
-  return [...s].sort();
+  const ids=new Set(chemMatches().map(m=>detailMatchKey(m.id))), s=new Set();
+  DB.attendance.forEach(r=>{ if(ids.has(detailMatchKey(r.id)) && r.player && !isOwnGoalPlayer(r.player)) s.add(r.player); });
+  return [...s].sort(compareNamesKo);
 }
 function chemistry(target){
   const ms=chemMatches(), M={}; ms.forEach(m=>M[m.id]=m);
@@ -2559,9 +2559,9 @@ function groundMatchCard(m){
   const fouls=matchTeamFouls(m);
   if(fouls.home+fouls.away>0) meta.push("파울 "+fouls.home+":"+fouls.away);
   if(forfeitText(m)) meta.push(esc(forfeitText(m)));
-  return '<div class="ground-match fixture-match-card">'+
+  return '<div class="ground-match fixture-match-card match-detail-card">'+
     '<div class="ground-match-meta">'+(meta.length?meta.map(x=>'<span>'+x+'</span>').join('<span>·</span>'):'<span>&nbsp;</span>')+'</div>'+
-    fixtureScoreRow(m,homeSc,awaySc,'ground-fixture')+
+    fixtureScoreRow(m,homeSc,awaySc,'ground-fixture')+matchDetailButton(m)+
     '</div>';
 }
 function groundPanel(code, list){
@@ -3491,7 +3491,7 @@ function renderDashboardQueryRankings(info){
   info=halfTeamRankingInfo(info||rankingQueryInfo());
   const list=info.list||[], period=info.label+" · "+list.length+"경기 기준";
   if($("#dashScorerQueryNote")) $("#dashScorerQueryNote").textContent=period+" · 득점 ↓ · 경기수 ↑ · 동률이면 이름순";
-  if($("#dashAttendanceQueryNote")) $("#dashAttendanceQueryNote").textContent=period+" · 출석률은 주 소속팀 경기 수 대비 선수 출석 횟수입니다. 출석률·출석수·득점 동률이면 이름순";
+  if($("#dashAttendanceQueryNote")) $("#dashAttendanceQueryNote").textContent=period+" · 출석률은 주 소속팀 경기 수 대비 선수 출석 횟수입니다. 출석률이 같으면 경기수·득점과 관계없이 이름순";
 
   if($("#dashPlayerPointQueryNote")) $("#dashPlayerPointQueryNote").textContent=period+" · 실제 출석 경기의 승점 누적 · 승점·경기수·득점 동률이면 이름순";
   if($("#dashTeamFoulQueryNote")) $("#dashTeamFoulQueryNote").textContent=period+" · 누적 파울 ↑ · 경기수 ↓ · 동률이면 팀 이름순. 경기별 개인파울 합계 우선, 없으면 기존 팀파울 적용";
@@ -3503,7 +3503,7 @@ function renderDashboardQueryRankings(info){
     scorers.map((p,i)=>['<span class="rank'+(i<3?' top':'')+'">'+(i+1)+'</span>',playerCardLink(p.player,'<b>'+esc(p.player)+'</b>',info),'<span class="muted">'+teamChip(p.mainTeam)+'</span>',p.att,'<b>'+p.g+'</b>'])
   );
 
-  const attendance=players.filter(p=>p.teamGames>0).sort((a,b)=>b.attendanceRate-a.attendanceRate || b.att-a.att || b.g-a.g || compareNamesKo(a.player,b.player)).slice(0,20);
+  const attendance=players.filter(p=>p.teamGames>0).sort((a,b)=>b.attendanceRate-a.attendanceRate || compareNamesKo(a.player,b.player)).slice(0,20);
   const attendanceRanks=sharedRanks(attendance,p=>p.attendanceRate);
   $("#dashAttendanceRank").innerHTML=tbl(
     [{t:"#"},{t:"선수"},{t:"팀"},{t:"출석",n:1},{t:"팀 경기",n:1},{t:"출석률",n:1}],
@@ -3643,7 +3643,7 @@ function renderRecentMatches(){
     '<div class="record-summary-grid">'+summaries.map(x=>'<div class="record-summary-item"><div class="l">'+esc(x.l)+'</div><div class="v">'+x.v+'</div><div class="s">'+esc(x.s||'—')+'</div></div>').join('')+'</div>'+ 
     '<div class="record-export-section" id="exportTeamStandingSection"><div class="record-period-head"><div class="record-period-heading"><div class="sec-t">팀 순위 및 누적 기록</div><span class="record-round-range">'+esc(recordRoundRangeLabel(list))+'</span></div><div class="record-period-label">'+esc(info.start||'')+(info.end&&info.end!==info.start?' ~ '+esc(info.end):'')+'</div><button class="btn sm section-export-btn" type="button" data-export-target="exportTeamStandingSection" data-export-name="팀순위_누적기록" data-export-ignore>이미지 저장</button></div>'+ 
     '<div class="tablewrap record-standing-table">'+standingHtml+'</div></div>'+ 
-    '<div class="record-export-section" id="exportDayDetailsSection"><div class="record-period-head"><div class="sec-t">경기일별 상세 기록</div><div class="record-period-label">최신 경기일부터 표시 · 날짜를 눌러 펼치기</div><button class="btn sm section-export-btn" type="button" data-export-target="exportDayDetailsSection" data-export-name="경기일별_상세기록" data-export-ignore>이미지 저장</button></div>'+ 
+    '<div class="record-export-section" id="exportDayDetailsSection"><div class="record-period-head"><div class="sec-t">경기일별 상세 기록</div><div class="record-period-label">최신 경기일부터 표시 · 날짜를 눌러 펼치기 · 대진을 눌러 상세기록 보기</div><button class="btn sm section-export-btn" type="button" data-export-target="exportDayDetailsSection" data-export-name="경기일별_상세기록" data-export-ignore>이미지 저장</button></div>'+ 
     '<div class="record-day-list">'+byDate.map((x,i)=>recordDayBlock(x.date,x.items,i===0)).join('')+'</div></div>';
 }
 function renderDash(){
@@ -3837,16 +3837,22 @@ function renderPlayer(){
   const specials=DB.specials.filter(x=>{const d=normDate(x.date);return draftPlayerVisible(x.player,draftNames)&&d&&(!info.start||d>=info.start)&&(!info.end||d<=info.end);}).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
   $("#specialTable").innerHTML=tbl([{t:"날짜"},{t:"선수"},{t:"구분"},{t:"내용"}],specials.map(x=>[esc(x.date),playerCardLink(x.player,'<b>'+esc(x.player)+'</b>',info),'<span class="pill">'+esc(x.type)+'</span>',esc(x.memo)]));
 }
-function pairStats(a,b){
-  const ms=chemMatches(), ids=new Set(ms.map(m=>m.id));
-  const goalOf={}; DB.goals.forEach(g=>{ if(ids.has(g.id)) goalOf[g.id+"|"+g.player]=(goalOf[g.id+"|"+g.player]||0)+g.g; });
-  const teamOf={}; DB.attendance.forEach(r=>{ if(ids.has(r.id)&&r.player) teamOf[r.id+"|"+r.player]=r.team; });
+function pairStats(a,b,list){
+  const ms=uniqueRecordMatches(list||chemMatches()), ids=new Set(ms.map(m=>detailMatchKey(m.id)));
+  const goalOf={}; DB.goals.forEach(g=>{ const id=detailMatchKey(g.id);if(ids.has(id))goalOf[id+"|"+g.player]=(goalOf[id+"|"+g.player]||0)+num(g.g); });
+  const teamOf=new Map(); DB.attendance.forEach(r=>{
+    const id=detailMatchKey(r.id),team=String(r.team||'').trim();
+    if(!ids.has(id)||!r.player||!team)return;
+    const key=id+'|'+r.player;if(!teamOf.has(key))teamOf.set(key,new Set());teamOf.get(key).add(team);
+  });
   const tog={p:0,w:0,d:0,l:0,ag:0,bg:0,rows:[]};
   const vs ={p:0,aw:0,d:0,bw:0,ag:0,bg:0,rows:[]};
   ms.slice().sort((x,y)=>(y.date||"").localeCompare(x.date||"")).forEach(m=>{
-    const ta=teamOf[m.id+"|"+a], tb=teamOf[m.id+"|"+b];
-    if(!ta||!tb) return;
-    const ag=goalOf[m.id+"|"+a]||0, bg=goalOf[m.id+"|"+b]||0;
+    const at=teamOf.get(detailMatchKey(m.id)+'|'+a),bt=teamOf.get(detailMatchKey(m.id)+'|'+b);
+    if(at?.size!==1||bt?.size!==1)return;
+    const ta=[...at][0],tb=[...bt][0];
+    if(![m.home,m.away].includes(ta)||![m.home,m.away].includes(tb))return;
+    const ag=goalOf[detailMatchKey(m.id)+"|"+a]||0, bg=goalOf[detailMatchKey(m.id)+"|"+b]||0;
     const resOf=t=>matchResult(m,t);
     const r=resOf(ta); if(!r) return;
     if(ta===tb){ tog.p++; tog[r.toLowerCase()]++; tog.ag+=ag; tog.bg+=bg; tog.rows.push({m,team:ta,r,ag,bg}); }
@@ -4100,6 +4106,7 @@ function renderChem(){
   const sel = $("#chemPlayer"), otherInput = $("#chemOther");
   const playerSuggest=$("#chemPlayerSuggest"), otherSuggest=$("#chemOtherSuggest");
   if(!names.length){
+    chemSel='';chemOther='';updateChemCompareButton();
     sel.value='';
     if(playerSuggest){playerSuggest.innerHTML='';playerSuggest.classList.remove("on");}
     $("#chemSum").innerHTML='<span class="muted">해당 조건의 경기 기록이 없습니다.</span>';
@@ -4136,6 +4143,7 @@ function renderChem(){
     c.coaches.slice(0,10).map(x=>[esc(x.name), x.p+"경기", x.w+"·"+x.d+"·"+x.l, x.rate+"%", x.att+"%", x.tg+"골", "<b>"+x.score+"</b>", bar(x.score)]))
     : '<div class="empty">감독 기록이 없습니다.</div>';
   renderPair(chemSel, chemOther);
+  updateChemCompareButton();
 }
 function rosterStats(){
   const ps = playerStats(), byName = {};
