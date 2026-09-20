@@ -18,6 +18,10 @@ let admin = false, comp = "ALL", calRef = new Date(), selDay = null, chemSel = "
 let seasonYear = "ALL", half = "ALL", dashDate = "", chemOther = "", monthlyMetric = "g";
 let repAdminYear = "";
 let abilityYear = "", abilityHalf = "H1", abilityAsOfDate = "";
+// 화면 정렬 상태만 보관한다. 원본 DB 및 공유 설정에는 저장하지 않는다.
+let abilitySort = {key:"player", direction:"asc"};
+const ABILITY_SORT_FIELDS = [["player","선수명"],["ovr","OVR"],["pac","PAC"],["sho","SHO"],["pas","PAS"],["dri","DRI"],["def","DEF"],["phy","PHY"]];
+const NAME_COLLATOR_KO = new Intl.Collator("ko", {numeric:true, sensitivity:"variant"});
 let recordMode = "LATEST", recordYear = "", recordDate = "", recordStart = "", recordEnd = "", recordSegment = "ALL";
 /* 대시보드 랭킹 5종과 상대전적은 종합 누적기록과 독립된 조회기간을 사용합니다. */
 let rankingRangeMode = "", rankingRangeYear = "", rankingRangeStart = "", rankingRangeEnd = "", rankingRangeSegment = "ALL";
@@ -32,6 +36,10 @@ const $$ = (s, root=document) => [...root.querySelectorAll(s)];
 const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const num = v => { const n = parseFloat(String(v??"").replace(/[^0-9.\-]/g,"")); return isNaN(n)?0:n; };
 const pct = (a,b) => b? Math.round(a/b*1000)/10 : 0;
+function compareNamesKo(a,b){
+  const left=String(a??"").normalize("NFKC").trim(), right=String(b??"").normalize("NFKC").trim();
+  return NAME_COLLATOR_KO.compare(left,right) || (left<right?-1:left>right?1:0);
+}
 function toast(m){ const t=$("#toast"); t.textContent=m+(GGFC.pending?' · 공유 저장 대기':''); t.classList.add("on"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("on"),2200); }
 function teamColor(name){ const ts=teamList(); const i=ts.indexOf(name); return TEAM_COLORS[(i<0?0:i)%TEAM_COLORS.length]; }
 function ymd(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
@@ -298,7 +306,7 @@ const UNI = {
   name:"경기기록",
   head:"날짜,대회,반기,라운드,경기번호,그룹,팀,감독,상대팀,득점,실점,파울수,몰수패,득점자,도움,개인파울,선방,MOM,득점자 열 검사,"+
     Array.from({length:MAXP},(_,i)=>"선수"+(i+1)).join(","),
-  desc:"한 줄 = 한 경기의 한 팀. 첨부 GGFC DB 양식과 동일하게 파울수=팀파울, 도움·개인파울·선방·MOM=선수별 기록입니다. 득점자·도움·개인파울·선방·MOM은 '김철수 2, 최민수 1'처럼 이름과 횟수를 쉼표로 적습니다. 개인파울과 MOM은 선수 능력치에 반영되고 팀파울은 팀 통계에만 사용됩니다. MOM은 수상 선수명을 입력하며 같은 선수가 한 Round에 여러 경기 MOM이면 횟수만큼 누적됩니다. 그룹은 날짜별 팀 리그 소속이며 A/슈퍼리그는 슈퍼리그, B/챌린지리그는 챌린지리그로 반영됩니다. 몰수패한 팀의 몰수패 칸에 '몰수패'를 입력하면 점수와 관계없이 패배로 판정되고 상대팀은 승리로 판정됩니다. 출석 선수를 선수1~15에 적습니다. 반기는 상반기/하반기, 라운드는 R1·R2처럼 적고, 경기번호는 구장까지 포함해 1A·1B. 감독이 선수로 뛰었다면 선수 칸에도 이름을 적어야 출석으로 집계됩니다.",
+  desc:"한 줄 = 한 경기의 한 팀. 첨부 GGFC DB 양식과 동일하게 파울수=팀파울, 도움·개인파울·선방·MOM=선수별 기록입니다. 득점자·도움·개인파울·선방·MOM은 '김철수 2, 최민수 1'처럼 이름과 횟수를 쉼표로 적습니다. 개인파울은 선수 능력치와 해당 경기·팀의 팀파울 합계에 반영합니다. 개인파울이 등록된 팀은 개인파울 합계를 사용하고, 없으면 파울수 열의 값을 사용합니다. 두 값을 더하지 않습니다. MOM은 선수 능력치에 반영합니다. MOM은 수상 선수명을 입력하며 같은 선수가 한 Round에 여러 경기 MOM이면 횟수만큼 누적됩니다. 그룹은 날짜별 팀 리그 소속이며 A/슈퍼리그는 슈퍼리그, B/챌린지리그는 챌린지리그로 반영됩니다. 몰수패한 팀의 몰수패 칸에 '몰수패'를 입력하면 점수와 관계없이 패배로 판정되고 상대팀은 승리로 판정됩니다. 출석 선수를 선수1~15에 적습니다. 반기는 상반기/하반기, 라운드는 R1·R2처럼 적고, 경기번호는 구장까지 포함해 1A·1B. 감독이 선수로 뛰었다면 선수 칸에도 이름을 적어야 출석으로 집계됩니다.",
   rows:[
     uniRow("2026-03-07","정규리그","상반기","R1","1A","A특공대","박감독","풀파워",3,2,4,["김철수","최민수","이준호","박도윤","장민석"],"김철수 2, 최민수 1","","A","최민수 1","김철수 1","박도윤 6","김철수",""),
     uniRow("2026-03-07","정규리그","상반기","R1","1A","풀파워","정감독","A특공대",2,3,6,["이영호","한지훈","권태현","오세훈"],"이영호 2","","A","한지훈 1","이영호 2","오세훈 5","",""),
@@ -923,13 +931,42 @@ function matchResult(m,team){
 }
 function forfeitText(m){ const a=forfeitTeamNames(m); return a.length?"몰수패: "+a.join(", "):""; }
 
+/* 개인파울이 등록된 경기·팀은 선수별 합계를 팀파울로 사용한다.
+   개인 기록이 없을 때만 기존 파울수(hf/af)를 사용해 이중 집계를 방지한다.
+   원본 필드는 유지하므로 조회·내보내기·재업로드를 반복해도 파울이 늘지 않는다. */
+function personalTeamFoulIndex(list){
+  const matchesById=new Map((list||[]).map(m=>[String(m.id??"").trim(),m]));
+  const totals=new Map();
+  (DB.fouls||[]).forEach(r=>{
+    const id=String(r.id??"").trim(), m=matchesById.get(id);
+    const team=String(r.team||"").trim(), player=String(r.player||"").trim(), count=num(r.fouls);
+    if(!id||!m||!player||isOwnGoalPlayer(player)||!Number.isFinite(count)||count<=0) return;
+    if(team!==String(m.home||"").trim() && team!==String(m.away||"").trim()) return;
+    if(!totals.has(id)) totals.set(id,new Map());
+    const byTeam=totals.get(id); byTeam.set(team,(byTeam.get(team)||0)+count);
+  });
+  return totals;
+}
+function matchTeamFouls(m,index){
+  const byTeam=(index||personalTeamFoulIndex([m])).get(String(m.id??"").trim());
+  const value=(team,raw)=>{
+    const key=String(team||"").trim();
+    if(byTeam&&byTeam.has(key)) return byTeam.get(key);
+    const n=num(raw); return Number.isFinite(n)?Math.max(0,n):0;
+  };
+  return {home:value(m.home,m.hf),away:value(m.away,m.af)};
+}
+function totalTeamFouls(list){
+  const index=personalTeamFoulIndex(list);
+  return list.reduce((sum,m)=>{const f=matchTeamFouls(m,index);return sum+f.home+f.away;},0);
+}
 function teamStats(){
-  const t={};
+  const t={}, list=matches(), foulIndex=personalTeamFoulIndex(list);
   const g=n=>t[n]||(t[n]={team:n,p:0,w:0,d:0,l:0,gf:0,ga:0,f:0,pts:0});
-  matches().forEach(m=>{
+  list.forEach(m=>{
     if(!m.home||!m.away) return;
     const H=g(m.home), A=g(m.away);
-    H.p++;A.p++; H.gf+=m.hs;H.ga+=m.as; A.gf+=m.as;A.ga+=m.hs; H.f+=m.hf;A.f+=m.af;
+    H.p++;A.p++; H.gf+=m.hs;H.ga+=m.as; A.gf+=m.as;A.ga+=m.hs; const fouls=matchTeamFouls(m,foulIndex); H.f+=fouls.home;A.f+=fouls.away;
     const hr=matchResult(m,m.home), ar=matchResult(m,m.away);
     if(hr==="W"){H.w++;H.pts+=3;} else if(hr==="D"){H.d++;H.pts++;} else H.l++;
     if(ar==="W"){A.w++;A.pts+=3;} else if(ar==="D"){A.d++;A.pts++;} else A.l++;
@@ -1972,6 +2009,50 @@ function abilityYearGameDates(year){
   const y=String(year||"");
   return [...new Set((DB.matches||[]).map(m=>normDate(m.date)).filter(d=>d&&d.slice(0,4)===y))].sort().reverse();
 }
+function sortAbilityRecords(records){
+  const {key,direction}=abilitySort, sign=direction==="desc"?-1:1;
+  return records.slice().sort((a,b)=>{
+    if(key==="player") return sign*compareNamesKo(a.player,b.player);
+    // 표·모바일 카드에 표시되는 정수와 같은 기준으로 비교한다.
+    return sign*(Math.floor(num(a[key]))-Math.floor(num(b[key]))) || compareNamesKo(a.player,b.player);
+  });
+}
+function abilitySortButtons(key,kind){
+  const label=ABILITY_SORT_FIELDS.find(f=>f[0]===key)[1];
+  return ["asc","desc"].map(direction=>{
+    const active=abilitySort.key===key&&abilitySort.direction===direction;
+    const name=direction==="asc"?"오름차순":"내림차순", arrow=direction==="asc"?"↑":"↓";
+    return '<button type="button" class="ability-sort-button" data-ability-sort-key="'+key+'" data-ability-sort-direction="'+direction+'" data-ability-sort-control="'+kind+'" aria-label="'+label+' '+name+'" title="'+label+' '+name+'" aria-pressed="'+active+'"><span aria-hidden="true">'+arrow+'</span>'+(kind==="toolbar"?' '+name:'')+'</button>';
+  }).join('');
+}
+function abilitySortHeader(key,label){
+  const state=abilitySort.key===key?(abilitySort.direction==="asc"?"ascending":"descending"):"none";
+  return '<th scope="col" aria-sort="'+state+'"><div class="ability-sort-heading"><span>'+label+'</span><span class="ability-sort-arrows">'+abilitySortButtons(key,"header")+'</span></div></th>';
+}
+function abilitySortToolbar(half){
+  const label=ABILITY_SORT_FIELDS.find(f=>f[0]===abilitySort.key)[1];
+  const direction=abilitySort.direction==="asc"?"오름차순":"내림차순";
+  return '<div class="ability-sort-toolbar"><label for="abilitySortField'+half+'">정렬 기준</label><select id="abilitySortField'+half+'" data-ability-sort-field>'+ABILITY_SORT_FIELDS.map(([key,name])=>'<option value="'+key+'"'+(key===abilitySort.key?' selected':'')+'>'+name+'</option>').join('')+'</select><div class="ability-sort-actions">'+abilitySortButtons(abilitySort.key,"toolbar")+'</div><span class="ability-sort-status" role="status">'+label+' '+direction+(abilitySort.key!=="player"?' · 동점은 이름순':'')+'</span></div>';
+}
+function updateAbilitySort(key,direction,origin){
+  if(!ABILITY_SORT_FIELDS.some(f=>f[0]===key)||!["asc","desc"].includes(direction)) return;
+  const sections=$("#abilityHalfSections"), half=origin.closest('[data-ability-half]')?.dataset.abilityHalf;
+  const scrolls=$$('[data-ability-half]',sections).map(section=>({half:section.dataset.abilityHalf,left:section.querySelector('.ability-table-wrap')?.scrollLeft||0}));
+  const kind=origin.dataset.abilitySortControl||"select";
+  abilitySort={key,direction}; renderAbility();
+  const section=sections.querySelector('[data-ability-half="'+half+'"]');
+  const focus=section?.querySelector(kind==="select"?'[data-ability-sort-field]':'[data-ability-sort-control="'+kind+'"][data-ability-sort-key="'+key+'"][data-ability-sort-direction="'+direction+'"]');
+  if(focus) focus.focus({preventScroll:true});
+  scrolls.forEach(item=>{const wrap=sections.querySelector('[data-ability-half="'+item.half+'"] .ability-table-wrap');if(wrap)wrap.scrollLeft=item.left;});
+}
+function handleAbilitySortClick(e){
+  const button=e.target.closest('[data-ability-sort-key]');
+  if(!button) return;
+  updateAbilitySort(button.dataset.abilitySortKey,button.dataset.abilitySortDirection,button);
+}
+function handleAbilitySortChange(e){
+  if(e.target.matches('[data-ability-sort-field]')) updateAbilitySort(e.target.value,abilitySort.direction,e.target);
+}
 function renderAbility(){
   const original=playerAbilityRecordAtDate,memo=new Map();
   playerAbilityRecordAtDate=function(...args){const key=JSON.stringify(args);if(!memo.has(key))memo.set(key,original(...args));return memo.get(key);};
@@ -2052,19 +2133,19 @@ function renderAbility(){
     : '<div class="ability-riser-empty">'+(selectedDate?'선택 경기일 기준으로 직전 경기일 대비 1점 이상 상승한 선수가 없습니다.':'최근 비교 가능한 경기에서 1점 이상 상승한 선수가 없습니다.')+'</div>';
 
   const renderHalf=(half,label,cmp,cutoff)=>{
-    const rows=(cutoff?abilityRecordsAtDate(abilityYear,half,cutoff):abilityRecords(abilityYear,half)).sort((a,b)=>String(a.player||"").localeCompare(String(b.player||""),"ko"));
+    const rows=sortAbilityRecords(cutoff?abilityRecordsAtDate(abilityYear,half,cutoff):abilityRecords(abilityYear,half));
     const prevMap={};
     if(cmp.previous) rows.forEach(r=>prevMap[r.player]=playerAbilityRecordAtDate(r.player,abilityYear,half,cmp.previous,true));
     const compareText=cutoff
       ? ('기준 '+cutoff+(cmp.latest?' · 최근 경기 '+cmp.latest:' · 선택 경기일까지 경기 없음')+(cmp.previous?' / 비교 '+cmp.previous:''))
       : (cmp.latest?(cmp.previous?'최근 '+cmp.latest+' / 비교 '+cmp.previous:'최근 '+cmp.latest+' / 비교일 없음'):'기록 없음');
-    const table=rows.length?'<div class="tablewrap ability-table-wrap"><table class="ability-table"><thead><tr><th>선수</th><th>팀</th><th>평가</th><th>시스템</th><th>OVR</th><th>PAC</th><th>SHO</th><th>PAS</th><th>DRI</th><th>DEF</th><th>PHY</th><th>출석R</th><th>누적 결석R</th><th>기준R</th><th>골</th><th>도움</th><th>개인파울</th><th>선방</th><th>MOM</th><th>승점</th><th>Career 누적 결석감점</th></tr></thead><tbody>'+rows.map(r=>{
+    const table=rows.length?'<div class="tablewrap ability-table-wrap"><table class="ability-table"><thead><tr>'+abilitySortHeader('player','선수')+'<th>팀</th><th>평가</th><th>시스템</th>'+ABILITY_SORT_FIELDS.slice(1).map(([key,label])=>abilitySortHeader(key,label)).join('')+'<th>출석R</th><th>누적 결석R</th><th>기준R</th><th>골</th><th>도움</th><th>개인파울</th><th>선방</th><th>MOM</th><th>승점</th><th>Career 누적 결석감점</th></tr></thead><tbody>'+rows.map(r=>{
       const p=prevMap[r.player]||null, abs=r.absence||{rounds:0,penalty:{}}, ap=abs.penalty||{};
       return '<tr><td>'+playerCardLink(r.player,playerFaceChip(r.player,false,r.info?.year||abilityYear),Object.assign({},r.info,{asOf:r.cutoffDate,allCompetitions:true}))+'</td><td>'+(r.team?teamChip(r.team):'<span class="muted">—</span>')+'</td><td><span class="ability-status '+(r.measured?'':'unassessed')+'">'+(r.measured?'SB '+esc(r.sbDate):'SB 미평가')+'</span></td>'+ 
         '<td><span class="ability-mode compare">Round+결석감점</span></td><td><b>'+abilityScoreWithDelta(r.ovr,p&&p.ovr)+'</b></td><td>'+abilityScoreWithDelta(r.pac,p&&p.pac)+'</td><td>'+abilityScoreWithDelta(r.sho,p&&p.sho)+'</td><td>'+abilityScoreWithDelta(r.pas,p&&p.pas)+'</td><td>'+abilityScoreWithDelta(r.dri,p&&p.dri)+'</td><td>'+abilityScoreWithDelta(r.def,p&&p.def)+'</td><td>'+abilityScoreWithDelta(r.phy,p&&p.phy)+'</td>'+ 
         '<td>'+r.summary.att+'</td><td>'+num(abs.rounds)+'</td><td><b>'+num(r.summary.att+num(abs.rounds))+' / '+num(r.summary.progress)+'R</b></td><td>'+r.summary.g+'</td><td>'+r.summary.a+'</td><td>'+r.summary.f+'</td><td>'+r.summary.sv+'</td><td>'+r.summary.mom+'</td><td>'+r.summary.pts+'</td><td><span class="ability-growth negative">SHO '+fmtGrowth(num(ap.sho))+' · PAS '+fmtGrowth(num(ap.pas))+' · DRI '+fmtGrowth(num(ap.dri))+' · DEF '+fmtGrowth(num(ap.def))+' · PHY '+fmtGrowth(num(ap.phy))+'</span></td></tr>';
     }).join('')+'</tbody></table></div>':'<div class="empty">'+label+' 선수 데이터가 없습니다.</div>';
-    return '<div class="ability-half-section"><div class="ability-half-head"><div><div class="ability-half-title">'+label+(cutoff?' · '+cutoff+' 기준':'')+'</div><div class="ability-half-meta">'+cmp.info.start+' ~ '+cmp.info.end+' · 선택 경기일까지 최종 기준 '+abilityPeriodRoundBasis(cmp.info,cutoff||cmp.latest||cmp.info.end)+'R · 출석R+결석R=선택 기간 최종 기준R · 능력치 성장은 이전 시즌부터 연속 누적</div></div><div class="ability-half-compare">'+compareText+'</div></div>'+table+mobileAbilityCards(rows,prevMap)+'</div>';
+    return '<div class="ability-half-section" data-ability-half="'+half+'"><div class="ability-half-head"><div><div class="ability-half-title">'+label+(cutoff?' · '+cutoff+' 기준':'')+'</div><div class="ability-half-meta">'+cmp.info.start+' ~ '+cmp.info.end+' · 선택 경기일까지 최종 기준 '+abilityPeriodRoundBasis(cmp.info,cutoff||cmp.latest||cmp.info.end)+'R · 출석R+결석R=선택 기간 최종 기준R · 능력치 성장은 이전 시즌부터 연속 누적</div></div><div class="ability-half-compare">'+compareText+'</div></div>'+abilitySortToolbar(half)+table+mobileAbilityCards(rows,prevMap)+'</div>';
   };
   if($("#abilityHalfSections")){
     $("#abilityHalfSections").innerHTML=selectedDate
@@ -2475,7 +2556,8 @@ function groundMatchCard(m){
   const meta=[];
   if(m.round) meta.push(esc(m.round));
   if(m.no) meta.push(esc(m.no));
-  if(num(m.hf)+num(m.af)>0) meta.push("파울 "+num(m.hf)+":"+num(m.af));
+  const fouls=matchTeamFouls(m);
+  if(fouls.home+fouls.away>0) meta.push("파울 "+fouls.home+":"+fouls.away);
   if(forfeitText(m)) meta.push(esc(forfeitText(m)));
   return '<div class="ground-match fixture-match-card">'+
     '<div class="ground-match-meta">'+(meta.length?meta.map(x=>'<span>'+x+'</span>').join('<span>·</span>'):'<span>&nbsp;</span>')+'</div>'+
@@ -3329,12 +3411,12 @@ function queryRosterStats(list){
 }
 
 function statsFromMatches(list){
-  const t={};
+  const t={}, foulIndex=personalTeamFoulIndex(list);
   const get=n=>t[n]||(t[n]={team:n,p:0,w:0,d:0,l:0,gf:0,ga:0,f:0,pts:0});
   list.forEach(m=>{
     if(!m.home||!m.away) return;
     const H=get(m.home), A=get(m.away), hs=num(m.hs), as=num(m.as);
-    H.p++; A.p++; H.gf+=hs; H.ga+=as; A.gf+=as; A.ga+=hs; H.f+=num(m.hf); A.f+=num(m.af);
+    H.p++; A.p++; H.gf+=hs; H.ga+=as; A.gf+=as; A.ga+=hs; const fouls=matchTeamFouls(m,foulIndex); H.f+=fouls.home; A.f+=fouls.away;
     const hr=matchResult(m,m.home), ar=matchResult(m,m.away);
     if(hr==="W"){H.w++;H.pts+=3;} else if(hr==="D"){H.d++;H.pts++;} else H.l++;
     if(ar==="W"){A.w++;A.pts+=3;} else if(ar==="D"){A.d++;A.pts++;} else A.l++;
@@ -3408,20 +3490,20 @@ function renderDashboardQueryRankings(info){
   // 모든 랭킹은 팀 순위와 동일한 시즌·반기 전체 기록으로 계산한다.
   info=halfTeamRankingInfo(info||rankingQueryInfo());
   const list=info.list||[], period=info.label+" · "+list.length+"경기 기준";
-  if($("#dashScorerQueryNote")) $("#dashScorerQueryNote").textContent=period+" · 득점이 같으면 출전 횟수가 적은 선수가 우선입니다.";
-  if($("#dashAttendanceQueryNote")) $("#dashAttendanceQueryNote").textContent=period+" · 출석률은 주 소속팀 경기 수 대비 선수 출석 횟수입니다.";
+  if($("#dashScorerQueryNote")) $("#dashScorerQueryNote").textContent=period+" · 득점 ↓ · 경기수 ↑ · 동률이면 이름순";
+  if($("#dashAttendanceQueryNote")) $("#dashAttendanceQueryNote").textContent=period+" · 출석률은 주 소속팀 경기 수 대비 선수 출석 횟수입니다. 출석률·출석수·득점 동률이면 이름순";
 
-  if($("#dashPlayerPointQueryNote")) $("#dashPlayerPointQueryNote").textContent=period+" · 실제 출석 경기의 승점 누적";
-  if($("#dashTeamFoulQueryNote")) $("#dashTeamFoulQueryNote").textContent=period+" · 누적 파울이 적은 팀 우선";
+  if($("#dashPlayerPointQueryNote")) $("#dashPlayerPointQueryNote").textContent=period+" · 실제 출석 경기의 승점 누적 · 승점·경기수·득점 동률이면 이름순";
+  if($("#dashTeamFoulQueryNote")) $("#dashTeamFoulQueryNote").textContent=period+" · 누적 파울 ↑ · 경기수 ↓ · 동률이면 팀 이름순. 경기별 개인파울 합계 우선, 없으면 기존 팀파울 적용";
 
   const players=queryPlayerStats(list);
-  const scorers=players.filter(p=>p.g>0).sort((a,b)=>b.g-a.g || a.att-b.att || a.player.localeCompare(b.player)).slice(0,20);
+  const scorers=players.filter(p=>p.g>0).sort((a,b)=>b.g-a.g || a.att-b.att || compareNamesKo(a.player,b.player)).slice(0,20);
   $("#dashScorers").innerHTML=tbl(
     [{t:"#"},{t:"선수"},{t:"팀"},{t:"경기",n:1},{t:"득점",n:1}],
     scorers.map((p,i)=>['<span class="rank'+(i<3?' top':'')+'">'+(i+1)+'</span>',playerCardLink(p.player,'<b>'+esc(p.player)+'</b>',info),'<span class="muted">'+teamChip(p.mainTeam)+'</span>',p.att,'<b>'+p.g+'</b>'])
   );
 
-  const attendance=players.filter(p=>p.teamGames>0).sort((a,b)=>b.attendanceRate-a.attendanceRate || b.att-a.att || b.g-a.g || a.player.localeCompare(b.player)).slice(0,20);
+  const attendance=players.filter(p=>p.teamGames>0).sort((a,b)=>b.attendanceRate-a.attendanceRate || b.att-a.att || b.g-a.g || compareNamesKo(a.player,b.player)).slice(0,20);
   const attendanceRanks=sharedRanks(attendance,p=>p.attendanceRate);
   $("#dashAttendanceRank").innerHTML=tbl(
     [{t:"#"},{t:"선수"},{t:"팀"},{t:"출석",n:1},{t:"팀 경기",n:1},{t:"출석률",n:1}],
@@ -3438,7 +3520,7 @@ function renderDashboardQueryRankings(info){
   );
   renderRepresentativePointBreakdown(ranking.detail,scope);
 
-  const playerPointsAll=players.filter(p=>p.att>0).sort((a,b)=>b.pts-a.pts || b.att-a.att || b.g-a.g || a.player.localeCompare(b.player));
+  const playerPointsAll=players.filter(p=>p.att>0).sort((a,b)=>b.pts-a.pts || b.att-a.att || b.g-a.g || compareNamesKo(a.player,b.player));
   const playerPoints=playerPointsAll.slice(0,5);
   const playerPointRanks=sharedRanks(playerPoints,p=>p.pts);
   let tiedBeyond=0;
@@ -3454,7 +3536,7 @@ function renderDashboardQueryRankings(info){
     })
   );
 
-  const foulTeams=statsFromMatches(list).sort((a,b)=>a.f-b.f || b.p-a.p || a.team.localeCompare(b.team));
+  const foulTeams=statsFromMatches(list).sort((a,b)=>a.f-b.f || b.p-a.p || compareNamesKo(teamDisplayName(a.team),teamDisplayName(b.team)) || compareNamesKo(a.team,b.team));
   const foulRanks=sharedRanks(foulTeams,t=>t.f);
   $("#dashTeamFoulRank").innerHTML=tbl(
     [{t:"#"},{t:"팀"},{t:"경기",n:1},{t:"파울",n:1}],
@@ -3529,7 +3611,7 @@ function recordAttendanceBlock(list){
 function recordDayBlock(date,list,open){
   const A=list.filter(m=>matchGround(m)==="A"), B=list.filter(m=>matchGround(m)==="B"), unassigned=list.filter(m=>!matchGround(m));
   A.push(...unassigned);
-  const goals=list.reduce((s,m)=>s+num(m.hs)+num(m.as),0), fouls=list.reduce((s,m)=>s+num(m.hf)+num(m.af),0);
+  const goals=list.reduce((s,m)=>s+num(m.hs)+num(m.as),0), fouls=totalTeamFouls(list);
   return '<details class="record-day"'+playerCardQueryAttrs({start:date,end:date})+(open?' open':'')+'><summary><span class="record-day-date">'+esc(date)+'</span><span class="record-day-meta">'+list.length+'경기 · '+goals+'골 · 파울 '+fouls+'회</span></summary><div class="record-day-body">'+
     '<div class="ground-grid">'+groundPanel("A",A)+groundPanel("B",B)+'</div>'+recordAttendanceBlock(list)+'</div></details>';
 }
@@ -3546,7 +3628,7 @@ function renderRecentMatches(){
   const ids=new Set(list.map(m=>m.id));
   const dates=[...new Set(list.map(m=>normDate(m.date)).filter(Boolean))].sort().reverse();
   const teams=[...new Set(list.flatMap(m=>[m.home,m.away]).filter(Boolean))];
-  const goals=list.reduce((s,m)=>s+num(m.hs)+num(m.as),0), fouls=list.reduce((s,m)=>s+num(m.hf)+num(m.af),0);
+  const goals=list.reduce((s,m)=>s+num(m.hs)+num(m.as),0), fouls=totalTeamFouls(list);
   const att=DB.attendance.filter(a=>ids.has(a.id));
   const uniquePlayers=new Set(att.map(a=>a.player).filter(Boolean)).size;
   const summaries=[
@@ -3572,9 +3654,9 @@ function renderDash(){
   if($("#dashSub")) $("#dashSub").textContent="경기결과 · 순위 · 상대전적 · 선수 기록";
 }
 function matchCard(m){
-  const homeSc=teamScorers(m,m.home), awaySc=teamScorers(m,m.away);
+  const homeSc=teamScorers(m,m.home), awaySc=teamScorers(m,m.away), fouls=matchTeamFouls(m);
   return '<div class="match fixture-match-card">'+
-    '<div class="top"><span class="pill">'+esc(m.comp||"정규리그")+'</span>'+(m.round?'<span class="pill">'+esc(m.round)+'</span>':'')+(m.no?'<span class="pill">'+esc(m.no)+' 경기</span>':'')+(m.half?'<span class="pill">'+halfLabel(normHalf(m.half))+'</span>':'')+(forfeitText(m)?'<span class="pill l">'+esc(forfeitText(m))+'</span>':'')+'<span>'+esc(m.date||"")+'</span><span class="muted">파울 '+m.hf+':'+m.af+'</span></div>'+
+    '<div class="top"><span class="pill">'+esc(m.comp||"정규리그")+'</span>'+(m.round?'<span class="pill">'+esc(m.round)+'</span>':'')+(m.no?'<span class="pill">'+esc(m.no)+' 경기</span>':'')+(m.half?'<span class="pill">'+halfLabel(normHalf(m.half))+'</span>':'')+(forfeitText(m)?'<span class="pill l">'+esc(forfeitText(m))+'</span>':'')+'<span>'+esc(m.date||"")+'</span><span class="muted">파울 '+fouls.home+':'+fouls.away+'</span></div>'+
     fixtureScoreRow(m,homeSc,awaySc,'calendar-fixture')+
     '</div>';
 }
@@ -4227,7 +4309,7 @@ function renderData(){
     ["경기", DB.matches.length, '<span class="muted">'+esc(compList().join(", ")||"—")+'</span>'],
     ["출석(연인원)", DB.attendance.length, '<span class="muted">'+teamList().length+'개 팀</span>'],
     ["득점/어시스트", DB.goals.length, '<span class="muted">총 '+DB.goals.reduce((s,g)=>s+num(g.g),0)+'골 · '+DB.goals.reduce((s,g)=>s+num(g.a),0)+'도움</span>'],
-    ["개인파울", (DB.fouls||[]).length, '<span class="muted">총 '+(DB.fouls||[]).reduce((s,g)=>s+num(g.fouls),0)+'회 · 팀파울과 별도</span>'],
+    ["개인파울", (DB.fouls||[]).length, '<span class="muted">총 '+(DB.fouls||[]).reduce((s,g)=>s+num(g.fouls),0)+'회 · 경기·팀별 합계로 팀파울 반영</span>'],
     ["선방", (DB.saves||[]).length, '<span class="muted">총 '+(DB.saves||[]).reduce((s,g)=>s+num(g.saves),0)+'회</span>'],
     ["MOM", (DB.moms||[]).length, '<span class="muted">총 '+(DB.moms||[]).reduce((s,g)=>s+num(g.mom),0)+'회 · 선수 능력치 반영</span>'],
     ["SoccerBee", (DB.soccerbee||[]).length, '<span class="muted">측정 이력 '+(DB.soccerbee||[]).length+'건</span>'],
@@ -4254,6 +4336,8 @@ function renderAll(){
 }
 
 /* ---------- events ---------- */
+$("#abilityHalfSections").addEventListener("click",handleAbilitySortClick);
+$("#abilityHalfSections").addEventListener("change",handleAbilitySortChange);
 document.addEventListener("click",e=>{
   const player=e.target.closest(".player-card-link");
   if(player){

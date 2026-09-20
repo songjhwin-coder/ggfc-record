@@ -2284,3 +2284,94 @@ tr:nth-child(1) .rank.top{background:var(--kl-red);color:#fff}
 .modal{border-color:#d0d9e7;border-radius:8px}
 .password-label{color:var(--kl-navy)}
 .toast{background:var(--kl-navy);color:#fff;border-radius:6px}
+
+
+/* V3.18.5 — 능력치 정렬: PC 열 버튼과 모바일 공통 도구 */
+.ability-sort-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid #dfe5ed;background:#f6f8fb;color:#314765;font-size:12px}
+.ability-sort-toolbar>label{font-weight:800;white-space:nowrap}
+.ability-sort-toolbar select{width:auto;min-width:90px;max-width:160px;min-height:36px;padding:6px 28px 6px 9px;border:1px solid #b8c7db;border-radius:4px;background:#fff;color:#061f44;font:inherit;font-weight:750}
+.ability-sort-actions,.ability-sort-arrows{display:inline-flex;gap:3px;align-items:center}
+.ability-sort-button{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:3px;min-width:25px;min-height:28px;padding:3px 6px;border:1px solid #bdcbdc;border-radius:3px;background:#fff;color:#3b526e;font:inherit;font-size:12px;font-weight:800;cursor:pointer;line-height:1.2}
+.ability-sort-actions .ability-sort-button{min-height:36px;padding:7px 10px}
+.ability-sort-button:hover{background:#e8eff8;border-color:#6688b0}
+.ability-sort-button[aria-pressed="true"]{background:#061f44;color:#fff;border-color:#061f44}
+.ability-sort-button:focus-visible,.ability-sort-toolbar select:focus-visible{outline:3px solid #4e90da;outline-offset:2px}
+.ability-sort-heading{display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
+.ability-table th:first-child .ability-sort-heading{justify-content:flex-start}
+.ability-table th[aria-sort="ascending"],.ability-table th[aria-sort="descending"]{background:#dce8f7;color:#061f44;box-shadow:inset 0 -3px #245a93}
+.ability-sort-status{margin-left:auto;color:#526782;font-size:11.5px;line-height:1.5}
+.ggfc-mobile .ability-sort-toolbar{gap:8px;padding:10px}
+.ggfc-mobile .ability-sort-toolbar select,.ggfc-mobile .ability-sort-actions .ability-sort-button{min-height:42px}
+.ggfc-mobile .ability-sort-status{width:100%;margin-left:0}
+@media(max-width:620px){.ability-sort-status{width:100%;margin-left:0}}
+
+/* GGFC player card — K리그 포털의 네이비·화이트·레드 색상 체계 */
+.player-card-mask{background:rgba(3,17,38,.96)}
+.ggfc-player-card{border:1px solid #8dabc9;border-radius:12px;background:linear-gradient(180deg,#061f44 0%,#123963 61%,#fff 61%,#fff 100%);box-shadow:0 20px 48px rgba(0,0,0,.4)}
+.ggfc-player-card::before{background:linear-gradient(125deg,transparent 43%,rgba(82,144,210,.14) 43%,rgba(82,144,210,.14) 60%,transparent 60%);bottom:39%}
+.ggfc-player-card::after{content:"";position:absolute;left:0;right:0;top:61%;height:5px;background:#df2037;z-index:3}
+.player-card-mask.on .ggfc-player-card{animation-name:ggfc-card-portal-glow}
+@keyframes ggfc-card-portal-glow{from{box-shadow:0 14px 38px rgba(0,0,0,.35)}to{box-shadow:0 20px 54px rgba(46,113,183,.28)}}
+.ggfc-player-card-content{font-family:inherit;text-shadow:none;padding:0}
+.ggfc-player-card-brand{top:22px;left:24px;transform:none;width:auto;justify-content:flex-start;gap:10px}
+.ggfc-player-card-brand-logo{width:38px;height:38px;border-radius:5px;border:1px solid #d2dfef;box-shadow:none;color:#061f44;background-size:contain;font-size:10px}
+.ggfc-player-card-brand-text{font-family:inherit;font-size:28px;line-height:38px;font-style:normal;letter-spacing:-1px}
+.ggfc-player-card-brand-year{margin-left:7px;color:#91b6df}
+.ggfc-player-card-edition{position:absolute;right:24px;top:28px;z-index:25;color:#cad8e9;text-align:right;font-size:10px;line-height:1.5;letter-spacing:1.3px;font-weight:700}
+.ggfc-player-card-left{top:108px;bottom:auto;width:112px;padding:0 6px;background:none;border:0;backdrop-filter:none}
+.ggfc-player-card-rating-label{color:#b5cce5;font-size:12px;font-weight:800;letter-spacing:2px;margin-bottom:5px}
+.ggfc-player-card-ovr{font-size:62px;line-height:1;font-weight:850;letter-spacing:-2px;color:#fff;text-shadow:none;font-variant-numeric:tabular-nums}
+.ggfc-player-card-pos{font-size:19px;line-height:1.3;margin:7px 0 13px;color:#ffb4bf;max-width:100%;overflow-wrap:anywhere;text-align:center}
+.ggfc-player-card-national{font-size:25px;margin-bottom:14px;filter:none}
+.ggfc-player-card-club{width:62px;height:62px;padding:5px;background-color:#fff;border:5px solid #fff;border-radius:6px;color:#061f44;filter:none;font-size:11px;overflow-wrap:anywhere;line-height:1.3}
+.ggfc-player-card-photo-wrap{top:92px;right:24px;width:250px;height:266px;border-radius:6px;overflow:hidden;background:#29486d}
+.ggfc-player-card-photo{object-fit:cover;object-position:center 30%;-webkit-mask-image:none;mask-image:none;filter:none}
+.ggfc-player-card-photo-fallback{border-radius:0;background:linear-gradient(160deg,#45678b,#1c3758);font-size:62px;color:#dbe5f0}
+.ggfc-player-card-name{top:384px;left:22px;width:calc(100% - 44px);padding:0 0 14px;border:0;color:#061f44;font-size:32px;line-height:1.25;letter-spacing:.2px;font-weight:850}
+.ggfc-player-card-name::after{bottom:0;left:calc(50% - 28px);width:56px;height:3px;background:#df2037}
+.ggfc-player-card-stats{top:457px;left:35px;width:calc(100% - 70px)}
+.ggfc-player-card-stat-col{gap:12px}
+.ggfc-player-card-stat-row{gap:10px;justify-content:center;line-height:1}
+.ggfc-player-card-stat-value{width:48px;margin-right:0;font-size:28px;color:#061f44;text-shadow:none;font-weight:850;font-variant-numeric:tabular-nums}
+.ggfc-player-card-stat-label{font-size:17px;color:#59708b;letter-spacing:.8px;width:42px}
+.ggfc-player-card-divider{background:#dce4ee;margin:0 16px}
+.ggfc-player-card-watermark{top:33%;width:285px;height:285px;opacity:.045}
+.ggfc-player-stat-value{color:#c4e0ff;text-shadow:none}
+.ggfc-player-stat-point{text-shadow:none}
+.ggfc-player-stat-label,.ggfc-player-hex-caption{color:#c6d4e5}
+.ggfc-player-hex-grid{filter:none;background-color:rgba(126,170,219,.04)}
+.player-card-data-panel{border:1px solid #c6d3e4;border-top:4px solid #df2037;background:#fff;color:#061f44;border-radius:8px;box-shadow:0 14px 36px rgba(0,0,0,.16)}
+.player-card-data-title{color:#061f44}
+.player-card-data-date,.player-card-chart-note{color:#536a84}
+.player-card-data-card{background:#f5f7fa;border-color:#dce4ef;border-radius:6px}
+.player-card-data-card h4{color:#061f44}
+.player-card-data-card.soccerbee h4{color:#245a93}
+.player-card-metric{background:#fff;border-color:#dfe6ef;border-radius:4px}
+.player-card-metric-label,.player-card-metric-unit{color:#526984}
+.player-card-metric-value{color:#061f44}
+.player-card-sb-details{border-color:#d9e2ee}
+.player-card-sb-details>summary,.player-card-chart-label,.player-card-chart-value{color:#385574}
+.player-card-history{border-radius:8px;border-color:#385573;box-shadow:none}
+.player-card-close{background:#fff;color:#061f44;border-color:#b6c6d9;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.16)}
+.player-card-close:hover{background:#e8eff8;color:#061f44}
+@media(prefers-reduced-motion:reduce){.player-card-mask.on .ggfc-player-card{animation:none}}
+
+/* 경기결과 두 리그: 헤더·팀 상자의 여백과 로고 높이를 약 절반으로 축소.
+   경기별 상세 기록의 확대 엠블럼에는 영향을 주지 않는다. */
+#dashLeagueSummary .league-zone-head{min-height:52px;padding:5px 12px;gap:9px;justify-content:flex-start;text-align:left}
+#dashLeagueSummary .league-symbol,#dashLeagueSummary .league-symbol.has-logo{width:42px;height:42px;flex:0 0 42px;font-size:18px}
+#dashLeagueSummary .league-zone-title{font-size:20px;line-height:1.25}
+#dashLeagueSummary .league-team-grid{grid-template-columns:repeat(3,minmax(0,1fr));padding:6px;gap:6px}
+#dashLeagueSummary .league-team-card{padding:7px 4px 6px;min-width:0}
+#dashLeagueSummary .league-crest,#dashLeagueSummary .league-crest.has-logo{width:34px;height:34px;margin:0 auto 4px;font-size:13px;border-width:2px}
+#dashLeagueSummary .league-team-name{font-size:14px;line-height:1.25}
+#dashLeagueSummary .league-team-rule{margin:4px 0}
+#dashLeagueSummary .league-team-wdl,#dashLeagueSummary .league-team-goals{font-size:12px;line-height:1.3}
+#dashLeagueSummary .league-team-goals{margin-top:2px}
+#dashLeagueSummary .league-zone-empty{padding:16px 10px;font-size:12px}
+.ggfc-mobile #mainContent #dashLeagueSummary .league-team-grid{grid-template-columns:repeat(3,minmax(0,1fr));padding:5px;gap:5px}
+.ggfc-mobile #mainContent #dashLeagueSummary .league-team-card{padding:6px 3px}
+.ggfc-mobile #mainContent #dashLeagueSummary .league-crest{width:26px;height:26px;margin-bottom:3px;font-size:12px}
+.ggfc-mobile #mainContent #dashLeagueSummary .league-team-name{font-size:clamp(12px,3.2vw,14px);line-height:1.2}
+.ggfc-mobile #mainContent #dashLeagueSummary .league-team-rule{margin:3px 0}
+.ggfc-mobile #mainContent #dashLeagueSummary .league-team-wdl,.ggfc-mobile #mainContent #dashLeagueSummary .league-team-goals{font-size:11px;line-height:1.25;letter-spacing:-.025em}
