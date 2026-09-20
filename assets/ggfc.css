@@ -1138,7 +1138,7 @@ code{border-radius:5px;background:#eee7f0}
   line-height:1.4;
 }
 .fixture-team-scorers.none{color:#aaa1ad;font-weight:650}
-.record-day .fixture-team-scorers{line-height:1.55}
+.record-day .fixture-team-scorers,#dayDetail .fixture-team-scorers{line-height:1.55}
 .fixture-logo-wrap{
   width:64px;height:64px;
   display:flex;align-items:center;justify-content:center;
@@ -1293,7 +1293,7 @@ code{border-radius:5px;background:#eee7f0}
   background:var(--pl-purple);color:#fff;font-size:16px;font-weight:950;line-height:1.1;text-align:center;padding:8px
 }
 .team-league-standing .league-standing-rank{font-size:15px;font-weight:950}
-.team-league-standing .league-standing-rank.rank-1{background:var(--pl-green);color:var(--pl-purple)}
+.team-league-standing .league-standing-rank.rank-1{background:var(--pl-green);color:#fff}
 .team-league-standing .league-standing-rank.rank-2,.team-league-standing .league-standing-rank.rank-3{background:var(--pl-purple);color:#fff}
 .team-league-standing tr.league-b-start>td:not(.league-standing-cell){border-top:4px solid #eee8f0}
 .team-league-standing .team-chip{font-weight:900}
@@ -1306,7 +1306,7 @@ code{border-radius:5px;background:#eee7f0}
 /* ===== 누적기록 / 독립 조회기간 / 대표승점 ===== */
 .team-league-standing tbody td{font-size:16.8px}
 .team-league-standing tbody .team-chip{font-size:16.8px;gap:9px}
-.team-league-standing tbody .team-logo-sm{width:29px;height:29px}
+.team-league-standing tbody .team-logo-sm{width:43.5px;height:43.5px}
 .team-league-standing tbody td.num{font-size:16.8px;font-weight:760}
 .representative-segment-config{margin-top:12px;padding-top:10px;border-top:1px dashed #d9cfdd}
 .representative-half-title{margin:10px 0 6px;font-size:12px;font-weight:950;color:var(--pl-purple)}
@@ -1717,39 +1717,39 @@ body.admin-mode .admin-only-chem-pair{display:block!important}
 .player-card-chart-label,.player-card-chart-value{font-size:12px;color:#d7e0ef}
 .player-card-chart-bars{gap:10px}
 .player-card-chart-track{height:9px}
-.player-card-history{padding:24px;border:1px solid #374158;border-radius:20px;background:#101725;color:#f6f8ff;min-width:0;box-shadow:0 18px 48px rgba(0,0,0,.25)}
+.player-card-history{padding:24px;border:1px solid #d7e2ee;border-radius:8px;background:#fff;color:#061f44;min-width:0;box-shadow:none}
 .player-card-history-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap}
-.player-card-history-head h3{margin:0 0 7px;font-size:22px;line-height:1.3;font-weight:850;color:#fff}
-.player-card-history-sub{font-size:13px;line-height:1.7;color:#b8c8df;margin:0}
+.player-card-history-head h3{margin:0 0 7px;font-size:22px;line-height:1.3;font-weight:850;color:#061f44}
+.player-card-history-sub{font-size:13px;line-height:1.7;color:#526882;margin:0}
 .player-card-history-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
-.player-card-history-controls label{display:grid;gap:5px;font-size:12px;color:#c1cde0;font-weight:700}
-.player-card-history-controls select{width:auto;min-width:130px;background:#1d293d;color:#f4f7ff;border:1px solid #54627a;border-radius:8px;padding:9px 28px 9px 10px;font:inherit;font-size:13px;color-scheme:dark}
+.player-card-history-controls label{display:grid;gap:5px;font-size:12px;color:#526882;font-weight:700}
+.player-card-history-controls select{width:auto;min-width:130px;background:#fff;color:#173653;border:1px solid #bdccde;border-radius:8px;padding:9px 28px 9px 10px;font:inherit;font-size:13px;color-scheme:light}
 .player-card-history-legend{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-top:18px}
-.player-card-history-series{appearance:none;text-align:left;border:1px solid #465168;border-top:3px solid var(--series-color);background:#1c2739;border-radius:10px;padding:12px 13px;color:#fff;cursor:pointer;font-family:inherit;min-width:0;transition:background .15s,border-color .15s}
-.player-card-history-series:hover{background:#263750}
-.player-card-history-series[aria-pressed="false"]{background:#111a29;border-color:#303b50;opacity:.52}
-.player-card-history-series[aria-pressed="false"] .pc-series-label{text-decoration:line-through}
+.player-card-history-series{appearance:none;text-align:left;border:1px solid #d7e2ee;border-top:3px solid var(--series-color);background:#f2f6fb;border-radius:6px;padding:12px 13px;color:#061f44;cursor:pointer;font-family:inherit;min-width:0;transition:background .15s,border-color .15s}
+.player-card-history-series:hover{background:#e7eff8}
+.player-card-history-series[aria-pressed="false"]{background:#f5f7fa;border-color:#dce4ed;opacity:1}
+.player-card-history-series[aria-pressed="false"] .pc-series-label{color:#65758a;text-decoration:line-through}
 .pc-series-label{display:block;font-size:13px;letter-spacing:.06em;color:var(--series-color);font-weight:900}
 .pc-series-bottom{display:flex;align-items:baseline;justify-content:space-between;gap:7px;margin-top:7px;flex-wrap:wrap}
 .pc-series-value{font-size:24px;line-height:1.15;font-weight:850;font-variant-numeric:tabular-nums}
-.pc-series-delta{font-size:12px;color:#bcc9dd;white-space:nowrap;font-weight:700}
-.pc-series-delta.up{color:#ffa7ab}.pc-series-delta.down{color:#9cc7ff}
-.player-card-history-help{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px;color:#bfcee2;font-size:12px;line-height:1.65}
-.player-card-history-all{border:1px solid #54627a;background:#1d293d;color:#eff5ff;border-radius:8px;padding:7px 12px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
-.player-card-history-plot{width:100%;overflow-x:auto;margin-top:6px;scrollbar-color:#52637f #172134;overscroll-behavior-x:contain}
+.pc-series-delta{font-size:12px;color:#526882;white-space:nowrap;font-weight:700}
+.pc-series-delta.up{color:#c92b45}.pc-series-delta.down{color:#1d60b2}
+.player-card-history-help{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px;color:#526882;font-size:12px;line-height:1.65}
+.player-card-history-all{border:1px solid #bdccde;background:#fff;color:#173653;border-radius:8px;padding:7px 12px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.player-card-history-plot{width:100%;overflow-x:auto;margin-top:6px;scrollbar-color:#9eb0c6 #edf2f8;overscroll-behavior-x:contain}
 .player-card-history-plot svg{display:block;min-width:760px;width:100%;height:340px;touch-action:pan-y}
 .player-card-history-line{stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
-.player-card-history-dot{stroke:#101725;stroke-width:1.2;vector-effect:non-scaling-stroke}
-.player-card-history-inspect{padding:14px 16px;background:#1a2537;border:1px solid #39485f;border-radius:12px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-top:8px;min-height:64px}
-.pc-history-date{min-width:135px;font-size:15px;font-weight:800;color:#f6f8ff;font-variant-numeric:tabular-nums}
-.pc-history-date small{display:block;font-size:11px;color:#c1cde0;font-weight:600;margin-top:4px}
+.player-card-history-dot{stroke:#fff;stroke-width:1.2;vector-effect:non-scaling-stroke}
+.player-card-history-inspect{padding:14px 16px;background:#f2f6fb;border:1px solid #d7e2ee;border-radius:6px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-top:8px;min-height:64px}
+.pc-history-date{min-width:135px;font-size:15px;font-weight:800;color:#061f44;font-variant-numeric:tabular-nums}
+.pc-history-date small{display:block;font-size:11px;color:#526882;font-weight:600;margin-top:4px}
 .pc-history-values{display:flex;flex:1;gap:16px;flex-wrap:wrap}
 .pc-history-value{display:flex;align-items:baseline;gap:7px;white-space:nowrap}
 .pc-history-value span{font-size:12px;font-weight:850;color:var(--series-color)}
 .pc-history-value b{font-size:20px;font-weight:850;font-variant-numeric:tabular-nums}
-.player-card-history-slider{display:flex;align-items:center;gap:16px;margin-top:12px;color:#c1cde0;font-size:12px;font-weight:650}
-.player-card-history-slider input{flex:1;min-width:0;accent-color:#8ab5ff;cursor:pointer}
-.player-card-history-empty{padding:56px 20px;text-align:center;color:#c7d4e7;font-size:14px;line-height:1.8}
+.player-card-history-slider{display:flex;align-items:center;gap:16px;margin-top:12px;color:#526882;font-size:12px;font-weight:650}
+.player-card-history-slider input{flex:1;min-width:0;accent-color:#cf2947;cursor:pointer}
+.player-card-history-empty{padding:56px 20px;text-align:center;color:#526882;font-size:14px;line-height:1.8}
 .player-card-history :focus-visible,.player-card-sb-details>summary:focus-visible{outline:2px solid #b3d8ff;outline-offset:4px}
 @media(min-width:1500px){.player-card-data-grid{grid-template-columns:1fr 1fr}.player-card-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:1199px){
@@ -2233,21 +2233,21 @@ tr:nth-child(1) .rank.top{background:var(--kl-red);color:#fff}
 .record-attendance,.record-attendance-item,.record-attendance-league{border-color:#dce3ed;background:#fff}
 .record-attendance-league-title{background:#edf2f8;color:var(--kl-navy)}
 
-/* Detail crests: desktop image 40 -> 60px, phone image 28 -> 42px. */
-#mainContent .record-day .fixture-score-row{grid-template-columns:minmax(0,1fr) 63px minmax(64px,.9fr) 63px minmax(0,1fr)}
-#mainContent .record-day .fixture-logo-wrap{width:63px;height:63px}
-#mainContent .record-day .fixture-team-logo{width:60px;height:60px}
-#mainContent .record-day .fixture-logo-fallback{width:57px;height:57px;font-size:14px}
+/* Dashboard and calendar share detail crest sizes: desktop 60px, phone 42px. */
+#mainContent .record-day .fixture-score-row,#mainContent #dayDetail .fixture-score-row{grid-template-columns:minmax(0,1fr) 63px minmax(64px,.9fr) 63px minmax(0,1fr)}
+#mainContent .record-day .fixture-logo-wrap,#mainContent #dayDetail .fixture-logo-wrap{width:63px;height:63px}
+#mainContent .record-day .fixture-team-logo,#mainContent #dayDetail .fixture-team-logo{width:60px;height:60px}
+#mainContent .record-day .fixture-logo-fallback,#mainContent #dayDetail .fixture-logo-fallback{width:57px;height:57px;font-size:14px}
 @media(max-width:1100px){#mainContent .ground-grid{grid-template-columns:minmax(0,1fr)}}
-.ggfc-mobile #mainContent .record-day .fixture-score-row{grid-template-columns:minmax(0,1fr) minmax(68px,.85fr) minmax(0,1fr);grid-template-rows:auto auto;align-items:start;gap:8px 6px}
-.ggfc-mobile #mainContent .record-day .fixture-logo-wrap,.ggfc-mobile #mainContent .record-day .fixture-team-logo,.ggfc-mobile #mainContent .record-day .fixture-logo-fallback{width:42px;height:42px}
-.ggfc-mobile #mainContent .record-day .fixture-logo-wrap{justify-self:center}
-.ggfc-mobile #mainContent .record-day .fixture-logo-wrap:nth-child(2){grid-column:1;grid-row:1}
-.ggfc-mobile #mainContent .record-day .fixture-logo-wrap:nth-child(4){grid-column:3;grid-row:1}
-.ggfc-mobile #mainContent .record-day .fixture-score-center{grid-column:2;grid-row:1/3;align-self:start;padding-top:7px}
-.ggfc-mobile #mainContent .record-day .fixture-team-copy.home{grid-column:1;grid-row:2;text-align:center}
-.ggfc-mobile #mainContent .record-day .fixture-team-copy.away{grid-column:3;grid-row:2;text-align:center}
-.ggfc-mobile #mainContent .record-day .fixture-team-scorers{font-size:11px}
+.ggfc-mobile #mainContent .record-day .fixture-score-row,.ggfc-mobile #mainContent #dayDetail .fixture-score-row{grid-template-columns:minmax(0,1fr) minmax(68px,.85fr) minmax(0,1fr);grid-template-rows:auto auto;align-items:start;gap:8px 6px}
+.ggfc-mobile #mainContent .record-day .fixture-logo-wrap,.ggfc-mobile #mainContent .record-day .fixture-team-logo,.ggfc-mobile #mainContent .record-day .fixture-logo-fallback,.ggfc-mobile #mainContent #dayDetail .fixture-logo-wrap,.ggfc-mobile #mainContent #dayDetail .fixture-team-logo,.ggfc-mobile #mainContent #dayDetail .fixture-logo-fallback{width:42px;height:42px}
+.ggfc-mobile #mainContent .record-day .fixture-logo-wrap,.ggfc-mobile #mainContent #dayDetail .fixture-logo-wrap{justify-self:center}
+.ggfc-mobile #mainContent .record-day .fixture-logo-wrap:nth-child(2),.ggfc-mobile #mainContent #dayDetail .fixture-logo-wrap:nth-child(2){grid-column:1;grid-row:1}
+.ggfc-mobile #mainContent .record-day .fixture-logo-wrap:nth-child(4),.ggfc-mobile #mainContent #dayDetail .fixture-logo-wrap:nth-child(4){grid-column:3;grid-row:1}
+.ggfc-mobile #mainContent .record-day .fixture-score-center,.ggfc-mobile #mainContent #dayDetail .fixture-score-center{grid-column:2;grid-row:1/3;align-self:start;padding-top:7px}
+.ggfc-mobile #mainContent .record-day .fixture-team-copy.home,.ggfc-mobile #mainContent #dayDetail .fixture-team-copy.home{grid-column:1;grid-row:2;text-align:center}
+.ggfc-mobile #mainContent .record-day .fixture-team-copy.away,.ggfc-mobile #mainContent #dayDetail .fixture-team-copy.away{grid-column:3;grid-row:2;text-align:center}
+.ggfc-mobile #mainContent .record-day .fixture-team-scorers,.ggfc-mobile #mainContent #dayDetail .fixture-team-scorers{font-size:11px}
 .ggfc-mobile #mainContent .record-day .ground-content{padding:8px 6px}
 .ggfc-mobile #mainContent .record-day .ground-match{margin:0;padding:14px 3px}
 .summary-poster .fixture-score-row{grid-template-columns:minmax(0,1fr) 57px 54px 57px minmax(0,1fr)}
@@ -2351,7 +2351,7 @@ tr:nth-child(1) .rank.top{background:var(--kl-red);color:#fff}
 .player-card-metric-value{color:#061f44}
 .player-card-sb-details{border-color:#d9e2ee}
 .player-card-sb-details>summary,.player-card-chart-label,.player-card-chart-value{color:#385574}
-.player-card-history{border-radius:8px;border-color:#385573;box-shadow:none}
+.player-card-history{border-radius:8px;border-color:#d7e2ee;border-top:4px solid #061f44;box-shadow:none}
 .player-card-close{background:#fff;color:#061f44;border-color:#b6c6d9;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.16)}
 .player-card-close:hover{background:#e8eff8;color:#061f44}
 @media(prefers-reduced-motion:reduce){.player-card-mask.on .ggfc-player-card{animation:none}}
@@ -2438,7 +2438,7 @@ tr:nth-child(1) .rank.top{background:var(--kl-red);color:#fff}
 .compare-role{font-size:11px;letter-spacing:.03em;font-weight:800;color:#245a93;margin-bottom:10px}
 .compare-player.other .compare-role{color:#b71f3c}
 .compare-player .player-face-chip.large{flex-direction:column;gap:9px;max-width:100%;text-align:center}
-.compare-player .player-face{width:66px;height:66px;font-size:24px}
+.compare-player .player-face-chip.large .player-face{width:104px;height:104px;font-size:30px}
 .compare-player .player-face-name{font-size:19px!important;overflow-wrap:anywhere}
 .compare-player>p{font-size:12px;color:#5b6f88;margin:8px 0 0;text-align:center;overflow-wrap:anywhere}
 .compare-stat-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 28px}
@@ -2528,4 +2528,27 @@ tr:nth-child(1) .rank.top{background:var(--kl-red);color:#fff}
 @media(prefers-reduced-motion:reduce){
  .ggfc-detail-dialog,.ggfc-detail-dialog::backdrop,.ggfc-detail-body.detail-refreshing{animation:none!important;transition:none!important}
  .match-detail-card{transition:none}
+}
+
+
+/* V3.18.8 — compact analysis controls and ability history finish */
+.chem-analysis-toolbar{display:grid;grid-template-columns:100px repeat(2,minmax(110px,150px)) minmax(254px,1fr);align-items:end;gap:12px}
+.chem-analysis-field{display:grid;gap:6px;min-width:0}
+.chem-analysis-field>label{font-size:12px;font-weight:800;color:#465e7b}
+#v-chem .chem-analysis-toolbar .chem-search-wrap{width:100%;min-width:0}
+#v-chem .chem-analysis-toolbar #chemPlayer,#v-chem .chem-analysis-toolbar #chemOther,#v-chem .chem-analysis-toolbar #chemYear{width:100%;min-width:0;min-height:44px;padding:9px 10px;font-size:16px}
+.chem-analysis-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;max-width:320px;align-self:end}
+.chem-analysis-actions .btn{min-width:0;min-height:44px;padding:9px 8px;font-size:13px;white-space:nowrap;justify-content:center}
+.chem-analysis-note{grid-column:1/-1;font-size:12.5px;line-height:1.6}
+.player-card-history .player-card-chart-note{color:#526882}
+.player-card-history :focus-visible{outline:3px solid #2868ae;outline-offset:3px}
+@media(max-width:1000px){
+ .chem-analysis-toolbar{grid-template-columns:100px repeat(2,minmax(0,150px))}
+ .chem-analysis-actions{grid-column:1/-1}
+}
+@media(max-width:620px){
+ .chem-analysis-toolbar{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .chem-year-field{grid-column:1/-1;grid-template-columns:auto minmax(90px,120px);align-items:center;justify-content:start}
+ .chem-analysis-actions{max-width:none;gap:6px}
+ .chem-analysis-actions .btn{font-size:12px;padding:9px 4px}
 }

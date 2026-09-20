@@ -2175,12 +2175,12 @@ function renderAbility(){
 
 /* Ability history uses the same date-specific calculation and integer floor as the card. */
 const PLAYER_CARD_HISTORY_METRICS=[
-  {key:'pac',label:'PAC',color:'#5cd6ff',dash:''},
-  {key:'dri',label:'DRI',color:'#b7a0ff',dash:'7 4'},
-  {key:'sho',label:'SHO',color:'#ff859a',dash:''},
-  {key:'def',label:'DEF',color:'#63e6ab',dash:'3 4'},
-  {key:'pas',label:'PAS',color:'#f4d272',dash:''},
-  {key:'phy',label:'PHY',color:'#ffa969',dash:'10 4 2 4'}
+  {key:'pac',label:'PAC',color:'#1763b1',dash:''},
+  {key:'dri',label:'DRI',color:'#7050a1',dash:'7 4'},
+  {key:'sho',label:'SHO',color:'#c52b46',dash:''},
+  {key:'def',label:'DEF',color:'#157b68',dash:'3 4'},
+  {key:'pas',label:'PAS',color:'#966400',dash:''},
+  {key:'phy',label:'PHY',color:'#b04e20',dash:'10 4 2 4'}
 ];
 let playerCardHistoryState=null, playerCardHistoryResize=null;
 function playerCardHistoryRange(query,mode){
@@ -2240,20 +2240,20 @@ function playerCardHistorySvg(history,enabled,scale,width){
   const times=rows.map(r=>Date.parse(r.date+'T00:00:00Z')),t0=times[0],t1=times[times.length-1];
   const xs=times.map(t=>t1===t0?L+pw/2:L+(t-t0)/(t1-t0)*pw),axis=playerCardHistoryAxis(rows,metrics.map(m=>m.key),scale);
   const y=v=>T+(axis.max-v)/(axis.max-axis.min)*ph;
-  let html='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" role="img" aria-labelledby="pcHistorySvgTitle pcHistorySvgDesc"><title id="pcHistorySvgTitle">선수 능력치 기간별 변화</title><desc id="pcHistorySvgDesc">X축은 날짜, Y축은 능력치 수치입니다. '+esc(history.start)+'부터 '+esc(history.end)+'까지 '+metrics.map(m=>m.label).join(', ')+'를 표시합니다. 아래 날짜 선택으로 정확한 값을 확인할 수 있습니다.</desc><rect width="'+W+'" height="'+H+'" fill="#101725"/><g font-family="Arial,sans-serif" font-size="13" fill="#bdcce2">';
-  for(let v=axis.min;v<=axis.max;v+=axis.step){const yy=y(v);html+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="#344158" stroke-width="1"'+(v===axis.min?'':' stroke-dasharray="3 5"')+'/><text x="'+(L-12)+'" y="'+(yy+4)+'" text-anchor="end">'+v+'</text>';}
-  html+='<text x="'+L+'" y="18" fill="#e0e9f8">ABILITY SCORE</text>';
+  let html='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" role="img" aria-labelledby="pcHistorySvgTitle pcHistorySvgDesc"><title id="pcHistorySvgTitle">선수 능력치 기간별 변화</title><desc id="pcHistorySvgDesc">X축은 날짜, Y축은 능력치 수치입니다. '+esc(history.start)+'부터 '+esc(history.end)+'까지 '+metrics.map(m=>m.label).join(', ')+'를 표시합니다. 아래 날짜 선택으로 정확한 값을 확인할 수 있습니다.</desc><rect width="'+W+'" height="'+H+'" fill="#ffffff"/><g font-family="Arial,sans-serif" font-size="13" fill="#526a83">';
+  for(let v=axis.min;v<=axis.max;v+=axis.step){const yy=y(v);html+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="#dbe4ee" stroke-width="1"'+(v===axis.min?'':' stroke-dasharray="3 5"')+'/><text x="'+(L-12)+'" y="'+(yy+4)+'" text-anchor="end">'+v+'</text>';}
+  html+='<text x="'+L+'" y="18" fill="#061f44">ABILITY SCORE</text>';
   const indices=[0];
   for(let i=1;i<rows.length-1;i++)if(xs[i]-xs[indices[indices.length-1]]>=92&&xs[xs.length-1]-xs[i]>=92)indices.push(i);
   if(rows.length>1)indices.push(rows.length-1);
-  indices.forEach(i=>{const date=rows[i].date,short=history.start.slice(0,4)===history.end.slice(0,4)?date.slice(5).replace('-','/'):date.slice(2).replaceAll('-','/');html+='<line x1="'+xs[i]+'" y1="'+(H-B)+'" x2="'+xs[i]+'" y2="'+(H-B+6)+'" stroke="#7b8ba4"/><text x="'+xs[i]+'" y="'+(H-B+24)+'" text-anchor="'+(i===0&&rows.length>1?'start':i===rows.length-1&&rows.length>1?'end':'middle')+'">'+short+'</text>';});
-  html+='<text x="'+(W-R)+'" y="'+(H-8)+'" text-anchor="end" fill="#e0e9f8">DATE</text></g>';
+  indices.forEach(i=>{const date=rows[i].date,short=history.start.slice(0,4)===history.end.slice(0,4)?date.slice(5).replace('-','/'):date.slice(2).replaceAll('-','/');html+='<line x1="'+xs[i]+'" y1="'+(H-B)+'" x2="'+xs[i]+'" y2="'+(H-B+6)+'" stroke="#8da0b7"/><text x="'+xs[i]+'" y="'+(H-B+24)+'" text-anchor="'+(i===0&&rows.length>1?'start':i===rows.length-1&&rows.length>1?'end':'middle')+'">'+short+'</text>';});
+  html+='<text x="'+(W-R)+'" y="'+(H-8)+'" text-anchor="end" fill="#061f44">DATE</text></g>';
   metrics.forEach(m=>{
     const path=rows.map((r,i)=>(i?'L':'M')+xs[i].toFixed(2)+' '+y(r.values[m.key]).toFixed(2)).join(' ');
     html+='<g data-history-series="'+m.key+'"><path class="player-card-history-line" d="'+path+'" stroke="'+m.color+'" fill="none" stroke-width="2.6" stroke-linejoin="round"'+(m.dash?' stroke-dasharray="'+m.dash+'"':'')+'/>';
     rows.forEach((r,i)=>{html+='<circle class="player-card-history-dot" cx="'+xs[i].toFixed(2)+'" cy="'+y(r.values[m.key]).toFixed(2)+'" r="'+(rows.length>65?2:3.2)+'" fill="'+m.color+'"><title>'+esc(r.date+' · '+m.label+' '+r.values[m.key])+'</title></circle>';});html+='</g>';
   });
-  html+='<line id="playerCardHistoryCursor" x1="'+xs[xs.length-1]+'" x2="'+xs[xs.length-1]+'" y1="'+T+'" y2="'+(H-B)+'" stroke="#eff5ff" stroke-width="1" stroke-dasharray="4 5" opacity=".7" pointer-events="none"/></svg>';
+  html+='<line id="playerCardHistoryCursor" x1="'+xs[xs.length-1]+'" x2="'+xs[xs.length-1]+'" y1="'+T+'" y2="'+(H-B)+'" stroke="#061f44" stroke-width="1" stroke-dasharray="4 5" opacity=".7" pointer-events="none"/></svg>';
   return {html,xs,axis,width:W};
 }
 function selectPlayerCardHistoryPoint(index){
@@ -2522,7 +2522,7 @@ function teamScorers(m, team, multiline=false){
   const rows=Object.entries(totals)
     .sort((a,b)=>b[1]-a[1] || a[0].localeCompare(b[0]))
     .map(([name,g])=>esc(name)+" "+g+"골");
-  /* 경기일별 상세 기록에서는 득점자를 한 명씩 세로로 표시하고, 달력/일반 경기카드는 기존 한 줄 표기를 유지한다. */
+  /* 경기일별 상세 기록과 경기달력은 multiline=true로 득점자를 한 명씩 세로로 표시한다. */
   return rows.join(multiline?"<br>":", ");
 }
 function fixtureLogoHtml(team){
@@ -3651,7 +3651,7 @@ function renderDash(){
   if($("#dashSub")) $("#dashSub").textContent="경기결과 · 순위 · 상대전적 · 선수 기록";
 }
 function matchCard(m){
-  const homeSc=teamScorers(m,m.home), awaySc=teamScorers(m,m.away), fouls=matchTeamFouls(m);
+  const homeSc=teamScorers(m,m.home,true), awaySc=teamScorers(m,m.away,true), fouls=matchTeamFouls(m);
   return '<div class="match fixture-match-card">'+
     '<div class="top"><span class="pill">'+esc(m.comp||"정규리그")+'</span>'+(m.round?'<span class="pill">'+esc(m.round)+'</span>':'')+(m.no?'<span class="pill">'+esc(m.no)+' 경기</span>':'')+(m.half?'<span class="pill">'+halfLabel(normHalf(m.half))+'</span>':'')+(forfeitText(m)?'<span class="pill l">'+esc(forfeitText(m))+'</span>':'')+'<span>'+esc(m.date||"")+'</span><span class="muted">파울 '+fouls.home+':'+fouls.away+'</span></div>'+
     fixtureScoreRow(m,homeSc,awaySc,'calendar-fixture')+
