@@ -1018,53 +1018,50 @@ function chemPlayers(){
   DB.attendance.forEach(r=>{ if(ids.has(detailMatchKey(r.id)) && r.player && !isOwnGoalPlayer(r.player)) s.add(r.player); });
   return [...s].sort(compareNamesKo);
 }
-function chemistry(target){
-  const ms=chemMatches(), M={}; ms.forEach(m=>M[m.id]=m);
-  const ids=new Set(ms.map(m=>m.id));
-  const goalOf={};
-  DB.goals.forEach(x=>{ if(ids.has(x.id)) goalOf[x.id+"|"+x.player]=(goalOf[x.id+"|"+x.player]||0)+x.g; });
-  const grp={};
-  DB.attendance.forEach(r=>{
-    if(!ids.has(r.id) || !r.player) return;
-    const k=r.id+"|"+r.team;
-    const G = grp[k]||(grp[k]={id:r.id,team:r.team,players:[],coaches:new Set()});
-    G.players.push(r.player);
-    if(r.coach) G.coaches.add(r.coach);
+function chemistry(target,list){
+  const ms=uniqueRecordMatches(list||chemMatches()), M=new Map(ms.map(m=>[detailMatchKey(m.id),m]));
+  const goalOf=new Map();
+  DB.goals.forEach(x=>{
+    const id=detailMatchKey(x.id),name=String(x.player||'').trim();if(!M.has(id)||!name)return;
+    const key=JSON.stringify([id,name]);goalOf.set(key,(goalOf.get(key)||0)+num(x.g));
   });
-  const mates={}, coaches={};
-  let base=0, baseGoals=0, bw=0, bd=0, bl=0;
-  Object.values(grp).forEach(G=>{
-    if(!G.players.includes(target)) return;
-    const m=M[G.id]; if(!m) return;
-    const res = matchResult(m,G.team);
-    const tg = goalOf[G.id+"|"+target]||0;
-    base++; baseGoals+=tg;
-    if(res==="W") bw++; else if(res==="D") bd++; else bl++;
-    G.players.forEach(pl=>{
-      if(!pl || pl===target) return;
-      const o = mates[pl]||(mates[pl]={name:pl,p:0,w:0,d:0,l:0,tg:0,mg:0});
-      o.p++; o[res.toLowerCase()]++;
-      o.tg += tg;
-      o.mg += goalOf[G.id+"|"+pl]||0;
-    });
-    G.coaches.forEach(c=>{
-      if(!c || c===target) return;
-      const o = coaches[c]||(coaches[c]={name:c,p:0,w:0,d:0,l:0,tg:0,mg:0});
-      o.p++; o[res.toLowerCase()]++; o.tg += tg;
-    });
+  const goal=(id,name)=>goalOf.get(JSON.stringify([id,name]))||0;
+  const attendance=DB.attendance.map(r=>({...r,id:detailMatchKey(r.id),player:String(r.player||'').trim(),team:String(r.team||'').trim()})).filter(r=>{
+    const m=M.get(r.id);return m&&r.player&&!isOwnGoalPlayer(r.player)&&[m.home,m.away].includes(r.team);
   });
-  const baseGpg = base? Math.round(baseGoals/base*100)/100 : 0;
-  const fin = obj => Object.values(obj).map(o=>{
-    const rate = pct(o.w, o.p);
-    const att  = pct(o.p, base);
-    const gpg  = o.p? Math.round(o.tg/o.p*100)/100 : 0;      /* 기준 선수가 함께 뛰었을 때의 경기당 득점 */
-    const mgpg = o.p? Math.round(o.mg/o.p*100)/100 : 0;      /* 동료의 경기당 득점 */
-    const diff = Math.round((gpg - baseGpg)*100)/100;        /* 본인 평균 대비 증감 */
-    const score = Math.round(rate*0.5 + att*0.3 + Math.min(gpg*33,100)*0.2);
-    return Object.assign(o,{rate,att,gpg,mgpg,diff,score});
-  }).sort((a,b)=> b.score-a.score || b.p-a.p);
-  return { mates:fin(mates), coaches:fin(coaches), base, baseGoals, baseGpg, bw, bd, bl,
-    baseRate: pct(bw, base) };
+  const playerTeams=new Map();
+  attendance.forEach(r=>{const key=JSON.stringify([r.id,r.player]);if(!playerTeams.has(key))playerTeams.set(key,new Set());playerTeams.get(key).add(r.team);});
+  const groups=new Map();
+  attendance.forEach(r=>{
+    // 같은 경기의 중복 출석을 한 번만 세고, 양 팀으로 중복 등록된 모호한 선수는 제외한다.
+    if(playerTeams.get(JSON.stringify([r.id,r.player])).size!==1)return;
+    const key=JSON.stringify([r.id,r.team]);
+    if(!groups.has(key))groups.set(key,{id:r.id,team:r.team,players:new Set(),coaches:new Set()});
+    const group=groups.get(key);group.players.add(r.player);
+    if(String(r.coach||'').trim())group.coaches.add(String(r.coach).trim());
+  });
+  const mates=new Map(),coaches=new Map();let base=0,baseGoals=0,bw=0,bd=0,bl=0;
+  groups.forEach(group=>{
+    if(!group.players.has(target))return;
+    const m=M.get(group.id),res=matchResult(m,group.team);if(!res)return;
+    const tg=goal(group.id,target);base++;baseGoals+=tg;
+    if(res==='W')bw++;else if(res==='D')bd++;else bl++;
+    const add=(map,name,mg)=>{
+      if(!name||name===target)return;
+      if(!map.has(name))map.set(name,{name,p:0,w:0,d:0,l:0,tg:0,mg:0});
+      const row=map.get(name);row.p++;row[res.toLowerCase()]++;row.tg+=tg;row.mg+=mg;
+    };
+    group.players.forEach(name=>add(mates,name,goal(group.id,name)));
+    group.coaches.forEach(name=>add(coaches,name,0));
+  });
+  const baseGpg=base?Math.round(baseGoals/base*100)/100:0;
+  const finish=map=>[...map.values()].map(row=>{
+    const rate=pct(row.w,row.p),att=pct(row.p,base),gpg=row.p?Math.round(row.tg/row.p*100)/100:0;
+    const mgpg=row.p?Math.round(row.mg/row.p*100)/100:0,diff=Math.round((gpg-baseGpg)*100)/100;
+    const score=coupleScoreBreakdown(rate,att,gpg).score;
+    return Object.assign(row,{rate,att,gpg,mgpg,diff,score});
+  }).sort((a,b)=>b.score-a.score||b.p-a.p);
+  return {mates:finish(mates),coaches:finish(coaches),base,baseGoals,baseGpg,bw,bd,bl,baseRate:pct(bw,base)};
 }
 
 /* ---------- renderers ---------- */
@@ -2559,9 +2556,9 @@ function groundMatchCard(m){
   const fouls=matchTeamFouls(m);
   if(fouls.home+fouls.away>0) meta.push("파울 "+fouls.home+":"+fouls.away);
   if(forfeitText(m)) meta.push(esc(forfeitText(m)));
-  return '<div class="ground-match fixture-match-card match-detail-card">'+
+  return '<div class="ground-match fixture-match-card match-detail-card"'+matchDetailAttrs(m)+'>'+
     '<div class="ground-match-meta">'+(meta.length?meta.map(x=>'<span>'+x+'</span>').join('<span>·</span>'):'<span>&nbsp;</span>')+'</div>'+
-    fixtureScoreRow(m,homeSc,awaySc,'ground-fixture')+matchDetailButton(m)+
+    fixtureScoreRow(m,homeSc,awaySc,'ground-fixture')+
     '</div>';
 }
 function groundPanel(code, list){
@@ -3641,10 +3638,10 @@ function renderRecentMatches(){
   const byDate=dates.map(d=>({date:d,items:list.filter(m=>normDate(m.date)===d).sort((a,b)=>String(a.no||"").localeCompare(String(b.no||""),undefined,{numeric:true}))}));
   box.innerHTML='<div class="record-analysis-note"><b>'+esc(info.label)+'</b>의 경기 결과를 누적 집계합니다. 승점은 승 3점·무 1점·패 0점이며, 몰수패가 입력된 팀은 점수와 관계없이 패배·상대팀은 승리로 계산합니다. 경기일별 상세에는 A·B구장 결과, 팀별 득점자, 스코어 아래의 MOM 선수와 출석 명단이 표시됩니다. 참석수는 같은 날짜·같은 팀·같은 선수의 중복 출전을 1회로 계산합니다.</div>'+ 
     '<div class="record-summary-grid">'+summaries.map(x=>'<div class="record-summary-item"><div class="l">'+esc(x.l)+'</div><div class="v">'+x.v+'</div><div class="s">'+esc(x.s||'—')+'</div></div>').join('')+'</div>'+ 
-    '<div class="record-export-section" id="exportTeamStandingSection"><div class="record-period-head"><div class="record-period-heading"><div class="sec-t">팀 순위 및 누적 기록</div><span class="record-round-range">'+esc(recordRoundRangeLabel(list))+'</span></div><div class="record-period-label">'+esc(info.start||'')+(info.end&&info.end!==info.start?' ~ '+esc(info.end):'')+'</div><button class="btn sm section-export-btn" type="button" data-export-target="exportTeamStandingSection" data-export-name="팀순위_누적기록" data-export-ignore>이미지 저장</button></div>'+ 
-    '<div class="tablewrap record-standing-table">'+standingHtml+'</div></div>'+ 
     '<div class="record-export-section" id="exportDayDetailsSection"><div class="record-period-head"><div class="sec-t">경기일별 상세 기록</div><div class="record-period-label">최신 경기일부터 표시 · 날짜를 눌러 펼치기 · 대진을 눌러 상세기록 보기</div><button class="btn sm section-export-btn" type="button" data-export-target="exportDayDetailsSection" data-export-name="경기일별_상세기록" data-export-ignore>이미지 저장</button></div>'+ 
-    '<div class="record-day-list">'+byDate.map((x,i)=>recordDayBlock(x.date,x.items,i===0)).join('')+'</div></div>';
+    '<div class="record-day-list">'+byDate.map((x,i)=>recordDayBlock(x.date,x.items,i===0)).join('')+'</div></div>'+ 
+    '<div class="record-export-section" id="exportTeamStandingSection"><div class="record-period-head"><div class="record-period-heading"><div class="sec-t">팀 순위 및 누적 기록</div><span class="record-round-range">'+esc(recordRoundRangeLabel(list))+'</span></div><div class="record-period-label">'+esc(info.start||'')+(info.end&&info.end!==info.start?' ~ '+esc(info.end):'')+'</div><button class="btn sm section-export-btn" type="button" data-export-target="exportTeamStandingSection" data-export-name="팀순위_누적기록" data-export-ignore>이미지 저장</button></div>'+ 
+    '<div class="tablewrap record-standing-table">'+standingHtml+'</div></div>';
 }
 function renderDash(){
   ensureDashboardDate();
