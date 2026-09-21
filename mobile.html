@@ -3,8 +3,8 @@
 <head><script>window.GGFC_MOBILE_ENTRY=true;</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>GGFC 모바일 기록센터 · 3.18.9</title>
-<link rel="stylesheet" href="assets/ggfc.css?v=3.18.9">
+<title>GGFC 모바일 기록센터 · 3.18.10</title>
+<link rel="stylesheet" href="assets/ggfc.css?v=3.18.10">
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <meta name="theme-color" content="#061f44"><script>if(new URLSearchParams(location.search).get("view")!=="desktop" && (window.GGFC_MOBILE_ENTRY || matchMedia("(max-width: 820px)").matches))document.documentElement.classList.add("ggfc-mobile");</script></head>
 <body>
@@ -41,7 +41,7 @@
     <button data-v="rep" id="repTab" class="admin-menu-tab" style="display:none"><span class="sidebar-icon">A2</span><span>대표승점 설정</span></button>
     <button data-v="data" id="dataTab" class="admin-menu-tab" style="display:none"><span class="sidebar-icon">A3</span><span>데이터 관리</span></button>
   </nav>
-  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.18.9 · 기록센터</span></footer>
+  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.18.10 · 기록센터</span></footer>
 </aside>
 <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" tabindex="-1" aria-label="메뉴 닫기" hidden></button>
 
@@ -373,7 +373,7 @@
     </div>
     <div class="card">
       <div class="dashboard-block-title"><div class="sec-t">선수 누적 기록</div><div class="dashboard-block-note" id="playerPeriodLabel"></div></div>
-      <div class="mobile-only member-search"><label for="memberPlayerSearch">선수 찾기</label><input id="memberPlayerSearch" type="search" placeholder="선수 이름 검색" autocomplete="off"></div><div class="mobile-only member-cards" id="memberPlayerCards"></div><div class="tablewrap" id="playerTable"></div>
+      <div class="member-search player-record-search"><label for="memberPlayerSearch">선수 이름 검색</label><div class="player-record-search-input"><input id="memberPlayerSearch" type="search" placeholder="이름 일부를 입력하세요" autocomplete="off" aria-controls="playerTable memberPlayerCards rosterTable specialTable" aria-describedby="playerRecordSearchStatus"><button id="playerRecordSearchClear" class="btn" type="button" disabled>검색 초기화</button></div><p id="playerRecordSearchStatus" role="status" aria-live="polite"></p></div><div class="mobile-only member-cards" id="memberPlayerCards"></div><div class="tablewrap" id="playerTable"></div>
     </div>
     <div class="card" style="margin-top:16px">
       <div class="sec-t">선수명단 — 조회 구간 현황</div>
@@ -775,21 +775,37 @@
         <div class="player-card-chart-note" id="playerCardFoulNote">개인파울·MOM·결석 기록은 능력치에 반영됩니다. 출석률은 조회기간의 주 소속팀 경기 수를 기준으로 계산합니다.</div>
       </div>
       </div>
+      <div class="player-card-history-grid">
       <section class="player-card-history" id="playerCardHistory" aria-label="기간별 선수 능력치 변화">
         <div class="player-card-history-head">
           <div><h3>능력치 변화</h3><p class="player-card-history-sub" id="playerCardHistoryNote">—</p></div>
           <div class="player-card-history-controls">
             <label>조회 범위<select id="playerCardHistoryRange"><option value="HALF">선택 반기</option><option value="QUERY">현재 기록 조회기간</option><option value="YEAR">선택 시즌</option><option value="ALL">전체 이력</option></select></label>
-            <label>Y축 범위<select id="playerCardHistoryScale"><option value="AUTO">변화 확대</option><option value="FULL">전체 수치 · 0–100</option></select></label>
+            <label>Y축 범위<select id="playerCardHistoryScale"><option value="AUTO">실제 수치 · 자동 확대</option><option value="DELTA">기간 시작 대비 증감</option><option value="FULL">전체 수치 · 0–100</option></select></label>
           </div>
         </div>
         <div class="player-card-history-legend" id="playerCardHistoryLegend" aria-label="표시할 능력치 선택"></div>
-        <div class="player-card-history-help"><span>능력치를 눌러 표시·숨기기 · 증감은 기간 시작 대비 · 아래 그래프에서 날짜별 수치 확인</span><button class="player-card-history-all" id="playerCardHistoryAll" type="button">6개 모두 표시</button></div>
+        <div class="player-card-history-help"><span>능력치를 눌러 표시·숨기기 · 미세한 변화는 한 항목 선택 또는 Y축의 증감 보기로 확인</span><button class="player-card-history-all" id="playerCardHistoryAll" type="button">6개 모두 표시</button></div>
         <div class="player-card-history-plot" id="playerCardHistoryPlot"></div>
         <div class="player-card-history-inspect" id="playerCardHistoryInspect" aria-live="polite" aria-atomic="true"></div>
         <label class="player-card-history-slider" for="playerCardHistoryDate"><span>확인할 날짜</span><input id="playerCardHistoryDate" type="range" min="0" max="0" step="1" value="0" aria-label="능력치 확인 날짜"></label>
-        <p class="player-card-chart-note">X축: 기간별 날짜 · Y축: 능력치 수치. 경기 종료일과 SoccerBee 측정일의 값을 표시하며, 카드의 선택 기준일 이후 기록은 포함하지 않습니다. 기간 시작·종료 값도 함께 표시합니다.</p>
+        <p class="player-card-chart-note">X축: 날짜 · Y축: 소수점 능력치 또는 기간 시작 대비 증감. 경기·측정일과 기간 시작·종료 값을 표시합니다. 그래프와 변화 상자는 소수 둘째 자리로 표시하고, 선수카드·OVR의 정수 계산은 유지합니다. 선택 기준일 이후 기록은 제외합니다.</p>
       </section>
+      <section class="player-card-history player-card-soccerbee" aria-label="기간별 사커비 측정기록">
+        <div class="player-card-history-head">
+          <div><h3>사커비 측정기록</h3><p class="player-card-history-sub" id="playerCardSoccerBeeNote">—</p></div>
+          <div class="player-card-history-controls">
+            <label>측정 항목<select id="playerCardSoccerBeeMetric"></select></label>
+            <label>조회 범위<select id="playerCardSoccerBeeRange"><option value="ALL">기준일까지 전체 측정</option><option value="MATCH">능력치와 같은 기간</option></select></label>
+          </div>
+        </div>
+        <div class="player-card-sb-summary" id="playerCardSoccerBeeSummary"></div>
+        <div class="player-card-history-plot" id="playerCardSoccerBeePlot"></div>
+        <div class="player-card-history-inspect" id="playerCardSoccerBeeInspect" aria-live="polite" aria-atomic="true"></div>
+        <label class="player-card-history-slider" for="playerCardSoccerBeeDate"><span>확인할 측정일</span><input id="playerCardSoccerBeeDate" type="range" min="0" max="0" step="1" value="0" aria-label="사커비 확인 측정일"></label>
+        <p class="player-card-chart-note">X축: 실제 측정일 · Y축: 선택 항목의 원래 단위. 측정 1회는 점으로 표시합니다. 같은 날짜의 재업로드는 마지막 기록을 표시하며, 없는 측정값은 연결하지 않습니다.</p>
+      </section>
+      </div>
     </div>
   </div>
 </div>
@@ -830,7 +846,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="assets/ggfc-sync.js?v=3.18.4"></script>
-<script src="assets/ggfc-mobile.js?v=3.18.4"></script>
-<script src="assets/ggfc-details.js?v=3.18.7"></script>
-<script src="assets/ggfc-app.js?v=3.18.9"></script>
+<script src="assets/ggfc-mobile.js?v=3.18.10"></script>
+<script src="assets/ggfc-details.js?v=3.18.10"></script>
+<script src="assets/ggfc-app.js?v=3.18.10"></script>
 </body></html>

@@ -1018,14 +1018,28 @@ function chemPlayers(){
   DB.attendance.forEach(r=>{ if(ids.has(detailMatchKey(r.id)) && r.player && !isOwnGoalPlayer(r.player)) s.add(r.player); });
   return [...s].sort(compareNamesKo);
 }
+function analysisGoalLookup(list){
+  const matchesById=new Map(list.map(m=>[detailMatchKey(m.id),m])),teamsByPlayer=new Map(),goals=new Map();
+  const playerKey=(id,name)=>JSON.stringify([id,normalizePlayerMatchKey(name)]);
+  const goalKey=(id,team,name)=>JSON.stringify([id,String(team||'').trim(),normalizePlayerMatchKey(name)]);
+  DB.attendance.forEach(r=>{
+    const id=detailMatchKey(r.id),m=matchesById.get(id),team=String(r.team||'').trim();
+    if(!m||!r.player||![m.home,m.away].includes(team))return;
+    const key=playerKey(id,r.player);if(!teamsByPlayer.has(key))teamsByPlayer.set(key,new Set());teamsByPlayer.get(key).add(team);
+  });
+  DB.goals.forEach(r=>{
+    const id=detailMatchKey(r.id),m=matchesById.get(id),name=String(r.player||'').trim();
+    if(!m||!name||isOwnGoalPlayer(name))return;
+    let team=String(r.team||'').trim();
+    if(!team){const candidates=teamsByPlayer.get(playerKey(id,name));if(candidates?.size!==1)return;team=[...candidates][0];}
+    if(![m.home,m.away].includes(team))return;
+    const key=goalKey(id,team,name);goals.set(key,(goals.get(key)||0)+num(r.g));
+  });
+  return (id,team,name)=>goals.get(goalKey(detailMatchKey(id),team,name))||0;
+}
 function chemistry(target,list){
   const ms=uniqueRecordMatches(list||chemMatches()), M=new Map(ms.map(m=>[detailMatchKey(m.id),m]));
-  const goalOf=new Map();
-  DB.goals.forEach(x=>{
-    const id=detailMatchKey(x.id),name=String(x.player||'').trim();if(!M.has(id)||!name)return;
-    const key=JSON.stringify([id,name]);goalOf.set(key,(goalOf.get(key)||0)+num(x.g));
-  });
-  const goal=(id,name)=>goalOf.get(JSON.stringify([id,name]))||0;
+  const goal=analysisGoalLookup(ms);
   const attendance=DB.attendance.map(r=>({...r,id:detailMatchKey(r.id),player:String(r.player||'').trim(),team:String(r.team||'').trim()})).filter(r=>{
     const m=M.get(r.id);return m&&r.player&&!isOwnGoalPlayer(r.player)&&[m.home,m.away].includes(r.team);
   });
@@ -1044,14 +1058,14 @@ function chemistry(target,list){
   groups.forEach(group=>{
     if(!group.players.has(target))return;
     const m=M.get(group.id),res=matchResult(m,group.team);if(!res)return;
-    const tg=goal(group.id,target);base++;baseGoals+=tg;
+    const tg=goal(group.id,group.team,target);base++;baseGoals+=tg;
     if(res==='W')bw++;else if(res==='D')bd++;else bl++;
     const add=(map,name,mg)=>{
       if(!name||name===target)return;
       if(!map.has(name))map.set(name,{name,p:0,w:0,d:0,l:0,tg:0,mg:0});
       const row=map.get(name);row.p++;row[res.toLowerCase()]++;row.tg+=tg;row.mg+=mg;
     };
-    group.players.forEach(name=>add(mates,name,goal(group.id,name)));
+    group.players.forEach(name=>add(mates,name,goal(group.id,group.team,name)));
     group.coaches.forEach(name=>add(coaches,name,0));
   });
   const baseGpg=base?Math.round(baseGoals/base*100)/100:0;
@@ -2173,7 +2187,7 @@ function renderAbility(){
   } finally {playerAbilityRecordAtDate=original;}
 }
 
-/* Ability history uses the same date-specific calculation and integer floor as the card. */
+/* History graphs use raw date-specific values; integer card/OVR calculations are unchanged. */
 const PLAYER_CARD_HISTORY_METRICS=[
   {key:'pac',label:'PAC',color:'#1763b1',dash:''},
   {key:'dri',label:'DRI',color:'#7050a1',dash:'7 4'},
@@ -2182,6 +2196,127 @@ const PLAYER_CARD_HISTORY_METRICS=[
   {key:'pas',label:'PAS',color:'#966400',dash:''},
   {key:'phy',label:'PHY',color:'#b04e20',dash:'10 4 2 4'}
 ];
+// Decimal chart formatting changes presentation only; card/OVR calculations stay unchanged.
+function playerChartNumber(value,digits=2){
+  if(value===null||value===undefined||!Number.isFinite(Number(value)))return '—';
+  const rounded=Number(Number(value).toFixed(digits));
+  return (Object.is(rounded,-0)?0:rounded).toFixed(digits);
+}
+function playerChartAutoAxis(values,zeroFloor=true,ceiling=null){
+  const clean=values.filter(Number.isFinite);
+  if(!clean.length)return {min:0,max:1,step:.2};
+  const lo=Math.min(...clean),hi=Math.max(...clean),span=Math.max(.1,hi-lo);
+  const pad=Math.max((span-(hi-lo))/2,span*.12,.01),target=(hi-lo+2*pad)/5;
+  const power=Math.pow(10,Math.floor(Math.log10(target)));
+  const step=Math.max(.01,[1,2,5,10].find(n=>n*power>=target)*power);
+  let min=Math.floor((lo-pad)/step)*step,max=Math.ceil((hi+pad)/step)*step;
+  if(zeroFloor)min=Math.max(0,min);
+  if(ceiling!==null)max=Math.min(ceiling,max);
+  if(max<=min)max=min+step;
+  return {min:Number(min.toFixed(8)),max:Number(max.toFixed(8)),step:Number(step.toFixed(8))};
+}
+function playerChartTicks(axis){
+  const count=Math.min(20,Math.floor((axis.max-axis.min)/axis.step+1e-7));
+  return Array.from({length:count+1},(_,i)=>Number((axis.min+i*axis.step).toFixed(8)));
+}
+const PLAYER_SB_METRICS=[
+  {key:'maxSpeed',label:'최고속도',unit:'km/h'},
+  {key:'energy',label:'에너지점수',unit:'점'},
+  {key:'dpm',label:'DPM',unit:'m/min'},
+  {key:'hsr',label:'HSR',unit:'회'},
+  {key:'hpm',label:'HPM',unit:'회/min'},
+  {key:'hsrDistance',label:'HSR 거리',unit:'m'},
+  {key:'hsrRatio',label:'HSR 비율',unit:'%'},
+  {key:'sprint',label:'스프린트',unit:'회'},
+  {key:'spm',label:'SPM',unit:'회/min'},
+  {key:'sprintDistance',label:'스프린트 거리',unit:'m'},
+  {key:'sprintRatio',label:'스프린트 비율',unit:'%'},
+  {key:'apm',label:'APM',unit:'회/min'},
+  {key:'hapm',label:'HAPM',unit:'회/min'},
+  {key:'activityRange',label:'활동범위',unit:'%'},
+  {key:'avgSpeed',label:'평균속도',unit:'km/h'},
+  {key:'action',label:'가속·감속 액션',unit:'회'},
+  {key:'accel',label:'가속',unit:'회'},
+  {key:'decel',label:'감속',unit:'회'},
+  {key:'highAction',label:'고강도 가속·감속 액션',unit:'회'},
+  {key:'highAccel',label:'고강도 가속',unit:'회'},
+  {key:'highDecel',label:'고강도 감속',unit:'회'}
+];
+let playerCardSoccerBeeState=null;
+function playerSoccerBeeHistory(player,query,mode,metric){
+  const range=playerCardHistoryRange(query,playerCardHistoryState?.mode||'HALF');
+  const byDate=new Map();
+  soccerBeePlayerRows(player,range.end).forEach(row=>{
+    const date=normDate(row.date);
+    if(!date||!range.end||date>range.end||(mode==='MATCH'&&date<range.start))return;
+    // Same-day reuploads replace that day's plotted value, just like the latest measurement.
+    byDate.set(date,row);
+  });
+  const rows=[...byDate].sort(([a],[b])=>a.localeCompare(b)).map(([date,row])=>{
+    const raw=row[metric],text=String(raw??'').trim();
+    const number=text?parseFloat(text.replace(/[^0-9.\-]/g,'')):NaN;
+    return {date,value:Number.isFinite(number)?number:null};
+  });
+  return {rows,end:range.end,start:mode==='MATCH'?range.start:(rows[0]?.date||''),mode};
+}
+function playerSoccerBeeSvg(history,metric,width){
+  const rows=history.rows,valid=rows.filter(r=>r.value!==null);
+  if(!valid.length)return {html:'<div class="player-card-history-empty">'+(rows.length?'선택한 측정 항목의 기록이 없습니다. 다른 항목을 선택해 주세요.':'선택 기준일까지의 사커비 측정 기록이 없습니다.')+'</div>',xs:[],width:0};
+  const W=Math.max(240,Math.round(width||660)),H=340,L=64,R=20,T=36,B=54,pw=W-L-R,ph=H-T-B;
+  const times=rows.map(r=>Date.parse(r.date+'T00:00:00Z')),t0=times[0],t1=times[times.length-1];
+  const xs=times.map(t=>t1===t0?L+pw/2:L+(t-t0)/(t1-t0)*pw),axis=playerChartAutoAxis(valid.map(r=>r.value));
+  const y=v=>T+(axis.max-v)/(axis.max-axis.min)*ph;
+  let html='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" role="img" aria-labelledby="pcSbTitle pcSbDesc"><title id="pcSbTitle">'+esc(metric.label)+' 측정 기록</title><desc id="pcSbDesc">X축은 측정일, Y축은 '+esc(metric.label+' ('+metric.unit+')')+'입니다. 기록이 한 건이면 측정점만 표시합니다.</desc><rect width="'+W+'" height="'+H+'" fill="#fff"/><g font-family="Arial,sans-serif" font-size="12" fill="#526a83">';
+  playerChartTicks(axis).forEach(v=>{const yy=y(v);html+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="#dbe4ee" stroke-dasharray="3 5"/><text x="'+(L-9)+'" y="'+(yy+4)+'" text-anchor="end">'+playerChartNumber(v)+'</text>';});
+  html+='<text x="'+L+'" y="18" fill="#061f44">'+esc('SOCCERBEE · '+metric.unit)+'</text>';
+  const indices=[0];for(let i=1;i<rows.length-1;i++)if(xs[i]-xs[indices[indices.length-1]]>=95&&xs[xs.length-1]-xs[i]>=95)indices.push(i);
+  if(rows.length>1)indices.push(rows.length-1);
+  indices.forEach(i=>{html+='<text x="'+xs[i]+'" y="'+(H-B+24)+'" text-anchor="'+(rows.length===1?'middle':i===0?'start':i===rows.length-1?'end':'middle')+'">'+esc(rows[i].date.slice(2).replaceAll('-','/'))+'</text>';});
+  html+='<text x="'+(W-R)+'" y="'+(H-8)+'" text-anchor="end" fill="#061f44">DATE</text></g>';
+  let path='',pen=false;
+  rows.forEach((r,i)=>{if(r.value===null){pen=false;return;}path+=(pen?' L':' M')+xs[i].toFixed(2)+' '+y(r.value).toFixed(2);pen=true;});
+  html+='<path class="player-card-sb-line" d="'+path.trim()+'" fill="none" stroke="#1763b1" stroke-width="2.08" stroke-linecap="round" stroke-linejoin="round"/>';
+  rows.forEach((r,i)=>{if(r.value!==null)html+='<circle cx="'+xs[i].toFixed(2)+'" cy="'+y(r.value).toFixed(2)+'" r="4" fill="#1763b1" stroke="#fff" stroke-width="1.2"><title>'+esc(r.date+' · '+metric.label+' '+playerChartNumber(r.value)+' '+metric.unit)+'</title></circle>';});
+  html+='<line id="playerCardSoccerBeeCursor" x1="'+xs[xs.length-1]+'" x2="'+xs[xs.length-1]+'" y1="'+T+'" y2="'+(H-B)+'" stroke="#061f44" stroke-dasharray="4 5" opacity=".65"/></svg>';
+  return {html,xs,width:W,axis};
+}
+function selectPlayerSoccerBeePoint(index){
+  const state=playerCardSoccerBeeState,rows=state?.history?.rows||[];
+  if(!rows.length)return;
+  const i=Math.max(0,Math.min(rows.length-1,Math.round(num(index)))),row=rows[i],metric=PLAYER_SB_METRICS.find(m=>m.key===state.metric);
+  state.index=i;
+  const slider=$('#playerCardSoccerBeeDate');if(slider){slider.value=i;slider.setAttribute('aria-valuetext',row.date+' · '+playerChartNumber(row.value)+' '+metric.unit);}
+  const cursor=$('#playerCardSoccerBeeCursor'),x=state.plot?.xs[i];if(cursor&&Number.isFinite(x)){cursor.setAttribute('x1',x);cursor.setAttribute('x2',x);}
+  const previous=rows[i-1],delta=row.value!==null&&previous&&previous.value!==null?row.value-previous.value:null;
+  $('#playerCardSoccerBeeInspect').innerHTML='<div class="pc-history-date">'+esc(row.date)+'<small>실제 측정일</small></div><div class="pc-sb-reading"><span>'+esc(metric.label)+'</span><b>'+playerChartNumber(row.value)+'</b><small>'+esc(metric.unit)+'</small><span>'+ (delta===null?(row.value===null?'측정값 없음':i===0?'첫 측정':'직전 측정값 없음'):playerCardHistoryDelta(delta)+' · 직전 측정 대비')+'</span></div>';
+}
+function drawPlayerSoccerBeeHistory(){
+  const state=playerCardSoccerBeeState,plot=$('#playerCardSoccerBeePlot');if(!state||!plot)return;
+  const metric=PLAYER_SB_METRICS.find(m=>m.key===state.metric)||PLAYER_SB_METRICS[0];
+  state.history=playerSoccerBeeHistory(state.player,state.query,state.mode,metric.key);
+  state.plot=playerSoccerBeeSvg(state.history,metric,plot.clientWidth);plot.innerHTML=state.plot.html;
+  const rows=state.history.rows,valid=rows.filter(r=>r.value!==null),latest=valid[valid.length-1],delta=valid.length>1?latest.value-valid[0].value:null;
+  $('#playerCardSoccerBeeNote').textContent=(state.history.start?state.history.start+' ~ ':'')+(state.history.end||'기준일 없음')+' · '+rows.length+'회 측정'+(valid.length===1?' · 측정 1회: 추세 비교는 2회부터 가능':'');
+  $('#playerCardSoccerBeeSummary').innerHTML=[['최근 측정값',latest?playerChartNumber(latest.value)+' '+metric.unit:'—',latest?.date||'등록 기록 없음'],['첫 측정 대비',delta===null?'—':playerCardHistoryDelta(delta),valid.length>1?valid[0].date+' 대비':'비교할 측정값 없음'],['유효 측정',valid.length+'회',metric.label]].map(([label,value,note])=>'<div><span>'+esc(label)+'</span><b>'+esc(value)+'</b><small>'+esc(note)+'</small></div>').join('');
+  const slider=$('#playerCardSoccerBeeDate');slider.min=0;slider.max=Math.max(0,rows.length-1);slider.disabled=rows.length<2;
+  if(rows.length)selectPlayerSoccerBeePoint(state.index===null?rows.length-1:state.index);else $('#playerCardSoccerBeeInspect').innerHTML='';
+  const svg=plot.querySelector('svg');if(svg)svg.onpointermove=e=>{
+    const rect=svg.getBoundingClientRect();if(!rect.width||!state.plot.xs.length)return;
+    const x=(e.clientX-rect.left)/rect.width*state.plot.width;let nearest=0;
+    state.plot.xs.forEach((v,i)=>{if(Math.abs(v-x)<Math.abs(state.plot.xs[nearest]-x))nearest=i;});
+    if(nearest!==state.index)selectPlayerSoccerBeePoint(nearest);
+  };
+}
+function openPlayerSoccerBeeHistory(player,query){
+  playerCardSoccerBeeState={player,query,mode:'ALL',metric:'maxSpeed',index:null,history:null,plot:null};
+  const metric=$('#playerCardSoccerBeeMetric'),range=$('#playerCardSoccerBeeRange');
+  metric.innerHTML=PLAYER_SB_METRICS.map(m=>'<option value="'+m.key+'">'+esc(m.label+' ('+m.unit+')')+'</option>').join('');metric.value='maxSpeed';range.value='ALL';
+  metric.onchange=e=>{if(playerCardSoccerBeeState){playerCardSoccerBeeState.metric=e.target.value;playerCardSoccerBeeState.index=null;drawPlayerSoccerBeeHistory();}};
+  range.onchange=e=>{if(playerCardSoccerBeeState){playerCardSoccerBeeState.mode=e.target.value;playerCardSoccerBeeState.index=null;drawPlayerSoccerBeeHistory();}};
+  $('#playerCardSoccerBeeDate').oninput=e=>selectPlayerSoccerBeePoint(e.target.value);
+  drawPlayerSoccerBeeHistory();
+}
+
 let playerCardHistoryState=null, playerCardHistoryResize=null;
 function playerCardHistoryRange(query,mode){
   const info=query||resolvePlayerCardQuery(), end=normDate(info.asOf||info.end), year=String(info.year||(end||'').slice(0,4));
@@ -2195,13 +2330,13 @@ function playerCardAbilityHistory(player,query,mode,cache){
   const range=playerCardHistoryRange(query,mode), {start,end}=range;
   if(!end||start>end)return Object.assign(range,{rows:[],eventCount:0});
   const matchDates=new Set((DB.matches||[]).map(m=>normDate(m.date)).filter(d=>d&&d>=start&&d<=end));
-  const sbDates=new Set((DB.soccerbee||[]).filter(r=>String(r.player||'').trim()===player).map(r=>normDate(r.date)).filter(d=>d&&d>=start&&d<=end));
+  const sbDates=new Set((DB.soccerbee||[]).filter(r=>normalizePlayerMatchKey(r.player)===normalizePlayerMatchKey(player)).map(r=>normDate(r.date)).filter(d=>d&&d>=start&&d<=end));
   const dates=[...new Set([start,end,...matchDates,...sbDates])].sort(), memo=cache||new Map();
   const rows=dates.map(date=>{
     let values=memo.get(date);
     if(!values){
       const year=date.slice(0,4), r=playerAbilityRecordAtDate(player,year,abilityHalfForDate(year,date),date,true);
-      values={};PLAYER_CARD_HISTORY_METRICS.forEach(m=>values[m.key]=Math.floor(num(r[m.key])));memo.set(date,values);
+      values={};PLAYER_CARD_HISTORY_METRICS.forEach(m=>values[m.key]=num(r[m.key]));memo.set(date,values);
     }
     const tags=[];
     if(date===start)tags.push('기간 시작');
@@ -2213,45 +2348,43 @@ function playerCardAbilityHistory(player,query,mode,cache){
   return Object.assign(range,{rows,eventCount:new Set([...matchDates,...sbDates]).size});
 }
 function playerCardHistoryAxis(rows,keys,scale){
-  const values=rows.flatMap(r=>keys.map(k=>r.values[k])).filter(Number.isFinite);
-  if(!values.length)return {min:0,max:100,step:20};
-  const lo=Math.min(...values),hi=Math.max(...values);
-  if(scale==='FULL')return {min:Math.min(0,Math.floor(lo/20)*20),max:Math.max(100,Math.ceil(hi/20)*20),step:20};
-  const span=Math.max(8,hi-lo+4), step=span<=12?2:span<=30?5:span<=60?10:20;
-  const middle=(lo+hi)/2;
-  const min=Math.max(0,Math.floor((middle-span/2)/step)*step), max=Math.max(min+step*2,Math.ceil((middle+span/2)/step)*step);
-  return {min,max,step};
+  const values=rows.flatMap(r=>keys.map(k=>r.values[k]-(scale==='DELTA'?(rows[0]?.values[k]||0):0))).filter(Number.isFinite);
+  if(scale==='FULL')return {min:Math.min(0,...values),max:Math.max(100,...values),step:20};
+  return playerChartAutoAxis(values,scale!=='DELTA');
 }
+
 function playerCardHistoryDelta(value){
-  return value>0?'▲ +'+value:value<0?'▼ '+value:'변화 없음';
+  const rounded=Number(num(value).toFixed(2));
+  return rounded>0?'▲ +'+playerChartNumber(rounded):rounded<0?'▼ '+playerChartNumber(rounded):'변화 없음';
 }
+
 function playerCardHistoryLegend(history,enabled){
   const rows=history.rows,first=rows[0],last=rows[rows.length-1];
   return PLAYER_CARD_HISTORY_METRICS.map(m=>{
     const value=last?last.values[m.key]:null,delta=last?value-first.values[m.key]:0;
-    return '<button type="button" class="player-card-history-series" style="--series-color:'+m.color+'" data-ability-series="'+m.key+'" aria-pressed="'+enabled.has(m.key)+'" aria-label="'+m.label+' 그래프 '+(enabled.has(m.key)?'숨기기':'표시')+'"><span class="pc-series-label">'+m.label+'</span><span class="pc-series-bottom"><b class="pc-series-value">'+(value===null?'—':value)+'</b><span class="pc-series-delta'+(delta>0?' up':delta<0?' down':'')+'">'+(value===null?'기록 없음':playerCardHistoryDelta(delta))+'</span></span></button>';
+    return '<button type="button" class="player-card-history-series" style="--series-color:'+m.color+'" data-ability-series="'+m.key+'" aria-pressed="'+enabled.has(m.key)+'" aria-label="'+m.label+' 그래프 '+(enabled.has(m.key)?'숨기기':'표시')+'"><span class="pc-series-label">'+m.label+'</span><span class="pc-series-bottom"><b class="pc-series-value">'+playerChartNumber(value)+'</b><span class="pc-series-delta'+(delta>0?' up':delta<0?' down':'')+'">'+(value===null?'기록 없음':playerCardHistoryDelta(delta))+'</span></span></button>';
   }).join('');
 }
 function playerCardHistorySvg(history,enabled,scale,width){
   const rows=history.rows,metrics=PLAYER_CARD_HISTORY_METRICS.filter(m=>enabled.has(m.key));
   if(!rows.length)return {html:'<div class="player-card-history-empty">선택한 기간에 표시할 능력치 이력이 없습니다.</div>',xs:[],axis:{min:0,max:100},width:0};
   if(!metrics.length)return {html:'<div class="player-card-history-empty">위에서 표시할 능력치를 선택해 주세요.</div>',xs:[],axis:{min:0,max:100},width:0};
-  const W=Math.max(760,Math.round(width||1000)),H=340,L=58,R=26,T=36,B=54,pw=W-L-R,ph=H-T-B;
+  const W=Math.max(240,Math.round(width||660)),H=340,L=64,R=20,T=36,B=54,pw=W-L-R,ph=H-T-B;
   const times=rows.map(r=>Date.parse(r.date+'T00:00:00Z')),t0=times[0],t1=times[times.length-1];
   const xs=times.map(t=>t1===t0?L+pw/2:L+(t-t0)/(t1-t0)*pw),axis=playerCardHistoryAxis(rows,metrics.map(m=>m.key),scale);
-  const y=v=>T+(axis.max-v)/(axis.max-axis.min)*ph;
-  let html='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" role="img" aria-labelledby="pcHistorySvgTitle pcHistorySvgDesc"><title id="pcHistorySvgTitle">선수 능력치 기간별 변화</title><desc id="pcHistorySvgDesc">X축은 날짜, Y축은 능력치 수치입니다. '+esc(history.start)+'부터 '+esc(history.end)+'까지 '+metrics.map(m=>m.label).join(', ')+'를 표시합니다. 아래 날짜 선택으로 정확한 값을 확인할 수 있습니다.</desc><rect width="'+W+'" height="'+H+'" fill="#ffffff"/><g font-family="Arial,sans-serif" font-size="13" fill="#526a83">';
-  for(let v=axis.min;v<=axis.max;v+=axis.step){const yy=y(v);html+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="#dbe4ee" stroke-width="1"'+(v===axis.min?'':' stroke-dasharray="3 5"')+'/><text x="'+(L-12)+'" y="'+(yy+4)+'" text-anchor="end">'+v+'</text>';}
-  html+='<text x="'+L+'" y="18" fill="#061f44">ABILITY SCORE</text>';
+  const y=v=>T+(axis.max-v)/(axis.max-axis.min)*ph,chartValue=(r,key)=>r.values[key]-(scale==='DELTA'?rows[0].values[key]:0);
+  let html='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" role="img" aria-labelledby="pcHistorySvgTitle pcHistorySvgDesc"><title id="pcHistorySvgTitle">선수 능력치 기간별 변화</title><desc id="pcHistorySvgDesc">X축은 날짜, Y축은 '+(scale==='DELTA'?'기간 시작 대비 증감':'소수점 능력치 수치')+'입니다. '+esc(history.start)+'부터 '+esc(history.end)+'까지 '+metrics.map(m=>m.label).join(', ')+'를 표시합니다. 아래 날짜 선택으로 정확한 값을 확인할 수 있습니다.</desc><rect width="'+W+'" height="'+H+'" fill="#ffffff"/><g font-family="Arial,sans-serif" font-size="13" fill="#526a83">';
+  for(const v of playerChartTicks(axis)){const yy=y(v);html+='<line x1="'+L+'" y1="'+yy+'" x2="'+(W-R)+'" y2="'+yy+'" stroke="#dbe4ee" stroke-width="1"'+(v===axis.min?'':' stroke-dasharray="3 5"')+'/><text x="'+(L-12)+'" y="'+(yy+4)+'" text-anchor="end">'+playerChartNumber(v)+'</text>';}
+  html+='<text x="'+L+'" y="18" fill="#061f44">'+(scale==='DELTA'?'CHANGE FROM START':'ABILITY SCORE')+'</text>';
   const indices=[0];
   for(let i=1;i<rows.length-1;i++)if(xs[i]-xs[indices[indices.length-1]]>=92&&xs[xs.length-1]-xs[i]>=92)indices.push(i);
   if(rows.length>1)indices.push(rows.length-1);
   indices.forEach(i=>{const date=rows[i].date,short=history.start.slice(0,4)===history.end.slice(0,4)?date.slice(5).replace('-','/'):date.slice(2).replaceAll('-','/');html+='<line x1="'+xs[i]+'" y1="'+(H-B)+'" x2="'+xs[i]+'" y2="'+(H-B+6)+'" stroke="#8da0b7"/><text x="'+xs[i]+'" y="'+(H-B+24)+'" text-anchor="'+(i===0&&rows.length>1?'start':i===rows.length-1&&rows.length>1?'end':'middle')+'">'+short+'</text>';});
   html+='<text x="'+(W-R)+'" y="'+(H-8)+'" text-anchor="end" fill="#061f44">DATE</text></g>';
   metrics.forEach(m=>{
-    const path=rows.map((r,i)=>(i?'L':'M')+xs[i].toFixed(2)+' '+y(r.values[m.key]).toFixed(2)).join(' ');
-    html+='<g data-history-series="'+m.key+'"><path class="player-card-history-line" d="'+path+'" stroke="'+m.color+'" fill="none" stroke-width="2.6" stroke-linejoin="round"'+(m.dash?' stroke-dasharray="'+m.dash+'"':'')+'/>';
-    rows.forEach((r,i)=>{html+='<circle class="player-card-history-dot" cx="'+xs[i].toFixed(2)+'" cy="'+y(r.values[m.key]).toFixed(2)+'" r="'+(rows.length>65?2:3.2)+'" fill="'+m.color+'"><title>'+esc(r.date+' · '+m.label+' '+r.values[m.key])+'</title></circle>';});html+='</g>';
+    const path=rows.map((r,i)=>(i?'L':'M')+xs[i].toFixed(2)+' '+y(chartValue(r,m.key)).toFixed(2)).join(' ');
+    html+='<g data-history-series="'+m.key+'"><path class="player-card-history-line" d="'+path+'" stroke="'+m.color+'" fill="none" stroke-width="2.08" stroke-linejoin="round"'+(m.dash?' stroke-dasharray="'+m.dash+'"':'')+'/>';
+    rows.forEach((r,i)=>{html+='<circle class="player-card-history-dot" cx="'+xs[i].toFixed(2)+'" cy="'+y(chartValue(r,m.key)).toFixed(2)+'" r="'+(rows.length>65?2:3.2)+'" fill="'+m.color+'"><title>'+esc(r.date+' · '+m.label+' '+playerChartNumber(r.values[m.key])+(scale==='DELTA'?' · '+playerCardHistoryDelta(chartValue(r,m.key)):''))+'</title></circle>';});html+='</g>';
   });
   html+='<line id="playerCardHistoryCursor" x1="'+xs[xs.length-1]+'" x2="'+xs[xs.length-1]+'" y1="'+T+'" y2="'+(H-B)+'" stroke="#061f44" stroke-width="1" stroke-dasharray="4 5" opacity=".7" pointer-events="none"/></svg>';
   return {html,xs,axis,width:W};
@@ -2262,7 +2395,7 @@ function selectPlayerCardHistoryPoint(index){
   const slider=$('#playerCardHistoryDate');if(slider){slider.value=i;slider.setAttribute('aria-valuetext',row.date);}
   const cursor=$('#playerCardHistoryCursor'),x=state.plot&&state.plot.xs[i];if(cursor&&Number.isFinite(x)){cursor.setAttribute('x1',x);cursor.setAttribute('x2',x);}
   const box=$('#playerCardHistoryInspect');if(box)box.innerHTML='<div class="pc-history-date">'+esc(row.date)+'<small>'+esc(row.tag||'기준일 능력치')+'</small></div><div class="pc-history-values">'+PLAYER_CARD_HISTORY_METRICS.filter(m=>state.enabled.has(m.key)).map(m=>{
-    const delta=row.values[m.key]-previous.values[m.key];return '<div class="pc-history-value" style="--series-color:'+m.color+'" title="직전 표시일 대비 '+esc(playerCardHistoryDelta(delta))+'"><span>'+m.label+'</span><b>'+row.values[m.key]+'</b><small class="pc-series-delta'+(delta>0?' up':delta<0?' down':'')+'">'+(delta?playerCardHistoryDelta(delta):'—')+'</small></div>';
+    const delta=row.values[m.key]-previous.values[m.key];return '<div class="pc-history-value" style="--series-color:'+m.color+'" title="직전 표시일 대비 '+esc(playerCardHistoryDelta(delta))+'"><span>'+m.label+'</span><b>'+playerChartNumber(row.values[m.key])+'</b><small class="pc-series-delta'+(delta>0?' up':delta<0?' down':'')+'">'+(delta?playerCardHistoryDelta(delta):'—')+'</small></div>';
   }).join('')+'</div>';
 }
 function drawPlayerCardHistory(){
@@ -2275,7 +2408,7 @@ function drawPlayerCardHistory(){
   const history=playerCardAbilityHistory(state.player,state.query,state.mode,state.cache);state.history=history;
   const legend=$('#playerCardHistoryLegend');if(legend)legend.innerHTML=playerCardHistoryLegend(history,state.enabled);
   state.plot=playerCardHistorySvg(history,state.enabled,state.scale,plot.clientWidth);plot.innerHTML=state.plot.html;
-  const note=$('#playerCardHistoryNote');if(note)note.textContent=history.start+' ~ '+history.end+' · '+history.eventCount+'개 경기·측정일'+(history.eventCount?'':' · 기간 내 새 기록 없음')+' · Y축 '+state.plot.axis.min+'–'+state.plot.axis.max;
+  const note=$('#playerCardHistoryNote');if(note)note.textContent=history.start+' ~ '+history.end+' · '+history.eventCount+'개 경기·측정일'+(history.eventCount?'':' · 기간 내 새 기록 없음')+' · Y축 '+playerChartNumber(state.plot.axis.min)+'–'+playerChartNumber(state.plot.axis.max)+(state.scale==='DELTA'?' · 기간 시작 대비 증감':'');
   const slider=$('#playerCardHistoryDate');if(slider){slider.min=0;slider.max=Math.max(0,history.rows.length-1);slider.disabled=history.rows.length<2;}
   if(history.rows.length)selectPlayerCardHistoryPoint(state.index===null?history.rows.length-1:state.index);
   else if($('#playerCardHistoryInspect'))$('#playerCardHistoryInspect').innerHTML='';
@@ -2290,16 +2423,20 @@ function openPlayerCardHistory(player,query){
   playerCardHistoryState={player,query,mode:'HALF',scale:'AUTO',enabled:new Set(PLAYER_CARD_HISTORY_METRICS.map(m=>m.key)),cache:new Map(),index:null,history:null,plot:null};
   const range=$('#playerCardHistoryRange'),scale=$('#playerCardHistoryScale');if(range)range.value='HALF';if(scale)scale.value='AUTO';
   drawPlayerCardHistory();
+  openPlayerSoccerBeeHistory(player,query);
   if(playerCardHistoryResize)playerCardHistoryResize.disconnect();
   if(typeof ResizeObserver!=='undefined'){
-    let previous=$('#playerCardHistoryPlot').clientWidth;
-    playerCardHistoryResize=new ResizeObserver(entries=>{const width=entries[0]&&entries[0].contentRect.width;if(width&&Math.abs(width-previous)>1){previous=width;drawPlayerCardHistory();}});
-    playerCardHistoryResize.observe($('#playerCardHistoryPlot'));
+    const plots=[$('#playerCardHistoryPlot'),$('#playerCardSoccerBeePlot')].filter(Boolean),widths=new Map(plots.map(el=>[el,el.clientWidth]));
+    playerCardHistoryResize=new ResizeObserver(entries=>{
+      let changed=false;entries.forEach(({target,contentRect})=>{if(contentRect.width&&Math.abs(contentRect.width-(widths.get(target)||0))>1){widths.set(target,contentRect.width);changed=true;}});
+      if(changed){drawPlayerCardHistory();drawPlayerSoccerBeeHistory();}
+    });
+    plots.forEach(el=>playerCardHistoryResize.observe(el));
   }
 }
 function bindPlayerCardHistory(){
   const range=$('#playerCardHistoryRange'),scale=$('#playerCardHistoryScale'),legend=$('#playerCardHistoryLegend'),all=$('#playerCardHistoryAll'),slider=$('#playerCardHistoryDate');
-  if(range)range.onchange=e=>{if(playerCardHistoryState){playerCardHistoryState.mode=e.target.value;playerCardHistoryState.index=null;drawPlayerCardHistory();}};
+  if(range)range.onchange=e=>{if(playerCardHistoryState){playerCardHistoryState.mode=e.target.value;playerCardHistoryState.index=null;drawPlayerCardHistory();if(playerCardSoccerBeeState?.mode==='MATCH'){playerCardSoccerBeeState.index=null;drawPlayerSoccerBeeHistory();}}};
   if(scale)scale.onchange=e=>{if(playerCardHistoryState){playerCardHistoryState.scale=e.target.value;drawPlayerCardHistory();}};
   if(legend)legend.onclick=e=>{
     const button=e.target.closest('[data-ability-series]'),state=playerCardHistoryState;if(!button||!state)return;
@@ -2437,7 +2574,7 @@ function closePlayerCard(){
   const mask=$("#playerCardMask"); if(!mask) return;
   clearPlayerCardAnimation();
   if(playerCardHistoryResize){playerCardHistoryResize.disconnect();playerCardHistoryResize=null;}
-  playerCardHistoryState=null;
+  playerCardHistoryState=null;playerCardSoccerBeeState=null;
   mask.classList.remove("on"); mask.setAttribute("aria-hidden","true");
   document.body.style.overflow="";
 }
@@ -3814,42 +3951,54 @@ function renderTeam(){
       (top.length?top.map(p=>'<div style="font-size:13px;display:flex;justify-content:space-between"><span>'+esc(p.player)+'</span><span class="muted">'+p.g+'골 · '+p.att+'출석</span></div>').join(""):'<div class="muted" style="font-size:13px">기록 없음</div>')+'</div>';
   }).join("")||'';
 }
+function playerRecordSearchQuery(){return normalizePlayerMatchKey($('#memberPlayerSearch')?.value||'');}
+function bindPlayerRecordSearch(){
+  const input=$('#memberPlayerSearch'),clear=$('#playerRecordSearchClear');
+  if(input)input.oninput=()=>renderPlayer();
+  if(clear)clear.onclick=()=>{if(input){input.value='';renderPlayer();input.focus();}};
+}
 function renderPlayer(){
+  bindPlayerRecordSearch();
   renderLinkedRecordControls("player");
   const info=recordQueryInfo(), list=info.list||[];
   if($("#playerPeriodLabel")) $("#playerPeriodLabel").textContent=info.label+" · "+list.length+"경기";
   const draftNames=draftPlayerNameSet(info.year);
-  const ps=queryPlayerStats(list).filter(p=>draftPlayerVisible(p.player,draftNames)).sort((a,b)=>String(a.player||"").localeCompare(String(b.player||""),"ko-KR"));
-  if($("#playerPeriodLabel")) $("#playerPeriodLabel").textContent+=' · Draft 등록 선수 '+ps.length+'명';
+  const search=playerRecordSearchQuery(),matchesName=name=>!search||normalizePlayerMatchKey(name).includes(search);
+  const allPlayers=queryPlayerStats(list).filter(p=>draftPlayerVisible(p.player,draftNames)).sort((a,b)=>String(a.player||"").localeCompare(String(b.player||""),"ko-KR"));
+  const ps=allPlayers.filter(p=>matchesName(p.player)),emptySearch='<div class="empty">검색한 이름과 일치하는 선수가 없습니다.</div>';
+  if($('#playerRecordSearchStatus'))$('#playerRecordSearchStatus').textContent=(search?'검색 결과 ':'전체 ')+ps.length+'명 / '+allPlayers.length+'명';
+  if($('#playerRecordSearchClear'))$('#playerRecordSearchClear').disabled=!String($('#memberPlayerSearch')?.value||'');
+  if($("#playerPeriodLabel")) $("#playerPeriodLabel").textContent+=' · Draft 등록 선수 '+allPlayers.length+'명';
   $("#playerTable").innerHTML=tbl(
     [{t:"선수"},{t:"주 소속"},{t:"출석",n:1},{t:"출석률",n:1},{t:"승",n:1},{t:"무",n:1},{t:"패",n:1},{t:"승률",n:1},{t:"득점",n:1},{t:"어시스트",n:1},{t:"개인파울",n:1},{t:"선방",n:1},{t:"MOM",n:1},{t:"승점",n:1}],
     ps.map(p=>[playerCardLink(p.player,playerFaceChip(p.player,false,info.year),info),'<span class="muted">'+teamChip(p.mainTeam)+'</span>',p.att,'<b>'+p.attendanceRate+'%</b>',p.w,p.d,p.l,p.winRate+'%',p.g,p.a||0,p.f||0,p.sv||0,p.mom||0,'<b>'+p.pts+'</b>'])
   );
-  if($("#memberPlayerCards")) $("#memberPlayerCards").innerHTML=mobilePlayerCards(ps,info);
-  const rs=queryRosterStats(list).filter(r=>draftPlayerVisible(r.player,draftNames));
+  if(search&&!ps.length)$('#playerTable').innerHTML=emptySearch;
+  if($("#memberPlayerCards")) $("#memberPlayerCards").innerHTML=search&&!ps.length?emptySearch:mobilePlayerCards(ps,info);
+  const rs=queryRosterStats(list).filter(r=>draftPlayerVisible(r.player,draftNames)&&matchesName(r.player));
   $("#rosterTable").innerHTML=rs.length?tbl(
     [{t:"연도"},{t:"팀"},{t:"등번호",n:1},{t:"선수"},{t:"포지션"},{t:"출석",n:1},{t:"팀 경기",n:1},{t:"출석률",n:1},{t:"득점",n:1},{t:"비고"}],
     rs.map(r=>[esc(r.year||"—"),'<span class="muted">'+teamChip(r.team)+'</span>',esc(r.no||""),playerCardLink(r.player,playerFaceChip(r.player,false,r.year||info.year),info),esc(r.pos||""),r.att,r.teamGames,'<b>'+r.rate+'%</b>','<b>'+r.g+'</b>','<span class="muted">'+esc(r.memo||"")+'</span>']))
-    :'<div class="empty">선택한 조회 구간에 표시할 선수명단이 없습니다.</div>';
-  const specials=DB.specials.filter(x=>{const d=normDate(x.date);return draftPlayerVisible(x.player,draftNames)&&d&&(!info.start||d>=info.start)&&(!info.end||d<=info.end);}).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
-  $("#specialTable").innerHTML=tbl([{t:"날짜"},{t:"선수"},{t:"구분"},{t:"내용"}],specials.map(x=>[esc(x.date),playerCardLink(x.player,'<b>'+esc(x.player)+'</b>',info),'<span class="pill">'+esc(x.type)+'</span>',esc(x.memo)]));
+    :search?emptySearch:'<div class="empty">선택한 조회 구간에 표시할 선수명단이 없습니다.</div>';
+  const specials=DB.specials.filter(x=>{const d=normDate(x.date);return draftPlayerVisible(x.player,draftNames)&&matchesName(x.player)&&d&&(!info.start||d>=info.start)&&(!info.end||d<=info.end);}).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  $("#specialTable").innerHTML=search&&!specials.length?'<div class="empty">검색한 선수의 특이사항 기록이 없습니다.</div>':tbl([{t:"날짜"},{t:"선수"},{t:"구분"},{t:"내용"}],specials.map(x=>[esc(x.date),playerCardLink(x.player,'<b>'+esc(x.player)+'</b>',info),'<span class="pill">'+esc(x.type)+'</span>',esc(x.memo)]));
 }
 function pairStats(a,b,list){
   const ms=uniqueRecordMatches(list||chemMatches()), ids=new Set(ms.map(m=>detailMatchKey(m.id)));
-  const goalOf={}; DB.goals.forEach(g=>{ const id=detailMatchKey(g.id);if(ids.has(id))goalOf[id+"|"+g.player]=(goalOf[id+"|"+g.player]||0)+num(g.g); });
+  const goal=analysisGoalLookup(ms);
   const teamOf=new Map(); DB.attendance.forEach(r=>{
     const id=detailMatchKey(r.id),team=String(r.team||'').trim();
     if(!ids.has(id)||!r.player||!team)return;
-    const key=id+'|'+r.player;if(!teamOf.has(key))teamOf.set(key,new Set());teamOf.get(key).add(team);
+    const key=JSON.stringify([id,normalizePlayerMatchKey(r.player)]);if(!teamOf.has(key))teamOf.set(key,new Set());teamOf.get(key).add(team);
   });
   const tog={p:0,w:0,d:0,l:0,ag:0,bg:0,rows:[]};
   const vs ={p:0,aw:0,d:0,bw:0,ag:0,bg:0,rows:[]};
   ms.slice().sort((x,y)=>(y.date||"").localeCompare(x.date||"")).forEach(m=>{
-    const at=teamOf.get(detailMatchKey(m.id)+'|'+a),bt=teamOf.get(detailMatchKey(m.id)+'|'+b);
+    const at=teamOf.get(JSON.stringify([detailMatchKey(m.id),normalizePlayerMatchKey(a)])),bt=teamOf.get(JSON.stringify([detailMatchKey(m.id),normalizePlayerMatchKey(b)]));
     if(at?.size!==1||bt?.size!==1)return;
     const ta=[...at][0],tb=[...bt][0];
     if(![m.home,m.away].includes(ta)||![m.home,m.away].includes(tb))return;
-    const ag=goalOf[detailMatchKey(m.id)+"|"+a]||0, bg=goalOf[detailMatchKey(m.id)+"|"+b]||0;
+    const ag=goal(m.id,ta,a), bg=goal(m.id,tb,b);
     const resOf=t=>matchResult(m,t);
     const r=resOf(ta); if(!r) return;
     if(ta===tb){ tog.p++; tog[r.toLowerCase()]++; tog.ag+=ag; tog.bg+=bg; tog.rows.push({m,team:ta,r,ag,bg}); }
@@ -4126,13 +4275,14 @@ function renderChem(){
   const c = chemistry(chemSel);
   $("#chemSum").innerHTML = '<div class="chem-selected-summary">'+playerFaceChip(chemSel,true)+'<span>· '+(chemYear==="ALL"?"전체 연도":chemYear+"년")+
     ' 기준 <b>'+c.base+'경기</b> 출전 · 승률 <b>'+c.baseRate+'%</b> ('+c.bw+'·'+c.bd+'·'+c.bl+') · 득점 <b>'+c.baseGoals+'골</b> (경기당 '+c.baseGpg+'골)</span></div>';
+  $("#chemSum").innerHTML+='<p class="chem-goal-scope">베스트 커플 득점은 <b>두 선수가 같은 경기·같은 팀으로 함께 출석한 경기</b>에서의 각 선수 득점입니다. 상대팀으로 만났거나 한 선수만 출석한 경기의 골은 제외되어, 위의 전체 출석경기 득점과 다를 수 있습니다.</p>';
   if($("#monthlyMetric")) $("#monthlyMetric").value=monthlyMetric;
   renderMonthlyPlayerStats();
   const bar = v => '<div class="bar"><i style="width:'+Math.min(v,100)+'%;background:'+(v>=60?"#46A171":v>=40?"#2783DE":"#D5803B")+'"></i></div>';
   const main = c.mates.filter(x=>x.p>=2);
   const rowsM = (main.length>=10? main : main.concat(c.mates.filter(x=>x.p<2))).slice(0,10);
   $("#chemMate").innerHTML = rowsM.length? tbl(
-    [{t:"동료"},{t:"동행",n:1},{t:"승·무·패",n:1},{t:"승률",n:1},{t:"출석률",n:1},{t:"본인 득점",n:1},{t:"동료 득점",n:1},{t:"커플점수",n:1},{t:""}],
+    [{t:"동료"},{t:"동행",n:1},{t:"승·무·패",n:1},{t:"승률",n:1},{t:"출석률",n:1},{t:"동행 중 본인 득점",n:1},{t:"동행 중 동료 득점",n:1},{t:"커플점수",n:1},{t:""}],
     rowsM.map(x=>[playerFaceChip(x.name,false), x.p+"경기", x.w+"·"+x.d+"·"+x.l, x.rate+"%", x.att+"%", x.tg+"골", x.mg+"골", "<b>"+x.score+"</b>", bar(x.score)]))
     : '<div class="empty">2경기 이상 함께 뛰어 분석할 조합이 없습니다.</div>';
   $("#chemCoach").innerHTML = c.coaches.length? tbl(

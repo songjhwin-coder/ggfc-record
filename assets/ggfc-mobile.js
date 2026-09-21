@@ -56,8 +56,8 @@ function initMemberUI(){
     if(e.shiftKey && (document.activeElement===first || !focusable.includes(document.activeElement))){e.preventDefault();last.focus();}
     else if(!e.shiftKey && (document.activeElement===last || !focusable.includes(document.activeElement))){e.preventDefault();first.focus();}
   });
-  const search=document.querySelector('#memberPlayerSearch');
-  if(search)search.oninput=()=>{const q=search.value.normalize('NFKC').replace(/\s/g,'').toLowerCase();document.querySelectorAll('[data-member-name]').forEach(el=>el.hidden=!el.dataset.memberName.normalize('NFKC').replace(/\s/g,'').toLowerCase().includes(q));};
+  // Reuse the desktop/mobile filter so period changes retain the name query.
+  if(typeof bindPlayerRecordSearch==='function')bindPlayerRecordSearch();
   const media=matchMedia('(max-width: 820px)');
   const update=()=>{
     const desktop=new URLSearchParams(location.search).get('view')==='desktop';

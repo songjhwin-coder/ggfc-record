@@ -1,4 +1,4 @@
-/* GGFC V3.18.7 — 읽기 전용 경기 상세 / 선수 비교 / 커플점수 창.
+/* GGFC V3.18.10 — 읽기 전용 경기 상세 / 선수 비교 / 커플점수 창.
    앱의 기존 경기 범위·능력치·파울 집계 함수를 사용하며 DB를 저장하지 않는다. */
 let ggfcDetailState=null;
 let ggfcDetailCloseTimer=0;
@@ -232,7 +232,8 @@ function coupleAnalysisHtml(data){
     comparisonRow('전체 출석',a.analysis.base,b.analysis.base,{unit:'경기'}),
     comparisonRow('동행 승률',relation(a,'rate'),relation(b,'rate'),{unit:'%',max:100}),
     comparisonRow('동행 비율',relation(a,'att'),relation(b,'att'),{unit:'%',max:100}),
-    comparisonRow('동행 득점',relation(a,'tg'),relation(b,'tg'),{unit:'골'}),
+    comparisonRow('전체 출석경기 득점',a.analysis.baseGoals,b.analysis.baseGoals,{unit:'골'}),
+    comparisonRow('같은 팀 동행 득점',relation(a,'tg'),relation(b,'tg'),{unit:'골'}),
     comparisonRow('동행 경기당 득점',relation(a,'gpg'),relation(b,'gpg'),{decimals:2}),
     comparisonRow('승률 기여',part(a,'winPoints'),part(b,'winPoints'),{unit:'점',decimals:2,max:50}),
     comparisonRow('동행 비율 기여',part(a,'attendancePoints'),part(b,'attendancePoints'),{unit:'점',decimals:2,max:30}),
@@ -242,7 +243,7 @@ function coupleAnalysisHtml(data){
   return analysisPlayerControls(data.players,'couple')+'<p class="detail-scope"><b>'+esc(data.scope.label)+'</b><span>'+esc(data.scope.start)+' ~ '+esc(data.scope.end)+' · 조회 경기 '+data.scope.list.length+'경기</span></p>'+analysisPlayerIdentity(data.players,data.year)+
     '<p class="detail-note">베스트 커플과 같은 계산식입니다. 동행 비율과 본인 득점을 각 선수 기준으로 계산하므로 두 점수는 다를 수 있습니다.</p>'+
     '<div class="couple-score-grid">'+data.players.map(coupleScoreCard).join('')+'</div>'+
-    '<section class="detail-section"><h3>커플점수 구성 비교</h3><p class="detail-note">동행은 같은 경기에서 같은 팀으로 출석한 경우입니다. 승률·득점 기여는 동행 경기로 계산하고, 동행 비율의 분모는 맞대결을 포함한 전체 출석 경기입니다.</p><div class="compare-stat-columns">'+rows+'</div></section>'+
+    '<section class="detail-section"><h3>커플점수 구성 비교</h3><p class="detail-note">전체 출석경기 득점은 위 조회기간의 전체 출석경기 기준입니다. 같은 팀 동행 득점은 두 선수가 같은 경기·같은 팀으로 함께 출석한 경기만 합산하며, 상대팀으로 만난 경기와 단독 출석경기는 제외합니다. 승률·득점 기여는 동행 경기로 계산하고, 동행 비율의 분모는 맞대결을 포함한 전체 출석 경기입니다.</p><div class="compare-stat-columns">'+rows+'</div></section>'+
     '<section class="detail-section couple-formula"><h3>점수 계산 기준</h3><ol><li><b>승률 기여, 최대 50점</b> = 동행 승률(%) × 0.5</li><li><b>동행 비율 기여, 최대 30점</b> = (동행 경기 ÷ 해당 선수의 전체 출석 경기 × 100) × 0.3</li><li><b>득점 기여, 최대 20점</b> = min(동행 경기당 본인 득점 × 33, 100) × 0.2</li></ol><p class="detail-note">기존 베스트 커플과 동일하게 승률·동행 비율은 소수 첫째 자리, 경기당 득점은 소수 둘째 자리 값을 사용합니다. 세 기여 점수를 합한 뒤 정수로 반올림합니다.</p></section>'+comparisonPairHtml(data);
 }
 function openCoupleAnalysis(a=chemSel,b=chemOther,trigger){

@@ -1738,7 +1738,7 @@ body.admin-mode .admin-only-chem-pair{display:block!important}
 .player-card-history-all{border:1px solid #bdccde;background:#fff;color:#173653;border-radius:8px;padding:7px 12px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .player-card-history-plot{width:100%;overflow-x:auto;margin-top:6px;scrollbar-color:#9eb0c6 #edf2f8;overscroll-behavior-x:contain}
 .player-card-history-plot svg{display:block;min-width:760px;width:100%;height:340px;touch-action:pan-y}
-.player-card-history-line{stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.player-card-history-line{stroke-width:2.08;fill:none;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
 .player-card-history-dot{stroke:#fff;stroke-width:1.2;vector-effect:non-scaling-stroke}
 .player-card-history-inspect{padding:14px 16px;background:#f2f6fb;border:1px solid #d7e2ee;border-radius:6px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-top:8px;min-height:64px}
 .pc-history-date{min-width:135px;font-size:15px;font-weight:800;color:#061f44;font-variant-numeric:tabular-nums}
@@ -2565,3 +2565,29 @@ body:not(.admin-mode) #v-dash [data-dashboard-admin]{display:none!important}
   #v-dash .dashboard-head-row{gap:12px}
   #v-dash .dashboard-export-btn{width:100%;justify-content:center}
 }
+
+/* V3.18.10 — searchable records and paired decimal/measurement charts */
+.player-record-search{max-width:640px;margin:4px 0 18px}
+.player-record-search-input{display:flex;align-items:stretch;gap:8px}
+.player-record-search-input input{flex:1;min-width:0}
+.player-record-search-input .btn{flex:none;white-space:nowrap}
+#playerRecordSearchStatus{margin:7px 0 0;font-size:12px;color:#526882;min-height:18px}
+.chem-goal-scope{margin:12px 0 0;padding:10px 12px;background:#f2f6fb;border-left:3px solid #1763b1;color:#465e7b;font-size:13px;line-height:1.7}
+.player-card-history-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;align-items:start}
+.player-card-history-grid .player-card-history{height:100%;box-sizing:border-box}
+.player-card-history-grid .player-card-history-legend{grid-template-columns:repeat(3,minmax(0,1fr))}
+.player-card-history-grid .pc-series-value{font-size:22px}
+.player-card-history-grid .player-card-history-plot svg{min-width:0;width:100%;height:340px}
+.player-card-history-controls label{max-width:100%}
+.player-card-history-controls select{max-width:100%}
+.player-card-sb-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:18px;margin-bottom:12px}
+.player-card-sb-summary>div{padding:12px 10px;border:1px solid #d7e2ee;border-top:3px solid #1763b1;background:#f2f6fb;border-radius:6px;min-width:0}
+.player-card-sb-summary span,.player-card-sb-summary small{display:block;font-size:12px;color:#526882;line-height:1.6;overflow-wrap:anywhere}
+.player-card-sb-summary b{display:block;margin:6px 0;font-size:19px;line-height:1.4;color:#061f44;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.player-card-sb-line{stroke-width:2.08;vector-effect:non-scaling-stroke}
+.pc-sb-reading{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:13px;color:#526882}
+.pc-sb-reading b{font-size:23px;color:#061f44;font-variant-numeric:tabular-nums}
+.pc-sb-reading>span:last-child{width:100%;font-size:12px}
+.ggfc-mobile .player-card-history-grid{grid-template-columns:minmax(0,1fr)}
+@media(max-width:1000px){.player-card-history-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:620px){.player-card-history-grid{gap:12px}.player-card-sb-summary b{font-size:17px}.player-card-history-grid .pc-series-value{font-size:20px}}
