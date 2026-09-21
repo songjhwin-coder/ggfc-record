@@ -2810,7 +2810,7 @@ function renderLeagueSummary(){
   const ctx=selectedHalfContext(dashDate), halfName=ctx.half==="H1"?"상반기":ctx.half==="H2"?"하반기":"선택 기간";
   if(title) title.textContent="경기결과";
   if(dateLabel) dateLabel.textContent=dashDate.replace(/-/g,".");
-  box.innerHTML=(admin?'<div class="league-rule-note"><b>'+halfName+' 당일 집계:</b> 슈퍼리그/챌린지리그 팀 구성은 선택한 날짜의 엑셀 <b>그룹</b> 값을 기준으로 합니다. 정규리그와 인터리그 결과만 합산하며, 날짜별 그룹 변경은 조회 날짜 변경 시 자동 반영됩니다. 토너먼트 대회는 상단 현황에 반영하지 않습니다.</div>':'')+
+  box.innerHTML=(admin?'<div class="league-rule-note" data-dashboard-admin data-export-ignore><b>'+halfName+' 당일 집계:</b> 슈퍼리그/챌린지리그 팀 구성은 선택한 날짜의 엑셀 <b>그룹</b> 값을 기준으로 합니다. 정규리그와 인터리그 결과만 합산하며, 날짜별 그룹 변경은 조회 날짜 변경 시 자동 반영됩니다. 토너먼트 대회는 상단 현황에 반영하지 않습니다.</div>':'')+
     '<div class="league-overview">'+leagueZone("A",dashDate)+leagueZone("B",dashDate)+'</div>';
 }
 
@@ -3304,23 +3304,23 @@ function renderRepresentativePointBreakdown(detail,info){
   const box=$("#dashRepresentativePointBreakdown"); if(!box) return;
   const year=parseInt((info&&info.year)||0,10);
   if(!year || year<2026){
-    box.innerHTML='<div class="rep-breakdown-note"><span class="rep-status-chip off">미적용</span> 구간별 승점 운영은 2026년 기록부터 적용됩니다.</div>'; return;
+    box.innerHTML='<div class="rep-breakdown-note" data-dashboard-admin data-export-ignore><span class="rep-status-chip off">미적용</span> 구간별 승점 운영은 2026년 기록부터 적용됩니다.</div>'; return;
   }
   const cfg=seasonCfg(String(year));
   if(!cfg.repEnabled){
-    box.innerHTML='<div class="rep-breakdown-note"><span class="rep-status-chip off">OFF</span> '+year+'년 구간별 승점 운영이 꺼져 있습니다. 관리자 상단 <b>대표승점</b> 메뉴에서 적용할 수 있습니다.</div>'; return;
+    box.innerHTML='<div class="rep-breakdown-note" data-dashboard-admin data-export-ignore><span class="rep-status-chip off">OFF</span> '+year+'년 구간별 승점 운영이 꺼져 있습니다. 관리자 상단 <b>대표승점</b> 메뉴에서 적용할 수 있습니다.</div>'; return;
   }
   const segments=(detail&&detail.segments||[]).filter(x=>x.year===String(year));
   const relevant=segments.filter(x=>x.inQuery);
   if(!relevant.length){
-    box.innerHTML='<div class="rep-breakdown-note"><span class="rep-status-chip off">0점</span> 현재 조회기간에 포함되는 승점 구간이 없습니다.</div>'; return;
+    box.innerHTML='<div class="rep-breakdown-note" data-dashboard-admin data-export-ignore><span class="rep-status-chip off">0점</span> 현재 조회기간에 포함되는 승점 구간이 없습니다.</div>'; return;
   }
   const cards=relevant.map(seg=>{
     const title=(seg.half==="H2"?'하반기 ':'상반기 ')+seg.index+'구간';
     const isIndividual=seg.mode==="IND";
     const modeChip='<span class="rep-mode-chip'+(isIndividual?' ind':'')+'">'+(isIndividual?'개별승점':'대표승점')+'</span>';
     if(!isIndividual && !seg.complete){
-      return '<div class="rep-segment-card"><div class="rep-segment-head"><span>'+title+' '+modeChip+' <span class="rep-status-chip off">미완료</span></span><span>'+esc(seg.start)+' ~ '+esc(seg.end)+' · '+seg.games+'경기</span></div><div class="rep-breakdown-note">대표승점 구간은 관리자가 구간완료 처리하기 전까지 슈퍼리그·챌린지리그 모두 0점으로 처리됩니다.</div></div>';
+      return '<div class="rep-segment-card"><div class="rep-segment-head"><span>'+title+' '+modeChip+' <span class="rep-status-chip off">미완료</span></span><span>'+esc(seg.start)+' ~ '+esc(seg.end)+' · '+seg.games+'경기</span></div><div class="rep-breakdown-note" data-dashboard-admin data-export-ignore>대표승점 구간은 관리자가 구간완료 처리하기 전까지 슈퍼리그·챌린지리그 모두 0점으로 처리됩니다.</div></div>';
     }
     const leagues=(seg.leagues||[]).map(l=>{
       const awards=l.awards&&l.awards.length?l.awards.map(a=>'<div class="rep-award-row"><span class="rep-award-rank">'+a.rank+'위</span><span class="rep-award-team">'+esc(teamDisplayName(a.team))+'</span><span class="rep-award-pts">+'+Number(a.appliedPoint||0)+'점</span><span class="muted">'+(isIndividual?'(경기 승점)':'(구간 승점 '+a.pts+')')+'</span></div>').join(''):'<div class="muted" style="font-size:11px">순위 산출 데이터 없음</div>';
@@ -3333,7 +3333,7 @@ function renderRepresentativePointBreakdown(detail,info){
   const repComplete=relevant.filter(x=>x.mode!=="IND"&&x.complete).length;
   const repPending=relevant.filter(x=>x.mode!=="IND"&&!x.complete).length;
   const indCount=relevant.filter(x=>x.mode==="IND").length;
-  box.innerHTML='<details class="rep-breakdown"><summary>구간별 승점 산출 내역 확인 '+(repComplete?'<span class="rep-status-chip">대표 완료 '+repComplete+'</span>':'')+(repPending?' <span class="rep-status-chip off">대표 미완료 '+repPending+'</span>':'')+(indCount?' <span class="rep-mode-chip ind">개별 '+indCount+'구간</span>':'')+'</summary><div class="rep-breakdown-note">'+esc(info.label)+' 기준 · 대표승점은 현재 조회 반기의 완료 구간만 반영 · 다른 반기 및 개별승점 구간은 팀 순위 대표승점에서 제외 · '+(totalPairs||'확정 적용승점 없음')+'</div><div class="rep-breakdown-grid">'+cards+'</div></details>';
+  box.innerHTML='<details class="rep-breakdown"><summary>구간별 승점 산출 내역 확인 '+(repComplete?'<span class="rep-status-chip">대표 완료 '+repComplete+'</span>':'')+(repPending?' <span class="rep-status-chip off">대표 미완료 '+repPending+'</span>':'')+(indCount?' <span class="rep-mode-chip ind">개별 '+indCount+'구간</span>':'')+'</summary><div class="rep-breakdown-note" data-dashboard-admin data-export-ignore>'+esc(info.label)+' 기준 · 대표승점은 현재 조회 반기의 완료 구간만 반영 · 다른 반기 및 개별승점 구간은 팀 순위 대표승점에서 제외 · '+(totalPairs||'확정 적용승점 없음')+'</div><div class="rep-breakdown-grid">'+cards+'</div></details>';
 }
 
 function refreshRecordLinkedViews(){
@@ -3509,8 +3509,8 @@ function renderDashboardQueryRankings(info){
 
   const ranking=halfTeamRanking(info), {teams,ranks:teamPointRanks,scope}=ranking;
   const basis=scope.label+' · '+recordRoundRangeLabel(scope.list)+' · '+scope.list.length+'경기';
-  if($("#dashTeamPointPeriod")) $("#dashTeamPointPeriod").textContent=basis+' · 대표승점 → 누적 참석수 → 누적 승점';
-  if($("#dashTeamPointQueryNote")) $("#dashTeamPointQueryNote").textContent='정규·인터리그 반기 전체 누적. 참석수는 같은 날·같은 팀·같은 선수를 1명으로 계산하며 다른 날짜의 참석은 합산합니다. 승점은 승 3점·무 1점·패 0점의 합계입니다. 세 기준이 같으면 공동순위입니다.';
+  if($("#dashTeamPointPeriod")) $("#dashTeamPointPeriod").textContent=basis;
+  if($("#dashTeamPointQueryNote")) $("#dashTeamPointQueryNote").textContent='대표승점 → 누적 참석수 → 누적 승점 순으로 정렬합니다. 정규·인터리그 반기 전체 누적. 참석수는 같은 날·같은 팀·같은 선수를 1명으로 계산하며 다른 날짜의 참석은 합산합니다. 승점은 승 3점·무 1점·패 0점의 합계입니다. 세 기준이 같으면 공동순위입니다.';
   $("#dashTeamPointRank").innerHTML=tbl(
     [{t:"#"},{t:"팀"},{t:"대표승점",n:1},{t:"누적 참석수",n:1},{t:"누적 승점",n:1},{t:"득실차",n:1}],
     teams.map((t,i)=>['<span class="rank'+(teamPointRanks[i]<=3?' top':'')+'">'+teamPointRanks[i]+'</span>',teamChip(t.team),'<span class="rep-point'+(t.representative?'':' zero')+'">'+t.representative+'</span>','<b>'+t.attendance+'</b>','<b>'+t.pts+'</b>',(t.gf-t.ga>0?'+':'')+(t.gf-t.ga)])
@@ -3603,7 +3603,7 @@ function recordAttendanceBlock(list){
     (grouped[code].length?grouped[code].map(([team,players])=>
       '<div class="record-attendance-item">'+teamChip(team)+' <span class="muted">('+players.length+'명)</span><br><span class="muted">'+esc(players.join(", "))+'</span></div>'
     ).join(""):'<div class="record-attendance-item muted">출석 기록 없음</div>')+'</div>';
-  return '<div class="record-attendance"><div class="record-attendance-title export-section-head"><span>출석 명단</span><button class="btn sm section-export-btn" type="button" data-export-self="attendance" data-export-name="출석명단" data-export-ignore>이미지 저장</button></div><div class="record-attendance-grid">'+col("A")+col("B")+'</div></div>';
+  return '<div class="record-attendance"><div class="record-attendance-title export-section-head"><span>출석 명단</span></div><div class="record-attendance-grid">'+col("A")+col("B")+'</div></div>';
 }
 function recordDayBlock(date,list,open){
   const A=list.filter(m=>matchGround(m)==="A"), B=list.filter(m=>matchGround(m)==="B"), unassigned=list.filter(m=>!matchGround(m));
@@ -3636,11 +3636,11 @@ function renderRecentMatches(){
   ];
   const standingHtml=teamStandingGroupedHtml(list);
   const byDate=dates.map(d=>({date:d,items:list.filter(m=>normDate(m.date)===d).sort((a,b)=>String(a.no||"").localeCompare(String(b.no||""),undefined,{numeric:true}))}));
-  box.innerHTML='<div class="record-analysis-note"><b>'+esc(info.label)+'</b>의 경기 결과를 누적 집계합니다. 승점은 승 3점·무 1점·패 0점이며, 몰수패가 입력된 팀은 점수와 관계없이 패배·상대팀은 승리로 계산합니다. 경기일별 상세에는 A·B구장 결과, 팀별 득점자, 스코어 아래의 MOM 선수와 출석 명단이 표시됩니다. 참석수는 같은 날짜·같은 팀·같은 선수의 중복 출전을 1회로 계산합니다.</div>'+ 
+  box.innerHTML='<div class="record-analysis-note" data-dashboard-admin data-export-ignore><b>'+esc(info.label)+'</b>의 경기 결과를 누적 집계합니다. 승점은 승 3점·무 1점·패 0점이며, 몰수패가 입력된 팀은 점수와 관계없이 패배·상대팀은 승리로 계산합니다. 경기일별 상세에는 A·B구장 결과, 팀별 득점자, 스코어 아래의 MOM 선수와 출석 명단이 표시됩니다. 참석수는 같은 날짜·같은 팀·같은 선수의 중복 출전을 1회로 계산합니다.</div>'+ 
     '<div class="record-summary-grid">'+summaries.map(x=>'<div class="record-summary-item"><div class="l">'+esc(x.l)+'</div><div class="v">'+x.v+'</div><div class="s">'+esc(x.s||'—')+'</div></div>').join('')+'</div>'+ 
-    '<div class="record-export-section" id="exportDayDetailsSection"><div class="record-period-head"><div class="sec-t">경기일별 상세 기록</div><div class="record-period-label">최신 경기일부터 표시 · 날짜를 눌러 펼치기 · 대진을 눌러 상세기록 보기</div><button class="btn sm section-export-btn" type="button" data-export-target="exportDayDetailsSection" data-export-name="경기일별_상세기록" data-export-ignore>이미지 저장</button></div>'+ 
+    '<div class="record-export-section" id="exportDayDetailsSection"><div class="record-period-head"><div class="sec-t">경기일별 상세 기록</div><div class="record-period-label" data-dashboard-admin data-export-ignore>최신 경기일부터 표시 · 날짜를 눌러 펼치기 · 대진을 눌러 상세기록 보기</div></div>'+ 
     '<div class="record-day-list">'+byDate.map((x,i)=>recordDayBlock(x.date,x.items,i===0)).join('')+'</div></div>'+ 
-    '<div class="record-export-section" id="exportTeamStandingSection"><div class="record-period-head"><div class="record-period-heading"><div class="sec-t">팀 순위 및 누적 기록</div><span class="record-round-range">'+esc(recordRoundRangeLabel(list))+'</span></div><div class="record-period-label">'+esc(info.start||'')+(info.end&&info.end!==info.start?' ~ '+esc(info.end):'')+'</div><button class="btn sm section-export-btn" type="button" data-export-target="exportTeamStandingSection" data-export-name="팀순위_누적기록" data-export-ignore>이미지 저장</button></div>'+ 
+    '<div class="record-export-section" id="exportTeamStandingSection"><div class="record-period-head"><div class="record-period-heading"><div class="sec-t">팀 순위 및 누적 기록</div><span class="record-round-range">'+esc(recordRoundRangeLabel(list))+'</span></div><div class="record-period-label">'+esc(info.start||'')+(info.end&&info.end!==info.start?' ~ '+esc(info.end):'')+'</div></div>'+ 
     '<div class="tablewrap record-standing-table">'+standingHtml+'</div></div>';
 }
 function renderDash(){
@@ -5037,367 +5037,241 @@ function sampleData(){
 }
 
 
-/* ---------- 종합기록 세로 포스터 PNG 출력 ---------- */
-const POSTER_W=900;
-const POSTER_H=Math.round(POSTER_W*2048/437); // 첨부 예시 437×2048과 동일 비율
-
-/* 포스터는 화면의 임의 조회조건이 아니라 "최근 경기 + 그 경기가 속한 반기"를 기준으로 고정한다. */
-function posterSeasonContext(){
-  const base=recordBaseMatches();
-  const dates=[...new Set(base.map(m=>normDate(m.date)).filter(Boolean))].sort();
-  const day=dates[dates.length-1]||"";
-  if(!day) return {day:"",year:"",half:"H1",start:"",end:"",label:"기록 없음",list:[],dayList:[]};
-  const year=day.slice(0,4), cfg=seasonCfg(year);
-  const dayRaw=base.filter(m=>normDate(m.date)===day);
-  const explicit=dayRaw.map(m=>normHalf(m.half)).filter(Boolean);
-  let h=explicit.length?explicit[0]:"";
-  if(!h){
-    if(day>=cfg.h1s && day<=cfg.h1e) h="H1";
-    else if(day>=cfg.h2s && day<=cfg.h2e) h="H2";
-    else h=day<cfg.h2s?"H1":"H2";
-  }
-  const start=h==="H1"?cfg.h1s:cfg.h2s;
-  const end=h==="H1"?cfg.h1e:cfg.h2e;
-  const list=uniqueRecordMatches(base.filter(m=>{const d=normDate(m.date);return d&&d>=start&&d<=end;}))
-    .sort((a,b)=>normDate(b.date).localeCompare(normDate(a.date)) || String(a.no||"").localeCompare(String(b.no||""),undefined,{numeric:true}));
-  const dayList=uniqueRecordMatches(base.filter(m=>normDate(m.date)===day))
-    .sort((a,b)=>String(a.no||"").localeCompare(String(b.no||""),undefined,{numeric:true}));
-  return {day,year,half:h,start,end,label:year+" 시즌 "+(h==="H1"?"상반기":"하반기"),basis:(h==="H1"?"상반기 ":"하반기 ")+start+" ~ "+end,list,dayList};
-}
-function posterBrandLogoHtml(){
-  const src=headerLogo();
-  return src?'<img src="'+src+'" alt="헤더 로고">':defaultHeaderLogoHtml();
-}
-function posterDayDetailHtml(dayList){
-  const A=dayList.filter(m=>matchGround(m)==="A"), B=dayList.filter(m=>matchGround(m)==="B"), unassigned=dayList.filter(m=>!matchGround(m));
-  A.push(...unassigned);
-  return '<div class="ground-grid">'+groundPanel("A",A)+groundPanel("B",B)+'</div>';
-}
-function posterRankHtml(id){
-  const el=$(id); return el?el.innerHTML:'<div class="empty">기록 없음</div>';
-}
-/* 시즌 기준 랭킹/상대전적을 계산하되 현재 화면의 조회조건/표시는 건드리지 않는다. */
-function posterSeasonSnapshots(info){
-  const ids=["dashAttendanceRank","dashScorers","dashTeamPointRank","dashPlayerPointRank","dashTeamFoulRank","dashHeadToHead","dashTeamPointPeriod","dashRepresentativePointBreakdown"];
-  const noteIds=["dashScorerQueryNote","dashAttendanceQueryNote","dashTeamPointQueryNote","dashPlayerPointQueryNote","dashTeamFoulQueryNote"];
-  const saved={}; ids.forEach(id=>{const el=$("#"+id);saved[id]=el?el.innerHTML:"";});
-  const savedNotes={}; noteIds.forEach(id=>{const el=$("#"+id);savedNotes[id]=el?el.textContent:"";});
-  const periodEl=$("#dashHeadToHeadPeriod"), savedPeriod=periodEl?periodEl.textContent:"";
-  renderDashboardQueryRankings(info);
-  renderHeadToHead(info);
-  const out={
-    attendance:posterRankHtml("#dashAttendanceRank"),
-    scorers:posterRankHtml("#dashScorers"),
-    team:posterRankHtml("#dashTeamPointRank"),
-    player:posterRankHtml("#dashPlayerPointRank"),
-    foul:posterRankHtml("#dashTeamFoulRank"),
-    h2h:posterRankHtml("#dashHeadToHead")
-  };
-  ids.forEach(id=>{const el=$("#"+id);if(el) el.innerHTML=saved[id];});
-  noteIds.forEach(id=>{const el=$("#"+id);if(el) el.textContent=savedNotes[id];});
-  if(periodEl) periodEl.textContent=savedPeriod;
-  return out;
-}
-function buildSummaryPoster(){
-  renderDash();
-  const info=posterSeasonContext();
-  const day=info.day, dayList=info.dayList;
-  const d=displaySettings();
-  const stage=document.createElement('div');
-  stage.className='summary-poster-stage';
-  stage.setAttribute('aria-hidden','true');
-  /* 경기결과와 경기일별 상세기록은 무조건 가장 최근 경기일 기준 */
-  const leagueHtml=day?'<div class="league-overview">'+leagueZone("A",day)+leagueZone("B",day)+'</div>':'<div class="empty">경기결과 없음</div>';
-  const attendanceHtml=dayList.length?recordAttendanceBlock(dayList):'<div class="empty">최근 경기일의 출석 기록이 없습니다.</div>';
-  /* 순위/랭킹/상대전적은 최근 경기가 속한 상반기 또는 하반기 전체 누적 */
-  const snap=posterSeasonSnapshots(info);
-  stage.innerHTML='<div class="summary-poster" id="summaryPosterCanvas">'+
-    '<div class="poster-header">'+
-      '<div><div class="poster-kicker">'+esc(info.year)+' '+esc(info.half==="H1"?"상반기":"하반기")+'</div><div class="poster-title">LEAGUE RESULTS</div><div class="poster-subtitle">'+esc(d.brandTitle)+' · 최근 경기 '+esc(day||'경기 기록 없음')+'</div></div>'+
-      '<div class="poster-brand"><div><div class="poster-brand-name">'+esc(d.brandTitle)+'</div><div class="poster-brand-date">'+esc(day||'')+'</div></div><div class="poster-brand-logo">'+posterBrandLogoHtml()+'</div></div>'+
-    '</div>'+
-    '<section class="poster-section light"><div class="poster-section-title"><h3>#경기결과</h3><span>'+esc(day||'')+'</span></div><div class="poster-divider"></div>'+leagueHtml+'</section>'+
-    '<section class="poster-section light" style="padding-top:14px"><div class="poster-section-title"><h3>#경기일별 상세 기록</h3><span>최근 경기일 · '+dayList.length+'경기</span></div><div class="poster-divider"></div>'+posterDayDetailHtml(dayList)+'</section>'+
-    '<section class="poster-section blue"><div class="poster-section-title"><h3>#팀 순위 및 누적 기록 <small class="record-round-range">'+esc(recordRoundRangeLabel(info.list))+'</small></h3><span>'+esc(info.label)+'</span></div><div class="poster-divider"></div><div class="tablewrap">'+teamStandingGroupedHtml(info.list)+'</div></section>'+
-    '<section class="poster-section blue poster-ranking"><div class="poster-three-col">'+
-      '<div class="poster-panel"><div class="poster-ranking-title">#출석률 랭킹</div><div class="poster-ranking-sub">'+esc(info.label)+'</div><div id="posterAttendance">'+snap.attendance+'</div></div>'+
-      '<div class="poster-panel"><div class="poster-ranking-title">#득점 랭킹</div><div class="poster-ranking-sub">'+esc(info.label)+'</div><div id="posterScorers">'+snap.scorers+'</div></div>'+
-      '<div class="poster-stack"><div class="poster-panel"><div class="poster-ranking-title">#팀 순위</div><div class="poster-ranking-sub">'+esc(info.label)+'</div>'+snap.team+'</div><div class="poster-panel"><div class="poster-ranking-title">#개인 순위</div><div class="poster-ranking-sub">'+esc(info.label)+'</div>'+snap.player+'</div></div>'+
-    '</div></section>'+
-    '<section class="poster-section white"><div class="poster-section-title"><h3>#출석명단</h3><span>최근 경기일 · '+esc(day||'')+'</span></div><div class="poster-divider"></div>'+attendanceHtml+'</section>'+
-    '<section class="poster-section blue"><div class="poster-section-title"><h3>#상대전적</h3><span>'+esc(info.label)+'</span></div><div class="poster-divider"></div><div class="headtohead-wrap">'+snap.h2h+'</div></section>'+
-    '<div class="poster-footer">'+esc(d.brandTitle)+' MATCH CENTRE · '+esc(info.label)+' · 최근 경기 '+esc(day||'')+'</div>'+
-  '</div>';
-  document.body.appendChild(stage);
-  return stage;
-}
-function waitPosterImages(root){
-  const imgs=[...root.querySelectorAll('img')];
-  return Promise.all(imgs.map(img=>new Promise(resolve=>{
-    if(img.complete){ resolve(); return; }
-    const done=()=>resolve(); img.addEventListener('load',done,{once:true}); img.addEventListener('error',done,{once:true});
-  })));
-}
-function rgbaVisible(v){
-  if(!v || v==='transparent') return false;
-  const m=String(v).match(/rgba?\(([^)]+)\)/i);
-  if(m){const p=m[1].split(',').map(x=>x.trim()); if(p.length>3 && Number(p[3])===0) return false;}
-  return true;
-}
-function posterRoundedRect(ctx,x,y,w,h,r){
-  r=Math.max(0,Math.min(Number(r)||0,Math.min(w,h)/2));
-  ctx.beginPath();
-  if(ctx.roundRect) ctx.roundRect(x,y,w,h,r);
-  else{ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
-}
-function posterCanvasFont(cs){
-  const style=cs.fontStyle&&cs.fontStyle!=="normal"?cs.fontStyle+" ":"";
-  const weight=cs.fontWeight||"400";
-  return style+weight+" "+cs.fontSize+" "+cs.fontFamily;
-}
-function posterDrawTextNode(ctx,node,baseRect,alpha){
-  const raw=node.nodeValue||''; if(!raw.trim()) return;
-  const parent=node.parentElement; if(!parent) return;
-  const cs=getComputedStyle(parent); if(cs.visibility==='hidden'||cs.display==='none') return;
-  ctx.save();ctx.globalAlpha=alpha;ctx.font=posterCanvasFont(cs);ctx.fillStyle=cs.color||'#000';ctx.textAlign='left';ctx.textBaseline='bottom';
-  const full=document.createRange();
-  try{full.selectNodeContents(node);}catch(e){ctx.restore();return;}
-  const rects=[...full.getClientRects()].filter(r=>r.width>0&&r.height>0);
-  if(rects.length<=1){
-    const rr=rects[0]||full.getBoundingClientRect();
-    if(rr&&rr.width>0&&rr.height>0) ctx.fillText(raw,rr.left-baseRect.left,rr.bottom-baseRect.top);
-    ctx.restore();return;
-  }
-  /* 여러 줄인 텍스트만 단어 단위로 위치를 계산해 그린다. */
-  const re=/\S+\s*/g; let m;
-  while((m=re.exec(raw))){
-    const a=m.index,b=a+m[0].length, range=document.createRange();
-    try{
-      range.setStart(node,a);range.setEnd(node,b);
-      const rs=[...range.getClientRects()].filter(r=>r.width>0&&r.height>0);
-      if(rs.length===1) ctx.fillText(m[0],rs[0].left-baseRect.left,rs[0].bottom-baseRect.top);
-      else if(rs.length>1){
-        /* 아주 긴 한 단어가 줄바꿈된 예외만 글자 단위 처리 */
-        for(let i=a;i<b;){const cp=raw.codePointAt(i),step=cp>0xffff?2:1,j=i+step,ch=raw.slice(i,j),cr=document.createRange();try{cr.setStart(node,i);cr.setEnd(node,j);const rr=cr.getBoundingClientRect();if(rr.width>0&&rr.height>0)ctx.fillText(ch,rr.left-baseRect.left,rr.bottom-baseRect.top);}catch(e){}i=j;}
-      }
-    }catch(e){}
-  }
-  ctx.restore();
-}
-function posterDrawImage(ctx,img,baseRect,alpha){
-  if(!img.complete||!img.naturalWidth||!img.naturalHeight) return;
-  const r=img.getBoundingClientRect(); if(!r.width||!r.height) return;
-  const cs=getComputedStyle(img), fit=cs.objectFit||'fill';
-  let dx=r.left-baseRect.left,dy=r.top-baseRect.top,dw=r.width,dh=r.height;
-  if(fit==='contain'||fit==='cover'){
-    const scale=fit==='contain'?Math.min(dw/img.naturalWidth,dh/img.naturalHeight):Math.max(dw/img.naturalWidth,dh/img.naturalHeight);
-    const w=img.naturalWidth*scale,h=img.naturalHeight*scale;
-    dx+=(dw-w)/2;dy+=(dh-h)/2;dw=w;dh=h;
-  }
-  ctx.save();ctx.globalAlpha=alpha;
-  const rad=parseFloat(cs.borderTopLeftRadius)||0;
-  if(rad){posterRoundedRect(ctx,r.left-baseRect.left,r.top-baseRect.top,r.width,r.height,rad);ctx.clip();}
-  ctx.drawImage(img,dx,dy,dw,dh);ctx.restore();
-}
-function posterPaintNode(ctx,node,baseRect,parentAlpha){
-  if(node.nodeType===Node.TEXT_NODE){posterDrawTextNode(ctx,node,baseRect,parentAlpha);return;}
-  if(node.nodeType!==Node.ELEMENT_NODE) return;
-  const el=node, tag=el.tagName.toLowerCase();
-  if(tag==='style'||tag==='script'||tag==='noscript') return;
-  const cs=getComputedStyle(el);
-  if(cs.display==='none'||cs.visibility==='hidden') return;
-  const ownOpacity=isFinite(parseFloat(cs.opacity))?parseFloat(cs.opacity):1, alpha=parentAlpha*ownOpacity;
-  if(alpha<=0) return;
-  const r=el.getBoundingClientRect(), x=r.left-baseRect.left,y=r.top-baseRect.top,w=r.width,h=r.height;
-  if(w>0&&h>0){
-    if(rgbaVisible(cs.backgroundColor)){
-      ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle=cs.backgroundColor;posterRoundedRect(ctx,x,y,w,h,parseFloat(cs.borderTopLeftRadius)||0);ctx.fill();ctx.restore();
-    }
-    const borders=[['Top',x,y,x+w,y],['Right',x+w,y,x+w,y+h],['Bottom',x,y+h,x+w,y+h],['Left',x,y,x,y+h]];
-    borders.forEach(([side,x1,y1,x2,y2])=>{const bw=parseFloat(cs['border'+side+'Width'])||0,bc=cs['border'+side+'Color'];if(bw>0&&rgbaVisible(bc)){ctx.save();ctx.globalAlpha=alpha;ctx.strokeStyle=bc;ctx.lineWidth=bw;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.restore();}});
-  }
-  if(tag==='img'){posterDrawImage(ctx,el,baseRect,alpha);return;}
-  /* 기본 SVG 아이콘은 저장 실패를 유발하지 않도록 캔버스 캡처에서 생략. 등록 로고(img)는 정상 출력된다. */
-  if(tag==='svg') return;
-  for(const child of el.childNodes) posterPaintNode(ctx,child,baseRect,alpha);
-}
-async function rasterizeSummaryPoster(poster){
-  const canvas=document.createElement('canvas'); canvas.width=POSTER_W;canvas.height=POSTER_H;
-  const ctx=canvas.getContext('2d',{alpha:false});
-  /* 현재 종합기록 화면의 기본 배경색을 그대로 사용한다. */
-  const rootStyle=getComputedStyle(document.documentElement);
-  const screenSoft=(rootStyle.getPropertyValue('--soft')||'#F9F8F7').trim();
-  ctx.fillStyle=screenSoft;ctx.fillRect(0,0,POSTER_W,POSTER_H);
-  const baseRect=poster.getBoundingClientRect();
-  posterPaintNode(ctx,poster,baseRect,1);
-  return canvas;
-}
-async function exportSummaryPoster(){
-  const btn=$("#posterExportBtn");
-  const old=btn?btn.textContent:'';
-  let stage=null;
-  try{
-    if(btn){btn.disabled=true;btn.textContent='이미지 생성 중...';}
-    stage=buildSummaryPoster();
-    await waitPosterImages(stage);
-    if(document.fonts&&document.fonts.ready) await document.fonts.ready;
-    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-    const poster=stage.querySelector('.summary-poster');
-    const canvas=await rasterizeSummaryPoster(poster);
-    const png=await new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('PNG 변환에 실패했습니다.')),'image/png'));
-    const info=posterSeasonContext(), stamp=info.day||ymd(new Date());
-    const halfName=info.half==="H1"?'상반기':'하반기';
-    downloadBlob((displaySettings().brandTitle||'GGFC')+'_종합기록_'+info.year+'_'+halfName+'_'+stamp+'.png',png);
-    toast('현재 종합기록 화면 스타일로 최근 경기 결과와 '+info.label+' 누적 DATA 이미지를 저장했습니다.');
-  }catch(err){
-    console.error(err); toast('이미지 저장 실패: '+err.message);
-  }finally{
-    if(stage&&stage.parentNode) stage.parentNode.removeChild(stage);
-    if(btn){btn.disabled=false;btn.textContent=old||'이미지 저장';}
-  }
-}
-const posterExportBtn=$("#posterExportBtn");
-if(posterExportBtn) posterExportBtn.onclick=exportSummaryPoster;
-
-
-/* ---------- current-screen section image export ---------- */
+/* ---------- current dashboard: one high-resolution PNG ---------- */
 function exportSafeName(v){
   return String(v||'GGFC').trim().replace(/[\\/:*?"<>|]+/g,'_').replace(/\s+/g,'_').slice(0,80)||'GGFC';
 }
-function exportOpaqueBackground(el){
-  let n=el;
-  while(n){
-    const c=getComputedStyle(n).backgroundColor;
-    if(c && c!=='transparent' && !/rgba\([^)]*,\s*0(?:\.0+)?\s*\)/i.test(c)) return c;
-    n=n.parentElement;
-  }
-  return '#ffffff';
+let dashboardRendererPromise=null;
+function loadDashboardRenderer(){
+  if(typeof window.html2canvas==='function') return Promise.resolve(window.html2canvas);
+  if(dashboardRendererPromise) return dashboardRendererPromise;
+  dashboardRendererPromise=new Promise((resolve,reject)=>{
+    const script=document.createElement('script');
+    let done=false;
+    const finish=err=>{
+      if(done) return;
+      done=true; clearTimeout(timer); script.onload=script.onerror=null;
+      if(err){script.remove();reject(err);} else resolve(window.html2canvas);
+    };
+    const failure=()=>finish(new Error('이미지 저장 모듈을 불러오지 못했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.'));
+    const timer=setTimeout(failure,12000);
+    script.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    script.onload=()=>typeof window.html2canvas==='function'?finish():failure();
+    script.onerror=failure;
+    document.head.appendChild(script);
+  }).catch(err=>{dashboardRendererPromise=null;throw err;});
+  return dashboardRendererPromise;
 }
-function exportSectionDate(el){
-  const own=el.querySelector('.record-day-date,.dashboard-result-date');
-  if(own&&own.textContent.trim()) return own.textContent.trim();
-  const day=normDate(dashDate||'');
-  return day||ymd(new Date());
-}
-function exportScaleFor(el){
-  const r=el.getBoundingClientRect();
-  let scale=Math.max(3,Math.min(4,(window.devicePixelRatio||1)*2));
-  const maxDim=14000;
-  if(r.width*scale>maxDim) scale=Math.max(2,maxDim/Math.max(1,r.width));
-  if(r.height*scale>maxDim) scale=Math.max(2,Math.min(scale,maxDim/Math.max(1,r.height)));
-  return scale;
-}
-async function waitExportImages(root){
-  const imgs=[...root.querySelectorAll('img')];
-  await Promise.all(imgs.map(img=>new Promise(resolve=>{
-    if(img.complete){resolve();return;}
-    const done=()=>resolve();
-    img.addEventListener('load',done,{once:true});
-    img.addEventListener('error',done,{once:true});
-    setTimeout(done,4000);
-  })));
-}
-function loadHtml2CanvasFallback(){
-  if(window.html2canvas) return Promise.resolve(window.html2canvas);
-  return new Promise((resolve,reject)=>{
-    const existing=document.querySelector('script[data-h2c-fallback]');
-    if(existing){
-      existing.addEventListener('load',()=>window.html2canvas?resolve(window.html2canvas):reject(new Error('이미지 캡처 모듈을 불러오지 못했습니다.')),{once:true});
-      existing.addEventListener('error',()=>reject(new Error('이미지 캡처 모듈을 불러오지 못했습니다.')),{once:true});
-      return;
-    }
-    const sc=document.createElement('script');
-    sc.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-    sc.dataset.h2cFallback='1';
-    sc.onload=()=>window.html2canvas?resolve(window.html2canvas):reject(new Error('이미지 캡처 모듈 초기화에 실패했습니다.'));
-    sc.onerror=()=>reject(new Error('이미지 캡처 모듈을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.'));
-    document.head.appendChild(sc);
+function settleExportResource(node,timeout,isReady){
+  return new Promise(resolve=>{
+    let done=false;
+    const finish=()=>{
+      if(done) return;
+      done=true; clearTimeout(timer);
+      node.removeEventListener('load',finish); node.removeEventListener('error',finish);
+      resolve();
+    };
+    const timer=setTimeout(finish,timeout);
+    node.addEventListener('load',finish); node.addEventListener('error',finish);
+    if(isReady&&isReady()) finish();
   });
 }
-async function manualSectionCanvas(el,scale,bg){
-  const rect=el.getBoundingClientRect();
-  const canvas=document.createElement('canvas');
-  canvas.width=Math.max(1,Math.round(rect.width*scale));
-  canvas.height=Math.max(1,Math.round(rect.height*scale));
-  const ctx=canvas.getContext('2d',{alpha:false});
-  ctx.setTransform(scale,0,0,scale,0,0);
-  ctx.fillStyle=bg||'#fff';ctx.fillRect(0,0,rect.width,rect.height);
-  const ignored=[...el.querySelectorAll('[data-export-ignore]')];
-  const prev=ignored.map(n=>n.style.display);
-  ignored.forEach(n=>n.style.display='none');
-  try{posterPaintNode(ctx,el,rect,1);}finally{ignored.forEach((n,i)=>n.style.display=prev[i]);}
-  ctx.setTransform(1,0,0,1,0,0);
-  return canvas;
+async function waitDashboardImages(root){
+  await Promise.all([...root.querySelectorAll('img')].map(img=>settleExportResource(img,7000,()=>img.complete)));
 }
-async function captureSectionAsPng(el,label,trigger){
-  if(!el) throw new Error('출력할 영역을 찾을 수 없습니다.');
-  const rect=el.getBoundingClientRect();
-  if(rect.width<2||rect.height<2) throw new Error('현재 화면에 표시되지 않은 영역입니다.');
-  await waitExportImages(el);
-  if(document.fonts&&document.fonts.ready) await document.fonts.ready;
-  await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-  const scale=exportScaleFor(el);
-  const bg=exportOpaqueBackground(el);
-  el.classList.add('export-capture-flash');
-  try{
-    let canvas=null, h2c=null;
-    try{h2c=await loadHtml2CanvasFallback();}catch(loadErr){console.warn('html2canvas unavailable; using built-in fallback',loadErr);}
-    if(h2c){
-      try{
-        canvas=await h2c(el,{
-          scale,
-          backgroundColor:bg,
-          useCORS:true,
-          allowTaint:false,
-          logging:false,
-          imageTimeout:5000,
-          removeContainer:true,
-          scrollX:-window.scrollX,
-          scrollY:-window.scrollY,
-          windowWidth:document.documentElement.clientWidth,
-          windowHeight:document.documentElement.clientHeight,
-          ignoreElements:(node)=>node.nodeType===1 && node.hasAttribute && node.hasAttribute('data-export-ignore'),
-          onclone:(doc)=>{
-            doc.querySelectorAll('[data-export-ignore]').forEach(n=>n.style.setProperty('display','none','important'));
-            const cloned=el.id?doc.getElementById(el.id):null;
-            if(cloned) cloned.classList.remove('export-capture-flash');
-          }
-        });
-      }catch(renderErr){
-        console.warn('html2canvas capture failed; using built-in fallback',renderErr);
-        canvas=await manualSectionCanvas(el,scale,bg);
+function dashboardImagePlaceholder(){
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180"><rect width="180" height="180" rx="16" fill="#eef3fa"/><path d="M90 26l48 18v42c0 31-21 54-48 66-27-12-48-35-48-66V44z" fill="#d5dfed"/><text x="90" y="87" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#355477">이미지</text><text x="90" y="109" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#355477">없음</text></svg>';
+  return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+}
+async function embedDashboardImages(root){
+  // Embed readable images so the renderer cannot silently omit a remote logo.
+  await waitDashboardImages(root);
+  const groups=new Map();
+  root.querySelectorAll('img').forEach(img=>{
+    const url=img.currentSrc||img.src;
+    if(!groups.has(url)) groups.set(url,[]);
+    groups.get(url).push(img);
+  });
+  let unavailable=0;
+  for(const [url,images] of groups){
+    const img=images.find(x=>x.complete&&x.naturalWidth>0);
+    let embedded=url,canvas=null;
+    try{
+      if(!img) throw new Error('Image unavailable');
+      if(!/^data:/i.test(url)){
+        canvas=root.ownerDocument.createElement('canvas');
+        const scale=Math.min(1,2048/Math.max(img.naturalWidth,img.naturalHeight));
+        canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));
+        canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));
+        const ctx=canvas.getContext('2d');
+        if(!ctx) throw new Error('Canvas unavailable');
+        ctx.drawImage(img,0,0,canvas.width,canvas.height);
+        embedded=canvas.toDataURL('image/png');
+        if(!embedded.startsWith('data:image/')) throw new Error('Image conversion failed');
       }
-    }else canvas=await manualSectionCanvas(el,scale,bg);
-    const blob=await new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('PNG 변환에 실패했습니다.')),'image/png'));
-    const brand=exportSafeName((displaySettings().brandTitle||'GGFC'));
-    const name=exportSafeName(label||'기록');
-    const date=exportSafeName(exportSectionDate(el));
-    downloadBlob(brand+'_'+name+'_'+date+'_'+canvas.width+'x'+canvas.height+'.png',blob);
-    toast(name+' 이미지를 고해상도로 저장했습니다.');
-  } finally {
-    el.classList.remove('export-capture-flash');
+    }catch(err){unavailable++;embedded=dashboardImagePlaceholder();}
+    finally{if(canvas){canvas.width=0;canvas.height=0;}}
+    images.forEach(image=>{image.src=embedded;});
+  }
+  await waitDashboardImages(root);
+  return unavailable;
+}
+function cleanDashboardSnapshot(root){
+  root.querySelectorAll('[data-dashboard-admin],[data-export-ignore],.admin-ranking-note,script').forEach(node=>node.remove());
+  root.querySelectorAll('*').forEach(node=>{
+    [...node.attributes].forEach(attr=>{if(/^on/i.test(attr.name)) node.removeAttribute(attr.name);});
+    node.removeAttribute('autofocus');
+    if(node.tagName==='IMG'){
+      const src=node.currentSrc||node.src;
+      node.removeAttribute('srcset'); node.removeAttribute('sizes');
+      node.loading='eager'; node.decoding='sync'; node.crossOrigin='anonymous';
+      node.src=src;
+    }
+  });
+  // Expand dates only in the snapshot; never change the user's live UI or query.
+  root.querySelectorAll('details.record-day').forEach(node=>{node.open=true;});
+}
+function fitDashboardExportTables(root){
+  root.querySelectorAll('.tablewrap').forEach(wrap=>{
+    const table=wrap.querySelector('table');
+    if(!table) return;
+    const style=wrap.ownerDocument.defaultView.getComputedStyle(wrap);
+    const available=wrap.clientWidth-(parseFloat(style.paddingLeft)||0)-(parseFloat(style.paddingRight)||0);
+    const rect=table.getBoundingClientRect(),natural=Math.max(rect.width,table.scrollWidth);
+    wrap.scrollLeft=0;wrap.scrollTop=0;
+    if(available<=0||natural<=available+1) return;
+    // Keep the card/column width while fitting all table columns into the PNG.
+    table.style.setProperty('width',natural+'px','important');
+    table.style.setProperty('min-width',natural+'px','important');
+    table.style.setProperty('max-width',natural+'px','important');
+    const ratio=available/natural,height=Math.ceil(table.getBoundingClientRect().height*ratio);
+    const holder=wrap.ownerDocument.createElement('div');
+    holder.className='dashboard-export-table-fit';
+    holder.style.cssText='position:relative;width:100%;height:'+height+'px;overflow:hidden;';
+    table.parentNode.insertBefore(holder,table); holder.appendChild(table);
+    table.style.setProperty('position','absolute','important');
+    table.style.setProperty('top','0','important');table.style.setProperty('left','0','important');
+    table.style.setProperty('margin','0','important');
+    table.style.setProperty('transform','scale('+ratio+')','important');
+    table.style.setProperty('transform-origin','top left','important');
+  });
+}
+async function createDashboardExportSnapshot(source){
+  const width=Math.ceil(source.getBoundingClientRect().width);
+  if(!width) throw new Error('종합기록 화면을 연 뒤 다시 저장해 주세요.');
+  const viewportWidth=window.innerWidth||document.documentElement.clientWidth;
+  const viewportHeight=window.innerHeight||document.documentElement.clientHeight;
+  const frame=document.createElement('iframe');
+  frame.title='종합기록 이미지 준비';frame.tabIndex=-1;frame.setAttribute('aria-hidden','true');
+  frame.style.cssText='position:fixed;left:-100000px;top:0;border:0;pointer-events:none;width:'+viewportWidth+'px;height:'+viewportHeight+'px;';
+  document.body.appendChild(frame);
+  try{
+    const doc=frame.contentDocument;
+    if(!doc||!doc.body) throw new Error('이미지 준비 화면을 만들지 못했습니다.');
+    doc.documentElement.lang=document.documentElement.lang||'ko';
+    doc.documentElement.className=document.documentElement.className;
+    doc.documentElement.style.cssText=document.documentElement.style.cssText;
+    doc.body.className=document.body.className;
+    doc.body.classList.remove('sidebar-open');
+    const base=doc.createElement('base');base.href=document.baseURI;doc.head.appendChild(base);
+    const stylePromises=[];
+    document.head.querySelectorAll('link[rel="stylesheet"],style').forEach(original=>{
+      const copy=original.cloneNode(true);
+      if(copy.tagName==='LINK'){
+        copy.href=original.href;
+        stylePromises.push(settleExportResource(copy,8000,()=>!!copy.sheet).then(()=>{
+          if(!copy.sheet) throw new Error('화면 스타일을 불러오지 못했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.');
+        }));
+      }
+      doc.head.appendChild(copy);
+    });
+    const style=doc.createElement('style');
+    style.textContent='html,body{margin:0!important;padding:0!important;min-height:0!important;overflow:visible!important}body::before{display:none!important}*{animation:none!important;transition:none!important;caret-color:transparent!important}#v-dash{display:block!important;width:100%!important;max-width:none!important;height:auto!important;max-height:none!important;overflow:visible!important;padding-bottom:16px!important}#v-dash .tablewrap{overflow:hidden!important;max-height:none!important}#v-dash th,#v-dash td{position:static!important}';
+    doc.head.appendChild(style);
+    const main=source.closest('main').cloneNode(false);
+    main.removeAttribute('inert');
+    ['margin','padding'].forEach(prop=>main.style.setProperty(prop,'0','important'));
+    main.style.setProperty('width',width+'px','important');
+    main.style.setProperty('max-width','none','important');main.style.setProperty('min-width','0','important');
+    const root=source.cloneNode(true);
+    cleanDashboardSnapshot(root);
+    main.appendChild(root);doc.body.appendChild(main);
+    await Promise.all(stylePromises);
+    root.getBoundingClientRect(); // Trigger font loading before measuring the tables.
+    const unavailableImages=await embedDashboardImages(root);
+    if(doc.fonts&&doc.fonts.ready){
+      let timer;
+      try{await Promise.race([doc.fonts.ready,new Promise(resolve=>{timer=setTimeout(resolve,4000);})]);}
+      finally{clearTimeout(timer);}
+    }
+    // DOM measurements below force layout, including opened details and loaded logos.
+    fitDashboardExportTables(root);
+    const rect=root.getBoundingClientRect();
+    return {root,frame,viewportWidth,viewportHeight,width:Math.ceil(Math.max(rect.width,root.scrollWidth)),height:Math.ceil(Math.max(rect.height,root.scrollHeight)),unavailableImages,cleanup:()=>frame.remove()};
+  }catch(err){frame.remove();throw err;}
+}
+function dashboardExportScale(width,height,mobile){
+  if(!Number.isFinite(width)||!Number.isFinite(height)||width<=0||height<=0) throw new Error('저장할 기록의 크기를 확인할 수 없습니다.');
+  // PNG stays lossless. Limit allocations for long seasons and phone memory.
+  const maxAxis=16384,pixelBudget=mobile?12000000:28000000;
+  return Math.min(3,(maxAxis-1)/width,(maxAxis-1)/height,Math.sqrt(pixelBudget/(width*height)));
+}
+async function renderDashboardPng(renderer,snapshot,mobile){
+  const scale=dashboardExportScale(snapshot.width,snapshot.height,mobile);
+  let lastError;
+  for(const factor of [1,.7,.45]){
+    let canvas;
+    try{
+      const captureScale=scale*factor;
+      canvas=await renderer(snapshot.root,{
+        scale:captureScale,backgroundColor:'#f1f4f8',useCORS:true,allowTaint:false,logging:false,
+        imageTimeout:7000,removeContainer:true,scrollX:0,scrollY:0,
+        windowWidth:snapshot.viewportWidth,windowHeight:Math.max(snapshot.viewportHeight,snapshot.height),
+        width:snapshot.width,height:snapshot.height
+      });
+      const expectedWidth=Math.floor(snapshot.width*captureScale),expectedHeight=Math.floor(snapshot.height*captureScale);
+      if(!canvas||!canvas.width||!canvas.height||Math.abs(canvas.width-expectedWidth)>1||Math.abs(canvas.height-expectedHeight)>1) throw new Error('이미지 크기가 맞지 않습니다.');
+      const blob=await new Promise((resolve,reject)=>canvas.toBlob(b=>b&&b.size?resolve(b):reject(new Error('PNG 변환에 실패했습니다.')),'image/png'));
+      return {blob,width:canvas.width,height:canvas.height};
+    }catch(err){lastError=err;}
+    finally{if(canvas){canvas.width=0;canvas.height=0;}}
+  }
+  console.warn('Dashboard PNG rendering failed',lastError);
+  throw new Error('전체 이미지를 만들지 못했습니다. 조회기간을 줄이거나 PC에서 다시 저장해 주세요.');
+}
+let dashboardExportBusy=false;
+async function exportDashboardAsPng(button){
+  if(!admin){toast('이미지 저장은 관리자 모드에서만 사용할 수 있습니다.');return;}
+  if(dashboardExportBusy) return;
+  const source=document.getElementById('v-dash');
+  if(!source){toast('종합기록 화면을 찾을 수 없습니다.');return;}
+  const label=button.textContent;
+  const brand=exportSafeName(displaySettings().brandTitle||'GGFC');
+  const stamp=exportSafeName(normDate(dashDate||'')||ymd(new Date()));
+  const mobile=document.documentElement.classList.contains('ggfc-mobile')||window.matchMedia('(max-width: 820px)').matches;
+  dashboardExportBusy=true;button.disabled=true;button.textContent='이미지 준비 중…';button.setAttribute('aria-busy','true');
+  let snapshot;
+  try{
+    // Clone the visible result, without changing/recomputing any query or record.
+    snapshot=await createDashboardExportSnapshot(source);
+    const renderer=await loadDashboardRenderer();
+    button.textContent='전체 이미지 저장 중…';
+    const result=await renderDashboardPng(renderer,snapshot,mobile);
+    downloadBlob(brand+'_종합기록_'+stamp+'_'+result.width+'x'+result.height+'.png',result.blob);
+    toast('종합기록 전체 이미지를 저장했습니다. ('+result.width+' × '+result.height+')'+(snapshot.unavailableImages?' · 불러오지 못한 이미지는 대체 표시했습니다.':''));
+  }catch(err){console.error(err);toast('이미지 저장 실패: '+err.message);}
+  finally{
+    if(snapshot) snapshot.cleanup();
+    button.disabled=false;button.textContent=label;button.removeAttribute('aria-busy');dashboardExportBusy=false;
   }
 }
-let sectionExportBusy=false;
-document.addEventListener('click',async e=>{
-  const btn=e.target.closest('[data-export-target],[data-export-self]');
-  if(!btn||sectionExportBusy) return;
-  if(!admin){ toast('이미지 저장은 관리자 모드에서만 사용할 수 있습니다.'); return; }
-  e.preventDefault(); e.stopPropagation();
-  const old=btn.textContent;
-  let target=null;
-  if(btn.dataset.exportTarget) target=document.getElementById(btn.dataset.exportTarget);
-  else if(btn.dataset.exportSelf==='attendance') target=btn.closest('.record-attendance');
-  if(!target){toast('이미지 출력 영역을 찾을 수 없습니다.');return;}
-  sectionExportBusy=true; btn.disabled=true; btn.textContent='저장 중...';
-  try{
-    await captureSectionAsPng(target,btn.dataset.exportName||'기록',btn);
-  }catch(err){
-    console.error(err); toast('이미지 저장 실패: '+err.message);
-  }finally{
-    btn.disabled=false;btn.textContent=old;sectionExportBusy=false;
-  }
+document.addEventListener('click',e=>{
+  const button=e.target.closest('[data-export-dashboard]');
+  if(!button) return;
+  e.preventDefault();e.stopPropagation();
+  exportDashboardAsPng(button);
 },true);
+
 
 /* ---------- administrator display-name settings ---------- */
 const displayNameSave=$("#displayNameSave");
