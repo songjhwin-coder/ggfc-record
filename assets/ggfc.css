@@ -2591,3 +2591,11 @@ body:not(.admin-mode) #v-dash [data-dashboard-admin]{display:none!important}
 .ggfc-mobile .player-card-history-grid{grid-template-columns:minmax(0,1fr)}
 @media(max-width:1000px){.player-card-history-grid{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:620px){.player-card-history-grid{gap:12px}.player-card-sb-summary b{font-size:17px}.player-card-history-grid .pc-series-value{font-size:20px}}
+
+/* V3.18.11 — member ability search and administrator-only management controls */
+body:not(.admin-mode) [data-ability-admin],#abilityAdminControls[hidden]{display:none!important}
+#abilityHalfSections [hidden]{display:none!important}
+#abilityPlayerSearchStatus{margin:7px 0 0;font-size:12px;line-height:1.6;color:#526882;min-height:18px}
+
+/* V3.18.12 dated squad attendance */
+.squad-names{line-height:1.9}.squad-present{font-weight:800!important;color:var(--navy,#102c48)}.squad-absent{font-weight:400!important;color:#697787}.squad-names small{font-size:.8em}.record-attendance-title small{font-size:.75em;font-weight:400}

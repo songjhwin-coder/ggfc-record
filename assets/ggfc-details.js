@@ -1,4 +1,4 @@
-/* GGFC V3.18.10 — 읽기 전용 경기 상세 / 선수 비교 / 커플점수 창.
+/* GGFC V3.18.12 — 읽기 전용 경기 상세 / 선수 비교 / 커플점수 창.
    앱의 기존 경기 범위·능력치·파울 집계 함수를 사용하며 DB를 저장하지 않는다. */
 let ggfcDetailState=null;
 let ggfcDetailCloseTimer=0;
@@ -37,6 +37,8 @@ function matchDetailData(m){
       if(!members.has(name))members.set(name,{player:name,att:false,g:0,a:0,f:0,sv:0,mom:0,ownGoal:isOwnGoalPlayer(name)});
       return members.get(name);
     };
+    const squad=squadAtMatch(m,team);
+    (squad?.members||[]).forEach(r=>{get(r.player).squad=true;get(r.player).role=r.role;if(r.role==='감독')coaches.add(r.player);});
     DETAIL_RECORD_KINDS.forEach(([kind])=>source[kind].forEach(r=>{
       if(resolveTeam(r,kind)!==String(team||'').trim())return;
       if(kind==='attendance'&&String(r.coach||'').trim())coaches.add(String(r.coach).trim());
@@ -68,7 +70,7 @@ function detailMetricGrid(items){
 function detailPlayerTable(team){
   if(!team.rows.length)return '<div class="detail-empty">등록된 선수별 기록이 없습니다.</div>';
   return '<p class="detail-scroll-hint">표를 좌우로 밀면 모든 기록을 볼 수 있습니다.</p><div class="detail-table-wrap" tabindex="0" aria-label="'+esc(teamDisplayName(team.team))+' 선수별 경기 기록 표"><table class="detail-table"><caption class="detail-visually-hidden">'+esc(teamDisplayName(team.team))+' 선수별 경기 기록</caption><thead><tr><th scope="col">선수</th><th scope="col">출석</th><th scope="col">득점</th><th scope="col">도움</th><th scope="col">개인파울</th><th scope="col">선방</th><th scope="col">MOM</th><th scope="col">승점</th></tr></thead><tbody>'+team.rows.map(r=>
-    '<tr><th scope="row">'+esc(r.ownGoal?'자책골':r.player)+'</th><td>'+(r.ownGoal?'—':r.att?'<span class="detail-attended">출석</span>':'<span class="detail-missing">미등록</span>')+'</td><td>'+r.g+'</td><td>'+r.a+'</td><td>'+r.f+'</td><td>'+r.sv+'</td><td>'+r.mom+'</td><td>'+(r.att&&!r.ownGoal?team.points:'—')+'</td></tr>'
+    '<tr><th scope="row" class="'+(r.att?'squad-present':'squad-absent')+'">'+esc(r.ownGoal?'자책골':r.player)+(r.role&&r.role!=='선수'?' <small>('+esc(r.role)+')</small>':'')+'</th><td>'+(r.ownGoal?'—':r.att?'<span class="detail-attended">출석</span>':'<span class="detail-missing">'+(r.squad?'미출석':'미등록')+'</span>')+'</td><td>'+r.g+'</td><td>'+r.a+'</td><td>'+r.f+'</td><td>'+r.sv+'</td><td>'+r.mom+'</td><td>'+(r.att&&!r.ownGoal?team.points:'—')+'</td></tr>'
   ).join('')+'</tbody><tfoot><tr><th scope="row">합계</th><td>'+team.totals.att+'명</td><td>'+team.totals.g+'</td><td>'+team.totals.a+'</td><td>'+team.totals.f+'</td><td>'+team.totals.sv+'</td><td>'+team.totals.mom+'</td><td>'+team.totals.att*team.points+'</td></tr></tfoot></table></div>';
 }
 function detailUnassignedHtml(items){
@@ -243,7 +245,7 @@ function coupleAnalysisHtml(data){
   return analysisPlayerControls(data.players,'couple')+'<p class="detail-scope"><b>'+esc(data.scope.label)+'</b><span>'+esc(data.scope.start)+' ~ '+esc(data.scope.end)+' · 조회 경기 '+data.scope.list.length+'경기</span></p>'+analysisPlayerIdentity(data.players,data.year)+
     '<p class="detail-note">베스트 커플과 같은 계산식입니다. 동행 비율과 본인 득점을 각 선수 기준으로 계산하므로 두 점수는 다를 수 있습니다.</p>'+
     '<div class="couple-score-grid">'+data.players.map(coupleScoreCard).join('')+'</div>'+
-    '<section class="detail-section"><h3>커플점수 구성 비교</h3><p class="detail-note">전체 출석경기 득점은 위 조회기간의 전체 출석경기 기준입니다. 같은 팀 동행 득점은 두 선수가 같은 경기·같은 팀으로 함께 출석한 경기만 합산하며, 상대팀으로 만난 경기와 단독 출석경기는 제외합니다. 승률·득점 기여는 동행 경기로 계산하고, 동행 비율의 분모는 맞대결을 포함한 전체 출석 경기입니다.</p><div class="compare-stat-columns">'+rows+'</div></section>'+
+    '<section class="detail-section"><h3>커플점수 구성 비교</h3><p class="detail-note">전체 출석경기 득점은 위 조회기간의 전체 출석경기 기준입니다. 같은 팀 동행 득점은 경기일에 적용되는 팀스쿼드와 시작일을 확인하여 두 선수가 같은 경기·같은 팀으로 함께 출석한 경기만 합산하며, 상대팀으로 만난 경기와 단독 출석경기는 제외합니다. 승률·득점 기여는 동행 경기로 계산하고, 동행 비율의 분모는 맞대결을 포함한 전체 출석 경기입니다.</p><div class="compare-stat-columns">'+rows+'</div></section>'+
     '<section class="detail-section couple-formula"><h3>점수 계산 기준</h3><ol><li><b>승률 기여, 최대 50점</b> = 동행 승률(%) × 0.5</li><li><b>동행 비율 기여, 최대 30점</b> = (동행 경기 ÷ 해당 선수의 전체 출석 경기 × 100) × 0.3</li><li><b>득점 기여, 최대 20점</b> = min(동행 경기당 본인 득점 × 33, 100) × 0.2</li></ol><p class="detail-note">기존 베스트 커플과 동일하게 승률·동행 비율은 소수 첫째 자리, 경기당 득점은 소수 둘째 자리 값을 사용합니다. 세 기여 점수를 합한 뒤 정수로 반올림합니다.</p></section>'+comparisonPairHtml(data);
 }
 function openCoupleAnalysis(a=chemSel,b=chemOther,trigger){
