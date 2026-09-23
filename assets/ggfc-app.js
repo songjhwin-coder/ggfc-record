@@ -3944,7 +3944,47 @@ function renderPlayerAchievementBoard(players,cutoff){
   const rows=(players||[]).map(p=>{const stats=v319CareerStatsMap(cutoff)[p.player]||{},list=v319AchievementList(stats);return {player:p.player,count:list.length,list};}).sort((a,b)=>b.count-a.count||compareNamesKo(a.player,b.player));
   box.innerHTML=rows.length?'<div class="v319-player-achievement-grid">'+rows.map(r=>'<article class="v319-player-achievement-card"><header>'+playerCardLink(r.player,'<b>'+esc(r.player)+'</b>',{asOf:cutoff,allCompetitions:true})+'<span>🏅 '+r.count+'</span></header><div class="v319-badges">'+(r.list.length?r.list.slice(-6).reverse().map(a=>'<span class="v319-badge" title="'+esc(a.desc)+'"><i>'+esc(a.icon)+'</i>'+esc(a.name)+'</span>').join(''):'<span class="muted">첫 Achievement를 기다리는 중</span>')+'</div></article>').join('')+'</div>':v319InsightEmpty('표시할 선수가 없습니다.');
 }
-function renderPlayerCardAchievements(player,cutoff){const box=$('#playerCardAchievements');if(box)box.innerHTML=v319AchievementHtml(player,cutoff,false);}
+// Career frame progression is cosmetic: no OVR, ability or match-stat writes.
+const CAREER_FRAME_METRICS=[
+  {key:'att',label:'통산 출전',unit:'경기'}, {key:'g',label:'통산 득점',unit:'골'},
+  {key:'a',label:'통산 도움',unit:'도움'}, {key:'sv',label:'통산 선방',unit:'선방'},
+  {key:'mom',label:'통산 MOM',unit:'회'}, {key:'w',label:'통산 승리',unit:'승'}
+];
+const CAREER_FRAME_TIERS=[
+  {id:'NORMAL',name:'NORMAL',title:'커리어의 시작',thresholds:null},
+  {id:'SILVER',name:'SILVER',title:'쌓여 가는 존재감',thresholds:[50,25,25,100,5,25]},
+  {id:'GOLD',name:'GOLD',title:'팀을 빛내는 커리어',thresholds:[100,50,50,200,10,50]},
+  {id:'LEGEND',name:'LEGEND',title:'GGFC에 남긴 발자취',thresholds:[200,100,100,500,25,100]}
+];
+function careerFrameState(stats){
+  const values=CAREER_FRAME_METRICS.map(m=>Math.max(0,num(stats?.[m.key])));
+  let index=0;
+  CAREER_FRAME_TIERS.forEach((tier,i)=>{if(tier.thresholds?.some((target,j)=>values[j]>=target))index=i;});
+  const tier=CAREER_FRAME_TIERS[index],next=CAREER_FRAME_TIERS[index+1]||null;
+  const routes=CAREER_FRAME_METRICS.map((metric,i)=>({...metric,value:values[i],target:next?.thresholds[i]||null,remaining:next?Math.max(0,next.thresholds[i]-values[i]):0}));
+  const earned=tier.thresholds?CAREER_FRAME_METRICS.filter((m,i)=>values[i]>=tier.thresholds[i]).map(m=>m.label):[];
+  return {tier,next,routes,earned};
+}
+function renderCareerFrame(player,cutoff){
+  const stats=v319CareerStatsMap(cutoff)[player]||{},state=careerFrameState(stats);
+  const card=document.querySelector('#playerCardContainer .ggfc-player-card');
+  if(card)card.dataset.careerTier=state.tier.id;
+  const badge=document.getElementById('playerCardFrameBadge');
+  if(badge){badge.textContent=state.tier.name;badge.title=state.tier.title;}
+  const box=document.getElementById('playerCardFrameProgress');
+  if(!box)return;
+  const date=normDate(cutoff)||'전체 기록';
+  const next=state.next?'<p class="career-frame-next"><b>'+state.next.name+'</b>까지 아래 조건 중 <b>하나</b>를 달성하세요.</p><div class="career-frame-routes">'+state.routes.map(route=>{
+    return '<div class="career-frame-route"><span>'+route.label+'</span><b>'+route.value+' / '+route.target+' '+route.unit+'</b><progress max="'+route.target+'" value="'+Math.min(route.value,route.target)+'" aria-label="'+route.label+' '+route.value+' / '+route.target+'"></progress><small>'+route.remaining+' '+route.unit+' 남음</small></div>';
+  }).join('')+'</div>':'<p class="career-frame-complete">최고 등급 LEGEND 달성 · 앞으로 쌓는 기록도 통산 업적에 계속 반영됩니다.</p>';
+  const rules=CAREER_FRAME_TIERS.slice(1).map(tier=>'<li><b>'+tier.name+'</b><span>'+CAREER_FRAME_METRICS.map((m,i)=>m.label.replace('통산 ','')+' '+tier.thresholds[i]+m.unit).join(' / ')+'</span></li>').join('');
+  box.dataset.careerTier=state.tier.id;
+  box.innerHTML='<header><span>CAREER FRAME</span><strong>'+state.tier.name+'</strong></header><p class="career-frame-title">'+state.tier.title+'</p><p class="career-frame-basis">'+esc(date)+' 기준 · 전체 시즌·대회 통산 기록</p><p class="career-frame-earned">'+(state.earned.length?'현재 등급 달성 근거: '+state.earned.join(' · '):'아직 SILVER 기준에 도달하지 않았습니다.')+'</p>'+next+'<details class="career-frame-rules"><summary>등급 기준 전체 보기</summary><p>NORMAL은 기본 등급입니다. 각 등급은 아래 조건 중 하나만 충족하면 적용됩니다. 누적 업적 개수나 능력치 점수는 사용하지 않습니다.</p><ul>'+rules+'</ul><p>출전은 경기 ID당 1회입니다. 같은 날 여러 경기에 출전하면 경기 수만큼 집계합니다. 시즌·조회 구간이 바뀌어도 기준일까지의 통산 기록을 사용하며, 과거 날짜 조회와 기록 정정 시 해당 기록에 맞춰 등급을 다시 계산합니다. 프레임은 OVR·능력치에 영향을 주지 않습니다.</p></details>';
+}
+function renderPlayerCardAchievements(player,cutoff){
+  const box=$('#playerCardAchievements');if(box)box.innerHTML=v319AchievementHtml(player,cutoff,false);
+  renderCareerFrame(player,cutoff);
+}
 
 function sharedRanks(list,valueFn){
   let previous, rank=0;
@@ -4345,6 +4385,98 @@ function pairStats(a,b,list){
   });
   return {tog,vs};
 }
+
+/* ---------- V3.21 CHEMISTRY MAP ---------- */
+function chemistryNemesis(target,list){
+  const names=chemPlayers().filter(name=>name!==target);
+  const rows=names.map(name=>{
+    const stats=pairStats(target,name,list||chemMatches()), vs=stats.vs;
+    if(!vs.p)return null;
+    return {name,p:vs.p,w:vs.aw,d:vs.d,l:vs.bw,gf:vs.ag,ga:vs.bg,pain:vs.bw-vs.aw};
+  }).filter(Boolean);
+  rows.sort((a,b)=>b.pain-a.pain||b.l-a.l||b.p-a.p||(a.gf-a.ga)-(b.gf-b.ga)||compareNamesKo(a.name,b.name));
+  return rows[0]||null;
+}
+function chemistryMapModel(target){
+  const analysis=chemistry(target), qualified=analysis.mates.filter(x=>x.p>=2);
+  const source=(qualified.length>=6?qualified:analysis.mates).slice(0,12);
+  const maxTogether=Math.max(1,...source.map(x=>x.p));
+  return {analysis,partners:source,maxTogether,nemesis:chemistryNemesis(target,chemMatches())};
+}
+function chemistryMapSvg(target,model){
+  const W=780,H=500,cx=390,cy=250, nodes=model.partners;
+  if(!nodes.length)return '<div class="empty chemistry-map-empty">함께 뛴 선수 기록이 없어 CHEMISTRY MAP을 만들 수 없습니다.</div>';
+  const total=nodes.length, maxP=model.maxTogether;
+  const positions=nodes.map((row,i)=>{
+    const angle=-Math.PI/2+(Math.PI*2*i/total)+(i%2?0.055:-0.055);
+    const closeness=row.p/maxP;
+    const radius=105+(1-closeness)*65;
+    return {row,x:cx+Math.cos(angle)*radius*1.42,y:cy+Math.sin(angle)*radius*.76,i};
+  });
+  const lines=positions.map(({row,x,y})=>{
+    const width=(1.4+Math.max(0,Math.min(100,row.score))/100*7).toFixed(2);
+    const opacity=(.28+Math.max(0,Math.min(100,row.score))/100*.58).toFixed(2);
+    return '<line class="chem-map-link" x1="'+cx+'" y1="'+cy+'" x2="'+x.toFixed(1)+'" y2="'+y.toFixed(1)+'" style="stroke-width:'+width+';opacity:'+opacity+'"><title>'+esc(target)+' + '+esc(row.name)+' · '+row.p+'경기 · 커플점수 '+row.score+'</title></line>';
+  }).join('');
+  const partnerNodes=positions.map(({row,x,y,i})=>{
+    const score=Math.max(0,Math.min(100,row.score)), r=31+score/100*9;
+    const photo=playerPhoto(row.name),clip='chemClip'+i;
+    const initials=esc(String(row.name||'?').trim().slice(0,2));
+    const avatar=photo
+      ?'<defs><clipPath id="'+clip+'"><circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+r.toFixed(1)+'"/></clipPath></defs><image href="'+esc(photo)+'" x="'+(x-r).toFixed(1)+'" y="'+(y-r).toFixed(1)+'" width="'+(r*2).toFixed(1)+'" height="'+(r*2).toFixed(1)+'" preserveAspectRatio="xMidYMid slice" clip-path="url(#'+clip+')" class="chem-map-photo"/>'
+      :'<circle class="chem-map-avatar-fallback" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+r.toFixed(1)+'"/><text class="chem-map-initials" x="'+x.toFixed(1)+'" y="'+(y+5).toFixed(1)+'">'+initials+'</text>';
+    return '<g class="chem-map-node" data-chem-focus="'+esc(row.name)+'" role="button" tabindex="0" aria-label="'+esc(row.name)+' 선수 중심으로 보기">'+
+      '<circle class="chem-map-node-ring" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(r+4).toFixed(1)+'"/>'+avatar+
+      '<rect class="chem-map-score-bg" x="'+(x-25).toFixed(1)+'" y="'+(y+r-2).toFixed(1)+'" width="50" height="21" rx="10.5"/>'+
+      '<text class="chem-map-score" x="'+x.toFixed(1)+'" y="'+(y+r+12).toFixed(1)+'">'+row.score+' ♥</text>'+
+      '<text class="chem-map-name" x="'+x.toFixed(1)+'" y="'+(y+r+37).toFixed(1)+'">'+esc(row.name)+'</text>'+
+      '<text class="chem-map-games" x="'+x.toFixed(1)+'" y="'+(y+r+52).toFixed(1)+'">'+row.p+'경기</text></g>';
+  }).join('');
+  const centerPhoto=playerPhoto(target),centerR=53,centerClip='chemCenterClip';
+  const centerAvatar=centerPhoto
+    ?'<defs><clipPath id="'+centerClip+'"><circle cx="'+cx+'" cy="'+cy+'" r="'+centerR+'"/></clipPath></defs><image href="'+esc(centerPhoto)+'" x="'+(cx-centerR)+'" y="'+(cy-centerR)+'" width="'+(centerR*2)+'" height="'+(centerR*2)+'" preserveAspectRatio="xMidYMid slice" clip-path="url(#'+centerClip+')" class="chem-map-photo"/>'
+    :'<circle class="chem-map-center-fallback" cx="'+cx+'" cy="'+cy+'" r="'+centerR+'"/><text class="chem-map-center-initials" x="'+cx+'" y="'+(cy+7)+'">'+esc(String(target||'?').trim().slice(0,2))+'</text>';
+  return '<svg class="chemistry-map-svg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(target)+' 선수 Chemistry Map">'+
+    '<circle class="chem-map-orbit chem-map-orbit-one" cx="'+cx+'" cy="'+cy+'" r="125"/><circle class="chem-map-orbit chem-map-orbit-two" cx="'+cx+'" cy="'+cy+'" r="165"/>'+lines+partnerNodes+
+    '<g class="chem-map-center"><circle class="chem-map-center-ring" cx="'+cx+'" cy="'+cy+'" r="60"/>'+centerAvatar+
+    '<rect class="chem-map-center-label-bg" x="'+(cx-75)+'" y="'+(cy+65)+'" width="150" height="35" rx="17.5"/><text class="chem-map-center-name" x="'+cx+'" y="'+(cy+88)+'">'+esc(target)+'</text></g></svg>';
+}
+function chemistryMapSideHtml(target,model){
+  const partners=(model.analysis.mates.filter(x=>x.p>=2).length?model.analysis.mates.filter(x=>x.p>=2):model.analysis.mates).slice(0,3);
+  const medals=['🥇','🥈','🥉'];
+  const partnerHtml=partners.length?partners.map((x,i)=>
+    '<button type="button" class="chem-side-partner" data-chem-other="'+esc(x.name)+'"><span class="chem-side-rank">'+medals[i]+'</span><span class="chem-side-person">'+playerFaceChip(x.name,false)+'<small>'+x.p+'경기 · '+x.w+'승 '+x.d+'무 '+x.l+'패 · 승률 '+x.rate+'%</small></span><strong>'+x.score+'</strong></button>'
+  ).join(''):'<div class="chem-side-empty">2경기 이상 함께 뛴 파트너가 없습니다.</div>';
+  const n=model.nemesis;
+  const nemesisHtml=n?'<button type="button" class="chem-nemesis" data-chem-other="'+esc(n.name)+'"><span class="chem-nemesis-icon">⚔</span><span class="chem-side-person">'+playerFaceChip(n.name,false)+'<small>맞대결 '+n.p+'경기 · '+esc(target)+' 기준 <b>'+n.w+'승 '+n.d+'무 '+n.l+'패</b><br>득점 '+n.gf+' : '+n.ga+'</small></span><span class="chem-nemesis-tag">NEMESIS</span></button>':'<div class="chem-side-empty">맞대결 기록이 없습니다.</div>';
+  return '<section class="chem-side-profile"><span class="chem-side-eyebrow">'+esc(String(target).toUpperCase())+' CHEMISTRY</span>'+playerFaceChip(target,true)+'<div class="chem-side-base"><b>'+model.analysis.base+'경기</b><span>출전</span><b>'+model.analysis.baseRate+'%</b><span>승률</span><b>'+model.analysis.baseGoals+'골</b><span>득점</span></div></section>'+
+    '<section class="chem-side-section"><h3>BEST PARTNER</h3>'+partnerHtml+'</section><section class="chem-side-section nemesis-section"><h3>NEMESIS</h3>'+nemesisHtml+'<p>맞대결에서 선택 선수에게 가장 어려웠던 상대를 패배 우위 → 패배 수 → 맞대결 수 순으로 계산합니다.</p></section>';
+}
+function bindChemistryMapInteractions(){
+  const map=$('#chemistryMap'),side=$('#chemistryMapSide');
+  const focus=name=>{if(!name||name===chemSel)return;chemSel=name;chemOther='';renderChem();requestAnimationFrame(()=>$('#chemistryMap')?.scrollIntoView({block:'nearest',behavior:'smooth'}));};
+  if(map){
+    map.querySelectorAll('[data-chem-focus]').forEach(el=>{
+      const run=()=>focus(el.getAttribute('data-chem-focus'));
+      el.addEventListener('click',run);
+      el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();run();}});
+    });
+  }
+  if(side)side.querySelectorAll('[data-chem-other]').forEach(el=>el.addEventListener('click',()=>{
+    const name=el.getAttribute('data-chem-other');if(!name||name===chemSel)return;
+    chemOther=name;const input=$('#chemOther');if(input)input.value=name;renderPair(chemSel,chemOther);updateChemCompareButton();
+    $('#chemPair')?.scrollIntoView({block:'nearest',behavior:'smooth'});
+  }));
+}
+function renderChemistryMap(){
+  const map=$('#chemistryMap'),side=$('#chemistryMapSide'),note=$('#chemMapNote');if(!map||!side)return;
+  if(!chemSel){map.innerHTML='<div class="empty chemistry-map-empty">분석할 선수를 선택해 주세요.</div>';side.innerHTML='';return;}
+  const model=chemistryMapModel(chemSel);
+  map.innerHTML=chemistryMapSvg(chemSel,model);side.innerHTML=chemistryMapSideHtml(chemSel,model);
+  if(note)note.textContent=(chemYear==='ALL'?'전체 연도':chemYear+'년')+' · 최대 12명 표시 · 가까울수록 함께 뛴 경기가 많고, 선이 굵을수록 커플점수가 높습니다.';
+  bindChemistryMapInteractions();
+}
+
 function normalizePlayerPhotoUrl(src){
   let v=String(src||'').trim().replace(/&amp;/g,'&').replace(/^['"]|['"]$/g,'').trim();
   if(!v)return '';
@@ -4602,7 +4734,9 @@ function renderChem(){
     if($("#monthlyChart")) $("#monthlyChart").innerHTML='<div class="empty">월별 STATISTICS를 표시할 선수가 없습니다.</div>';
     if($("#monthlyStatTable")) $("#monthlyStatTable").innerHTML='';
     $("#chemMate").innerHTML='<div class="empty">데이터가 없습니다.</div>';
-    $("#chemCoach").innerHTML='<div class="empty">데이터가 없습니다.</div>'; return;
+    $("#chemCoach").innerHTML='<div class="empty">데이터가 없습니다.</div>';
+    if($("#chemistryMap")) $("#chemistryMap").innerHTML='<div class="empty chemistry-map-empty">CHEMISTRY MAP을 표시할 선수가 없습니다.</div>';
+    if($("#chemistryMapSide")) $("#chemistryMapSide").innerHTML=''; return;
   }
   if(!chemSel || !names.includes(chemSel)) chemSel = names[0];
   sel.value = chemSel;
@@ -4619,6 +4753,7 @@ function renderChem(){
   const squadIssues=squadRecordIssues(chemMatches(),[chemSel,chemOther]);
   if(squadIssues.length)$("#chemSum").innerHTML+='<p class="chem-goal-scope">선택 선수의 스쿼드·시작일 확인 대상 '+squadIssues.length+'건이 있습니다. 원본 확인 전 분석 결과는 잠정값입니다.</p>';
   if($("#monthlyMetric")) $("#monthlyMetric").value=monthlyMetric;
+  renderChemistryMap();
   renderMonthlyPlayerStats();
   const bar = v => '<div class="bar"><i style="width:'+Math.min(v,100)+'%;background:'+(v>=60?"#46A171":v>=40?"#2783DE":"#D5803B")+'"></i></div>';
   const main = c.mates.filter(x=>x.p>=2);
