@@ -5538,7 +5538,7 @@ function sampleData(){
 }
 
 
-/* ---------- V3.19.1: single-page matchday poster ---------- */
+/* ---------- V3.19.2: high-resolution, aligned single-page matchday poster ---------- */
 function exportSafeName(v){
   return String(v||'GGFC').trim().replace(/[\\/:*?"<>|]+/g,'_').replace(/\s+/g,'_').slice(0,80)||'GGFC';
 }
@@ -5649,13 +5649,13 @@ function posterLeagueIcon(code){
   return src?'<img class="poster-league-logo" src="'+src+'" alt="'+esc(name)+'">':'<strong class="poster-league-name">'+esc(name)+'</strong>';
 }
 function posterMatchHtml(m){
-  const home=teamScorers(m,m.home,false),away=teamScorers(m,m.away,false);
-  const mom=fixtureMomHtml(m),forfeit=forfeitText(m);
+  // Reuse the program's escaped, one-scorer-per-line presentation.
+  const home=teamScorers(m,m.home,true),away=teamScorers(m,m.away,true);
+  const forfeit=forfeitText(m);
   return '<article class="poster-match" data-match-id="'+esc(m.id)+'"><div class="poster-match-line">'+
-    '<span class="poster-match-team home">'+esc(teamDisplayName(m.home))+'</span>'+posterTeamIcon(m.home)+
-    '<b class="poster-score">'+num(m.hs)+' - '+num(m.as)+'</b>'+posterTeamIcon(m.away)+'<span class="poster-match-team away">'+esc(teamDisplayName(m.away))+'</span></div>'+
-    '<div class="poster-scorers"><span>'+home+'</span><span>'+away+'</span></div>'+
-    (mom.includes('empty-mom')?'':'<div class="poster-mom">'+mom+'</div>')+
+    '<div class="poster-match-copy home"><b class="poster-match-team">'+esc(teamDisplayName(m.home))+'</b><div class="poster-scorers">'+home+'</div></div>'+posterTeamIcon(m.home)+
+    '<div class="poster-match-center"><b class="poster-score">'+num(m.hs)+' <span>-</span> '+num(m.as)+'</b>'+fixtureMomHtml(m)+'</div>'+posterTeamIcon(m.away)+
+    '<div class="poster-match-copy away"><b class="poster-match-team">'+esc(teamDisplayName(m.away))+'</b><div class="poster-scorers">'+away+'</div></div></div>'+
     (forfeit?'<div class="poster-forfeit">'+esc(forfeit)+'</div>':'')+'</article>';
 }
 function posterStandingHtml(source){
@@ -5675,7 +5675,7 @@ function posterStandingHtml(source){
 }
 function posterAttendanceHtml(list){
   const teams=headToHeadTeams(list);
-  if(!teams.length)return '<div class="poster-empty">출석 기록 없음</div>';
+  if(!teams.length)return '<div class="poster-empty">참석 기록 없음</div>';
   return '<table class="poster-attendance-table"><thead><tr><th>팀</th><th>감독</th><th>코치</th><th>선수 명단</th></tr></thead><tbody>'+teams.map(team=>{
     const members=squadAttendanceMembers(list,team);
     const names=rows=>rows.map(p=>'<span class="'+(p.att?'present':'absent')+'">'+esc(p.player)+'</span>').join(' ');
@@ -5716,7 +5716,7 @@ function buildReferencePoster(doc,source){
         panel('poster-rank-team','#팀순위 <span>(누적 승점)</span>',posterTable(source,'#dashTeamPointRank',[0,1,2,3,4,5],['순위','팀명','대표','참석','승점','득실']))+
         panel('poster-rank-player','#개인순위 <span>(누적 승점)</span>',posterTable(source,'#dashPlayerPointRank',[0,1,2,3],['순위','이름','경기수','승점']))+
         panel('poster-rank-fouls','#팀순위 <span>(팀파울)</span>',posterTable(source,'#dashTeamFoulRank',[0,1,2,3],['순위','이름','경기수','팀파울']))+'</div></div></section>'+
-    '<section class="poster-attendance"><h3>#출석자</h3><div class="poster-attendance-note">'+esc(dateText)+' · 진한 이름: 출석 / 연한 이름: 결석</div>'+posterAttendanceHtml(dayMatches)+'</section>'+
+    '<section class="poster-attendance"><h3>#참석자</h3><div class="poster-attendance-note">'+esc(dateText)+' · 진한 이름: 참석 / 연한 이름: 미참석</div>'+posterAttendanceHtml(dayMatches)+'</section>'+
     '<section class="poster-headtohead poster-dark"><h3>#상대전적</h3><div class="poster-period">'+esc(source.querySelector('#dashHeadToHeadPeriod')?.textContent||'')+'</div>'+h2h+'</section>';
   cleanDashboardSnapshot(root);
   // Normalise UI-only classes without altering any live node or database value.
@@ -5730,16 +5730,53 @@ function buildReferencePoster(doc,source){
 }
 
 function fitDashboardPoster(root){
-    root.querySelectorAll('.poster-lane,.poster-statistics,.poster-attendance,.poster-headtohead').forEach(section=>{
-      let inner=section.querySelector(':scope > .poster-fit-content');
-      if(!inner){inner=root.ownerDocument.createElement('div');inner.className='poster-fit-content';while(section.firstChild)inner.appendChild(section.firstChild);section.appendChild(inner);}
-      inner.style.transform='none';
-      const width=section.clientWidth-20,height=section.clientHeight-20;
-      inner.style.width=width+'px';
-      const scale=Math.min(1,width/Math.max(width,inner.scrollWidth),height/Math.max(1,inner.scrollHeight));
-      inner.style.transform='scale('+scale+')';inner.style.transformOrigin='top left';
-      section.dataset.contentScale=scale.toFixed(4);
+  const sections=[...root.querySelectorAll('.poster-lane,.poster-statistics,.poster-attendance,.poster-headtohead')];
+  sections.forEach(section=>{
+    let inner=section.querySelector(':scope > .poster-fit-content');
+    if(!inner){inner=root.ownerDocument.createElement('div');inner.className='poster-fit-content';while(section.firstChild)inner.appendChild(section.firstChild);section.appendChild(inner);}
+    inner.style.transform='none';
+  });
+  root.querySelectorAll('.poster-rank-panel tbody tr').forEach(row=>row.style.height='');
+  const lanes=[...root.querySelectorAll('.poster-lane')];
+  const equalHeight=nodes=>{
+    nodes=nodes.filter(Boolean);nodes.forEach(n=>n.style.height='auto');
+    const height=Math.ceil(Math.max(0,...nodes.map(n=>n.getBoundingClientRect().height)));
+    nodes.forEach(n=>n.style.height=height+'px');
+  };
+  const layout=scale=>{
+    // Expand the layout width before scaling: tables always fill their full column.
+    sections.forEach(section=>section.firstElementChild.style.width=((section.clientWidth-20)/scale)+'px');
+    root.querySelectorAll('.poster-league-team,.poster-league-team b,.poster-team-cards,.poster-match').forEach(n=>n.style.height='auto');
+    equalHeight([...root.querySelectorAll('.poster-league-team b')]);
+    equalHeight([...root.querySelectorAll('.poster-league-team')]);
+    equalHeight(lanes.map(n=>n.querySelector('.poster-team-cards')));
+    const games=lanes.map(n=>[...n.querySelectorAll('.poster-match')]);
+    for(let i=0;i<Math.max(0,...games.map(rows=>rows.length));i++)equalHeight(games.map(rows=>rows[i]));
+    return sections.every(section=>{
+      const inner=section.firstElementChild;
+      return inner.scrollHeight*scale<=section.clientHeight-20&&inner.scrollWidth*scale<=section.clientWidth-19;
     });
+  };
+  // One shared scale keeps all names and statistics at the same visible font size.
+  let scale=1;
+  if(!layout(scale)){
+    let low=.05,high=1;
+    for(let i=0;i<12;i++){const mid=(low+high)/2;if(layout(mid))low=mid;else high=mid;}
+    scale=low;layout(scale);
+  }
+  // Use remaining ranking space evenly, with matching row spacing in all three columns.
+  const statistics=root.querySelector('.poster-statistics'),rankings=root.querySelector('.poster-rankings');
+  if(statistics&&rankings){
+    const available=(statistics.clientHeight-20)/scale-(rankings.getBoundingClientRect().top-statistics.firstElementChild.getBoundingClientRect().top);
+    const columns=[...rankings.children].map(column=>({column,rows:[...column.querySelectorAll('tbody tr')]})).filter(x=>x.rows.length);
+    const extra=Math.max(0,Math.min(12,...columns.map(x=>(available-x.column.getBoundingClientRect().height-2)/x.rows.length)));
+    columns.forEach(x=>x.rows.forEach(row=>row.style.height=(row.getBoundingClientRect().height+extra)+'px'));
+  }
+  sections.forEach(section=>{
+    section.firstElementChild.style.transform='scale('+scale+')';
+    section.firstElementChild.style.transformOrigin='top left';
+    section.dataset.contentScale=scale.toFixed(4);
+  });
 }
 async function createDashboardExportSnapshot(source){
   if(!source.getBoundingClientRect().width)throw new Error('종합기록 화면을 연 뒤 다시 저장해 주세요.');
@@ -5748,7 +5785,7 @@ async function createDashboardExportSnapshot(source){
   try{
     const doc=frame.contentDocument;doc.documentElement.lang='ko';
     const base=doc.createElement('base');base.href=document.baseURI;doc.head.appendChild(base);
-    const style=doc.createElement('link');style.rel='stylesheet';style.href=new URL('assets/ggfc-export.css?v=3.19.1',document.baseURI).href;
+    const style=doc.createElement('link');style.rel='stylesheet';style.href=new URL('assets/ggfc-export.css?v=3.19.2',document.baseURI).href;
     const ready=settleExportResource(style,12000,()=>!!style.sheet);doc.head.appendChild(style);await ready;
     if(!style.sheet)throw new Error('출력 스타일을 불러오지 못했습니다.');
     const root=buildReferencePoster(doc,source);doc.body.appendChild(root);
@@ -5768,17 +5805,27 @@ async function createDashboardExportSnapshot(source){
   }catch(err){frame.remove();throw err;}
 }
 async function renderDashboardPng(renderer,snapshot){
-  let canvas;
+  let canvas,output;
   try{
-    canvas=await renderer(snapshot.root,{scale:1,backgroundColor:'#f3f5f8',useCORS:true,allowTaint:false,logging:false,imageTimeout:8000,removeContainer:true,scrollX:0,scrollY:0,windowWidth:428,windowHeight:2047,width:428,height:2047,onclone:async doc=>{
+    // Render text and layout at 4× first; never enlarge a low-resolution bitmap.
+    canvas=await renderer(snapshot.root,{scale:4,backgroundColor:'#f3f5f8',useCORS:true,allowTaint:false,logging:false,imageTimeout:8000,removeContainer:true,scrollX:0,scrollY:0,windowWidth:428,windowHeight:2047,width:428,height:2047,onclone:async doc=>{
       await Promise.all([doc.fonts.load('700 28px GGFCTitle'),...[400,700,800,900].map(weight=>doc.fonts.load(weight+' 10px GGFCBody'))]);
       await doc.fonts.ready;
       fitDashboardPoster(doc.getElementById('ggfc-reference-poster'));
     }});
-    if(!canvas||canvas.width!==428||canvas.height!==2047)throw new Error('출력 크기를 확인할 수 없습니다.');
-    const blob=await new Promise((resolve,reject)=>canvas.toBlob(b=>b?.size?resolve(b):reject(new Error('PNG 변환에 실패했습니다.')),'image/png'));
-    return {blob,width:428,height:2047};
-  }finally{if(canvas){canvas.width=0;canvas.height=0;}}
+    if(!canvas||canvas.width!==1712||canvas.height!==8188)throw new Error('고해상도 출력 크기를 확인할 수 없습니다.');
+    output=document.createElement('canvas');output.width=1600;output.height=7653;
+    const ctx=output.getContext('2d',{alpha:false});
+    if(!ctx)throw new Error('이미지 변환 화면을 만들지 못했습니다.');
+    ctx.fillStyle='#f3f5f8';ctx.fillRect(0,0,output.width,output.height);
+    ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+    ctx.drawImage(canvas,0,0,output.width,output.height);
+    const blob=await new Promise((resolve,reject)=>output.toBlob(b=>b?.size?resolve(b):reject(new Error('PNG 변환에 실패했습니다.')),'image/png'));
+    return {blob,width:1600,height:7653};
+  }finally{
+    if(canvas){canvas.width=0;canvas.height=0;}
+    if(output){output.width=0;output.height=0;}
+  }
 }
 let dashboardExportBusy=false;
 async function exportDashboardAsPng(button){
@@ -5799,7 +5846,7 @@ async function exportDashboardAsPng(button){
     button.textContent='이미지 만드는 중…';
     const result=await renderDashboardPng(renderer,snapshot);
     downloadBlob(brand+'_종합기록_'+stamp+'.png',result.blob);
-    toast('종합기록 PNG 한 장을 저장했습니다. (428 × 2047px)'+(snapshot.unavailableImages?' · 불러오지 못한 이미지는 대체 표시했습니다.':''));
+    toast('종합기록 PNG 한 장을 저장했습니다. (1600 × 7653px)'+(snapshot.unavailableImages?' · 불러오지 못한 이미지는 대체 표시했습니다.':''));
   }catch(err){console.error(err);toast('이미지 저장 실패: '+err.message);}
   finally{
     if(snapshot) snapshot.cleanup();
