@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>GGFC 기록센터 · 3.21.8</title>
-<link rel="stylesheet" href="assets/ggfc.css?v=3.21.8">
+<title>GGFC 기록센터 · 3.21.9</title>
+<link rel="stylesheet" href="assets/ggfc.css?v=3.21.9">
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <meta name="theme-color" content="#061f44"><script>if(new URLSearchParams(location.search).get("view")!=="desktop" && (window.GGFC_MOBILE_ENTRY || matchMedia("(max-width: 820px)").matches))document.documentElement.classList.add("ggfc-mobile");</script></head>
 <body>
@@ -31,7 +31,7 @@
   <nav class="tabs sidebar-tabs" id="tabs">
     <div class="sidebar-group-title">MENU</div>
     <button data-v="dash" class="on"><span class="sidebar-icon">01</span><span>Overview</span></button>
-    <button data-v="insights"><span class="sidebar-icon">07</span><span>기록 스토리</span></button>
+    <button data-v="insights"><span class="sidebar-icon">07</span><span>Record Stories</span></button>
     <button data-v="cal"><span class="sidebar-icon">02</span><span>Match Calendar</span></button>
     <button data-v="team"><span class="sidebar-icon">03</span><span>Team Stats</span></button>
     <button data-v="player"><span class="sidebar-icon">04</span><span>Player Stats</span></button>
@@ -42,7 +42,7 @@
     <button data-v="rep" id="repTab" class="admin-menu-tab" style="display:none"><span class="sidebar-icon">A2</span><span>대표승점 설정</span></button>
     <button data-v="data" id="dataTab" class="admin-menu-tab" style="display:none"><span class="sidebar-icon">A3</span><span>데이터 관리</span></button>
   </nav>
-  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.21.8 · 기록센터</span></footer>
+  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.21.9 · 기록센터</span></footer>
 </aside>
 <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" tabindex="-1" aria-label="메뉴 닫기" hidden></button>
 
@@ -276,7 +276,7 @@
 
   <!-- CALENDAR -->
   <section class="view" id="v-insights">
-    <div class="insight-page-head"><div><h2>기록 스토리</h2><p>Matchday Story · Streak · Milestone · New Record · Achievement</p></div>
+    <div class="insight-page-head"><div><h2>Record Stories</h2><p>Matchday Story · Streak · Milestone · New Record · Achievement</p></div>
     <div class="insight-date-controls"><label for="insightDate">경기일</label><select id="insightDate"></select><button id="insightLatest" class="btn">최근 경기일</button></div></div>
     <div class="card v319-story-shell" id="ggfcStorySection" style="margin-bottom:16px">
       <div class="dashboard-block-title">
@@ -391,12 +391,9 @@
     </div>
     <div class="card">
       <div class="dashboard-block-title"><div class="sec-t">선수 누적 기록</div><div class="dashboard-block-note" id="playerPeriodLabel"></div></div>
-      <div class="member-search player-record-search"><label for="memberPlayerSearch">선수 이름 검색</label><div class="player-record-search-input"><input id="memberPlayerSearch" type="search" placeholder="이름 일부를 입력하세요" autocomplete="off" aria-controls="playerTable memberPlayerCards specialTable" aria-describedby="playerRecordSearchStatus"><button id="playerRecordSearchClear" class="btn" type="button" disabled>검색 초기화</button></div><p id="playerRecordSearchStatus" role="status" aria-live="polite"></p></div><div class="mobile-only member-cards" id="memberPlayerCards"></div><div class="tablewrap" id="playerTable"></div>
+      <div class="member-search player-record-search"><label for="memberPlayerSearch">선수 이름 검색</label><div class="player-record-search-input"><input id="memberPlayerSearch" type="search" placeholder="이름 일부를 입력하세요" autocomplete="off" aria-controls="playerTable memberPlayerCards specialTable" aria-describedby="playerRecordSearchStatus"><button id="playerRecordSearchClear" class="btn" type="button" disabled>검색 초기화</button></div><p id="playerRecordSearchStatus" role="status" aria-live="polite"></p></div><div class="mobile-only member-cards" id="memberPlayerCards"></div><p class="note">좌우로 스크롤하여 전체 기록과 ACHIEVEMENT를 확인하세요.</p><div class="tablewrap player-stats-scroll" id="playerTable" tabindex="0" role="region" aria-label="선수 누적 기록 · 좌우 스크롤"></div>
     </div>
-    <div class="card" style="margin-top:16px">
-      <div class="dashboard-block-title"><div><div class="sec-t">ACHIEVEMENT</div><div class="dashboard-block-note">조회 종료일 기준 커리어 업적 · 선수카드에서 전체 배지를 확인할 수 있습니다.</div></div></div>
-      <div id="playerAchievementBoard"></div>
-    </div>
+
     <div class="card" style="margin-top:16px">
       <div class="sec-t">스페셜 기록 (우승 · 연혁)</div>
       <div class="tablewrap" id="specialTable"></div>
@@ -510,7 +507,7 @@
           </div>
           <div class="chemistry-map-legend" aria-label="Chemistry Map 범례">
             <span><i class="line-score"></i> 실선 굵기 = 기준선수 커플점수</span>
-            <span><i class="line-peer"></i> 점선 = BEST #1 연결</span>
+            <span><i class="line-peer"></i> 점선 = BEST #1 · #2 연결</span>
             <span><i class="base-best-chip">★</i> 기준선수 BEST #1</span><span><i class="hub-chip">HUB</i> BEST #1 최다 선택</span>
             <span><i class="dot-distance"></i> 중심 거리 = 동행경기</span>
             <span><i class="dot-size"></i> 원 크기 = 커플점수 상대비교</span>
@@ -670,7 +667,7 @@
     <div class="card" style="margin-bottom:16px" id="careerFrameSettingsCard">
       <div class="sec-t">선수카드 등급 조건</div>
       <p class="note">Career Achievement 통산 기준입니다. 각 등급에서 지정한 개수만큼 조건을 달성하면 승급합니다. NORMAL은 기본 등급이며 OVR·능력치는 변경되지 않습니다.</p>
-      <p class="note">항목별 기준은 SILVER &lt; GOLD &lt; LEGEND 순으로 입력하세요. 상위 등급의 필요 조건 수는 하위 등급 이상이어야 합니다. 변경하면 모든 선수의 현재·과거 카드 등급이 새 기준으로 재계산됩니다.</p>
+      <p class="note">항목별 기준은 BRONZE ≤ SILVER &lt; GOLD &lt; LEGEND 순으로 입력하세요. 상위 등급의 필요 조건 수는 하위 등급 이상이어야 합니다. 변경하면 모든 선수의 현재·과거 카드 등급이 새 기준으로 재계산됩니다.</p>
       <div id="careerFrameSettingsFields"></div>
       <div class="row"><label>미리보기 기준일 <input type="date" id="careerFramePreviewDate"></label><button type="button" class="btn" id="careerFrameSettingsPreview">변경 선수 미리보기</button><button type="button" class="btn primary" id="careerFrameSettingsSave">기준 저장</button><button type="button" class="btn" id="careerFrameSettingsDefault">기본값 불러오기</button><button type="button" class="btn" id="careerFrameSettingsCancel">변경 취소</button></div>
       <div id="careerFramePreview" class="career-frame-preview" aria-live="polite" hidden></div>
@@ -749,6 +746,7 @@
     <div class="player-card-stage" id="playerCardStage">
       <div class="player-card-upper">
       <div class="player-card-visuals">
+      <aside class="player-current-team" id="playerCardCurrentTeam" aria-label="현재 소속팀"></aside>
       <div class="ggfc-player-card-container" id="playerCardContainer">
         <div class="ggfc-player-card">
           <div class="ggfc-player-card-content">
@@ -831,6 +829,7 @@
             <div class="player-card-metric-grid" id="playerCardSoccerBeeMetrics"></div>
           </section>
         </div>
+        <section id="playerCardTeamHistory" class="player-team-history"></section>
         <details class="player-card-sb-details">
           <summary>SoccerBee 지표 비교 보기</summary>
           <section class="player-card-chart soccerbee" aria-label="SoccerBee 기록 차트">
@@ -859,6 +858,7 @@
         <div class="player-card-history-legend" id="playerCardHistoryLegend" aria-label="표시할 능력치 선택"></div>
         <div class="player-card-history-help"><span>능력치를 눌러 표시·숨기기 · 미세한 변화는 한 항목 선택 또는 Y축의 증감 보기로 확인</span><button class="player-card-history-all" id="playerCardHistoryAll" type="button">6개 모두 표시</button></div>
         <div class="player-card-history-plot" id="playerCardHistoryPlot"></div>
+        <details class="season-growth-details"><summary>시즌별 성장량 비교</summary><div id="playerCardSeasonGrowth"></div></details>
         <div class="player-card-history-inspect" id="playerCardHistoryInspect" aria-live="polite" aria-atomic="true"></div>
         <label class="player-card-history-slider" for="playerCardHistoryDate"><span>확인할 날짜</span><input id="playerCardHistoryDate" type="range" min="0" max="0" step="1" value="0" aria-label="능력치 확인 날짜"></label>
         <p class="player-card-chart-note">X축: 날짜 · Y축: 소수점 능력치 또는 기간 시작 대비 증감. 경기·측정일과 기간 시작·종료 값을 표시합니다. 그래프와 변화 상자는 소수 둘째 자리로 표시하고, 선수카드·OVR의 정수 계산은 유지합니다. 선택 기준일 이후 기록은 제외합니다.</p>
@@ -917,8 +917,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<script src="assets/ggfc-sync.js?v=3.21.8"></script>
-<script src="assets/ggfc-mobile.js?v=3.21.8"></script>
+<script src="assets/ggfc-sync.js?v=3.21.9"></script>
+<script src="assets/ggfc-mobile.js?v=3.21.9"></script>
 <script src="assets/ggfc-details.js?v=3.19.1"></script>
-<script src="assets/ggfc-app.js?v=3.21.8"></script>
+<script src="assets/ggfc-app.js?v=3.21.9"></script>
 </body></html>
