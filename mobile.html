@@ -502,7 +502,7 @@
         </div>
         <div class="chemistry-map-heading-right">
           <div class="chemistry-map-tools">
-            <label for="chemDepth">관계 깊이</label>
+            <div class="chem-zoom-controls" role="group" aria-label="지도 확대 축소"><button type="button" class="btn" id="chemZoomOut" aria-label="지도 축소">−</button><output id="chemZoomValue" aria-live="polite">100%</output><button type="button" class="btn" id="chemZoomIn" aria-label="지도 확대">+</button><button type="button" class="btn" id="chemZoomFit">맞춤</button></div><label for="chemDepth">관계 깊이</label>
             <select id="chemDepth" aria-label="Chemistry Map 관계 깊이">
               <option value="2">2단계</option>
               <option value="3">3단계</option>
@@ -511,7 +511,7 @@
           <div class="chemistry-map-legend" aria-label="Chemistry Map 범례">
             <span><i class="line-score"></i> 실선 굵기 = 기준선수 커플점수</span>
             <span><i class="line-peer"></i> 점선 = BEST #1 연결</span>
-            <span><i class="hub-chip">HUB</i> BEST #1 최다 선택</span>
+            <span><i class="base-best-chip">★</i> 기준선수 BEST #1</span><span><i class="hub-chip">HUB</i> BEST #1 최다 선택</span>
             <span><i class="dot-distance"></i> 중심 거리 = 동행경기</span>
             <span><i class="dot-size"></i> 원 크기 = 커플점수 상대비교</span>
           </div>
@@ -672,7 +672,8 @@
       <p class="note">Career Achievement 통산 기준입니다. 각 등급에서 지정한 개수만큼 조건을 달성하면 승급합니다. NORMAL은 기본 등급이며 OVR·능력치는 변경되지 않습니다.</p>
       <p class="note">항목별 기준은 SILVER &lt; GOLD &lt; LEGEND 순으로 입력하세요. 상위 등급의 필요 조건 수는 하위 등급 이상이어야 합니다. 변경하면 모든 선수의 현재·과거 카드 등급이 새 기준으로 재계산됩니다.</p>
       <div id="careerFrameSettingsFields"></div>
-      <div class="row"><button type="button" class="btn primary" id="careerFrameSettingsSave">기준 저장</button><button type="button" class="btn" id="careerFrameSettingsDefault">기본값 불러오기</button><button type="button" class="btn" id="careerFrameSettingsCancel">변경 취소</button></div>
+      <div class="row"><label>미리보기 기준일 <input type="date" id="careerFramePreviewDate"></label><button type="button" class="btn" id="careerFrameSettingsPreview">변경 선수 미리보기</button><button type="button" class="btn primary" id="careerFrameSettingsSave">기준 저장</button><button type="button" class="btn" id="careerFrameSettingsDefault">기본값 불러오기</button><button type="button" class="btn" id="careerFrameSettingsCancel">변경 취소</button></div>
+      <div id="careerFramePreview" class="career-frame-preview" aria-live="polite" hidden></div>
       <p id="careerFrameSettingsStatus" class="note" role="status" aria-live="polite"></p>
     </div>
     <div class="card" style="margin-bottom:16px" id="displayNameManagerCard">
@@ -813,6 +814,8 @@
       </div>
 
       </div>
+      </div>
+      <div class="player-card-detail-grid">
       <div class="player-card-data-panel" id="playerCardDataPanel">
         <div class="player-card-data-head">
           <div class="player-card-data-title">선수 기록</div>
@@ -828,11 +831,6 @@
             <div class="player-card-metric-grid" id="playerCardSoccerBeeMetrics"></div>
           </section>
         </div>
-        <section class="player-card-data-card v319-player-card-achievement" aria-label="선수 Achievement">
-          <h4>CAREER · ACHIEVEMENTS</h4>
-          <div id="playerCardFrameProgress" class="career-frame-panel"></div>
-          <div id="playerCardAchievements"></div>
-        </section>
         <details class="player-card-sb-details">
           <summary>SoccerBee 지표 비교 보기</summary>
           <section class="player-card-chart soccerbee" aria-label="SoccerBee 기록 차트">
@@ -842,6 +840,11 @@
         </details>
         <div class="player-card-chart-note" id="playerCardFoulNote">개인파울·MOM·결석 기록은 능력치에 반영됩니다. 출석률은 조회기간의 주 소속팀 경기 수를 기준으로 계산합니다.</div>
       </div>
+        <section class="player-card-data-card v319-player-card-achievement player-card-career-panel" aria-label="선수 Achievement">
+          <h4>CAREER · ACHIEVEMENTS</h4>
+          <div id="playerCardFrameProgress" class="career-frame-panel"></div>
+          <div id="playerCardAchievements"></div>
+        </section>
       </div>
       <div class="player-card-history-grid">
       <section class="player-card-history" id="playerCardHistory" aria-label="기간별 선수 능력치 변화">
