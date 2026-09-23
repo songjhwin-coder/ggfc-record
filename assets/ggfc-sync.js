@@ -85,7 +85,7 @@ const GGFC = (() => {
   function status(text){state.status=text;refreshUI();}
   function applySnapshot(raw,first=false){
     const next=merge(raw);
-    DB=Object.assign(blankDB(),next);abilityPriorYearPoolCache=null;
+    DB=Object.assign(blankDB(),next);abilityPriorYearPoolCache=null;if(typeof v319CareerCache!=='undefined')v319CareerCache={key:'',map:null};
     state.revision=Number(raw?.meta?.revision)||0;state.savedAt=raw?.meta?.savedAt||null;
     state.ready=true;state.error='';
     ensureAbilityData();

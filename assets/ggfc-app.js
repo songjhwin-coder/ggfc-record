@@ -232,6 +232,7 @@ function representativeSettingsPersistedForYear(y){
   }catch(e){ return false; }
 }
 function save(){
+  v319CareerCache={key:'',map:null};
   if(!GGFC.canEdit()){ toast('관리자 인증과 서버 연결을 확인해 주세요.'); return {databaseSaved:false,representativeSaved:false,error:new Error('권한 또는 연결 없음')}; }
   abilityPriorYearPoolCache=null;
   const representativeSaved=saveRepresentativeSettingsBackup();
@@ -240,7 +241,7 @@ function save(){
   GGFC.markChanged();
   return {databaseSaved,representativeSaved,error,cloudPending:true};
 }
-function load(){ DB=blankDB(); ensureAbilityData(); }
+function load(){ DB=blankDB(); v319CareerCache={key:'',map:null}; ensureAbilityData(); }
 
 /* ---------- CSV ---------- */
 function parseCSV(text){
@@ -2663,6 +2664,7 @@ function openPlayerCard(player,query){
   $("#playerCardPosition").textContent=pos;
   labels.forEach((k,i)=>{ const el=$("#playerCardStat"+k); if(el) el.textContent=abilities[i]===null?"—":String(abilities[i]); });
   renderPlayerCardPerformance(name,stat,playerCardCutoff,cardInfo);
+  renderPlayerCardAchievements(name,playerCardCutoff);
 
   const photoWrap=$("#playerCardPhotoWrap");
   photoWrap.title='';delete photoWrap.dataset.photoState;
@@ -3739,6 +3741,200 @@ function queryPlayerStats(list){
     return Object.assign(P,{mainTeam,teamGames:games,attendanceRate:pct(P.att,games),winRate:pct(P.w,P.w+P.d+P.l)});
   });
 }
+
+/* ---------- V3.19: Matchday Story · Streak · Milestone · New Record · Achievement ---------- */
+const V319_MILESTONES={
+  att:[10,25,50,100,150,200,300],
+  g:[10,25,50,75,100,150,200],
+  a:[10,25,50,75,100],
+  sv:[50,100,200,300,500],
+  mom:[5,10,20,30,50]
+};
+const V319_ACHIEVEMENTS=[
+  {id:'DEBUT',icon:'👟',name:'DEBUT',ko:'첫 출전',desc:'GGFC 공식 경기 첫 출전',test:s=>s.att>=1},
+  {id:'REGULAR',icon:'🎽',name:'REGULAR',ko:'레귤러',desc:'통산 25경기 출전',test:s=>s.att>=25},
+  {id:'FIFTY_CLUB',icon:'5️⃣',name:'FIFTY CLUB',ko:'50경기 클럽',desc:'통산 50경기 출전',test:s=>s.att>=50},
+  {id:'CENTURY_CLUB',icon:'💯',name:'CENTURY CLUB',ko:'센추리 클럽',desc:'통산 100경기 출전',test:s=>s.att>=100},
+  {id:'IRON_MAN',icon:'🦾',name:'IRON MAN',ko:'아이언맨',desc:'통산 200경기 출전',test:s=>s.att>=200},
+  {id:'FIRST_GOAL',icon:'⚽',name:'FIRST GOAL',ko:'첫 골',desc:'GGFC 공식 경기 첫 득점',test:s=>s.g>=1},
+  {id:'DOUBLE_DIGITS',icon:'🔟',name:'DOUBLE DIGITS',ko:'두 자릿수 득점',desc:'통산 10골',test:s=>s.g>=10},
+  {id:'SNIPER',icon:'🎯',name:'SNIPER',ko:'스나이퍼',desc:'통산 25골',test:s=>s.g>=25},
+  {id:'GOAL_MACHINE',icon:'🔥',name:'GOAL MACHINE',ko:'골 머신',desc:'통산 50골',test:s=>s.g>=50},
+  {id:'GOAL_CENTURION',icon:'👑',name:'GOAL CENTURION',ko:'100골 클럽',desc:'통산 100골',test:s=>s.g>=100},
+  {id:'CREATOR',icon:'🪄',name:'CREATOR',ko:'크리에이터',desc:'통산 10도움',test:s=>s.a>=10},
+  {id:'PLAYMAKER',icon:'🎩',name:'PLAYMAKER',ko:'플레이메이커',desc:'통산 25도움',test:s=>s.a>=25},
+  {id:'ASSIST_KING',icon:'🤝',name:'ASSIST KING',ko:'어시스트 킹',desc:'통산 50도움',test:s=>s.a>=50},
+  {id:'SAFE_HANDS',icon:'🧤',name:'SAFE HANDS',ko:'세이프 핸즈',desc:'통산 50선방',test:s=>s.sv>=50},
+  {id:'THE_WALL',icon:'🧱',name:'THE WALL',ko:'더 월',desc:'통산 100선방',test:s=>s.sv>=100},
+  {id:'STAR_PLAYER',icon:'⭐',name:'STAR PLAYER',ko:'스타 플레이어',desc:'통산 MOM 5회',test:s=>s.mom>=5},
+  {id:'SUPERSTAR',icon:'🌟',name:'SUPERSTAR',ko:'슈퍼스타',desc:'통산 MOM 10회',test:s=>s.mom>=10},
+  {id:'WINNER',icon:'🏅',name:'WINNER',ko:'위너',desc:'통산 25승',test:s=>s.w>=25},
+  {id:'CHAMPION',icon:'🏆',name:'CHAMPION',ko:'챔피언',desc:'통산 50승',test:s=>s.w>=50},
+  {id:'DUAL_THREAT',icon:'⚡',name:'DUAL THREAT',ko:'듀얼 스렛',desc:'통산 20골 · 20도움',test:s=>s.g>=20&&s.a>=20}
+];
+let v319CareerCache={key:'',map:null};
+function v319DateMatches(cutoff,exclusive=false){
+  const d=normDate(cutoff);
+  return uniqueRecordMatches((DB.matches||[]).filter(m=>{
+    const md=normDate(m.date); if(!md)return false;
+    return !d || (exclusive?md<d:md<=d);
+  }));
+}
+function v319StoryDayMatches(date){
+  const d=normDate(date);
+  return uniqueRecordMatches((DB.matches||[]).filter(m=>normDate(m.date)===d && (comp==='ALL'||m.comp===comp)));
+}
+function v319CareerStatsMap(cutoff,exclusive=false){
+  const d=normDate(cutoff), key=[d,exclusive?'X':'I',(DB.matches||[]).length,(DB.attendance||[]).length,(DB.goals||[]).length,(DB.saves||[]).length,(DB.moms||[]).length].join('|');
+  if(v319CareerCache.key===key&&v319CareerCache.map)return v319CareerCache.map;
+  const ms=v319DateMatches(d,exclusive), byId=new Map(ms.map(m=>[String(m.id),m])), ids=new Set(byId.keys()), out={};
+  const get=name=>out[name]||(out[name]={player:name,att:0,w:0,d:0,l:0,g:0,a:0,sv:0,f:0,mom:0,pts:0});
+  const seen=new Set();
+  (DB.attendance||[]).forEach(r=>{
+    const name=String(r.player||'').trim(),id=String(r.id||''); if(!name||isOwnGoalPlayer(name)||!ids.has(id))return;
+    const k=id+'|'+normalizePlayerMatchKey(name); if(seen.has(k))return;seen.add(k);
+    const m=byId.get(id),P=get(name),res=matchResult(m,String(r.team||'').trim());P.att++;
+    if(res==='W'){P.w++;P.pts+=3;}else if(res==='D'){P.d++;P.pts++;}else if(res==='L')P.l++;
+  });
+  (DB.goals||[]).forEach(r=>{const name=String(r.player||'').trim(),id=String(r.id||'');if(!name||isOwnGoalPlayer(name)||!ids.has(id))return;const P=get(name);P.g+=num(r.g);P.a+=num(r.a);});
+  (DB.saves||[]).forEach(r=>{const name=String(r.player||'').trim(),id=String(r.id||'');if(!name||isOwnGoalPlayer(name)||!ids.has(id))return;get(name).sv+=num(r.saves);});
+  (DB.fouls||[]).forEach(r=>{const name=String(r.player||'').trim(),id=String(r.id||'');if(!name||isOwnGoalPlayer(name)||!ids.has(id))return;get(name).f+=num(r.fouls);});
+  (DB.moms||[]).forEach(r=>{const name=String(r.player||'').trim(),id=String(r.id||'');if(!name||isOwnGoalPlayer(name)||!ids.has(id))return;get(name).mom+=num(r.mom);});
+  if(!exclusive)v319CareerCache={key,map:out};
+  return out;
+}
+function v319AchievementList(stats){return V319_ACHIEVEMENTS.filter(a=>a.test(stats||{}));}
+function playerAchievementCount(player,cutoff){return v319AchievementList(v319CareerStatsMap(cutoff)[player]||{}).length;}
+function v319DayPlayerRows(date){
+  const ms=v319StoryDayMatches(date),byId=new Map(ms.map(m=>[String(m.id),m])),ids=new Set(byId.keys()),out={};
+  const get=name=>out[name]||(out[name]={player:name,teams:new Set(),matchIds:new Set(),w:0,d:0,l:0,g:0,a:0,sv:0,f:0,mom:0});
+  const seen=new Set();
+  (DB.attendance||[]).forEach(r=>{
+    const id=String(r.id||''),name=String(r.player||'').trim();if(!ids.has(id)||!name||isOwnGoalPlayer(name))return;
+    const k=id+'|'+normalizePlayerMatchKey(name);if(seen.has(k))return;seen.add(k);
+    const P=get(name),team=String(r.team||'').trim(),res=matchResult(byId.get(id),team);P.matchIds.add(id);if(team)P.teams.add(team);
+    if(res==='W')P.w++;else if(res==='D')P.d++;else if(res==='L')P.l++;
+  });
+  (DB.goals||[]).forEach(r=>{const id=String(r.id||''),name=String(r.player||'').trim();if(!ids.has(id)||!name||isOwnGoalPlayer(name))return;const P=get(name);P.g+=num(r.g);P.a+=num(r.a);});
+  (DB.saves||[]).forEach(r=>{const id=String(r.id||''),name=String(r.player||'').trim();if(!ids.has(id)||!name||isOwnGoalPlayer(name))return;get(name).sv+=num(r.saves);});
+  (DB.fouls||[]).forEach(r=>{const id=String(r.id||''),name=String(r.player||'').trim();if(!ids.has(id)||!name||isOwnGoalPlayer(name))return;get(name).f+=num(r.fouls);});
+  (DB.moms||[]).forEach(r=>{const id=String(r.id||''),name=String(r.player||'').trim();if(!ids.has(id)||!name||isOwnGoalPlayer(name))return;get(name).mom+=num(r.mom);});
+  return Object.values(out).map(P=>({...P,att:P.matchIds.size,teams:[...P.teams]}));
+}
+function v319PlayerDaySeries(player,cutoff){
+  const name=String(player||'').trim(), ms=v319DateMatches(cutoff), byId=new Map(ms.map(m=>[String(m.id),m])), ids=new Set(byId.keys()), days=new Map(),seen=new Set();
+  const get=date=>{if(!days.has(date))days.set(date,{date,w:0,d:0,l:0,g:0,a:0,mom:0,sv:0});return days.get(date);};
+  (DB.attendance||[]).forEach(r=>{
+    const id=String(r.id||'');if(!ids.has(id)||normalizePlayerMatchKey(r.player)!==normalizePlayerMatchKey(name))return;
+    const k=id+'|'+normalizePlayerMatchKey(name);if(seen.has(k))return;seen.add(k);
+    const m=byId.get(id),D=get(normDate(m.date)),res=matchResult(m,String(r.team||'').trim());if(res==='W')D.w++;else if(res==='D')D.d++;else if(res==='L')D.l++;
+  });
+  const add=(rows,key,field)=>{(rows||[]).forEach(r=>{const id=String(r.id||'');if(!ids.has(id)||normalizePlayerMatchKey(r.player)!==normalizePlayerMatchKey(name))return;const m=byId.get(id);if(!m)return;get(normDate(m.date))[field]+=num(r[key]);});};
+  add(DB.goals,'g','g');add(DB.goals,'a','a');add(DB.moms,'mom','mom');add(DB.saves,'saves','sv');
+  return [...days.values()].sort((a,b)=>a.date.localeCompare(b.date));
+}
+function v319TailCount(rows,test){let n=0;for(let i=rows.length-1;i>=0;i--){if(!test(rows[i]))break;n++;}return n;}
+function v319StreaksOnDate(date){
+  const d=normDate(date), players=v319DayPlayerRows(d).map(x=>x.player), out=[];
+  players.forEach(player=>{
+    const rows=v319PlayerDaySeries(player,d);if(!rows.length||rows[rows.length-1].date!==d)return;
+    const candidates=[
+      {type:'득점',icon:'🔥',count:v319TailCount(rows,r=>r.g>0),min:2,text:'연속 득점'},
+      {type:'공격P',icon:'⚡',count:v319TailCount(rows,r=>r.g+r.a>0),min:2,text:'연속 공격포인트'},
+      {type:'무패',icon:'🛡️',count:v319TailCount(rows,r=>r.l===0),min:3,text:'연속 무패'},
+      {type:'연승',icon:'🚀',count:v319TailCount(rows,r=>r.w>0&&r.d===0&&r.l===0),min:2,text:'연속 승리'},
+      {type:'MOM',icon:'⭐',count:v319TailCount(rows,r=>r.mom>0),min:2,text:'연속 MOM'}
+    ];
+    candidates.filter(x=>x.count>=x.min).forEach(x=>out.push({...x,player}));
+  });
+  return out.sort((a,b)=>b.count-a.count||({MOM:5,'득점':4,'공격P':3,'연승':2,'무패':1}[b.type]||0)-({MOM:5,'득점':4,'공격P':3,'연승':2,'무패':1}[a.type]||0)||compareNamesKo(a.player,b.player));
+}
+function v319MilestonesOnDate(date){
+  const d=normDate(date),before=v319CareerStatsMap(d,true),after=v319CareerStatsMap(d,false), players=new Set(v319DayPlayerRows(d).map(x=>x.player)),out=[];
+  const meta={att:['출전','경기','👕'],g:['득점','골','⚽'],a:['도움','도움','🎯'],sv:['선방','선방','🧤'],mom:['MOM','회','⭐']};
+  players.forEach(player=>{
+    const prev=before[player]||{},cur=after[player]||{};
+    Object.entries(V319_MILESTONES).forEach(([key,levels])=>levels.forEach(level=>{
+      if(num(prev[key])<level&&num(cur[key])>=level){const [label,unit,icon]=meta[key];out.push({player,key,level,icon,label,text:'통산 '+level+(unit==='경기'?'경기':unit)+' 달성'});}
+    }));
+  });
+  return out.sort((a,b)=>b.level-a.level||compareNamesKo(a.player,b.player));
+}
+function v319AchievementUnlocksOnDate(date){
+  const d=normDate(date),before=v319CareerStatsMap(d,true),after=v319CareerStatsMap(d,false),players=new Set(v319DayPlayerRows(d).map(x=>x.player)),out=[];
+  players.forEach(player=>{
+    const prev=new Set(v319AchievementList(before[player]||{}).map(a=>a.id));
+    v319AchievementList(after[player]||{}).filter(a=>!prev.has(a.id)).forEach(a=>out.push({player,...a}));
+  });
+  return out;
+}
+function v319MaxGroup(rows,keyFn,valueFn,filterFn=()=>true){
+  const map=new Map();(rows||[]).filter(filterFn).forEach(r=>{const k=keyFn(r);if(!k)return;map.set(k,(map.get(k)||0)+num(valueFn(r)));});
+  let best=null;map.forEach((value,key)=>{if(!best||value>best.value)best={key,value};});return best;
+}
+function v319NewRecordsOnDate(date){
+  const d=normDate(date), day=v319StoryDayMatches(d), dayIds=new Set(day.map(m=>String(m.id))), beforeMatches=v319DateMatches(d,true), beforeIds=new Set(beforeMatches.map(m=>String(m.id))), out=[];
+  const push=(icon,label,subject,value,previous,unit)=>{if(value>0&&value>previous)out.push({icon,label,subject,value,previous,unit,text:(previous>0?'종전 '+previous+unit+' → ':'첫 기준 기록 · ')+value+unit});};
+  const bestPlayerMetric=(rows,key,unit,icon,label)=>{
+    const current=v319MaxGroup(rows,r=>dayIds.has(String(r.id))?String(r.id)+'|'+String(r.player||'').trim():'',r=>r[key],r=>!isOwnGoalPlayer(r.player));
+    const previous=v319MaxGroup(rows,r=>beforeIds.has(String(r.id))?String(r.id)+'|'+String(r.player||'').trim():'',r=>r[key],r=>!isOwnGoalPlayer(r.player));
+    if(current){const parts=current.key.split('|');push(icon,label,parts.slice(1).join('|'),current.value,previous?previous.value:0,unit);}
+  };
+  bestPlayerMetric(DB.goals,'g','골','⚽','한 경기 최다 득점');
+  bestPlayerMetric(DB.goals,'a','도움','🎯','한 경기 최다 도움');
+  bestPlayerMetric(DB.saves,'saves','선방','🧤','한 경기 최다 선방');
+  const beforeTeamScores=beforeMatches.flatMap(m=>[{team:m.home,v:num(m.hs)},{team:m.away,v:num(m.as)}]),dayTeamScores=day.flatMap(m=>[{team:m.home,v:num(m.hs)},{team:m.away,v:num(m.as)}]);
+  const prevTeam=Math.max(0,...beforeTeamScores.map(x=>x.v)),curTeam=dayTeamScores.sort((a,b)=>b.v-a.v)[0];if(curTeam)push('🚨','팀 한 경기 최다 득점',teamDisplayName(curTeam.team),curTeam.v,prevTeam,'골');
+  const prevTotal=Math.max(0,...beforeMatches.map(m=>num(m.hs)+num(m.as))),curTotal=day.slice().sort((a,b)=>(num(b.hs)+num(b.as))-(num(a.hs)+num(a.as)))[0];if(curTotal)push('🎆','한 경기 최다 총득점',teamDisplayName(curTotal.home)+' vs '+teamDisplayName(curTotal.away),num(curTotal.hs)+num(curTotal.as),prevTotal,'골');
+  const prevDiff=Math.max(0,...beforeMatches.map(m=>Math.abs(num(m.hs)-num(m.as)))),curDiff=day.slice().sort((a,b)=>Math.abs(num(b.hs)-num(b.as))-Math.abs(num(a.hs)-num(a.as)))[0];
+  if(curDiff){const diff=Math.abs(num(curDiff.hs)-num(curDiff.as)),winner=num(curDiff.hs)>num(curDiff.as)?curDiff.home:num(curDiff.as)>num(curDiff.hs)?curDiff.away:'무승부';if(winner!=='무승부')push('📈','역대 최다 점수차 승리',teamDisplayName(winner),diff,prevDiff,'골 차');}
+  return out.slice(0,6);
+}
+function v319UpcomingMilestone(player,stats){
+  const meta={att:['출전','경기'],g:['득점','골'],a:['도움','도움'],sv:['선방','선방'],mom:['MOM','회']},candidates=[];
+  Object.entries(V319_MILESTONES).forEach(([key,levels])=>{const cur=num(stats[key]),next=levels.find(x=>x>cur);if(next){const [label,unit]=meta[key];candidates.push({key,label,unit,current:cur,target:next,left:next-cur,ratio:cur/next});}});
+  return candidates.sort((a,b)=>a.left-b.left||b.ratio-a.ratio)[0]||null;
+}
+function v319MatchdayStory(date){
+  const d=normDate(date),rows=v319DayPlayerRows(d),matches=v319StoryDayMatches(d),milestones=v319MilestonesOnDate(d),records=v319NewRecordsOnDate(d),streaks=v319StreaksOnDate(d),unlocks=v319AchievementUnlocksOnDate(d),story=[];
+  records.slice(0,2).forEach(x=>story.push({icon:x.icon,kicker:'NEW RECORD',title:x.subject,text:x.label+' · '+x.text}));
+  milestones.slice(0,2).forEach(x=>story.push({icon:x.icon,kicker:'MILESTONE',title:x.player,text:x.text}));
+  streaks.slice(0,2).forEach(x=>story.push({icon:x.icon,kicker:'STREAK',title:x.player,text:x.count+'경기일 '+x.text}));
+  unlocks.slice(0,1).forEach(x=>story.push({icon:x.icon,kicker:'ACHIEVEMENT',title:x.player,text:x.name+' · '+x.ko+' 획득'}));
+  if(rows.length){
+    const scorer=rows.slice().sort((a,b)=>b.g-a.g||b.a-a.a||compareNamesKo(a.player,b.player))[0];if(scorer&&scorer.g>0)story.push({icon:'⚽',kicker:'TOP SCORER',title:scorer.player,text:d+' · '+scorer.g+'골'+(scorer.a?' · '+scorer.a+'도움':'')});
+    const helper=rows.slice().sort((a,b)=>b.a-a.a||b.g-a.g||compareNamesKo(a.player,b.player))[0];if(helper&&helper.a>0&&(!scorer||helper.player!==scorer.player))story.push({icon:'🎯',kicker:'TOP ASSIST',title:helper.player,text:d+' · '+helper.a+'도움'});
+    const moms=rows.filter(r=>r.mom>0).sort((a,b)=>b.mom-a.mom||compareNamesKo(a.player,b.player));if(moms.length)story.push({icon:'⭐',kicker:'MOM',title:moms.slice(0,3).map(x=>x.player).join(' · '),text:'오늘의 MOM '+moms.reduce((s,x)=>s+x.mom,0)+'회'});
+  }
+  if(matches.length){
+    const big=matches.slice().sort((a,b)=>Math.abs(num(b.hs)-num(b.as))-Math.abs(num(a.hs)-num(a.as)))[0],diff=Math.abs(num(big.hs)-num(big.as));
+    if(diff>0)story.push({icon:'🏟️',kicker:'MATCHDAY',title:teamDisplayName(big.home)+' '+num(big.hs)+' : '+num(big.as)+' '+teamDisplayName(big.away),text:'오늘 가장 큰 점수차 · '+diff+'골 차'});
+  }
+  return story.slice(0,8);
+}
+function v319StoryItemHtml(x){return '<article class="v319-story-item"><div class="v319-story-icon">'+esc(x.icon)+'</div><div><div class="v319-story-kicker">'+esc(x.kicker)+'</div><div class="v319-story-title">'+esc(x.title)+'</div><div class="v319-story-text">'+esc(x.text)+'</div></div></article>';}
+function v319InsightEmpty(text){return '<div class="v319-insight-empty">'+esc(text)+'</div>';}
+function renderV319Story(){
+  const date=normDate(dashDate),dateText=date?date.replace(/-/g,'.'):'—';
+  const dateEls=['#matchdayStoryDate','#streakDate','#milestoneDate','#newRecordDate','#achievementUnlockDate'];dateEls.forEach(sel=>{const el=$(sel);if(el)el.textContent=dateText;});
+  const story=$('#matchdayStory');if(story){const rows=v319MatchdayStory(date);story.innerHTML=rows.length?'<div class="v319-story-grid">'+rows.map(v319StoryItemHtml).join('')+'</div>':v319InsightEmpty('선택한 경기일에서 생성할 스토리가 없습니다.');}
+  const streak=$('#streakBoard');if(streak){const rows=v319StreaksOnDate(date).slice(0,8);streak.innerHTML=rows.length?'<div class="v319-list">'+rows.map(x=>'<div class="v319-list-row"><span class="v319-list-icon">'+esc(x.icon)+'</span><div><b>'+playerCardLink(x.player,esc(x.player),{start:date,end:date,asOf:date,allCompetitions:true})+'</b><small>'+esc(x.text)+'</small></div><strong>'+x.count+'일</strong></div>').join('')+'</div>':v319InsightEmpty('현재 이어지고 있는 주요 연속 기록이 없습니다.');}
+  const milestone=$('#milestoneBoard');if(milestone){const rows=v319MilestonesOnDate(date);milestone.innerHTML=rows.length?'<div class="v319-list">'+rows.slice(0,8).map(x=>'<div class="v319-list-row"><span class="v319-list-icon">'+esc(x.icon)+'</span><div><b>'+playerCardLink(x.player,esc(x.player),{start:date,end:date,asOf:date,allCompetitions:true})+'</b><small>'+esc(x.label)+' milestone</small></div><strong>'+x.level+'</strong></div>').join('')+'</div>':v319InsightEmpty('이 경기일에 새로 달성한 통산 마일스톤이 없습니다.');}
+  const record=$('#newRecordBoard');if(record){const rows=v319NewRecordsOnDate(date);record.innerHTML=rows.length?'<div class="v319-list">'+rows.map(x=>'<div class="v319-list-row"><span class="v319-list-icon">'+esc(x.icon)+'</span><div><b>'+esc(x.subject)+'</b><small>'+esc(x.label)+'</small></div><strong>'+x.value+esc(x.unit)+'</strong></div>').join('')+'</div>':v319InsightEmpty('이 경기일에 경신된 역대 기록이 없습니다.');}
+  const achieve=$('#achievementUnlockBoard');if(achieve){const rows=v319AchievementUnlocksOnDate(date);achieve.innerHTML=rows.length?'<div class="v319-achievement-grid">'+rows.slice(0,10).map(x=>'<div class="v319-achievement"><span>'+esc(x.icon)+'</span><div><b>'+esc(x.name)+'</b><small>'+playerCardLink(x.player,esc(x.player),{start:date,end:date,asOf:date,allCompetitions:true})+' · '+esc(x.ko)+'</small></div></div>').join('')+'</div>':v319InsightEmpty('이 경기일에 새로 해금된 Achievement가 없습니다.');}
+}
+function v319AchievementHtml(player,cutoff,compact=false){
+  const stats=v319CareerStatsMap(cutoff)[player]||{},list=v319AchievementList(stats),next=v319UpcomingMilestone(player,stats),chips=list.map(a=>'<span class="v319-badge" title="'+esc(a.desc)+'"><i>'+esc(a.icon)+'</i>'+esc(a.name)+'</span>').join('');
+  if(compact)return '<span class="v319-badge-count" title="Achievement '+list.length+'개">🏅 '+list.length+'</span>';
+  return '<div class="v319-player-achievements">'+(chips?'<div class="v319-badges">'+chips+'</div>':v319InsightEmpty('아직 해금된 Achievement가 없습니다.'))+(next?'<div class="v319-next-milestone"><b>NEXT MILESTONE</b><span>'+esc(next.label)+' '+next.current+' / '+next.target+(next.unit==='경기'?'경기':next.unit)+'</span><div><i style="width:'+Math.max(2,Math.min(100,next.ratio*100))+'%"></i></div></div>':'')+'</div>';
+}
+function renderPlayerAchievementBoard(players,cutoff){
+  const box=$('#playerAchievementBoard');if(!box)return;
+  const rows=(players||[]).map(p=>{const stats=v319CareerStatsMap(cutoff)[p.player]||{},list=v319AchievementList(stats);return {player:p.player,count:list.length,list};}).sort((a,b)=>b.count-a.count||compareNamesKo(a.player,b.player));
+  box.innerHTML=rows.length?'<div class="v319-player-achievement-grid">'+rows.map(r=>'<article class="v319-player-achievement-card"><header>'+playerCardLink(r.player,'<b>'+esc(r.player)+'</b>',{asOf:cutoff,allCompetitions:true})+'<span>🏅 '+r.count+'</span></header><div class="v319-badges">'+(r.list.length?r.list.slice(-6).reverse().map(a=>'<span class="v319-badge" title="'+esc(a.desc)+'"><i>'+esc(a.icon)+'</i>'+esc(a.name)+'</span>').join(''):'<span class="muted">첫 Achievement를 기다리는 중</span>')+'</div></article>').join('')+'</div>':v319InsightEmpty('표시할 선수가 없습니다.');
+}
+function renderPlayerCardAchievements(player,cutoff){const box=$('#playerCardAchievements');if(box)box.innerHTML=v319AchievementHtml(player,cutoff,false);}
+
 function sharedRanks(list,valueFn){
   let previous, rank=0;
   return list.map((item,i)=>{
@@ -3913,8 +4109,9 @@ function renderDash(){
   ensureDashboardDate();
   renderDashboardDateControls();
   renderLeagueSummary();
+  renderV319Story();
   renderRecentMatches();
-  if($("#dashSub")) $("#dashSub").textContent="경기결과 · 순위 · 상대전적 · 선수 기록";
+  if($("#dashSub")) $("#dashSub").textContent="경기결과 · Matchday Story · Streak · Milestone · 기록 · Achievement";
 }
 function matchCard(m){
   const homeSc=teamScorers(m,m.home,true), awaySc=teamScorers(m,m.away,true), fouls=matchTeamFouls(m);
@@ -4093,17 +4290,20 @@ function renderPlayer(){
   if($("#playerPeriodLabel")) $("#playerPeriodLabel").textContent=info.label+" · "+list.length+"경기";
   const draftNames=draftPlayerNameSet(info.year);
   const search=playerRecordSearchQuery(),matchesName=name=>!search||normalizePlayerMatchKey(name).includes(search);
-  const allPlayers=queryPlayerStats(list).filter(p=>draftPlayerVisible(p.player,draftNames)).sort((a,b)=>String(a.player||"").localeCompare(String(b.player||""),"ko-KR"));
+  const careerCutoff=normDate(info.end)||normDate(info.asOf)||recordDates()[0]||"";
+  const careerMap=v319CareerStatsMap(careerCutoff);
+  const allPlayers=queryPlayerStats(list).filter(p=>draftPlayerVisible(p.player,draftNames)).map(p=>{const achievements=v319AchievementList(careerMap[p.player]||{});return Object.assign(p,{achievements,achievementCount:achievements.length});}).sort((a,b)=>String(a.player||"").localeCompare(String(b.player||""),"ko-KR"));
   const ps=allPlayers.filter(p=>matchesName(p.player)),emptySearch='<div class="empty">검색한 이름과 일치하는 선수가 없습니다.</div>';
   if($('#playerRecordSearchStatus'))$('#playerRecordSearchStatus').textContent=(search?'검색 결과 ':'전체 ')+ps.length+'명 / '+allPlayers.length+'명';
   if($('#playerRecordSearchClear'))$('#playerRecordSearchClear').disabled=!String($('#memberPlayerSearch')?.value||'');
   if($("#playerPeriodLabel")) $("#playerPeriodLabel").textContent+=' · 선수명단 등록 선수 '+allPlayers.length+'명';
   $("#playerTable").innerHTML=tbl(
-    [{t:"선수"},{t:"주 소속"},{t:"출석",n:1},{t:"출석률",n:1},{t:"승",n:1},{t:"무",n:1},{t:"패",n:1},{t:"승률",n:1},{t:"득점",n:1},{t:"어시스트",n:1},{t:"개인파울",n:1},{t:"선방",n:1},{t:"MOM",n:1},{t:"승점",n:1}],
-    ps.map(p=>[playerCardLink(p.player,playerFaceChip(p.player,false,info.year),info),'<span class="muted">'+teamChip(p.mainTeam)+'</span>',p.att,'<b>'+p.attendanceRate+'%</b>',p.w,p.d,p.l,p.winRate+'%',p.g,p.a||0,p.f||0,p.sv||0,p.mom||0,'<b>'+p.pts+'</b>'])
+    [{t:"선수"},{t:"주 소속"},{t:"출석",n:1},{t:"출석률",n:1},{t:"승",n:1},{t:"무",n:1},{t:"패",n:1},{t:"승률",n:1},{t:"득점",n:1},{t:"어시스트",n:1},{t:"개인파울",n:1},{t:"선방",n:1},{t:"MOM",n:1},{t:"승점",n:1},{t:"업적",n:1}],
+    ps.map(p=>[playerCardLink(p.player,playerFaceChip(p.player,false,info.year),info),'<span class="muted">'+teamChip(p.mainTeam)+'</span>',p.att,'<b>'+p.attendanceRate+'%</b>',p.w,p.d,p.l,p.winRate+'%',p.g,p.a||0,p.f||0,p.sv||0,p.mom||0,'<b>'+p.pts+'</b>',v319AchievementHtml(p.player,careerCutoff,true)])
   );
   if(search&&!ps.length)$('#playerTable').innerHTML=emptySearch;
   if($("#memberPlayerCards")) $("#memberPlayerCards").innerHTML=search&&!ps.length?emptySearch:mobilePlayerCards(ps,info);
+  renderPlayerAchievementBoard(ps,careerCutoff);
   const rs=queryRosterStats(list).filter(r=>draftPlayerVisible(r.player,draftNames)&&matchesName(r.player));
   $("#rosterTable").innerHTML=rs.length?tbl(
     [{t:"연도"},{t:"팀"},{t:"등번호",n:1},{t:"선수"},{t:"포지션"},{t:"출석",n:1},{t:"팀 경기",n:1},{t:"출석률",n:1},{t:"득점",n:1},{t:"비고"}],
@@ -5328,7 +5528,7 @@ function sampleData(){
 }
 
 
-/* ---------- V3.18.13: readable cafe PNGs with safe pagination ---------- */
+/* ---------- V3.19: readable cafe PNGs with safe pagination ---------- */
 function exportSafeName(v){
   return String(v||'GGFC').trim().replace(/[\\/:*?"<>|]+/g,'_').replace(/\s+/g,'_').slice(0,80)||'GGFC';
 }
@@ -5559,7 +5759,7 @@ async function createDashboardExportSnapshot(source){
       doc.head.appendChild(copy);
     });
     const cafeStyle=doc.createElement('link');cafeStyle.rel='stylesheet';
-    cafeStyle.href=new URL('assets/ggfc-export.css?v=3.18.13',document.baseURI).href;
+    cafeStyle.href=new URL('assets/ggfc-export.css?v=3.19.0',document.baseURI).href;
     stylePromises.push(settleExportResource(cafeStyle,8000,()=>!!cafeStyle.sheet).then(()=>{
       if(!cafeStyle.sheet)throw new Error('이미지 출력 스타일을 불러오지 못했습니다. 다시 시도해 주세요.');
     }));
