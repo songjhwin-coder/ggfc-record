@@ -3914,7 +3914,7 @@ function v319MatchdayStory(date){
   }
   return story.slice(0,8);
 }
-function storyPlayerLink(player,date){return playerCardLink(player,playerFaceChip(player,false,String(date||'').slice(0,4)||'ALL'),{start:date,end:date,asOf:date,allCompetitions:true});}
+function storyPlayerLink(player,date){return playerCardLink(player,esc(player),{start:date,end:date,asOf:date,allCompetitions:true});}
 function v319StoryItemHtml(x,date){
   const players=x.players||(x.player?[x.player]:[]);
   const title=players.length?players.map(name=>storyPlayerLink(name,date)).join(' '):esc(x.title);
@@ -3989,8 +3989,10 @@ function renderCareerFrameSettings(tiers=careerFrameTiers(),force=false){
   const fields=document.getElementById('careerFrameSettingsFields');if(!fields)return;
   if(careerFrameSettingsDirty&&admin&&!force)return;
   if(!admin)careerFrameSettingsDirty=false;
+  invalidateCareerPreview();
+  const previewDate=document.getElementById('careerFramePreviewDate');if(previewDate&&!previewDate.value)previewDate.value=recordDates()[0]||'';
   fields.innerHTML=tiers.slice(1).map(tier=>'<fieldset class="career-frame-settings-tier"><legend>'+tier.name+'</legend><label>승급에 필요한 조건 수 <select id="frame-count-'+tier.id+'"'+(!admin?' disabled':'')+'>'+[1,2,3,4,5,6].map(n=>'<option value="'+n+'"'+(n===(tier.required||1)?' selected':'')+'>'+n+'개'+(n===1?' (하나만)':n===6?' (모두)':' 이상')+'</option>').join('')+'</select></label><div class="career-frame-settings-inputs">'+CAREER_FRAME_METRICS.map((metric,i)=>'<label for="frame-'+tier.id+'-'+metric.key+'">'+metric.label+' ('+metric.unit+')<input id="frame-'+tier.id+'-'+metric.key+'" data-frame-tier="'+tier.id+'" data-frame-metric="'+i+'" type="number" min="1" max="1000000" step="1" required value="'+tier.thresholds[i]+'"'+(!admin?' disabled':'')+'></label>').join('')+'</div></fieldset>').join('');
-  ['careerFrameSettingsSave','careerFrameSettingsDefault','careerFrameSettingsCancel'].forEach(id=>{const button=document.getElementById(id);if(button)button.disabled=!admin;});
+  ['careerFrameSettingsSave','careerFrameSettingsDefault','careerFrameSettingsCancel','careerFrameSettingsPreview'].forEach(id=>{const button=document.getElementById(id);if(button)button.disabled=!admin;});
   const status=document.getElementById('careerFrameSettingsStatus');if(status)status.textContent='현재 저장된 기준입니다.';
 }
 function readCareerFrameSettingsForm(){
@@ -4021,8 +4023,7 @@ function saveCareerFrameSettings(){
   status.textContent='기준을 적용하고 공유 저장을 요청했습니다. 상단의 공유 저장 완료 표시를 확인해 주세요.';
   toast('선수카드 등급 기준을 적용했습니다. 공유 저장 상태를 확인해 주세요.');return true;
 }
-function careerFrameState(stats){
-  const tiers=careerFrameTiers();
+function careerFrameState(stats,tiers=careerFrameTiers()){
   const values=CAREER_FRAME_METRICS.map(m=>Math.max(0,num(stats?.[m.key])));
   let index=0;
   tiers.forEach((tier,i)=>{if(tier.thresholds&&tier.thresholds.filter((target,j)=>values[j]>=target).length>=tier.required)index=i;});
@@ -4030,6 +4031,30 @@ function careerFrameState(stats){
   const routes=CAREER_FRAME_METRICS.map((metric,i)=>({...metric,value:values[i],target:next?.thresholds[i]||null,remaining:next?Math.max(0,next.thresholds[i]-values[i]):0}));
   const earned=tier.thresholds?CAREER_FRAME_METRICS.filter((m,i)=>values[i]>=tier.thresholds[i]).map(m=>m.label):[];
   return {tier,next,routes,earned};
+}
+function careerFrameListHtml(state){
+  if(!state)return '';
+  const count=state.next?.required||1;
+  const ratios=state.routes.map(r=>r.target?Math.min(1,r.value/r.target):1).sort((a,b)=>b-a);
+  const percent=state.next?Math.floor(ratios.slice(0,count).reduce((a,b)=>a+b,0)/count*100):100;
+  return '<div class="career-list-progress" title="조회 종료일 기준 통산 기록 · 다음 등급에 필요한 상위 '+count+'개 조건 달성률의 평균"><span class="career-list-grade" data-tier="'+state.tier.id+'">'+state.tier.name+'</span><small>'+(state.next?state.next.name+' '+percent+'% · '+state.routes.filter(r=>r.remaining===0).length+'/'+count+'개 충족':'최고 등급 · 100%')+'</small><progress max="100" value="'+percent+'" aria-label="승급 진행률 '+percent+'%"></progress></div>';
+}
+function invalidateCareerPreview(){
+  const box=document.getElementById('careerFramePreview');if(box){box.innerHTML='';box.hidden=true;}
+}
+function previewCareerFrameSettings(){
+  const box=document.getElementById('careerFramePreview');if(!admin||!box)return;
+  const {thresholds,counts}=readCareerFrameSettingsForm(),error=validateCareerFrameThresholds(thresholds,counts);
+  box.hidden=false;
+  if(error){box.textContent=error;return;}
+  const input=document.getElementById('careerFramePreviewDate');
+  const cutoff=normDate(input.value)||recordDates()[0]||'';input.value=cutoff;
+  const proposed=CAREER_FRAME_TIERS.map(t=>({...t,required:counts[t.id]||1,thresholds:t.thresholds?thresholds[t.id]:null}));
+  const current=careerFrameTiers(),stats=v319CareerStatsMap(cutoff);
+  const names=[...new Set([...Object.keys(stats),...(DB.roster||[]).map(r=>r.player)].filter(n=>n&&!isOwnGoalPlayer(n)))].sort(compareNamesKo);
+  const changes=names.map(name=>({name,before:careerFrameState(stats[name],current).tier.id,after:careerFrameState(stats[name],proposed).tier.id})).filter(x=>x.before!==x.after);
+  const rank=id=>CAREER_FRAME_TIERS.findIndex(t=>t.id===id),up=changes.filter(x=>rank(x.after)>rank(x.before)).length;
+  box.innerHTML='<p><b>'+esc(cutoff||'전체 기록')+' 기준 · '+names.length+'명 비교</b><br>승급 '+up+'명 · 하향 '+(changes.length-up)+'명 · 유지 '+(names.length-changes.length)+'명</p><p class="note">저장 전 비교입니다. 실제 등급과 능력치는 변경되지 않습니다. 선수카드는 현재 저장된 기준으로 열립니다.</p>'+(changes.length?tbl([{t:'선수'},{t:'현재 등급'},{t:'변경 후 등급'},{t:'변경'}],changes.map(x=>[playerCardLink(x.name,esc(x.name),{asOf:cutoff,end:cutoff,allCompetitions:true}),x.before,x.after,rank(x.after)>rank(x.before)?'승급':'하향'])):'<p>등급이 바뀌는 선수가 없습니다.</p>');
 }
 function renderCareerFrame(player,cutoff){
   careerFrameCardContext={player,cutoff};
@@ -4409,14 +4434,14 @@ function renderPlayer(){
   const search=playerRecordSearchQuery(),matchesName=name=>!search||normalizePlayerMatchKey(name).includes(search);
   const careerCutoff=normDate(info.end)||normDate(info.asOf)||recordDates()[0]||"";
   const careerMap=v319CareerStatsMap(careerCutoff);
-  const allPlayers=queryPlayerStats(list).filter(p=>draftPlayerVisible(p.player,draftNames)).map(p=>{const achievements=v319AchievementList(careerMap[p.player]||{});const roster=playerCardRoster(p.player,info)||{};return Object.assign(p,{achievements,achievementCount:achievements.length,shirtNumber:roster.no??"",position:roster.pos||""});}).sort((a,b)=>String(a.player||"").localeCompare(String(b.player||""),"ko-KR"));
+  const allPlayers=queryPlayerStats(list).filter(p=>draftPlayerVisible(p.player,draftNames)).map(p=>{const achievements=v319AchievementList(careerMap[p.player]||{});const roster=playerCardRoster(p.player,info)||{};return Object.assign(p,{frameState:careerFrameState(careerMap[p.player]),achievements,achievementCount:achievements.length,shirtNumber:roster.no??"",position:roster.pos||""});}).sort((a,b)=>String(a.player||"").localeCompare(String(b.player||""),"ko-KR"));
   const ps=allPlayers.filter(p=>matchesName(p.player)),emptySearch='<div class="empty">검색한 이름과 일치하는 선수가 없습니다.</div>';
-  if($('#playerRecordSearchStatus'))$('#playerRecordSearchStatus').textContent=(search?'검색 결과 ':'전체 ')+ps.length+'명 / '+allPlayers.length+'명';
+  if($('#playerRecordSearchStatus'))$('#playerRecordSearchStatus').textContent=(search?'검색 결과 ':'전체 ')+ps.length+'명 / '+allPlayers.length+'명 · 카드 등급은 조회 종료일 기준 통산 기록';
   if($('#playerRecordSearchClear'))$('#playerRecordSearchClear').disabled=!String($('#memberPlayerSearch')?.value||'');
-  if($("#playerPeriodLabel")) $("#playerPeriodLabel").textContent+=' · 선수명단 등록 선수 '+allPlayers.length+'명';
+  if($("#playerPeriodLabel")) $("#playerPeriodLabel").textContent+=' · 선수명단 등록 선수 '+allPlayers.length+'명 · 카드 등급은 조회 종료일 기준 통산 기록';
   $("#playerTable").innerHTML=tbl(
-    [{t:"선수"},{t:"주 소속"},{t:"등번호",n:1},{t:"포지션"},{t:"팀경기",n:1},{t:"출석",n:1},{t:"출석률",n:1},{t:"승",n:1},{t:"무",n:1},{t:"패",n:1},{t:"승률",n:1},{t:"득점",n:1},{t:"어시스트",n:1},{t:"개인파울",n:1},{t:"선방",n:1},{t:"MOM",n:1},{t:"승점",n:1},{t:"업적",n:1}],
-    ps.map(p=>[playerCardLink(p.player,playerFaceChip(p.player,false,info.year),info),'<span class="muted">'+teamChip(p.mainTeam)+'</span>',esc(String(p.shirtNumber??'')||'—'),esc(p.position||'—'),p.teamGames,p.att,'<b>'+p.attendanceRate+'%</b>',p.w,p.d,p.l,p.winRate+'%',p.g,p.a||0,p.f||0,p.sv||0,p.mom||0,'<b>'+p.pts+'</b>',v319AchievementHtml(p.player,careerCutoff,true)])
+    [{t:"선수"},{t:"주 소속"},{t:"등번호",n:1},{t:"포지션"},{t:"팀경기",n:1},{t:"출석",n:1},{t:"출석률",n:1},{t:"승",n:1},{t:"무",n:1},{t:"패",n:1},{t:"승률",n:1},{t:"득점",n:1},{t:"어시스트",n:1},{t:"개인파울",n:1},{t:"선방",n:1},{t:"MOM",n:1},{t:"승점",n:1},{t:"카드 등급 · 승급 진행률"},{t:"업적",n:1}],
+    ps.map(p=>[playerCardLink(p.player,playerFaceChip(p.player,false,info.year),info),'<span class="muted">'+teamChip(p.mainTeam)+'</span>',esc(String(p.shirtNumber??'')||'—'),esc(p.position||'—'),p.teamGames,p.att,'<b>'+p.attendanceRate+'%</b>',p.w,p.d,p.l,p.winRate+'%',p.g,p.a||0,p.f||0,p.sv||0,p.mom||0,'<b>'+p.pts+'</b>',careerFrameListHtml(p.frameState),v319AchievementHtml(p.player,careerCutoff,true)])
   );
   if(search&&!ps.length)$('#playerTable').innerHTML=emptySearch;
   if($("#memberPlayerCards")) $("#memberPlayerCards").innerHTML=search&&!ps.length?emptySearch:mobilePlayerCards(ps,info);
@@ -4625,7 +4650,7 @@ function chemistryMapSvg(target,model){
   }).join('');
   const centerLines=positions.map(({row,x,y})=>{
     const width=(1.4+Math.max(0,Math.min(100,row.score))/100*7).toFixed(2),opacity=(.28+Math.max(0,Math.min(100,row.score))/100*.58).toFixed(2);
-    return '<line class="chem-map-link" data-chem-a="'+esc(target)+'" data-chem-b="'+esc(row.name)+'" x1="'+cx+'" y1="'+cy+'" x2="'+x.toFixed(1)+'" y2="'+y.toFixed(1)+'" style="--chem-line-opacity:'+opacity+';stroke-width:'+width+';opacity:'+opacity+'"><title>'+esc(target)+' + '+esc(row.name)+' · '+row.p+'경기 · 커플점수 '+row.score+'</title></line>';
+    return '<line class="chem-map-link'+(row.name===model.partners[0]?.name?' is-base-best-link':'')+'" data-chem-a="'+esc(target)+'" data-chem-b="'+esc(row.name)+'" x1="'+cx+'" y1="'+cy+'" x2="'+x.toFixed(1)+'" y2="'+y.toFixed(1)+'" style="--chem-line-opacity:'+opacity+';stroke-width:'+width+';opacity:'+opacity+'"><title>'+esc(target)+' + '+esc(row.name)+' · '+row.p+'경기 · 커플점수 '+row.score+'</title></line>';
   }).join('');
   const extraNodes=extraPositions.map(({row,x,y,r,level})=>{
     const name=String(row.name||'?').trim(),fontSize=name.length>=5?9:name.length===4?10:11.2,count=(row.sources||[]).length;
@@ -4638,11 +4663,11 @@ function chemistryMapSvg(target,model){
   }).join('');
   const partnerNodes=positions.map(({row,x,y,r})=>{
     const name=String(row.name||'?').trim(),fontSize=name.length>=5?10.2:name.length===4?11.4:12.8,hubClass=model.hub?.name===row.name?' is-chemistry-hub':'';
-    return '<g class="chem-map-node'+hubClass+'" data-chem-focus="'+esc(row.name)+'" role="button" tabindex="0" aria-label="'+esc(row.name)+' 선수 중심으로 보기">'+
+    return '<g class="chem-map-node'+hubClass+(row.name===model.partners[0]?.name?' is-base-best':'')+'" data-chem-focus="'+esc(row.name)+'" role="button" tabindex="0" aria-label="'+esc(row.name)+' 선수 중심으로 보기">'+
       '<circle class="chem-map-node-ring" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(r+4).toFixed(1)+'"/><circle class="chem-map-name-avatar" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+r.toFixed(1)+'"/>'+
-      '<text class="chem-map-name-avatar-text" style="font-size:'+fontSize+'px" x="'+x.toFixed(1)+'" y="'+(y+4.5).toFixed(1)+'">'+esc(name)+'</text>'+
+      '<text class="chem-map-name-avatar-text" style="font-size:'+fontSize+'px" x="'+x.toFixed(1)+'" y="'+(y+(row.name===model.partners[0]?.name?-7:4.5)).toFixed(1)+'">'+esc(name)+'</text>'+
       '<rect class="chem-map-score-bg" x="'+(x-25).toFixed(1)+'" y="'+(y+r-2).toFixed(1)+'" width="50" height="21" rx="10.5"/><text class="chem-map-score" x="'+x.toFixed(1)+'" y="'+(y+r+12).toFixed(1)+'">'+row.score+' ♥</text>'+
-      '<text class="chem-map-games" x="'+x.toFixed(1)+'" y="'+(y+r+34).toFixed(1)+'">'+row.p+'경기</text>'+chemistryHubBadge(name,model.hub,x,y-r-31,108)+'</g>';
+      '<text class="chem-map-games" x="'+x.toFixed(1)+'" y="'+(y+r+34).toFixed(1)+'">'+row.p+'경기</text>'+(row.name===model.partners[0]?.name?'<rect class="chem-base-best-bg" x="'+(x-43)+'" y="'+(y+5)+'" width="86" height="17" rx="10"/><text class="chem-base-best-label" x="'+x+'" y="'+(y+17)+'">기준 BEST #1</text>':'')+chemistryHubBadge(name,model.hub,x,y-r-31,108)+'</g>';
   }).join('');
   const centerPhoto=playerPhoto(target),centerR=53,centerClip='chemCenterClip';
   const centerFallback='<circle class="chem-map-center-fallback" cx="'+cx+'" cy="'+cy+'" r="'+centerR+'"/><text class="chem-map-center-initials" x="'+cx+'" y="'+(cy+7)+'">'+esc(String(target||'?').trim().slice(0,2))+'</text>';
@@ -4702,10 +4727,33 @@ function fitChemistryMap(map){
   const width=Math.max(...boxes.map(b=>b.x+b.width))-x+pad,height=Math.max(...boxes.map(b=>b.y+b.height))-y+pad;
   svg.setAttribute('viewBox',[x,y,width,height].join(' '));svg.style.aspectRatio=width+'/'+height;
 }
+let chemistryZoom=100,chemistryZoomObserver=null;
+function setChemistryZoom(value,reset=false){
+  const map=$('#chemistryMap'),svg=map?.querySelector('svg');
+  chemistryZoom=Math.max(50,Math.min(200,value));
+  const output=$('#chemZoomValue');if(output)output.textContent=chemistryZoom+'%';
+  if($('#chemZoomOut'))$('#chemZoomOut').disabled=!svg||chemistryZoom<=50;
+  if($('#chemZoomIn'))$('#chemZoomIn').disabled=!svg||chemistryZoom>=200;
+  if(!svg){if(map)map.style.height='';return;}
+  const oldW=svg.getBoundingClientRect().width,oldH=svg.getBoundingClientRect().height;
+  const x=(map.scrollLeft+map.clientWidth/2)/(oldW||1),y=(map.scrollTop+map.clientHeight/2)/(oldH||1);
+  const vb=svg.viewBox.baseVal,base=map.getBoundingClientRect().width-2;
+  map.style.height=(base*vb.height/vb.width+2)+'px';
+  svg.style.width=base*chemistryZoom/100+'px';svg.style.height=base*vb.height/vb.width*chemistryZoom/100+'px';
+  map.scrollLeft=reset?0:x*svg.getBoundingClientRect().width-map.clientWidth/2;
+  map.scrollTop=reset?0:y*svg.getBoundingClientRect().height-map.clientHeight/2;
+}
+function bindChemistryZoom(){
+  $('#chemZoomIn').onclick=()=>setChemistryZoom(chemistryZoom+25);
+  $('#chemZoomOut').onclick=()=>setChemistryZoom(chemistryZoom-25);
+  $('#chemZoomFit').onclick=()=>setChemistryZoom(100,true);
+  if(!chemistryZoomObserver){let lastWidth=0;chemistryZoomObserver=new ResizeObserver(entries=>{const width=entries[0].contentRect.width;if(width&&Math.abs(width-lastWidth)>1){lastWidth=width;setChemistryZoom(chemistryZoom);}});chemistryZoomObserver.observe($('#chemistryMap'));}
+  setChemistryZoom(100,true);
+}
 function renderChemistryMap(){
   const map=$('#chemistryMap'),side=$('#chemistryMapSide'),note=$('#chemMapNote'),depthSel=$('#chemDepth');if(!map||!side)return;
   chemDepth=chemDepth===3?3:2;if(depthSel)depthSel.value=String(chemDepth);
-  if(!chemSel){map.innerHTML='<div class="empty chemistry-map-empty">분석할 선수를 선택해 주세요.</div>';side.innerHTML='';return;}
+  if(!chemSel){map.innerHTML='<div class="empty chemistry-map-empty">분석할 선수를 선택해 주세요.</div>';side.innerHTML='';bindChemistryZoom();return;}
   const model=chemistryMapModel(chemSel,chemDepth);
   map.innerHTML=chemistryMapSvg(chemSel,model);fitChemistryMap(map);side.innerHTML=chemistryMapSideHtml(chemSel,model);
   if(note){
@@ -4714,7 +4762,7 @@ function renderChemistryMap(){
       ?period+' · 기준선수 BEST 12명 → 각자의 BEST #1 → 바깥 BEST #1 선수의 BEST #1까지 3단계로 확장합니다. BEST #1 피지목 횟수가 가장 많은 선수를 CHEMISTRY HUB로 표시합니다.'
       :period+' · 기준선수 BEST 12명 → 각 선수의 전체 기록 BEST #1까지 2단계로 표시합니다. BEST #1 피지목 횟수가 가장 많은 선수를 CHEMISTRY HUB로 표시합니다.';
   }
-  bindChemistryMapInteractions();
+  bindChemistryMapInteractions();bindChemistryZoom();
 }
 
 function normalizePlayerPhotoUrl(src){
@@ -6257,9 +6305,11 @@ if(displayNameReset) displayNameReset.onclick=()=>{
   save(); renderAll(); toast("기본 표시명으로 복원했습니다.");
 };
 
+document.getElementById('careerFrameSettingsPreview').onclick=previewCareerFrameSettings;
+document.getElementById('careerFramePreviewDate').oninput=invalidateCareerPreview;
 document.getElementById('careerFrameSettingsSave').onclick=saveCareerFrameSettings;
 document.getElementById('careerFrameSettingsFields').addEventListener('input',()=>{
-  careerFrameSettingsDirty=true;GGFC.refreshUI();document.getElementById('careerFrameSettingsStatus').textContent='변경한 기준은 아직 저장되지 않았습니다.';
+  careerFrameSettingsDirty=true;invalidateCareerPreview();GGFC.refreshUI();document.getElementById('careerFrameSettingsStatus').textContent='변경한 기준은 아직 저장되지 않았습니다.';
 });
 document.getElementById('careerFrameSettingsDefault').onclick=()=>{
   if(!admin)return;renderCareerFrameSettings(CAREER_FRAME_TIERS,true);careerFrameSettingsDirty=true;GGFC.refreshUI();
