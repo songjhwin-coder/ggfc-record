@@ -2375,7 +2375,7 @@ const PLAYER_SB_METRICS=[
 ];
 let playerCardSoccerBeeState=null;
 function playerSoccerBeeHistory(player,query,mode,metric){
-  const range=playerCardHistoryRange(query,playerCardHistoryState?.mode||'HALF');
+  const range=playerCardHistoryRange(playerCardHistoryState?playerCardHistoryQuery():query,playerCardHistoryState?.mode||'HALF');
   const byDate=new Map();
   soccerBeePlayerRows(player,range.end).forEach(row=>{
     const date=normDate(row.date);
@@ -2449,6 +2449,19 @@ function openPlayerSoccerBeeHistory(player,query){
 }
 
 let playerCardHistoryState=null, playerCardHistoryResize=null;
+function playerCardHistoryQuery(){
+  const state=playerCardHistoryState;if(!state)return resolvePlayerCardQuery();
+  if(state.mode==='QUERY')return state.query;
+  const year=state.year,cfg=seasonCfg(year),half=abilityHalfInfo(year,state.half);
+  const latest=[...(DB.matches||[]).map(r=>normDate(r.date)),...(DB.soccerbee||[]).map(r=>normDate(r.date))].filter(Boolean).sort().pop()||normDate(state.query.asOf||state.query.end);
+  const end=state.mode==='ALL'?latest:[state.mode==='YEAR'?cfg.h2e:half.end,latest].filter(Boolean).sort()[0];
+  return {...state.query,year,half:state.half,asOf:end,end};
+}
+function syncPlayerHistoryControls(){
+  const state=playerCardHistoryState;if(!state)return;
+  $('#playerCardHistoryYear').disabled=state.mode==='ALL'||state.mode==='QUERY';
+  $('#playerCardHistoryHalf').disabled=state.mode!=='HALF';
+}
 function playerCardHistoryRange(query,mode){
   const info=query||resolvePlayerCardQuery(), end=normDate(info.asOf||info.end), year=String(info.year||(end||'').slice(0,4));
   const half=abilityHalfInfo(year,info.half||abilityHalfForDate(year,end));
@@ -2536,7 +2549,7 @@ function drawPlayerCardHistory(){
     $('#playerCardHistoryNote').textContent='능력치 시스템을 켜면 선택 기준일까지의 변화가 표시됩니다.';
     $('#playerCardHistoryLegend').innerHTML='';$('#playerCardHistoryInspect').innerHTML='';$('#playerCardHistoryDate').disabled=true;return;
   }
-  const history=playerCardAbilityHistory(state.player,state.query,state.mode,state.cache);state.history=history;
+  const history=playerCardAbilityHistory(state.player,playerCardHistoryQuery(),state.mode,state.cache);state.history=history;
   const legend=$('#playerCardHistoryLegend');if(legend)legend.innerHTML=playerCardHistoryLegend(history,state.enabled);
   state.plot=playerCardHistorySvg(history,state.enabled,state.scale,plot.clientWidth);plot.innerHTML=state.plot.html;
   const note=$('#playerCardHistoryNote');if(note)note.textContent=history.start+' ~ '+history.end+' · '+history.eventCount+'개 경기·측정일'+(history.eventCount?'':' · 기간 내 새 기록 없음')+' · Y축 '+playerChartNumber(state.plot.axis.min)+'–'+playerChartNumber(state.plot.axis.max)+(state.scale==='DELTA'?' · 기간 시작 대비 증감':'');
@@ -2551,8 +2564,10 @@ function drawPlayerCardHistory(){
   };
 }
 function openPlayerCardHistory(player,query){
-  playerCardHistoryState={player,query,mode:'HALF',scale:'AUTO',enabled:new Set(PLAYER_CARD_HISTORY_METRICS.map(m=>m.key)),cache:new Map(),index:null,history:null,plot:null};
+  playerCardHistoryState={player,query,year:/^\d{4}$/.test(String(query.year))?String(query.year):normDate(query.asOf||query.end).slice(0,4),half:/^H[12]$/.test(query.half)?query.half:abilityHalfForDate(normDate(query.asOf||query.end).slice(0,4),query.asOf||query.end),mode:'HALF',scale:'AUTO',enabled:new Set(PLAYER_CARD_HISTORY_METRICS.map(m=>m.key)),cache:new Map(),index:null,history:null,plot:null};
   const range=$('#playerCardHistoryRange'),scale=$('#playerCardHistoryScale');if(range)range.value='HALF';if(scale)scale.value='AUTO';
+  const years=[...new Set([...abilityYearList(),playerCardHistoryState.year])].filter(y=>/^\d{4}$/.test(y)).sort().reverse();
+  $('#playerCardHistoryYear').innerHTML=years.map(y=>'<option value="'+y+'">'+y+' 시즌</option>').join('');$('#playerCardHistoryYear').value=playerCardHistoryState.year;$('#playerCardHistoryHalf').value=playerCardHistoryState.half;syncPlayerHistoryControls();
   drawPlayerCardHistory();
   openPlayerSoccerBeeHistory(player,query);
   if(playerCardHistoryResize)playerCardHistoryResize.disconnect();
@@ -2567,7 +2582,8 @@ function openPlayerCardHistory(player,query){
 }
 function bindPlayerCardHistory(){
   const range=$('#playerCardHistoryRange'),scale=$('#playerCardHistoryScale'),legend=$('#playerCardHistoryLegend'),all=$('#playerCardHistoryAll'),slider=$('#playerCardHistoryDate');
-  if(range)range.onchange=e=>{if(playerCardHistoryState){playerCardHistoryState.mode=e.target.value;playerCardHistoryState.index=null;drawPlayerCardHistory();if(playerCardSoccerBeeState?.mode==='MATCH'){playerCardSoccerBeeState.index=null;drawPlayerSoccerBeeHistory();}}};
+  if(range)range.onchange=e=>{if(playerCardHistoryState){playerCardHistoryState.mode=e.target.value;syncPlayerHistoryControls();playerCardHistoryState.index=null;drawPlayerCardHistory();if(playerCardSoccerBeeState?.mode==='MATCH'){playerCardSoccerBeeState.index=null;drawPlayerSoccerBeeHistory();}}};
+  ['Year','Half'].forEach(field=>{const el=$('#playerCardHistory'+field);if(el)el.onchange=()=>{const state=playerCardHistoryState;if(!state)return;state[field.toLowerCase()]=el.value;state.index=null;drawPlayerCardHistory();if(playerCardSoccerBeeState){playerCardSoccerBeeState.index=null;drawPlayerSoccerBeeHistory();}};});
   if(scale)scale.onchange=e=>{if(playerCardHistoryState){playerCardHistoryState.scale=e.target.value;drawPlayerCardHistory();}};
   if(legend)legend.onclick=e=>{
     const button=e.target.closest('[data-ability-series]'),state=playerCardHistoryState;if(!button||!state)return;
@@ -3230,7 +3246,7 @@ function renderLinkedRecordControls(prefix){
   if(endEl){ endEl.innerHTML=rangeOpts||'<option value="">경기일 없음</option>'; endEl.value=recordEnd||""; }
   const needsYear=recordMode!=="LATEST";
   const yearWrap=$("#"+prefix+"RecordYearWrap"), segmentWrap=$("#"+prefix+"RecordSegmentWrap"), dateWrap=$("#"+prefix+"RecordDateWrap"), rangeWrap=$("#"+prefix+"RecordRangeWrap");
-  if(yearWrap) yearWrap.style.display=needsYear?"block":"none";
+  if(yearWrap) yearWrap.style.display="block";
   if(segmentWrap) segmentWrap.style.display=(recordMode==="H1" || recordMode==="H2")?"block":"none";
   if(dateWrap) dateWrap.style.display=recordMode==="DAY"?"block":"none";
   if(rangeWrap) rangeWrap.style.display=recordMode==="RANGE"?"block":"none";
@@ -4425,6 +4441,13 @@ function bindPlayerRecordSearch(){
   if(input)input.oninput=()=>renderPlayer();
   if(clear)clear.onclick=()=>{if(input){input.value='';renderPlayer();input.focus();}};
 }
+function playerSquadDisplayTeam(player,info,fallback=''){
+  const date=normDate(info.end||info.asOf)||recordDates()[0]||'',key=normalizePlayerMatchKey(player);
+  const scope=squadScope({date,comp:comp==='ALL'?'정규리그':comp});
+  const latest=new Map();scope.forEach(row=>{if(!latest.has(row.team)||latest.get(row.team).date<row.date)latest.set(row.team,row);});
+  const assigned=[...latest.values()].filter(row=>(row.members||[]).some(m=>normalizePlayerMatchKey(m.player)===key)).sort((a,b)=>b.date.localeCompare(a.date)||compareNamesKo(a.team,b.team));
+  return assigned[0]?.team||fallback||'-';
+}
 function renderPlayer(){
   bindPlayerRecordSearch();
   renderLinkedRecordControls("player");
@@ -4434,14 +4457,14 @@ function renderPlayer(){
   const search=playerRecordSearchQuery(),matchesName=name=>!search||normalizePlayerMatchKey(name).includes(search);
   const careerCutoff=normDate(info.end)||normDate(info.asOf)||recordDates()[0]||"";
   const careerMap=v319CareerStatsMap(careerCutoff);
-  const allPlayers=queryPlayerStats(list).filter(p=>draftPlayerVisible(p.player,draftNames)).map(p=>{const achievements=v319AchievementList(careerMap[p.player]||{});const roster=playerCardRoster(p.player,info)||{};return Object.assign(p,{frameState:careerFrameState(careerMap[p.player]),achievements,achievementCount:achievements.length,shirtNumber:roster.no??"",position:roster.pos||""});}).sort((a,b)=>String(a.player||"").localeCompare(String(b.player||""),"ko-KR"));
+  const allPlayers=queryPlayerStats(list).filter(p=>draftPlayerVisible(p.player,draftNames)).map(p=>{const achievements=v319AchievementList(careerMap[p.player]||{});const roster=playerCardRoster(p.player,info)||{};return Object.assign(p,{displayTeam:playerSquadDisplayTeam(p.player,info,p.mainTeam),frameState:careerFrameState(careerMap[p.player]),achievements,achievementCount:achievements.length,shirtNumber:roster.no??"",position:roster.pos||""});}).sort((a,b)=>String(a.player||"").localeCompare(String(b.player||""),"ko-KR"));
   const ps=allPlayers.filter(p=>matchesName(p.player)),emptySearch='<div class="empty">검색한 이름과 일치하는 선수가 없습니다.</div>';
   if($('#playerRecordSearchStatus'))$('#playerRecordSearchStatus').textContent=(search?'검색 결과 ':'전체 ')+ps.length+'명 / '+allPlayers.length+'명 · 카드 등급은 조회 종료일 기준 통산 기록';
   if($('#playerRecordSearchClear'))$('#playerRecordSearchClear').disabled=!String($('#memberPlayerSearch')?.value||'');
   if($("#playerPeriodLabel")) $("#playerPeriodLabel").textContent+=' · 선수명단 등록 선수 '+allPlayers.length+'명 · 카드 등급은 조회 종료일 기준 통산 기록';
   $("#playerTable").innerHTML=tbl(
     [{t:"선수"},{t:"주 소속"},{t:"등번호",n:1},{t:"포지션"},{t:"팀경기",n:1},{t:"출석",n:1},{t:"출석률",n:1},{t:"승",n:1},{t:"무",n:1},{t:"패",n:1},{t:"승률",n:1},{t:"득점",n:1},{t:"어시스트",n:1},{t:"개인파울",n:1},{t:"선방",n:1},{t:"MOM",n:1},{t:"승점",n:1},{t:"카드 등급 · 승급 진행률"},{t:"업적",n:1}],
-    ps.map(p=>[playerCardLink(p.player,playerFaceChip(p.player,false,info.year),info),'<span class="muted">'+teamChip(p.mainTeam)+'</span>',esc(String(p.shirtNumber??'')||'—'),esc(p.position||'—'),p.teamGames,p.att,'<b>'+p.attendanceRate+'%</b>',p.w,p.d,p.l,p.winRate+'%',p.g,p.a||0,p.f||0,p.sv||0,p.mom||0,'<b>'+p.pts+'</b>',careerFrameListHtml(p.frameState),v319AchievementHtml(p.player,careerCutoff,true)])
+    ps.map(p=>[playerCardLink(p.player,playerFaceChip(p.player,false,info.year),info),'<span class="muted">'+teamChip(p.displayTeam)+'</span>',esc(String(p.shirtNumber??'')||'—'),esc(p.position||'—'),p.teamGames,p.att,'<b>'+p.attendanceRate+'%</b>',p.w,p.d,p.l,p.winRate+'%',p.g,p.a||0,p.f||0,p.sv||0,p.mom||0,'<b>'+p.pts+'</b>',careerFrameListHtml(p.frameState),v319AchievementHtml(p.player,careerCutoff,true)])
   );
   if(search&&!ps.length)$('#playerTable').innerHTML=emptySearch;
   if($("#memberPlayerCards")) $("#memberPlayerCards").innerHTML=search&&!ps.length?emptySearch:mobilePlayerCards(ps,info);
@@ -4727,27 +4750,54 @@ function fitChemistryMap(map){
   const width=Math.max(...boxes.map(b=>b.x+b.width))-x+pad,height=Math.max(...boxes.map(b=>b.y+b.height))-y+pad;
   svg.setAttribute('viewBox',[x,y,width,height].join(' '));svg.style.aspectRatio=width+'/'+height;
 }
-let chemistryZoom=100,chemistryZoomObserver=null;
-function setChemistryZoom(value,reset=false){
+let chemistryZoom=100,chemistryZoomObserver=null,chemistryPan={x:0,y:0},chemistryGestureUntil=0;
+function paintChemistryViewport(){
   const map=$('#chemistryMap'),svg=map?.querySelector('svg');
-  chemistryZoom=Math.max(50,Math.min(200,value));
-  const output=$('#chemZoomValue');if(output)output.textContent=chemistryZoom+'%';
-  if($('#chemZoomOut'))$('#chemZoomOut').disabled=!svg||chemistryZoom<=50;
-  if($('#chemZoomIn'))$('#chemZoomIn').disabled=!svg||chemistryZoom>=200;
+  $('#chemZoomValue').textContent=Math.round(chemistryZoom)+'%';
+  $('#chemZoomOut').disabled=!svg||chemistryZoom<=50;$('#chemZoomIn').disabled=!svg||chemistryZoom>=200;
   if(!svg){if(map)map.style.height='';return;}
-  const oldW=svg.getBoundingClientRect().width,oldH=svg.getBoundingClientRect().height;
-  const x=(map.scrollLeft+map.clientWidth/2)/(oldW||1),y=(map.scrollTop+map.clientHeight/2)/(oldH||1);
-  const vb=svg.viewBox.baseVal,base=map.getBoundingClientRect().width-2;
-  map.style.height=(base*vb.height/vb.width+2)+'px';
-  svg.style.width=base*chemistryZoom/100+'px';svg.style.height=base*vb.height/vb.width*chemistryZoom/100+'px';
-  map.scrollLeft=reset?0:x*svg.getBoundingClientRect().width-map.clientWidth/2;
-  map.scrollTop=reset?0:y*svg.getBoundingClientRect().height-map.clientHeight/2;
+  const base=map.clientWidth,vb=svg.viewBox.baseVal,height=base*vb.height/vb.width;
+  map.style.height=(height+2)+'px';svg.style.width=base+'px';svg.style.height=height+'px';
+  svg.style.transformOrigin='0 0';svg.style.transform='translate('+chemistryPan.x+'px,'+chemistryPan.y+'px) scale('+(chemistryZoom/100)+')';
+}
+function setChemistryZoom(value,reset=false,anchor=null){
+  const map=$('#chemistryMap'),next=Math.max(50,Math.min(200,value)),ratio=next/chemistryZoom;
+  const point=anchor||{x:(map?.clientWidth||0)/2,y:(map?.clientHeight||0)/2};
+  chemistryPan=reset?{x:0,y:0}:{x:point.x-(point.x-chemistryPan.x)*ratio,y:point.y-(point.y-chemistryPan.y)*ratio};
+  chemistryZoom=next;paintChemistryViewport();
 }
 function bindChemistryZoom(){
+  const map=$('#chemistryMap');
   $('#chemZoomIn').onclick=()=>setChemistryZoom(chemistryZoom+25);
   $('#chemZoomOut').onclick=()=>setChemistryZoom(chemistryZoom-25);
   $('#chemZoomFit').onclick=()=>setChemistryZoom(100,true);
-  if(!chemistryZoomObserver){let lastWidth=0;chemistryZoomObserver=new ResizeObserver(entries=>{const width=entries[0].contentRect.width;if(width&&Math.abs(width-lastWidth)>1){lastWidth=width;setChemistryZoom(chemistryZoom);}});chemistryZoomObserver.observe($('#chemistryMap'));}
+  if(!map.dataset.gestureBound){
+    map.dataset.gestureBound='true';const pointers=new Map();let gesture=null,moved=false;
+    const local=e=>{const r=map.getBoundingClientRect();return {x:e.clientX-r.left-map.clientLeft,y:e.clientY-r.top-map.clientTop};};
+    const geometry=()=>{const points=[...pointers.values()];return points.length>1?{x:(points[0].x+points[1].x)/2,y:(points[0].y+points[1].y)/2,d:Math.hypot(points[0].x-points[1].x,points[0].y-points[1].y)}:{...points[0],d:0};};
+    map.addEventListener('wheel',e=>{if(!map.querySelector('svg'))return;e.preventDefault();const delta=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?map.clientHeight:1);setChemistryZoom(chemistryZoom*Math.exp(-delta*.0015),false,local(e));},{passive:false});
+    map.addEventListener('pointerdown',e=>{
+      if(!map.querySelector('svg')||(e.pointerType==='mouse'&&e.button!==0))return;
+      if(!pointers.size)moved=false;
+      pointers.set(e.pointerId,local(e));gesture=geometry();
+      if(pointers.size>1)moved=true;
+      e.target.setPointerCapture?.(e.pointerId);map.classList.add('is-panning');
+    });
+    map.addEventListener('pointermove',e=>{
+      if(!pointers.has(e.pointerId))return;
+      const previous=pointers.get(e.pointerId),point=local(e);pointers.set(e.pointerId,point);const current=geometry();
+      if(!moved&&Math.hypot(current.x-gesture.x,current.y-gesture.y)<4)return;
+      moved=true;e.preventDefault();
+      if(current.d&&gesture.d)setChemistryZoom(chemistryZoom*current.d/Math.max(1,gesture.d),false,gesture);
+      chemistryPan.x+=current.x-gesture.x;chemistryPan.y+=current.y-gesture.y;
+      gesture=current;paintChemistryViewport();
+    });
+    const finish=e=>{if(!pointers.has(e.pointerId))return;pointers.delete(e.pointerId);if(moved)chemistryGestureUntil=performance.now()+500;gesture=pointers.size?geometry():null;if(!pointers.size)map.classList.remove('is-panning');};
+    map.addEventListener('pointerup',finish);map.addEventListener('pointercancel',finish);map.addEventListener('lostpointercapture',finish);
+    map.addEventListener('click',e=>{if(e.detail&&performance.now()<chemistryGestureUntil){e.preventDefault();e.stopImmediatePropagation();}},true);
+    map.addEventListener('dragstart',e=>e.preventDefault());
+  }
+  if(!chemistryZoomObserver){let width=0;chemistryZoomObserver=new ResizeObserver(entries=>{const next=entries[0].contentRect.width;if(next&&Math.abs(next-width)>1){width=next;paintChemistryViewport();}});chemistryZoomObserver.observe(map);}
   setChemistryZoom(100,true);
 }
 function renderChemistryMap(){
@@ -5790,7 +5840,7 @@ function bindLinkedRecordEvents(prefix){
   const mode=$("#"+prefix+"RecordMode"), year=$("#"+prefix+"RecordYear"), segment=$("#"+prefix+"RecordSegment"), date=$("#"+prefix+"RecordDate"), dateSel=$("#"+prefix+"RecordDateSel");
   const start=$("#"+prefix+"RecordStartSel"), end=$("#"+prefix+"RecordEndSel"), apply=$("#"+prefix+"RecordApply"), latestBtn=$("#"+prefix+"RecordLatest");
   if(mode) mode.onchange=e=>{ recordMode=e.target.value; recordSegment="ALL"; refreshRecordLinkedViews(); };
-  if(year) year.onchange=e=>{ recordYear=e.target.value; recordSegment="ALL"; setRecordYearDefaults(recordYear); if($("#seasonPanel")) $("#seasonPanel").style.display="none"; refreshRecordLinkedViews(); };
+  if(year) year.onchange=e=>{ recordYear=e.target.value; if(recordMode==="LATEST")recordMode="SEASON"; recordSegment="ALL"; setRecordYearDefaults(recordYear); if($("#seasonPanel")) $("#seasonPanel").style.display="none"; refreshRecordLinkedViews(); };
   if(segment) segment.onchange=e=>{ recordSegment=e.target.value||"ALL"; refreshRecordLinkedViews(); };
   if(date) date.onchange=e=>{ recordDate=normDate(e.target.value); refreshRecordLinkedViews(); };
   if(dateSel) dateSel.onchange=e=>{ if(e.target.value) recordDate=normDate(e.target.value); refreshRecordLinkedViews(); };
