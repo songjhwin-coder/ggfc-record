@@ -14,7 +14,7 @@ const TEAM_COLORS = ["#5E9FE8","#EAC26B","#72BC8F","#BF8EDA","#DE9255","#DF84A8"
 const DEF_DB = { matches:[], attendance:[], goals:[], saves:[], fouls:[], moms:[], soccerbee:[], specials:[], roster:[], settings:{seasons:{},teamLogos:{},teamNames:{},leagueLogos:{A:"",B:""},headerLogo:"",display:{brandTitle:"GGFC",leagueA:"슈퍼리그",leagueB:"챌린지리그"},ability:{enabled:true}} };
 const blankDB = () => JSON.parse(JSON.stringify(DEF_DB));
 let DB = blankDB();
-let admin = false, comp = "ALL", calRef = new Date(), selDay = null, chemSel = "", chemYear = "ALL";
+let admin = false, comp = "ALL", calRef = new Date(), selDay = null, chemSel = "", chemYear = "ALL", chemDepth = 2;
 let seasonYear = "ALL", half = "ALL", dashDate = "", chemOther = "", monthlyMetric = "g";
 let repAdminYear = "";
 let abilityYear = "", abilityHalf = "H1", abilityAsOfDate = "";
@@ -4386,7 +4386,7 @@ function pairStats(a,b,list){
   return {tog,vs};
 }
 
-/* ---------- V3.21.4 CHEMISTRY MAP BEST-1 BRANCH NETWORK ---------- */
+/* ---------- V3.21.5 CHEMISTRY MAP HUB + 3-STEP BRANCH NETWORK ---------- */
 function chemistryNemesis(target,list){
   const names=chemPlayers().filter(name=>name!==target);
   const rows=names.map(name=>{
@@ -4397,194 +4397,209 @@ function chemistryNemesis(target,list){
   rows.sort((a,b)=>b.pain-a.pain||b.l-a.l||b.p-a.p||(a.gf-a.ga)-(b.gf-b.ga)||compareNamesKo(a.name,b.name));
   return rows[0]||null;
 }
-function chemistryMapBestBranches(target,partners){
+function chemistryMapBestBranches(target,partners,depth=2){
+  const maxDepth=depth===3?3:2;
   const primaryNames=new Set((partners||[]).map(x=>x.name).filter(Boolean));
   const cache=new Map(),links=[],extras=new Map();
   const analysis=name=>{if(!cache.has(name))cache.set(name,chemistry(name));return cache.get(name);};
-  (partners||[]).forEach(row=>{
-    const from=row.name;if(!from)return;
-    const all=analysis(from).mates.filter(x=>x.name&&x.name!==from);
-    const qualified=all.filter(x=>x.p>=2),top=(qualified.length?qualified:all)[0];
-    if(!top)return;
-    const kind=top.name===target?'center':primaryNames.has(top.name)?'primary':'extra';
-    const link={from,to:top.name,score:top.score,p:top.p,kind};
+  const bestOne=name=>{
+    const all=analysis(name).mates.filter(x=>x.name&&x.name!==name);
+    const qualified=all.filter(x=>x.p>=2);
+    return (qualified.length?qualified:all)[0]||null;
+  };
+  const addExtra=(name,level)=>{
+    if(!name||name===target||primaryNames.has(name))return;
+    if(!extras.has(name))extras.set(name,{name,level,sources:[],score:0,p:0});
+    else extras.get(name).level=Math.min(extras.get(name).level,level);
+  };
+  const addLink=(from,toRow,level)=>{
+    if(!from||!toRow?.name)return null;
+    const link={from,to:toRow.name,score:toRow.score,p:toRow.p,depth:level};
     links.push(link);
-    if(kind==='extra'){
-      if(!extras.has(top.name))extras.set(top.name,{name:top.name,sources:[],score:top.score,p:top.p});
-      const ex=extras.get(top.name);ex.sources.push({from,score:top.score,p:top.p});
-      if(top.score>ex.score){ex.score=top.score;ex.p=top.p;}
+    addExtra(toRow.name,level);
+    if(!primaryNames.has(toRow.name)&&toRow.name!==target){
+      const ex=extras.get(toRow.name);
+      ex.sources.push({from,score:toRow.score,p:toRow.p,depth:level});
+      if(toRow.score>ex.score){ex.score=toRow.score;ex.p=toRow.p;}
     }
+    return link;
+  };
+
+  // 2단계: 기준선수의 BEST 12명 각각이 전체 선수 중 자신의 BEST #1을 선택합니다.
+  const stage2=[];
+  (partners||[]).forEach(row=>{
+    const top=bestOne(row.name);if(!top)return;
+    const link=addLink(row.name,top,2);if(link)stage2.push(link);
   });
-  return {links,extras:[...extras.values()].sort((a,b)=>b.sources.length-a.sources.length||b.score-a.score||compareNamesKo(a.name,b.name))};
+
+  // 3단계: 2단계에서 새롭게 바깥에 나타난 BEST #1 선수만 한 번 더 확장합니다.
+  // 이미 중앙/핵심 12명 안에 있는 선수는 2단계에서 자신의 BEST #1이 이미 계산되어 있어 중복 확장을 피합니다.
+  if(maxDepth>=3){
+    const frontier=[...new Set(stage2.map(x=>x.to).filter(name=>name&&name!==target&&!primaryNames.has(name)))];
+    frontier.forEach(from=>{
+      addExtra(from,2);
+      const top=bestOne(from);if(top)addLink(from,top,3);
+    });
+  }
+
+  // BEST #1 피지목 횟수로 CHEMISTRY HUB를 계산합니다. 동률은 연결점수 합 → 동행경기 합 → 이름순입니다.
+  const hubMap=new Map();
+  links.forEach(link=>{
+    if(!hubMap.has(link.to))hubMap.set(link.to,{name:link.to,count:0,scoreSum:0,pSum:0,sources:new Set()});
+    const row=hubMap.get(link.to);row.count++;row.scoreSum+=num(link.score);row.pSum+=num(link.p);row.sources.add(link.from);
+  });
+  const hubs=[...hubMap.values()].map(x=>({name:x.name,count:x.count,scoreSum:x.scoreSum,pSum:x.pSum,avgScore:x.count?Math.round(x.scoreSum/x.count):0,sources:[...x.sources]}));
+  hubs.sort((a,b)=>b.count-a.count||b.scoreSum-a.scoreSum||b.pSum-a.pSum||compareNamesKo(a.name,b.name));
+  const hub=hubs[0]||null;
+  const extraRows=[...extras.values()].sort((a,b)=>a.level-b.level||b.sources.length-a.sources.length||b.score-a.score||compareNamesKo(a.name,b.name));
+  return {links,extras:extraRows,hub,depth:maxDepth};
 }
-function chemistryMapModel(target){
+function chemistryMapModel(target,depth=chemDepth){
   const analysis=chemistry(target), qualified=analysis.mates.filter(x=>x.p>=2);
   const source=(qualified.length>=6?qualified:analysis.mates).slice(0,12);
   const maxTogether=Math.max(1,...source.map(x=>x.p));
   const scores=source.map(x=>Math.max(0,Math.min(100,num(x.score))));
   const minScore=scores.length?Math.min(...scores):0, maxScore=scores.length?Math.max(...scores):100;
-  const branches=chemistryMapBestBranches(target,source);
-  return {analysis,partners:source,maxTogether,minScore,maxScore,bestLinks:branches.links,bestExtras:branches.extras,nemesis:chemistryNemesis(target,chemMatches())};
+  const branches=chemistryMapBestBranches(target,source,depth);
+  return {analysis,partners:source,maxTogether,minScore,maxScore,bestLinks:branches.links,bestExtras:branches.extras,hub:branches.hub,depth:branches.depth,nemesis:chemistryNemesis(target,chemMatches())};
 }
 function chemistryMapForceLayout(nodes,cx,cy,W,H,maxP,relativeSize){
   const total=nodes.length;
   const points=nodes.map((row,i)=>{
     const angle=-Math.PI/2+(Math.PI*2*i/total)+(i%2?0.055:-0.055);
     const closeness=row.p/maxP;
-    // V3.21.2에서 확대한 130% 반경을 초기 앵커로 유지합니다.
     const radius=(105+(1-closeness)*65)*1.30;
     const tx=cx+Math.cos(angle)*radius*1.42, ty=cy+Math.sin(angle)*radius*.76;
     return {row,i,r:relativeSize(row.score),x:tx,y:ty,tx,ty};
   });
-  // Obsidian Graph처럼 노드끼리는 밀어내고, 원래 앵커/동행거리 쪽으로는 스프링 힘을 줍니다.
-  // 최대 12개 노드라 동기식 경량 계산으로도 충분하며 외부 라이브러리를 로드하지 않습니다.
   const centerSafe=112;
   for(let step=0;step<180;step++){
     const cool=1-step/180;
     points.forEach(p=>{
       const spring=.028+.010*(1-cool);
-      p.x+=(p.tx-p.x)*spring;
-      p.y+=(p.ty-p.y)*spring;
-      const dx=p.x-cx,dy=p.y-cy,dist=Math.hypot(dx,dy)||1;
-      const minCenter=centerSafe+p.r;
+      p.x+=(p.tx-p.x)*spring;p.y+=(p.ty-p.y)*spring;
+      const dx=p.x-cx,dy=p.y-cy,dist=Math.hypot(dx,dy)||1,minCenter=centerSafe+p.r;
       if(dist<minCenter){const push=(minCenter-dist)*.42;p.x+=dx/dist*push;p.y+=dy/dist*push;}
     });
     for(let i=0;i<points.length;i++)for(let j=i+1;j<points.length;j++){
       const a=points[i],b=points[j];let dx=b.x-a.x,dy=b.y-a.y,dist=Math.hypot(dx,dy)||.001;
-      // 점수/경기 라벨 공간까지 고려해 원끼리 단순 접촉보다 여유 있게 분리합니다.
       const minDist=a.r+b.r+46;
-      if(dist<minDist){
-        const overlap=minDist-dist, push=overlap*(.30+.18*cool);
-        const ux=dx/dist,uy=dy/dist;
-        a.x-=ux*push;a.y-=uy*push;b.x+=ux*push;b.y+=uy*push;
-      }else if(dist<minDist+55){
-        // 가까운 노드 사이에 약한 반발력을 계속 줘 군집이 뭉치는 현상을 줄입니다.
-        const push=(minDist+55-dist)*.006*cool,ux=dx/dist,uy=dy/dist;
-        a.x-=ux*push;a.y-=uy*push;b.x+=ux*push;b.y+=uy*push;
-      }
+      if(dist<minDist){const overlap=minDist-dist,push=overlap*(.30+.18*cool),ux=dx/dist,uy=dy/dist;a.x-=ux*push;a.y-=uy*push;b.x+=ux*push;b.y+=uy*push;}
+      else if(dist<minDist+55){const push=(minDist+55-dist)*.006*cool,ux=dx/dist,uy=dy/dist;a.x-=ux*push;a.y-=uy*push;b.x+=ux*push;b.y+=uy*push;}
     }
-    points.forEach(p=>{
-      const padX=p.r+42,padTop=p.r+30,padBottom=p.r+58;
-      p.x=Math.max(padX,Math.min(W-padX,p.x));
-      p.y=Math.max(padTop,Math.min(H-padBottom,p.y));
-    });
+    points.forEach(p=>{const padX=p.r+50,padTop=p.r+42,padBottom=p.r+62;p.x=Math.max(padX,Math.min(W-padX,p.x));p.y=Math.max(padTop,Math.min(H-padBottom,p.y));});
   }
-  // 마지막에는 스프링 힘을 끄고 충돌만 정리해 원/라벨 영역의 실제 겹침을 제거합니다.
   for(let pass=0;pass<90;pass++){
     let moved=false;
     for(let i=0;i<points.length;i++)for(let j=i+1;j<points.length;j++){
       const a=points[i],b=points[j];let dx=b.x-a.x,dy=b.y-a.y,dist=Math.hypot(dx,dy)||.001;
       const minDist=a.r+b.r+47;
-      if(dist<minDist){
-        const push=(minDist-dist)/2+.35,ux=dx/dist,uy=dy/dist;
-        a.x-=ux*push;a.y-=uy*push;b.x+=ux*push;b.y+=uy*push;moved=true;
-      }
+      if(dist<minDist){const push=(minDist-dist)/2+.35,ux=dx/dist,uy=dy/dist;a.x-=ux*push;a.y-=uy*push;b.x+=ux*push;b.y+=uy*push;moved=true;}
     }
-    points.forEach(p=>{
-      const padX=p.r+42,padTop=p.r+30,padBottom=p.r+58;
-      p.x=Math.max(padX,Math.min(W-padX,p.x));
-      p.y=Math.max(padTop,Math.min(H-padBottom,p.y));
-    });
+    points.forEach(p=>{const padX=p.r+50,padTop=p.r+42,padBottom=p.r+62;p.x=Math.max(padX,Math.min(W-padX,p.x));p.y=Math.max(padTop,Math.min(H-padBottom,p.y));});
     if(!moved)break;
   }
   return points;
 }
 function chemistryMapExtraLayout(extras,links,primaryPositions,cx,cy,W,H){
   if(!(extras||[]).length)return [];
-  const primaryByName=new Map((primaryPositions||[]).map(p=>[p.row.name,p]));
-  const points=(extras||[]).map((row,i)=>{
-    const refs=(links||[]).filter(l=>l.kind==='extra'&&l.to===row.name).map(l=>primaryByName.get(l.from)).filter(Boolean);
-    let ax=0,ay=0,weight=0;
-    refs.forEach(p=>{const w=1+Math.max(0,num(p.row.score))/100;ax+=p.x*w;ay+=p.y*w;weight+=w;});
-    if(weight){ax/=weight;ay/=weight;}else{const a=-Math.PI/2+Math.PI*2*i/Math.max(1,extras.length);ax=cx+Math.cos(a)*220;ay=cy+Math.sin(a)*155;}
-    let dx=ax-cx,dy=ay-cy,d=Math.hypot(dx,dy);
-    if(d<35){const a=-Math.PI/2+Math.PI*2*i/Math.max(1,extras.length);dx=Math.cos(a);dy=Math.sin(a);d=1;}
-    const avgDist=refs.length?refs.reduce((s,p)=>s+Math.hypot(p.x-cx,p.y-cy),0)/refs.length:220;
-    const targetDist=Math.max(285,avgDist+115);
-    const tx=cx+dx/d*targetDist,ty=cy+dy/d*targetDist;
-    return {row,i,r:22,x:tx,y:ty,tx,ty};
-  });
-  for(let step=0;step<150;step++){
-    const cool=1-step/150;
-    points.forEach(p=>{p.x+=(p.tx-p.x)*(.025+.01*(1-cool));p.y+=(p.ty-p.y)*(.025+.01*(1-cool));});
-    for(let i=0;i<points.length;i++)for(let j=i+1;j<points.length;j++){
-      const a=points[i],b=points[j];let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||.001;
-      const min=66;if(d<min){const push=(min-d)*(.34+.12*cool),ux=dx/d,uy=dy/d;a.x-=ux*push;a.y-=uy*push;b.x+=ux*push;b.y+=uy*push;}
-    }
-    points.forEach(p=>{
-      (primaryPositions||[]).forEach(q=>{let dx=p.x-q.x,dy=p.y-q.y,d=Math.hypot(dx,dy)||.001;const min=p.r+q.r+52;if(d<min){const push=(min-d)*.46;p.x+=dx/d*push;p.y+=dy/d*push;}});
-      const padX=55,padTop=42,padBottom=54;p.x=Math.max(padX,Math.min(W-padX,p.x));p.y=Math.max(padTop,Math.min(H-padBottom,p.y));
+  const primaryByName=new Map((primaryPositions||[]).map(p=>[p.row.name,p])),placed=new Map(primaryByName),all=[];
+  const levels=[2,3];
+  levels.forEach(level=>{
+    const rows=(extras||[]).filter(row=>(row.level||2)===level);
+    if(!rows.length)return;
+    const points=rows.map((row,i)=>{
+      const refs=(links||[]).filter(l=>l.to===row.name).map(l=>placed.get(l.from)).filter(Boolean);
+      let ax=0,ay=0,weight=0;
+      refs.forEach(p=>{const score=p.row?num(p.row.score):50,w=1+Math.max(0,score)/100;ax+=p.x*w;ay+=p.y*w;weight+=w;});
+      if(weight){ax/=weight;ay/=weight;}else{const a=-Math.PI/2+Math.PI*2*i/Math.max(1,rows.length);ax=cx+Math.cos(a)*(level===2?230:330);ay=cy+Math.sin(a)*(level===2?165:235);}
+      let dx=ax-cx,dy=ay-cy,d=Math.hypot(dx,dy);
+      if(d<35){const a=-Math.PI/2+Math.PI*2*i/Math.max(1,rows.length);dx=Math.cos(a);dy=Math.sin(a);d=1;}
+      const avgDist=refs.length?refs.reduce((sum,p)=>sum+Math.hypot(p.x-cx,p.y-cy),0)/refs.length:(level===2?220:330);
+      const targetDist=level===2?Math.max(292,avgDist+118):Math.max(405,avgDist+110);
+      const tx=cx+dx/d*targetDist,ty=cy+dy/d*targetDist;
+      return {row,i,r:level===2?22:19,x:tx,y:ty,tx,ty,level};
     });
-  }
-  return points;
+    const fixed=[...placed.values()];
+    for(let step=0;step<170;step++){
+      const cool=1-step/170;
+      points.forEach(p=>{p.x+=(p.tx-p.x)*(.023+.011*(1-cool));p.y+=(p.ty-p.y)*(.023+.011*(1-cool));});
+      for(let i=0;i<points.length;i++)for(let j=i+1;j<points.length;j++){
+        const a=points[i],b=points[j];let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||.001;
+        const min=(a.r+b.r)+(level===2?30:28);if(d<min){const push=(min-d)*(.36+.12*cool),ux=dx/d,uy=dy/d;a.x-=ux*push;a.y-=uy*push;b.x+=ux*push;b.y+=uy*push;}
+      }
+      points.forEach(p=>{
+        fixed.forEach(q=>{let dx=p.x-q.x,dy=p.y-q.y,d=Math.hypot(dx,dy)||.001;const qr=q.r||30,min=p.r+qr+44;if(d<min){const push=(min-d)*.50;p.x+=dx/d*push;p.y+=dy/d*push;}});
+        const dcx=p.x-cx,dcy=p.y-cy,dc=Math.hypot(dcx,dcy)||1,minCenter=level===2?255:355;if(dc<minCenter){const push=(minCenter-dc)*.32;p.x+=dcx/dc*push;p.y+=dcy/dc*push;}
+        const padX=64,padTop=52,padBottom=62;p.x=Math.max(padX,Math.min(W-padX,p.x));p.y=Math.max(padTop,Math.min(H-padBottom,p.y));
+      });
+    }
+    points.forEach(p=>{all.push(p);placed.set(p.row.name,p);});
+  });
+  return all;
+}
+function chemistryHubBadge(name,hub,x,y,width=100){
+  if(!hub||hub.name!==name)return '';
+  const w=Math.max(94,width),h=19;
+  return '<g class="chem-map-hub-badge" aria-hidden="true"><rect x="'+(x-w/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+w+'" height="'+h+'" rx="9.5"/><text x="'+x.toFixed(1)+'" y="'+(y+13).toFixed(1)+'">CHEMISTRY HUB ×'+hub.count+'</text></g>';
 }
 function chemistryMapSvg(target,model){
-  const W=1040,H=700,cx=520,cy=325,nodes=model.partners;
+  const depth=model.depth===3?3:2;
+  const W=depth===3?1220:1040,H=depth===3?820:700,cx=W/2,cy=depth===3?365:325,nodes=model.partners;
   if(!nodes.length)return '<div class="empty chemistry-map-empty">함께 뛴 선수 기록이 없어 CHEMISTRY MAP을 만들 수 없습니다.</div>';
   const maxP=model.maxTogether;
   const minScore=Number.isFinite(model.minScore)?model.minScore:0, maxScore=Number.isFinite(model.maxScore)?model.maxScore:100;
-  const relativeSize=score=>{
-    const safe=Math.max(0,Math.min(100,num(score)));
-    const t=maxScore>minScore?(safe-minScore)/(maxScore-minScore):.5;
-    return 25+t*19;
-  };
+  const relativeSize=score=>{const safe=Math.max(0,Math.min(100,num(score))),t=maxScore>minScore?(safe-minScore)/(maxScore-minScore):.5;return 25+t*19;};
   const positions=chemistryMapForceLayout(nodes,cx,cy,W,H,maxP,relativeSize);
   const primaryByName=new Map(positions.map(p=>[p.row.name,p]));
   const extraPositions=chemistryMapExtraLayout(model.bestExtras||[],model.bestLinks||[],positions,cx,cy,W,H);
   const extraByName=new Map(extraPositions.map(p=>[p.row.name,p]));
+  const pointFor=name=>name===target?{x:cx,y:cy,r:60}:primaryByName.get(name)||extraByName.get(name)||null;
   const bestLines=(model.bestLinks||[]).map(link=>{
-    const a=primaryByName.get(link.from);if(!a)return '';
-    let bx=cx,by=cy;
-    if(link.kind==='primary'){const b=primaryByName.get(link.to);if(!b)return '';bx=b.x;by=b.y;}
-    else if(link.kind==='extra'){const b=extraByName.get(link.to);if(!b)return '';bx=b.x;by=b.y;}
+    const a=pointFor(link.from),b=pointFor(link.to);if(!a||!b)return '';
     const score=Math.max(0,Math.min(100,num(link.score)));
-    const width=(1.3+score/100*3.5).toFixed(2),opacity=(.34+score/100*.44).toFixed(2);
-    return '<line class="chem-map-best-link" data-chem-a="'+esc(link.from)+'" data-chem-b="'+esc(link.to)+'" x1="'+a.x.toFixed(1)+'" y1="'+a.y.toFixed(1)+'" x2="'+Number(bx).toFixed(1)+'" y2="'+Number(by).toFixed(1)+'" style="--chem-line-opacity:'+opacity+';stroke-width:'+width+';opacity:'+opacity+'"><title>'+esc(link.from)+'의 BEST #1 → '+esc(link.to)+' · '+link.p+'경기 · 커플점수 '+link.score+'</title></line>';
+    const width=(1.3+score/100*(link.depth===3?2.7:3.5)).toFixed(2),opacity=(link.depth===3?.28:.34)+score/100*(link.depth===3?.36:.44);
+    return '<line class="chem-map-best-link chem-depth-'+link.depth+'" data-chem-depth="'+link.depth+'" data-chem-a="'+esc(link.from)+'" data-chem-b="'+esc(link.to)+'" x1="'+a.x.toFixed(1)+'" y1="'+a.y.toFixed(1)+'" x2="'+b.x.toFixed(1)+'" y2="'+b.y.toFixed(1)+'" style="--chem-line-opacity:'+opacity.toFixed(2)+';stroke-width:'+width+';opacity:'+opacity.toFixed(2)+'"><title>'+link.depth+'단계 · '+esc(link.from)+'의 BEST #1 → '+esc(link.to)+' · '+link.p+'경기 · 커플점수 '+link.score+'</title></line>';
   }).join('');
   const centerLines=positions.map(({row,x,y})=>{
-    const width=(1.4+Math.max(0,Math.min(100,row.score))/100*7).toFixed(2);
-    const opacity=(.28+Math.max(0,Math.min(100,row.score))/100*.58).toFixed(2);
+    const width=(1.4+Math.max(0,Math.min(100,row.score))/100*7).toFixed(2),opacity=(.28+Math.max(0,Math.min(100,row.score))/100*.58).toFixed(2);
     return '<line class="chem-map-link" data-chem-a="'+esc(target)+'" data-chem-b="'+esc(row.name)+'" x1="'+cx+'" y1="'+cy+'" x2="'+x.toFixed(1)+'" y2="'+y.toFixed(1)+'" style="--chem-line-opacity:'+opacity+';stroke-width:'+width+';opacity:'+opacity+'"><title>'+esc(target)+' + '+esc(row.name)+' · '+row.p+'경기 · 커플점수 '+row.score+'</title></line>';
   }).join('');
-  const extraNodes=extraPositions.map(({row,x,y,r})=>{
-    const name=String(row.name||'?').trim(),fontSize=name.length>=5?9.2:name.length===4?10.2:11.3;
-    const count=(row.sources||[]).length;
-    return '<g class="chem-map-best-node" data-chem-focus="'+esc(row.name)+'" role="button" tabindex="0" aria-label="'+esc(row.name)+' 선수 중심으로 보기">'+
-      '<circle class="chem-map-best-node-ring" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(r+3)+'"/>'+
-      '<circle class="chem-map-best-node-fill" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+r+'"/>'+
+  const extraNodes=extraPositions.map(({row,x,y,r,level})=>{
+    const name=String(row.name||'?').trim(),fontSize=name.length>=5?9:name.length===4?10:11.2,count=(row.sources||[]).length;
+    const hubClass=model.hub?.name===row.name?' is-chemistry-hub':'';
+    return '<g class="chem-map-best-node chem-level-'+level+hubClass+'" data-chem-focus="'+esc(row.name)+'" role="button" tabindex="0" aria-label="'+esc(row.name)+' 선수 중심으로 보기">'+
+      '<circle class="chem-map-best-node-ring" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(r+3)+'"/><circle class="chem-map-best-node-fill" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+r+'"/>'+
       '<text class="chem-map-best-node-name" style="font-size:'+fontSize+'px" x="'+x.toFixed(1)+'" y="'+(y+3.8).toFixed(1)+'">'+esc(name)+'</text>'+
-      '<rect class="chem-map-best-badge-bg" x="'+(x-27).toFixed(1)+'" y="'+(y+r+7).toFixed(1)+'" width="54" height="17" rx="8.5"/>'+
-      '<text class="chem-map-best-badge" x="'+x.toFixed(1)+'" y="'+(y+r+19).toFixed(1)+'">BEST 1'+(count>1?' ×'+count:'')+'</text></g>';
+      '<rect class="chem-map-best-badge-bg" x="'+(x-31).toFixed(1)+'" y="'+(y+r+7).toFixed(1)+'" width="62" height="17" rx="8.5"/>'+
+      '<text class="chem-map-best-badge" x="'+x.toFixed(1)+'" y="'+(y+r+19).toFixed(1)+'">BEST 1'+(level===3?' · L3':'')+(count>1?' ×'+count:'')+'</text>'+chemistryHubBadge(name,model.hub,x,y-r-29,108)+'</g>';
   }).join('');
   const partnerNodes=positions.map(({row,x,y,r})=>{
-    const name=String(row.name||'?').trim();
-    const fontSize=name.length>=5?10.2:name.length===4?11.4:12.8;
-    return '<g class="chem-map-node" data-chem-focus="'+esc(row.name)+'" role="button" tabindex="0" aria-label="'+esc(row.name)+' 선수 중심으로 보기">'+
-      '<circle class="chem-map-node-ring" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(r+4).toFixed(1)+'"/>'+
-      '<circle class="chem-map-name-avatar" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+r.toFixed(1)+'"/>'+
+    const name=String(row.name||'?').trim(),fontSize=name.length>=5?10.2:name.length===4?11.4:12.8,hubClass=model.hub?.name===row.name?' is-chemistry-hub':'';
+    return '<g class="chem-map-node'+hubClass+'" data-chem-focus="'+esc(row.name)+'" role="button" tabindex="0" aria-label="'+esc(row.name)+' 선수 중심으로 보기">'+
+      '<circle class="chem-map-node-ring" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(r+4).toFixed(1)+'"/><circle class="chem-map-name-avatar" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+r.toFixed(1)+'"/>'+
       '<text class="chem-map-name-avatar-text" style="font-size:'+fontSize+'px" x="'+x.toFixed(1)+'" y="'+(y+4.5).toFixed(1)+'">'+esc(name)+'</text>'+
-      '<rect class="chem-map-score-bg" x="'+(x-25).toFixed(1)+'" y="'+(y+r-2).toFixed(1)+'" width="50" height="21" rx="10.5"/>'+
-      '<text class="chem-map-score" x="'+x.toFixed(1)+'" y="'+(y+r+12).toFixed(1)+'">'+row.score+' ♥</text>'+
-      '<text class="chem-map-games" x="'+x.toFixed(1)+'" y="'+(y+r+34).toFixed(1)+'">'+row.p+'경기</text></g>';
+      '<rect class="chem-map-score-bg" x="'+(x-25).toFixed(1)+'" y="'+(y+r-2).toFixed(1)+'" width="50" height="21" rx="10.5"/><text class="chem-map-score" x="'+x.toFixed(1)+'" y="'+(y+r+12).toFixed(1)+'">'+row.score+' ♥</text>'+
+      '<text class="chem-map-games" x="'+x.toFixed(1)+'" y="'+(y+r+34).toFixed(1)+'">'+row.p+'경기</text>'+chemistryHubBadge(name,model.hub,x,y-r-31,108)+'</g>';
   }).join('');
   const centerPhoto=playerPhoto(target),centerR=53,centerClip='chemCenterClip';
   const centerAvatar=centerPhoto
     ?'<defs><clipPath id="'+centerClip+'"><circle cx="'+cx+'" cy="'+cy+'" r="'+centerR+'"/></clipPath></defs><image href="'+esc(centerPhoto)+'" x="'+(cx-centerR)+'" y="'+(cy-centerR)+'" width="'+(centerR*2)+'" height="'+(centerR*2)+'" preserveAspectRatio="xMidYMid slice" clip-path="url(#'+centerClip+')" class="chem-map-photo"/>'
     :'<circle class="chem-map-center-fallback" cx="'+cx+'" cy="'+cy+'" r="'+centerR+'"/><text class="chem-map-center-initials" x="'+cx+'" y="'+(cy+7)+'">'+esc(String(target||'?').trim().slice(0,2))+'</text>';
-  return '<svg class="chemistry-map-svg" data-chem-center="'+esc(target)+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(target)+' 선수 Chemistry Map">'+
-    '<circle class="chem-map-orbit chem-map-orbit-one" cx="'+cx+'" cy="'+cy+'" r="180"/><circle class="chem-map-orbit chem-map-orbit-two" cx="'+cx+'" cy="'+cy+'" r="255"/>'+bestLines+centerLines+extraNodes+partnerNodes+
-    '<g class="chem-map-center" tabindex="0" aria-label="기준선수 '+esc(target)+'"><circle class="chem-map-center-ring" cx="'+cx+'" cy="'+cy+'" r="60"/>'+centerAvatar+
-    '<rect class="chem-map-center-label-bg" x="'+(cx-75)+'" y="'+(cy+65)+'" width="150" height="35" rx="17.5"/><text class="chem-map-center-name" x="'+cx+'" y="'+(cy+88)+'">'+esc(target)+'</text></g></svg>';
+  const centerHubClass=model.hub?.name===target?' is-chemistry-hub':'';
+  return '<svg class="chemistry-map-svg depth-'+depth+'" data-chem-center="'+esc(target)+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(target)+' 선수 Chemistry Map">'+
+    '<circle class="chem-map-orbit chem-map-orbit-one" cx="'+cx+'" cy="'+cy+'" r="180"/><circle class="chem-map-orbit chem-map-orbit-two" cx="'+cx+'" cy="'+cy+'" r="255"/>'+(depth===3?'<circle class="chem-map-orbit chem-map-orbit-three" cx="'+cx+'" cy="'+cy+'" r="390"/>':'')+bestLines+centerLines+extraNodes+partnerNodes+
+    '<g class="chem-map-center'+centerHubClass+'" tabindex="0" aria-label="기준선수 '+esc(target)+'"><circle class="chem-map-center-ring" cx="'+cx+'" cy="'+cy+'" r="60"/>'+centerAvatar+
+    '<rect class="chem-map-center-label-bg" x="'+(cx-75)+'" y="'+(cy+65)+'" width="150" height="35" rx="17.5"/><text class="chem-map-center-name" x="'+cx+'" y="'+(cy+88)+'">'+esc(target)+'</text>'+chemistryHubBadge(target,model.hub,cx,cy-91,116)+'</g></svg>';
 }
 function chemistryMapSideHtml(target,model){
-  const partners=(model.analysis.mates.filter(x=>x.p>=2).length?model.analysis.mates.filter(x=>x.p>=2):model.analysis.mates).slice(0,3);
-  const medals=['🥇','🥈','🥉'];
-  const partnerHtml=partners.length?partners.map((x,i)=>
-    '<button type="button" class="chem-side-partner" data-chem-other="'+esc(x.name)+'"><span class="chem-side-rank">'+medals[i]+'</span><span class="chem-side-person"><b class="chem-side-name">'+esc(x.name)+'</b><small>'+x.p+'경기 · '+x.w+'승 '+x.d+'무 '+x.l+'패 · 승률 '+x.rate+'%</small></span><strong>'+x.score+'</strong></button>'
-  ).join(''):'<div class="chem-side-empty">2경기 이상 함께 뛴 파트너가 없습니다.</div>';
+  const partners=(model.analysis.mates.filter(x=>x.p>=2).length?model.analysis.mates.filter(x=>x.p>=2):model.analysis.mates).slice(0,3),medals=['🥇','🥈','🥉'];
+  const partnerHtml=partners.length?partners.map((x,i)=>'<button type="button" class="chem-side-partner" data-chem-other="'+esc(x.name)+'"><span class="chem-side-rank">'+medals[i]+'</span><span class="chem-side-person"><b class="chem-side-name">'+esc(x.name)+'</b><small>'+x.p+'경기 · '+x.w+'승 '+x.d+'무 '+x.l+'패 · 승률 '+x.rate+'%</small></span><strong>'+x.score+'</strong></button>').join(''):'<div class="chem-side-empty">2경기 이상 함께 뛴 파트너가 없습니다.</div>';
   const n=model.nemesis;
   const nemesisHtml=n?'<button type="button" class="chem-nemesis" data-chem-other="'+esc(n.name)+'"><span class="chem-nemesis-icon">⚔</span><span class="chem-side-person"><b class="chem-side-name">'+esc(n.name)+'</b><small>맞대결 '+n.p+'경기 · '+esc(target)+' 기준 <b>'+n.w+'승 '+n.d+'무 '+n.l+'패</b><br>득점 '+n.gf+' : '+n.ga+'</small></span><span class="chem-nemesis-tag">NEMESIS</span></button>':'<div class="chem-side-empty">맞대결 기록이 없습니다.</div>';
-  return '<section class="chem-side-profile"><span class="chem-side-eyebrow">'+esc(String(target).toUpperCase())+' CHEMISTRY</span>'+playerFaceChip(target,true)+'<div class="chem-side-base"><b>'+model.analysis.base+'경기</b><span>출전</span><b>'+model.analysis.baseRate+'%</b><span>승률</span><b>'+model.analysis.baseGoals+'골</b><span>득점</span></div></section>'+
+  const h=model.hub;
+  const hubHtml=h?'<section class="chem-side-section chem-hub-section"><h3>CHEMISTRY HUB</h3><button type="button" class="chem-hub-card" data-chem-map-focus="'+esc(h.name)+'"><span class="chem-hub-icon">HUB</span><span class="chem-side-person"><b class="chem-side-name">'+esc(h.name)+'</b><small>BEST #1 선택 <b>'+h.count+'회</b> · 평균 커플점수 '+h.avgScore+'<br>'+model.depth+'단계 지도에서 가장 많이 선택된 선수</small></span><strong>×'+h.count+'</strong></button></section>':'';
+  return '<section class="chem-side-profile"><span class="chem-side-eyebrow">'+esc(String(target).toUpperCase())+' CHEMISTRY</span>'+playerFaceChip(target,true)+'<div class="chem-side-base"><b>'+model.analysis.base+'경기</b><span>출전</span><b>'+model.analysis.baseRate+'%</b><span>승률</span><b>'+model.analysis.baseGoals+'골</b><span>득점</span></div></section>'+hubHtml+
     '<section class="chem-side-section"><h3>BEST PARTNER</h3>'+partnerHtml+'</section><section class="chem-side-section nemesis-section"><h3>NEMESIS</h3>'+nemesisHtml+'<p>맞대결에서 선택 선수에게 가장 어려웠던 상대를 패배 우위 → 패배 수 → 맞대결 수 순으로 계산합니다.</p></section>';
 }
 function bindChemistryMapInteractions(){
@@ -4592,45 +4607,41 @@ function bindChemistryMapInteractions(){
   const focus=name=>{if(!name||name===chemSel)return;chemSel=name;chemOther='';renderChem();requestAnimationFrame(()=>$('#chemistryMap')?.scrollIntoView({block:'nearest',behavior:'smooth'}));};
   const setLineFocus=name=>{
     const svg=map?.querySelector('.chemistry-map-svg');if(!svg)return;
-    const center=svg.getAttribute('data-chem-center')||'';
-    svg.classList.toggle('chem-line-focus-mode',!!name);
+    const center=svg.getAttribute('data-chem-center')||'';svg.classList.toggle('chem-line-focus-mode',!!name);
     svg.querySelectorAll('.chem-map-link,.chem-map-best-link').forEach(line=>{
       const a=line.getAttribute('data-chem-a')||'',b=line.getAttribute('data-chem-b')||'';
-      const active=!!name&&(a===name||b===name||(name===center&&(a===center||b===center)));
-      line.classList.toggle('chem-link-active',active);
+      const active=!!name&&(a===name||b===name||(name===center&&(a===center||b===center)));line.classList.toggle('chem-link-active',active);
     });
   };
   if(map){
     map.querySelectorAll('[data-chem-focus]').forEach(el=>{
       const name=el.getAttribute('data-chem-focus')||'',run=()=>focus(name);
-      el.addEventListener('click',run);
-      el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();run();}});
-      el.addEventListener('mouseenter',()=>setLineFocus(name));
-      el.addEventListener('mouseleave',()=>setLineFocus(''));
-      el.addEventListener('focus',()=>setLineFocus(name));
-      el.addEventListener('blur',()=>setLineFocus(''));
+      el.addEventListener('click',run);el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();run();}});
+      el.addEventListener('mouseenter',()=>setLineFocus(name));el.addEventListener('mouseleave',()=>setLineFocus(''));el.addEventListener('focus',()=>setLineFocus(name));el.addEventListener('blur',()=>setLineFocus(''));
     });
     const centerNode=map.querySelector('.chem-map-center');
-    if(centerNode){
-      const centerName=map.querySelector('.chemistry-map-svg')?.getAttribute('data-chem-center')||'';
-      centerNode.addEventListener('mouseenter',()=>setLineFocus(centerName));
-      centerNode.addEventListener('mouseleave',()=>setLineFocus(''));
-      centerNode.addEventListener('focus',()=>setLineFocus(centerName));
-      centerNode.addEventListener('blur',()=>setLineFocus(''));
-    }
+    if(centerNode){const centerName=map.querySelector('.chemistry-map-svg')?.getAttribute('data-chem-center')||'';centerNode.addEventListener('mouseenter',()=>setLineFocus(centerName));centerNode.addEventListener('mouseleave',()=>setLineFocus(''));centerNode.addEventListener('focus',()=>setLineFocus(centerName));centerNode.addEventListener('blur',()=>setLineFocus(''));}
   }
-  if(side)side.querySelectorAll('[data-chem-other]').forEach(el=>el.addEventListener('click',()=>{
-    const name=el.getAttribute('data-chem-other');if(!name||name===chemSel)return;
-    chemOther=name;const input=$('#chemOther');if(input)input.value=name;renderPair(chemSel,chemOther);updateChemCompareButton();
-    $('#chemPair')?.scrollIntoView({block:'nearest',behavior:'smooth'});
-  }));
+  if(side){
+    side.querySelectorAll('[data-chem-map-focus]').forEach(el=>el.addEventListener('click',()=>focus(el.getAttribute('data-chem-map-focus'))));
+    side.querySelectorAll('[data-chem-other]').forEach(el=>el.addEventListener('click',()=>{
+      const name=el.getAttribute('data-chem-other');if(!name||name===chemSel)return;
+      chemOther=name;const input=$('#chemOther');if(input)input.value=name;renderPair(chemSel,chemOther);updateChemCompareButton();$('#chemPair')?.scrollIntoView({block:'nearest',behavior:'smooth'});
+    }));
+  }
 }
 function renderChemistryMap(){
-  const map=$('#chemistryMap'),side=$('#chemistryMapSide'),note=$('#chemMapNote');if(!map||!side)return;
+  const map=$('#chemistryMap'),side=$('#chemistryMapSide'),note=$('#chemMapNote'),depthSel=$('#chemDepth');if(!map||!side)return;
+  chemDepth=chemDepth===3?3:2;if(depthSel)depthSel.value=String(chemDepth);
   if(!chemSel){map.innerHTML='<div class="empty chemistry-map-empty">분석할 선수를 선택해 주세요.</div>';side.innerHTML='';return;}
-  const model=chemistryMapModel(chemSel);
+  const model=chemistryMapModel(chemSel,chemDepth);
   map.innerHTML=chemistryMapSvg(chemSel,model);side.innerHTML=chemistryMapSideHtml(chemSel,model);
-  if(note)note.textContent=(chemYear==='ALL'?'전체 연도':chemYear+'년')+' · 기준선수 BEST 12명 + 각 선수의 전체 기록 기준 BEST #1 파트너를 바깥 노드로 확장합니다. 동일 BEST #1은 하나의 노드로 합쳐 여러 연결선이 모입니다. Force Layout이 겹침을 자동 보정하며 Hover 시 직접 연결선만 강조됩니다.';
+  if(note){
+    const period=chemYear==='ALL'?'전체 연도':chemYear+'년';
+    note.textContent=chemDepth===3
+      ?period+' · 기준선수 BEST 12명 → 각자의 BEST #1 → 바깥 BEST #1 선수의 BEST #1까지 3단계로 확장합니다. BEST #1 피지목 횟수가 가장 많은 선수를 CHEMISTRY HUB로 표시합니다.'
+      :period+' · 기준선수 BEST 12명 → 각 선수의 전체 기록 BEST #1까지 2단계로 표시합니다. BEST #1 피지목 횟수가 가장 많은 선수를 CHEMISTRY HUB로 표시합니다.';
+  }
   bindChemistryMapInteractions();
 }
 
@@ -5230,6 +5241,7 @@ document.addEventListener('mousedown',e=>{
   if(!e.target.closest('.chem-search-wrap')) $$('.chem-suggestions').forEach(x=>x.classList.remove('on'));
 });
 $('#chemYear').onchange=e=>{chemYear=e.target.value;renderChem();};
+const chemDepthSelect=$('#chemDepth');if(chemDepthSelect)chemDepthSelect.onchange=e=>{chemDepth=e.target.value==='3'?3:2;renderChemistryMap();};
 $('#monthlyMetric').onchange=e=>{monthlyMetric=e.target.value;renderMonthlyPlayerStats();};
 
 /* ---------- 대표승점 상단 관리자 메뉴 ---------- */

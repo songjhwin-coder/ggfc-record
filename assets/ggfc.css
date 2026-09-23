@@ -2674,7 +2674,7 @@ body:not(.admin-mode) [data-ability-admin],#abilityAdminControls[hidden]{display
 
 
 /* =====================================================================
-   V3.21.4 — CHEMISTRY MAP BEST-1 BRANCH NETWORK
+   V3.21.5 — CHEMISTRY MAP HUB + 3-STEP BRANCH NETWORK
    ===================================================================== */
 .chemistry-map-card{overflow:hidden;border-top:4px solid var(--pl-purple,#37003c)}
 .chemistry-map-heading{gap:18px;align-items:flex-start}.chemistry-map-note{font-size:12px;margin-top:4px;line-height:1.55}
@@ -2689,3 +2689,18 @@ body:not(.admin-mode) [data-ability-admin],#abilityAdminControls[hidden]{display
 @media(max-width:1050px){.chemistry-map-layout{grid-template-columns:minmax(0,1fr)}.chemistry-map-side{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.chem-side-profile,.chem-side-section{min-height:100%}}
 @media(max-width:700px){.chemistry-map-card{padding:14px 10px}.chemistry-map-heading{flex-direction:column}.chemistry-map-layout{gap:12px}.chemistry-map-canvas{min-height:350px;border-radius:10px;overflow-x:auto}.chemistry-map-svg{min-width:680px;min-height:420px}.chemistry-map-side{grid-template-columns:minmax(0,1fr)}.chem-side-base{grid-template-columns:repeat(3,auto 1fr)}.chemistry-map-legend{font-size:9.5px}.chem-map-name{font-size:12.5px}.chem-map-games{font-size:10px}}
 .ggfc-mobile .chemistry-map-layout,.ggfc-mobile .chemistry-map-side{grid-template-columns:minmax(0,1fr)}.ggfc-mobile .chemistry-map-canvas{overflow-x:auto}.ggfc-mobile .chemistry-map-svg{min-width:680px}
+
+
+/* V3.21.5 — Chemistry Hub + depth selector + 3-step branch styling */
+.chemistry-map-heading-right{display:flex;flex-direction:column;align-items:flex-end;gap:9px;min-width:0}
+.chemistry-map-tools{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid #e2dbe5;border-radius:10px;background:#fff}.chemistry-map-tools label{font-size:10.5px;font-weight:900;color:#5b4960;white-space:nowrap}.chemistry-map-tools select{min-width:92px;height:32px;border:1px solid #d8cfdb;border-radius:8px;background:#faf8fb;color:#37003c;font-size:11px;font-weight:900;padding:0 26px 0 9px;cursor:pointer}
+.chemistry-map-legend .hub-chip{width:auto;height:18px;padding:0 6px;border-radius:999px;background:#37003c;color:#00ff85;font-size:8px;font-style:normal;font-weight:950;letter-spacing:.06em;display:inline-grid;place-items:center}
+.chem-map-orbit-three{stroke-width:.9;stroke:#d3c8d7;stroke-dasharray:3 10;opacity:.28}
+.chem-map-best-link.chem-depth-3{stroke:#6d4a78;stroke-dasharray:3 7}
+.chem-map-best-node.chem-level-3 .chem-map-best-node-ring{stroke:#6d4a78;stroke-dasharray:3 2}.chem-map-best-node.chem-level-3 .chem-map-best-node-fill{fill:#f4eef6}.chem-map-best-node.chem-level-3 .chem-map-best-badge-bg{fill:#6d4a78}
+.chem-map-hub-badge{pointer-events:none}.chem-map-hub-badge rect{fill:#37003c;stroke:#00ff85;stroke-width:1.5;filter:drop-shadow(0 2px 3px rgba(55,0,60,.16))}.chem-map-hub-badge text{fill:#00ff85;font-size:7.8px;font-weight:950;text-anchor:middle;letter-spacing:.045em}
+.chem-map-node.is-chemistry-hub .chem-map-node-ring,.chem-map-best-node.is-chemistry-hub .chem-map-best-node-ring{stroke:#00ff85;stroke-width:5}.chem-map-center.is-chemistry-hub .chem-map-center-ring{stroke:#00ff85;stroke-width:9;filter:drop-shadow(0 0 9px rgba(0,255,133,.22))}
+.chem-hub-section{border-color:#cfeede;background:linear-gradient(145deg,#ffffff,#f0fff7)}.chem-hub-card{width:100%;display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:9px;border:1px solid #c9ead9;border-radius:10px;background:#fff;padding:10px;text-align:left;cursor:pointer}.chem-hub-card:hover,.chem-hub-card:focus-visible{background:#f3fff8;border-color:#00b968}.chem-hub-icon{height:30px;border-radius:999px;background:#37003c;color:#00ff85;font-size:9px;font-weight:950;letter-spacing:.08em;display:grid;place-items:center}.chem-hub-card>strong{min-width:38px;height:30px;padding:0 7px;border-radius:999px;background:#00b968;color:#fff;font-size:12px;display:grid;place-items:center}
+.chemistry-map-svg.depth-3{max-height:700px}
+@media(max-width:1050px){.chemistry-map-heading-right{align-items:flex-start;width:100%}.chemistry-map-tools{align-self:flex-start}.chemistry-map-svg.depth-3{min-width:960px}}
+@media(max-width:700px){.chemistry-map-heading-right{align-items:flex-start}.chemistry-map-tools{width:100%;justify-content:space-between}.chemistry-map-tools select{min-width:120px}.chemistry-map-svg.depth-3{min-width:980px}}
