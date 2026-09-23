@@ -3,8 +3,8 @@
 <head><script>window.GGFC_MOBILE_ENTRY=true;</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>GGFC 모바일 기록센터 · 3.21.5</title>
-<link rel="stylesheet" href="assets/ggfc.css?v=3.21.5">
+<title>GGFC 모바일 기록센터 · 3.21.6</title>
+<link rel="stylesheet" href="assets/ggfc.css?v=3.21.6">
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <meta name="theme-color" content="#061f44"><script>if(new URLSearchParams(location.search).get("view")!=="desktop" && (window.GGFC_MOBILE_ENTRY || matchMedia("(max-width: 820px)").matches))document.documentElement.classList.add("ggfc-mobile");</script></head>
 <body>
@@ -42,7 +42,7 @@
     <button data-v="rep" id="repTab" class="admin-menu-tab" style="display:none"><span class="sidebar-icon">A2</span><span>대표승점 설정</span></button>
     <button data-v="data" id="dataTab" class="admin-menu-tab" style="display:none"><span class="sidebar-icon">A3</span><span>데이터 관리</span></button>
   </nav>
-  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.21.5 · 기록센터</span></footer>
+  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.21.6 · 기록센터</span></footer>
 </aside>
 <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" tabindex="-1" aria-label="메뉴 닫기" hidden></button>
 
@@ -391,15 +391,11 @@
     </div>
     <div class="card">
       <div class="dashboard-block-title"><div class="sec-t">선수 누적 기록</div><div class="dashboard-block-note" id="playerPeriodLabel"></div></div>
-      <div class="member-search player-record-search"><label for="memberPlayerSearch">선수 이름 검색</label><div class="player-record-search-input"><input id="memberPlayerSearch" type="search" placeholder="이름 일부를 입력하세요" autocomplete="off" aria-controls="playerTable memberPlayerCards rosterTable specialTable" aria-describedby="playerRecordSearchStatus"><button id="playerRecordSearchClear" class="btn" type="button" disabled>검색 초기화</button></div><p id="playerRecordSearchStatus" role="status" aria-live="polite"></p></div><div class="mobile-only member-cards" id="memberPlayerCards"></div><div class="tablewrap" id="playerTable"></div>
+      <div class="member-search player-record-search"><label for="memberPlayerSearch">선수 이름 검색</label><div class="player-record-search-input"><input id="memberPlayerSearch" type="search" placeholder="이름 일부를 입력하세요" autocomplete="off" aria-controls="playerTable memberPlayerCards specialTable" aria-describedby="playerRecordSearchStatus"><button id="playerRecordSearchClear" class="btn" type="button" disabled>검색 초기화</button></div><p id="playerRecordSearchStatus" role="status" aria-live="polite"></p></div><div class="mobile-only member-cards" id="memberPlayerCards"></div><div class="tablewrap" id="playerTable"></div>
     </div>
     <div class="card" style="margin-top:16px">
       <div class="dashboard-block-title"><div><div class="sec-t">ACHIEVEMENT</div><div class="dashboard-block-note">조회 종료일 기준 커리어 업적 · 선수카드에서 전체 배지를 확인할 수 있습니다.</div></div></div>
       <div id="playerAchievementBoard"></div>
-    </div>
-    <div class="card" style="margin-top:16px">
-      <div class="sec-t">선수명단 — 조회 구간 현황</div>
-      <div class="tablewrap" id="rosterTable"></div>
     </div>
     <div class="card" style="margin-top:16px">
       <div class="sec-t">스페셜 기록 (우승 · 연혁)</div>
@@ -670,6 +666,15 @@
       <div class="sec-t">시트 구성</div>
       <div class="tablewrap" id="sheetSpec"></div>
     </div>
+    <div class="card" style="margin-bottom:16px" id="analysisStartSettingsCard"><div class="sec-t">선수분석 첫 선수 설정</div><p class="note">회원이 선수분석을 처음 열 때 표시할 선수입니다. 선택한 연도·대회에 기록이 없으면 이름순 첫 선수로 표시합니다. 이후 회원이 직접 선택한 선수는 유지됩니다.</p><div class="row"><label for="analysisStartPlayer">기본 선수</label><select id="analysisStartPlayer"></select><button type="button" id="analysisStartSave" class="btn primary">첫 선수 저장</button><button type="button" class="btn" id="analysisStartCancel">변경 취소</button></div><p class="note" id="analysisStartStatus" role="status"></p></div>
+    <div class="card" style="margin-bottom:16px" id="careerFrameSettingsCard">
+      <div class="sec-t">선수카드 등급 조건</div>
+      <p class="note">Career Achievement 통산 기준입니다. 각 등급에서 지정한 개수만큼 조건을 달성하면 승급합니다. NORMAL은 기본 등급이며 OVR·능력치는 변경되지 않습니다.</p>
+      <p class="note">항목별 기준은 SILVER &lt; GOLD &lt; LEGEND 순으로 입력하세요. 상위 등급의 필요 조건 수는 하위 등급 이상이어야 합니다. 변경하면 모든 선수의 현재·과거 카드 등급이 새 기준으로 재계산됩니다.</p>
+      <div id="careerFrameSettingsFields"></div>
+      <div class="row"><button type="button" class="btn primary" id="careerFrameSettingsSave">기준 저장</button><button type="button" class="btn" id="careerFrameSettingsDefault">기본값 불러오기</button><button type="button" class="btn" id="careerFrameSettingsCancel">변경 취소</button></div>
+      <p id="careerFrameSettingsStatus" class="note" role="status" aria-live="polite"></p>
+    </div>
     <div class="card" style="margin-bottom:16px" id="displayNameManagerCard">
       <div class="dashboard-block-title">
         <div>
@@ -742,6 +747,7 @@
     <button type="button" class="player-card-close" id="playerCardClose" aria-label="선수 카드 닫기">×</button>
     <div class="player-card-stage" id="playerCardStage">
       <div class="player-card-upper">
+      <div class="player-card-visuals">
       <div class="ggfc-player-card-container" id="playerCardContainer">
         <div class="ggfc-player-card">
           <div class="ggfc-player-card-content">
@@ -806,6 +812,7 @@
         <div class="ggfc-player-hex-caption">PLAYER ABILITY</div>
       </div>
 
+      </div>
       <div class="player-card-data-panel" id="playerCardDataPanel">
         <div class="player-card-data-head">
           <div class="player-card-data-title">선수 기록</div>
@@ -906,8 +913,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<script src="assets/ggfc-sync.js?v=3.19.1"></script>
-<script src="assets/ggfc-mobile.js?v=3.19.1"></script>
+<script src="assets/ggfc-sync.js?v=3.21.6"></script>
+<script src="assets/ggfc-mobile.js?v=3.21.6"></script>
 <script src="assets/ggfc-details.js?v=3.19.1"></script>
-<script src="assets/ggfc-app.js?v=3.21.5"></script>
+<script src="assets/ggfc-app.js?v=3.21.6"></script>
 </body></html>
