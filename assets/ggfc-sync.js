@@ -4,6 +4,8 @@ const GGFC = (() => {
   let loginBusy=false;
   const state={ready:false,serverSeen:false,connected:false,authorized:false,user:null,revision:0,dirty:false,saving:false,busy:0,conflict:false,serial:0,latest:null,hasLatest:false,error:'',status:'공유 기록을 확인하고 있습니다…',savedAt:null,authGeneration:0};
   let database=null,auth=null,dataRef=null,readTimer=null,saveTimer=null,editLease=false;
+  const hasSettingsDraft=()=>!!((typeof careerFrameSettingsDirty!=='undefined'&&careerFrameSettingsDirty)||(typeof analysisStartSettingsDirty!=='undefined'&&analysisStartSettingsDirty));
+  function discardSettingsDraft(){if(typeof careerFrameSettingsDirty!=='undefined')careerFrameSettingsDirty=false;if(typeof analysisStartSettingsDirty!=='undefined')analysisStartSettingsDirty=false;}
   const fields=['matches','attendance','goals','saves','fouls','moms','specials','roster','soccerbee'];
   const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
   const copy=v=>JSON.parse(JSON.stringify(v));
@@ -78,7 +80,7 @@ const GGFC = (() => {
     line.textContent=message;
     const show=(id,v)=>{const el=document.querySelector(id);if(el)el.hidden=!v;};
     show('#cloudRetry',state.dirty && !state.saving && !state.conflict && state.authorized);
-    show('#cloudDownload',state.dirty||editLease);show('#cloudReload',state.conflict||!!state.error);
+    show('#cloudDownload',state.dirty||editLease||hasSettingsDraft());show('#cloudReload',state.conflict||!!state.error);
     const login=document.querySelector('#memberLogin');if(login)login.textContent=state.user?'로그아웃':'관리자 로그인';
     document.querySelectorAll('.member-admin').forEach(el=>el.hidden=!state.authorized);
   }
@@ -106,7 +108,7 @@ const GGFC = (() => {
   function receive(raw){
     clearTimeout(readTimer);state.latest=raw;state.hasLatest=true;state.serverSeen=true;
     const rev=Number(raw?.meta?.revision)||0;
-    if(state.dirty||state.saving||state.busy||editLease){
+    if(state.dirty||state.saving||state.busy||editLease||hasSettingsDraft()){
       if(!state.saving && rev!==state.revision)state.conflict=true;
       refreshUI();return;
     }
@@ -159,11 +161,11 @@ const GGFC = (() => {
   }
   async function reload(){
     if(state.saving){toast('공유 저장이 끝난 뒤 다시 시도해 주세요.');return;}
-    if((state.dirty||editLease)&&!confirm('미저장 변경을 버리고 서버 기록을 다시 받을까요? 필요한 내용은 먼저 내려받아 주세요.'))return;
+    if((state.dirty||editLease||hasSettingsDraft())&&!confirm('미저장 변경을 버리고 서버 기록을 다시 받을까요? 필요한 내용은 먼저 내려받아 주세요.'))return;
     if(!dataRef){location.reload();return;}
     try{
       const snap=await dataRef.get();
-      state.dirty=false;state.conflict=false;state.error='';editLease=false;repAdminDrafts={};
+      state.dirty=false;state.conflict=false;state.error='';editLease=false;discardSettingsDraft();repAdminDrafts={};
       state.latest=snap.val();state.hasLatest=true;state.serverSeen=true;applySnapshot(snap.val(),true);
     }catch(e){state.error='서버 기록을 받지 못했습니다. 연결과 설정을 확인해 주세요.';refreshUI();}
   }
@@ -223,10 +225,10 @@ const GGFC = (() => {
     if(loginBusy)return;
     if(state.user){
       if(state.saving){toast('공유 저장 완료 후 로그아웃해 주세요.');return;}
-      if((state.dirty||editLease)&&!confirm('공유하지 않은 변경이 있습니다. 로그아웃하면 서버 기록으로 돌아갑니다. 계속할까요?'))return;
+      if((state.dirty||editLease||hasSettingsDraft())&&!confirm('공유하지 않은 변경이 있습니다. 로그아웃하면 서버 기록으로 돌아갑니다. 계속할까요?'))return;
       try{
         await auth.signOut();
-        state.user=null;state.authorized=false;state.dirty=false;state.conflict=false;editLease=false;setAdmin(false);
+        state.user=null;state.authorized=false;state.dirty=false;state.conflict=false;editLease=false;discardSettingsDraft();setAdmin(false);
         if(state.hasLatest)applySnapshot(state.latest,true);
         clearPassword();toast('로그아웃했습니다. 회원 열람 모드입니다.');
       }catch(e){toast('로그아웃하지 못했습니다. 다시 시도해 주세요.');}
@@ -291,7 +293,7 @@ const GGFC = (() => {
         }
       };
     }
-    window.addEventListener('beforeunload',e=>{if(state.dirty||state.saving||editLease){e.preventDefault();e.returnValue='';}});
+    window.addEventListener('beforeunload',e=>{if(state.dirty||state.saving||editLease||hasSettingsDraft()){e.preventDefault();e.returnValue='';}});
   }
   function start(){
     installGuards();
@@ -309,6 +311,10 @@ const GGFC = (() => {
       if(editLease && document.querySelector('#v-data')?.classList.contains('on')){
         draft.settings.display={brandTitle:document.querySelector('#brandTitleInput').value.trim(),leagueA:document.querySelector('#leagueANameInput').value.trim(),leagueB:document.querySelector('#leagueBNameInput').value.trim()};
       }
+      if(typeof careerFrameSettingsDirty!=='undefined'&&careerFrameSettingsDirty){
+        const form=readCareerFrameSettingsForm();draft.settings.careerFrameThresholds=form.thresholds;draft.settings.careerFrameRequiredCounts=form.counts;
+      }
+      if(typeof analysisStartSettingsDirty!=='undefined'&&analysisStartSettingsDirty)draft.settings.analysisStartPlayer=document.getElementById('analysisStartPlayer').value;
       download('GGFC_미저장기록.json',JSON.stringify(draft,null,2),'application/json');
     };
     const config=window.GGFC_CONFIG||{};
