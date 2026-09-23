@@ -4386,7 +4386,7 @@ function pairStats(a,b,list){
   return {tog,vs};
 }
 
-/* ---------- V3.21.1 CHEMISTRY MAP NETWORK ---------- */
+/* ---------- V3.21.2 CHEMISTRY MAP NETWORK ---------- */
 function chemistryNemesis(target,list){
   const names=chemPlayers().filter(name=>name!==target);
   const rows=names.map(name=>{
@@ -4425,7 +4425,7 @@ function chemistryMapModel(target){
   return {analysis,partners:source,maxTogether,minScore,maxScore,peerLinks:chemistryMapPeerLinks(target,source),nemesis:chemistryNemesis(target,chemMatches())};
 }
 function chemistryMapSvg(target,model){
-  const W=780,H=500,cx=390,cy=250, nodes=model.partners;
+  const W=900,H=590,cx=450,cy=280, nodes=model.partners;
   if(!nodes.length)return '<div class="empty chemistry-map-empty">함께 뛴 선수 기록이 없어 CHEMISTRY MAP을 만들 수 없습니다.</div>';
   const total=nodes.length, maxP=model.maxTogether;
   const minScore=Number.isFinite(model.minScore)?model.minScore:0, maxScore=Number.isFinite(model.maxScore)?model.maxScore:100;
@@ -4437,7 +4437,8 @@ function chemistryMapSvg(target,model){
   const positions=nodes.map((row,i)=>{
     const angle=-Math.PI/2+(Math.PI*2*i/total)+(i%2?0.055:-0.055);
     const closeness=row.p/maxP;
-    const radius=105+(1-closeness)*65;
+    // V3.21.2: 기존 배치 반경을 정확히 30% 확대해 주변 선수 간 간격 확보
+    const radius=(105+(1-closeness)*65)*1.30;
     return {row,x:cx+Math.cos(angle)*radius*1.42,y:cy+Math.sin(angle)*radius*.76,i,r:relativeSize(row.score)};
   });
   const posByName=new Map(positions.map(p=>[p.row.name,p]));
@@ -4453,36 +4454,35 @@ function chemistryMapSvg(target,model){
     const opacity=(.28+Math.max(0,Math.min(100,row.score))/100*.58).toFixed(2);
     return '<line class="chem-map-link" x1="'+cx+'" y1="'+cy+'" x2="'+x.toFixed(1)+'" y2="'+y.toFixed(1)+'" style="stroke-width:'+width+';opacity:'+opacity+'"><title>'+esc(target)+' + '+esc(row.name)+' · '+row.p+'경기 · 커플점수 '+row.score+'</title></line>';
   }).join('');
-  const partnerNodes=positions.map(({row,x,y,i,r})=>{
-    const photo=playerPhoto(row.name),clip='chemClip'+i;
-    const initials=esc(String(row.name||'?').trim().slice(0,2));
-    const avatar=photo
-      ?'<defs><clipPath id="'+clip+'"><circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+r.toFixed(1)+'"/></clipPath></defs><image href="'+esc(photo)+'" x="'+(x-r).toFixed(1)+'" y="'+(y-r).toFixed(1)+'" width="'+(r*2).toFixed(1)+'" height="'+(r*2).toFixed(1)+'" preserveAspectRatio="xMidYMid slice" clip-path="url(#'+clip+')" class="chem-map-photo"/>'
-      :'<circle class="chem-map-avatar-fallback" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+r.toFixed(1)+'"/><text class="chem-map-initials" x="'+x.toFixed(1)+'" y="'+(y+5).toFixed(1)+'">'+initials+'</text>';
+  const partnerNodes=positions.map(({row,x,y,r})=>{
+    // 주변 12명은 사진을 전혀 요청하지 않고 이름만 렌더링해 네트워크 표시 속도를 개선합니다.
+    const name=String(row.name||'?').trim();
+    const fontSize=name.length>=5?10.2:name.length===4?11.4:12.8;
     return '<g class="chem-map-node" data-chem-focus="'+esc(row.name)+'" role="button" tabindex="0" aria-label="'+esc(row.name)+' 선수 중심으로 보기">'+
-      '<circle class="chem-map-node-ring" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(r+4).toFixed(1)+'"/>'+avatar+
+      '<circle class="chem-map-node-ring" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(r+4).toFixed(1)+'"/>'+
+      '<circle class="chem-map-name-avatar" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+r.toFixed(1)+'"/>'+
+      '<text class="chem-map-name-avatar-text" style="font-size:'+fontSize+'px" x="'+x.toFixed(1)+'" y="'+(y+4.5).toFixed(1)+'">'+esc(name)+'</text>'+
       '<rect class="chem-map-score-bg" x="'+(x-25).toFixed(1)+'" y="'+(y+r-2).toFixed(1)+'" width="50" height="21" rx="10.5"/>'+
       '<text class="chem-map-score" x="'+x.toFixed(1)+'" y="'+(y+r+12).toFixed(1)+'">'+row.score+' ♥</text>'+
-      '<text class="chem-map-name" x="'+x.toFixed(1)+'" y="'+(y+r+37).toFixed(1)+'">'+esc(row.name)+'</text>'+
-      '<text class="chem-map-games" x="'+x.toFixed(1)+'" y="'+(y+r+52).toFixed(1)+'">'+row.p+'경기</text></g>';
+      '<text class="chem-map-games" x="'+x.toFixed(1)+'" y="'+(y+r+34).toFixed(1)+'">'+row.p+'경기</text></g>';
   }).join('');
   const centerPhoto=playerPhoto(target),centerR=53,centerClip='chemCenterClip';
   const centerAvatar=centerPhoto
     ?'<defs><clipPath id="'+centerClip+'"><circle cx="'+cx+'" cy="'+cy+'" r="'+centerR+'"/></clipPath></defs><image href="'+esc(centerPhoto)+'" x="'+(cx-centerR)+'" y="'+(cy-centerR)+'" width="'+(centerR*2)+'" height="'+(centerR*2)+'" preserveAspectRatio="xMidYMid slice" clip-path="url(#'+centerClip+')" class="chem-map-photo"/>'
     :'<circle class="chem-map-center-fallback" cx="'+cx+'" cy="'+cy+'" r="'+centerR+'"/><text class="chem-map-center-initials" x="'+cx+'" y="'+(cy+7)+'">'+esc(String(target||'?').trim().slice(0,2))+'</text>';
   return '<svg class="chemistry-map-svg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(target)+' 선수 Chemistry Map">'+
-    '<circle class="chem-map-orbit chem-map-orbit-one" cx="'+cx+'" cy="'+cy+'" r="125"/><circle class="chem-map-orbit chem-map-orbit-two" cx="'+cx+'" cy="'+cy+'" r="165"/>'+peerLines+lines+partnerNodes+
-    '<g class="chem-map-center"><circle class="chem-map-center-ring" cx="'+cx+'" cy="'+cy+'" r="60"/>'+centerAvatar+
+    '<circle class="chem-map-orbit chem-map-orbit-one" cx="'+cx+'" cy="'+cy+'" r="163"/><circle class="chem-map-orbit chem-map-orbit-two" cx="'+cx+'" cy="'+cy+'" r="215"/>'+peerLines+lines+partnerNodes+
+    '<g class="chem-map-center" tabindex="0" aria-label="기준선수 '+esc(target)+'"><circle class="chem-map-center-ring" cx="'+cx+'" cy="'+cy+'" r="60"/>'+centerAvatar+
     '<rect class="chem-map-center-label-bg" x="'+(cx-75)+'" y="'+(cy+65)+'" width="150" height="35" rx="17.5"/><text class="chem-map-center-name" x="'+cx+'" y="'+(cy+88)+'">'+esc(target)+'</text></g></svg>';
 }
 function chemistryMapSideHtml(target,model){
   const partners=(model.analysis.mates.filter(x=>x.p>=2).length?model.analysis.mates.filter(x=>x.p>=2):model.analysis.mates).slice(0,3);
   const medals=['🥇','🥈','🥉'];
   const partnerHtml=partners.length?partners.map((x,i)=>
-    '<button type="button" class="chem-side-partner" data-chem-other="'+esc(x.name)+'"><span class="chem-side-rank">'+medals[i]+'</span><span class="chem-side-person">'+playerFaceChip(x.name,false)+'<small>'+x.p+'경기 · '+x.w+'승 '+x.d+'무 '+x.l+'패 · 승률 '+x.rate+'%</small></span><strong>'+x.score+'</strong></button>'
+    '<button type="button" class="chem-side-partner" data-chem-other="'+esc(x.name)+'"><span class="chem-side-rank">'+medals[i]+'</span><span class="chem-side-person"><b class="chem-side-name">'+esc(x.name)+'</b><small>'+x.p+'경기 · '+x.w+'승 '+x.d+'무 '+x.l+'패 · 승률 '+x.rate+'%</small></span><strong>'+x.score+'</strong></button>'
   ).join(''):'<div class="chem-side-empty">2경기 이상 함께 뛴 파트너가 없습니다.</div>';
   const n=model.nemesis;
-  const nemesisHtml=n?'<button type="button" class="chem-nemesis" data-chem-other="'+esc(n.name)+'"><span class="chem-nemesis-icon">⚔</span><span class="chem-side-person">'+playerFaceChip(n.name,false)+'<small>맞대결 '+n.p+'경기 · '+esc(target)+' 기준 <b>'+n.w+'승 '+n.d+'무 '+n.l+'패</b><br>득점 '+n.gf+' : '+n.ga+'</small></span><span class="chem-nemesis-tag">NEMESIS</span></button>':'<div class="chem-side-empty">맞대결 기록이 없습니다.</div>';
+  const nemesisHtml=n?'<button type="button" class="chem-nemesis" data-chem-other="'+esc(n.name)+'"><span class="chem-nemesis-icon">⚔</span><span class="chem-side-person"><b class="chem-side-name">'+esc(n.name)+'</b><small>맞대결 '+n.p+'경기 · '+esc(target)+' 기준 <b>'+n.w+'승 '+n.d+'무 '+n.l+'패</b><br>득점 '+n.gf+' : '+n.ga+'</small></span><span class="chem-nemesis-tag">NEMESIS</span></button>':'<div class="chem-side-empty">맞대결 기록이 없습니다.</div>';
   return '<section class="chem-side-profile"><span class="chem-side-eyebrow">'+esc(String(target).toUpperCase())+' CHEMISTRY</span>'+playerFaceChip(target,true)+'<div class="chem-side-base"><b>'+model.analysis.base+'경기</b><span>출전</span><b>'+model.analysis.baseRate+'%</b><span>승률</span><b>'+model.analysis.baseGoals+'골</b><span>득점</span></div></section>'+
     '<section class="chem-side-section"><h3>BEST PARTNER</h3>'+partnerHtml+'</section><section class="chem-side-section nemesis-section"><h3>NEMESIS</h3>'+nemesisHtml+'<p>맞대결에서 선택 선수에게 가장 어려웠던 상대를 패배 우위 → 패배 수 → 맞대결 수 순으로 계산합니다.</p></section>';
 }
@@ -4507,7 +4507,7 @@ function renderChemistryMap(){
   if(!chemSel){map.innerHTML='<div class="empty chemistry-map-empty">분석할 선수를 선택해 주세요.</div>';side.innerHTML='';return;}
   const model=chemistryMapModel(chemSel);
   map.innerHTML=chemistryMapSvg(chemSel,model);side.innerHTML=chemistryMapSideHtml(chemSel,model);
-  if(note)note.textContent=(chemYear==='ALL'?'전체 연도':chemYear+'년')+' · 최대 12명 · 중심 거리는 동행경기, 원 크기는 선택 선수와의 커플점수 상대비교, 점선은 12명 사이 각 선수의 BEST PARTNER 연결입니다.';
+  if(note)note.textContent=(chemYear==='ALL'?'전체 연도':chemYear+'년')+' · 최대 12명 · 중심 거리는 동행경기, 원 크기는 선택 선수와의 커플점수 상대비교, 점선은 12명 사이 각 선수의 BEST PARTNER 연결입니다. 주변 선수는 이름으로 표시하며 마우스를 올리면 확대됩니다.';
   bindChemistryMapInteractions();
 }
 
