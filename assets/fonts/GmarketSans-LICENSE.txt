@@ -1,0 +1,4 @@
+Gmarket Sans — Gmarket
+Official distribution and permission: https://news.gmarket.com/fonts/
+Gmarket Sans는 누구나 제약 없이 자유롭게 수정하고 재배포 하실 수 있습니다.
+Fonts were converted from the official TTF distribution to WOFF for web embedding.

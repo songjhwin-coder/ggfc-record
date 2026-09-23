@@ -2640,3 +2640,6 @@ body:not(.admin-mode) [data-ability-admin],#abilityAdminControls[hidden]{display
 @media(max-width:720px){.v319-insight-grid,.v319-story-grid,.v319-player-achievement-grid{grid-template-columns:minmax(0,1fr)}.v319-achievement-grid{grid-template-columns:minmax(0,1fr)}.v319-story-item{padding:12px}.v319-story-icon{width:34px;height:34px;flex-basis:34px;font-size:18px}.v319-insight-card .dashboard-block-title{align-items:flex-start}.v319-date{font-size:10px}.v319-badge{font-size:9px}}
 .ggfc-mobile .v319-insight-grid,.ggfc-mobile .v319-story-grid,.ggfc-mobile .v319-player-achievement-grid,.ggfc-mobile .v319-achievement-grid{grid-template-columns:minmax(0,1fr)}
 .cafe-export-document .v319-story-item,.cafe-export-document .v319-achievement,.cafe-export-document .v319-player-achievement-card{break-inside:avoid}
+
+/* V3.19.1 — independent matchday stories */
+.insight-page-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap}.insight-page-head h2{color:#061f44;margin:0 0 8px}.insight-page-head p{color:#526882;margin:0;font-size:12px}.insight-date-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.insight-date-controls select{padding:9px;border:1px solid #dce4ef;border-radius:6px;background:white;color:#061f44}
