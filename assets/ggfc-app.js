@@ -5328,7 +5328,7 @@ function sampleData(){
 }
 
 
-/* ---------- current dashboard: one high-resolution PNG ---------- */
+/* ---------- V3.18.13: readable cafe PNGs with safe pagination ---------- */
 function exportSafeName(v){
   return String(v||'GGFC').trim().replace(/[\\/:*?"<>|]+/g,'_').replace(/\s+/g,'_').slice(0,80)||'GGFC';
 }
@@ -5422,36 +5422,116 @@ function cleanDashboardSnapshot(root){
   // Expand dates only in the snapshot; never change the user's live UI or query.
   root.querySelectorAll('details.record-day').forEach(node=>{node.open=true;});
 }
-function fitDashboardExportTables(root){
-  root.querySelectorAll('.tablewrap').forEach(wrap=>{
-    const table=wrap.querySelector('table');
-    if(!table) return;
-    const style=wrap.ownerDocument.defaultView.getComputedStyle(wrap);
-    const available=wrap.clientWidth-(parseFloat(style.paddingLeft)||0)-(parseFloat(style.paddingRight)||0);
-    const rect=table.getBoundingClientRect(),natural=Math.max(rect.width,table.scrollWidth);
-    wrap.scrollLeft=0;wrap.scrollTop=0;
-    if(available<=0||natural<=available+1) return;
-    // Keep the card/column width while fitting all table columns into the PNG.
-    table.style.setProperty('width',natural+'px','important');
-    table.style.setProperty('min-width',natural+'px','important');
-    table.style.setProperty('max-width',natural+'px','important');
-    const ratio=available/natural,height=Math.ceil(table.getBoundingClientRect().height*ratio);
-    const holder=wrap.ownerDocument.createElement('div');
-    holder.className='dashboard-export-table-fit';
-    holder.style.cssText='position:relative;width:100%;height:'+height+'px;overflow:hidden;';
-    table.parentNode.insertBefore(holder,table); holder.appendChild(table);
-    table.style.setProperty('position','absolute','important');
-    table.style.setProperty('top','0','important');table.style.setProperty('left','0','important');
-    table.style.setProperty('margin','0','important');
-    table.style.setProperty('transform','scale('+ratio+')','important');
-    table.style.setProperty('transform-origin','top left','important');
+// Export uses already-rendered cells, preserving the live query and every value.
+function prepareCafeDashboard(root,source){
+  const doc=root.ownerDocument;
+  root.classList.add('ggfc-cafe-export');
+  const head=root.querySelector('.dashboard-main-head');
+  if(head){
+    const brand=source.ownerDocument.getElementById('menuBrandTitle');
+    const logo=source.ownerDocument.getElementById('headerBrandLogo');
+    const banner=doc.createElement('div');banner.className='cafe-brand';
+    const mark=doc.createElement('div');mark.className='cafe-brand-logo';
+    if(logo) [...logo.childNodes].forEach(node=>mark.appendChild(node.cloneNode(true)));
+    const copy=doc.createElement('div');copy.className='cafe-brand-copy';
+    const title=doc.createElement('div');title.className='cafe-brand-name';title.textContent=brand?.textContent||'GGFC';
+    const sub=doc.createElement('h2');sub.textContent='종합기록';
+    copy.append(title,sub);banner.append(mark,copy);head.replaceChildren(banner);
+  }
+  // Keep the actual ranking period visible after removing administrator controls.
+  ['exportScorerSection','exportAttendanceRankSection','exportPlayerPointSection','exportTeamFoulSection'].forEach(id=>{
+    const original=source.querySelector('#'+id+' .admin-ranking-note');
+    const period=original?.textContent.match(/^.*?경기 기준/);
+    const section=root.querySelector('#'+id);
+    if(period&&section){
+      const note=doc.createElement('div');note.className='cafe-period';note.textContent=period[0];
+      section.querySelector('.export-section-head')?.after(note);
+    }
   });
+  root.querySelectorAll('table.team-league-standing').forEach(table=>{
+    const headers=[...table.querySelectorAll('thead th')].map(th=>th.textContent.trim());
+    const cards=doc.createElement('div');cards.className='cafe-team-records';
+    [...table.querySelectorAll('tbody tr')].forEach(row=>{
+      const cells=[...row.cells];
+      if(cells[0]?.classList.contains('league-standing-cell')){
+        const league=doc.createElement('div');league.className='cafe-standing-league';
+        league.innerHTML=cells.shift().innerHTML;
+        const emblem=league.querySelector('img');
+        if(emblem){const label=doc.createElement('span');label.textContent=emblem.alt.replace(/ 로고$/,'');league.appendChild(label);}
+        cards.appendChild(league);
+      }
+      const card=doc.createElement('div');card.className='cafe-team-record';
+      const team=doc.createElement('div');team.className='cafe-team-record-head';
+      team.innerHTML=(cells[0]?.innerHTML||'')+(cells[1]?.innerHTML||'');
+      const metrics=doc.createElement('dl');metrics.className='cafe-team-metrics';
+      cells.slice(2).forEach((cell,i)=>{
+        const metric=doc.createElement('div');
+        const label=doc.createElement('dt');label.textContent=headers[i+3]||'';
+        const value=doc.createElement('dd');value.innerHTML=cell.innerHTML;
+        metric.append(label,value);metrics.appendChild(metric);
+      });
+      card.append(team,metrics);cards.appendChild(card);
+    });
+    table.replaceWith(cards);
+  });
+  // A pair list retains each matchup without squeezing a many-column matrix.
+  root.querySelectorAll('table.headtohead-table').forEach(table=>{
+    const rows=[...table.querySelectorAll('tbody tr')];
+    const list=doc.createElement('table');list.className='cafe-headtohead';
+    const head=doc.createElement('thead');head.innerHTML='<tr><th>기준 팀</th><th>승 · 무 · 패</th><th>상대 팀</th></tr>';
+    const body=doc.createElement('tbody');
+    rows.forEach((row,i)=>{
+      rows.slice(i+1).forEach((opponent,j)=>{
+        const cell=row.cells[i+j+2];if(!cell)return;
+        const tr=doc.createElement('tr');
+        [row.cells[0],cell,opponent.cells[0]].forEach(original=>{
+          const td=doc.createElement('td');td.innerHTML=original.innerHTML;tr.appendChild(td);
+        });body.appendChild(tr);
+      });
+    });
+    list.append(head,body);table.replaceWith(list);
+    const note=doc.createElement('div');note.className='cafe-period';
+    note.textContent='왼쪽 기준 팀의 승 · 무 · 패입니다. 각 대진은 한 번씩 표시합니다.';
+    list.before(note);
+  });
+  cleanDashboardSnapshot(root);
+}
+function dashboardExportPages(snapshot){
+  const root=snapshot.root,origin=root.getBoundingClientRect().top,maxHeight=2800;
+  const bounds=node=>{const r=node.getBoundingClientRect();return {top:Math.floor(r.top-origin),bottom:Math.ceil(r.bottom-origin)};};
+  const atomic=[...root.querySelectorAll('.league-zone,.record-summary-grid,.ground-match,.cafe-team-record,.record-attendance-item,table tr,.rep-segment-card')]
+    .map(bounds).filter(r=>r.bottom>r.top);
+  // Keep the usual ranking tables on one page so their column labels stay visible.
+  root.querySelectorAll('.ranking-card,.headtohead-card').forEach(node=>{
+    const r=bounds(node);if(r.bottom-r.top<=maxHeight)atomic.push(r);
+  });
+  // Keep section headings attached to their first record.
+  root.querySelectorAll('.card,.record-export-section,.record-day,.ground-panel,.record-attendance-league,.cafe-team-records').forEach(section=>{
+    const first=section.querySelector('.league-zone,.record-summary-grid,.ground-match,.cafe-team-record,.record-attendance-item,tbody tr');
+    if(first)atomic.push({top:bounds(section).top,bottom:bounds(first).bottom});
+  });
+  const safe=y=>!atomic.some(r=>r.top<y&&r.bottom>y);
+  const preferred=[...root.querySelectorAll('.card,.record-export-section,.record-day,.league-zone')].map(node=>bounds(node).bottom).filter(safe);
+  const candidates=[...new Set([...atomic.map(r=>r.bottom),...preferred,snapshot.height])].filter(y=>y>0&&safe(y)).sort((a,b)=>a-b);
+  const pages=[];let top=0;
+  const headings=[...root.querySelectorAll('.sec-t,.record-day-date')].map(node=>({top:bounds(node).top,text:node.textContent.trim()}));
+  while(top<snapshot.height){
+    let end=snapshot.height;
+    if(end-top>maxHeight){
+      const ideal=preferred.filter(y=>y>=top+maxHeight*.65&&y<=top+maxHeight);
+      const available=candidates.filter(y=>y>top&&y<=top+maxHeight);
+      end=ideal.length?Math.max(...ideal):available.length?available[available.length-1]:candidates.find(y=>y>top);
+    }
+    if(!end||end<=top)throw new Error('이미지 분할 위치를 확인할 수 없습니다.');
+    const context=headings.filter(h=>h.top<=top+40).slice(-1)[0]?.text||'종합기록';
+    pages.push({top,height:end-top,context});top=end;
+  }
+  return pages;
 }
 async function createDashboardExportSnapshot(source){
-  const width=Math.ceil(source.getBoundingClientRect().width);
-  if(!width) throw new Error('종합기록 화면을 연 뒤 다시 저장해 주세요.');
-  const viewportWidth=window.innerWidth||document.documentElement.clientWidth;
-  const viewportHeight=window.innerHeight||document.documentElement.clientHeight;
+  const width=840;
+  if(!source.getBoundingClientRect().width) throw new Error('종합기록 화면을 연 뒤 다시 저장해 주세요.');
+  const viewportWidth=width,viewportHeight=1000;
   const frame=document.createElement('iframe');
   frame.title='종합기록 이미지 준비';frame.tabIndex=-1;frame.setAttribute('aria-hidden','true');
   frame.style.cssText='position:fixed;left:-100000px;top:0;border:0;pointer-events:none;width:'+viewportWidth+'px;height:'+viewportHeight+'px;';
@@ -5461,9 +5541,11 @@ async function createDashboardExportSnapshot(source){
     if(!doc||!doc.body) throw new Error('이미지 준비 화면을 만들지 못했습니다.');
     doc.documentElement.lang=document.documentElement.lang||'ko';
     doc.documentElement.className=document.documentElement.className;
+    doc.documentElement.classList.remove('ggfc-mobile');
     doc.documentElement.style.cssText=document.documentElement.style.cssText;
     doc.body.className=document.body.className;
     doc.body.classList.remove('sidebar-open');
+    doc.body.classList.add('cafe-export-document');
     const base=doc.createElement('base');base.href=document.baseURI;doc.head.appendChild(base);
     const stylePromises=[];
     document.head.querySelectorAll('link[rel="stylesheet"],style').forEach(original=>{
@@ -5476,6 +5558,12 @@ async function createDashboardExportSnapshot(source){
       }
       doc.head.appendChild(copy);
     });
+    const cafeStyle=doc.createElement('link');cafeStyle.rel='stylesheet';
+    cafeStyle.href=new URL('assets/ggfc-export.css?v=3.18.13',document.baseURI).href;
+    stylePromises.push(settleExportResource(cafeStyle,8000,()=>!!cafeStyle.sheet).then(()=>{
+      if(!cafeStyle.sheet)throw new Error('이미지 출력 스타일을 불러오지 못했습니다. 다시 시도해 주세요.');
+    }));
+    doc.head.appendChild(cafeStyle);
     const style=doc.createElement('style');
     style.textContent='html,body{margin:0!important;padding:0!important;min-height:0!important;overflow:visible!important}body::before{display:none!important}*{animation:none!important;transition:none!important;caret-color:transparent!important}#v-dash{display:block!important;width:100%!important;max-width:none!important;height:auto!important;max-height:none!important;overflow:visible!important;padding-bottom:16px!important}#v-dash .tablewrap{overflow:hidden!important;max-height:none!important}#v-dash th,#v-dash td{position:static!important}';
     doc.head.appendChild(style);
@@ -5485,7 +5573,7 @@ async function createDashboardExportSnapshot(source){
     main.style.setProperty('width',width+'px','important');
     main.style.setProperty('max-width','none','important');main.style.setProperty('min-width','0','important');
     const root=source.cloneNode(true);
-    cleanDashboardSnapshot(root);
+    prepareCafeDashboard(root,source);
     main.appendChild(root);doc.body.appendChild(main);
     await Promise.all(stylePromises);
     root.getBoundingClientRect(); // Trigger font loading before measuring the tables.
@@ -5496,39 +5584,73 @@ async function createDashboardExportSnapshot(source){
       finally{clearTimeout(timer);}
     }
     // DOM measurements below force layout, including opened details and loaded logos.
-    fitDashboardExportTables(root);
+    if(root.scrollWidth>width+1)throw new Error('저장할 내용이 이미지 폭을 초과합니다. 팀명이나 기록 내용을 확인해 주세요.');
     const rect=root.getBoundingClientRect();
     return {root,frame,viewportWidth,viewportHeight,width:Math.ceil(Math.max(rect.width,root.scrollWidth)),height:Math.ceil(Math.max(rect.height,root.scrollHeight)),unavailableImages,cleanup:()=>frame.remove()};
   }catch(err){frame.remove();throw err;}
 }
 function dashboardExportScale(width,height,mobile){
   if(!Number.isFinite(width)||!Number.isFinite(height)||width<=0||height<=0) throw new Error('저장할 기록의 크기를 확인할 수 없습니다.');
-  // PNG stays lossless. Limit allocations for long seasons and phone memory.
   const maxAxis=16384,pixelBudget=mobile?12000000:28000000;
-  return Math.min(3,(maxAxis-1)/width,(maxAxis-1)/height,Math.sqrt(pixelBudget/(width*height)));
+  const scale=Math.min(2,(maxAxis-1)/width,(maxAxis-1)/height,Math.sqrt(pixelBudget/(width*height)));
+  if(scale<1)throw new Error('한 항목의 내용이 너무 길어 저장할 수 없습니다. 조회기간을 줄여 주세요.');
+  return scale;
 }
-async function renderDashboardPng(renderer,snapshot,mobile){
-  const scale=dashboardExportScale(snapshot.width,snapshot.height,mobile);
+async function renderDashboardPng(renderer,snapshot,mobile,page,index,total){
+  page=page||{top:0,height:snapshot.height,context:'종합기록'};
+  const header=index>0?64:0,footer=44,height=page.height+header+footer;
+  const scale=dashboardExportScale(snapshot.width,height,mobile);
   let lastError;
-  for(const factor of [1,.7,.45]){
+  for(const captureScale of [...new Set([scale,Math.max(1,scale*.75),1])]){
     let canvas;
     try{
-      const captureScale=scale*factor;
       canvas=await renderer(snapshot.root,{
         scale:captureScale,backgroundColor:'#f1f4f8',useCORS:true,allowTaint:false,logging:false,
         imageTimeout:7000,removeContainer:true,scrollX:0,scrollY:0,
-        windowWidth:snapshot.viewportWidth,windowHeight:Math.max(snapshot.viewportHeight,snapshot.height),
-        width:snapshot.width,height:snapshot.height
+        windowWidth:snapshot.viewportWidth,windowHeight:snapshot.viewportHeight,
+        y:page.top-header,width:snapshot.width,height
       });
-      const expectedWidth=Math.floor(snapshot.width*captureScale),expectedHeight=Math.floor(snapshot.height*captureScale);
+      const expectedWidth=Math.floor(snapshot.width*captureScale),expectedHeight=Math.floor(height*captureScale);
       if(!canvas||!canvas.width||!canvas.height||Math.abs(canvas.width-expectedWidth)>1||Math.abs(canvas.height-expectedHeight)>1) throw new Error('이미지 크기가 맞지 않습니다.');
+      const ctx=canvas.getContext('2d');
+      ctx.save();ctx.setTransform(captureScale,0,0,captureScale,0,0);ctx.fillStyle='#f1f4f8';
+      const brand=displaySettings().brandTitle||'GGFC';
+      if(header){
+        ctx.fillRect(0,0,snapshot.width,header);ctx.fillStyle='#061f44';
+        ctx.font='700 24px '+getComputedStyle(snapshot.root).fontFamily;ctx.textBaseline='middle';
+        ctx.fillText(brand+' · 종합기록 (계속)',24,32,snapshot.width-48);
+      }
+      ctx.fillStyle='#f1f4f8';ctx.fillRect(0,height-footer,snapshot.width,footer);
+      ctx.fillStyle='#526882';ctx.font='500 20px '+getComputedStyle(snapshot.root).fontFamily;
+      ctx.textBaseline='middle';ctx.fillText('종합기록',24,height-footer/2);
+      ctx.textAlign='right';ctx.fillText(String((index||0)+1).padStart(2,'0')+' / '+String(total||1).padStart(2,'0'),snapshot.width-24,height-footer/2);ctx.restore();
       const blob=await new Promise((resolve,reject)=>canvas.toBlob(b=>b&&b.size?resolve(b):reject(new Error('PNG 변환에 실패했습니다.')),'image/png'));
       return {blob,width:canvas.width,height:canvas.height};
     }catch(err){lastError=err;}
     finally{if(canvas){canvas.width=0;canvas.height=0;}}
   }
   console.warn('Dashboard PNG rendering failed',lastError);
-  throw new Error('전체 이미지를 만들지 못했습니다. 조회기간을 줄이거나 PC에서 다시 저장해 주세요.');
+  throw new Error('이미지를 만들지 못했습니다. 조회기간을 줄이거나 PC에서 다시 저장해 주세요.');
+}
+// PNG is already compressed: store entries in a UTF-8 ZIP without another CDN.
+async function dashboardPngZip(files){
+  const encoder=new TextEncoder(),local=[],central=[];let offset=0,centralSize=0;
+  if(files.length>65535)throw new Error('저장할 이미지 수가 너무 많습니다. 조회기간을 줄여 주세요.');
+  for(const file of files){
+    const data=new Uint8Array(await file.blob.arrayBuffer()),name=encoder.encode(file.name);
+    const crc=crc32(data);
+    const header=new Uint8Array(30+name.length),h=new DataView(header.buffer);
+    h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x800,true);h.setUint16(12,33,true);
+    h.setUint32(14,crc,true);h.setUint32(18,data.length,true);h.setUint32(22,data.length,true);h.setUint16(26,name.length,true);header.set(name,30);
+    const entry=new Uint8Array(46+name.length),c=new DataView(entry.buffer);
+    c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x800,true);c.setUint16(14,33,true);
+    c.setUint32(16,crc,true);c.setUint32(20,data.length,true);c.setUint32(24,data.length,true);c.setUint16(28,name.length,true);c.setUint32(42,offset,true);entry.set(name,46);
+    local.push(header,file.blob);central.push(entry);offset+=header.length+data.length;centralSize+=entry.length;
+    if(offset+centralSize>0xffffffff)throw new Error('저장 파일이 너무 큽니다. 조회기간을 줄여 주세요.');
+  }
+  const end=new Uint8Array(22),e=new DataView(end.buffer);
+  e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,centralSize,true);e.setUint32(16,offset,true);
+  return new Blob([...local,...central,end],{type:'application/zip'});
 }
 let dashboardExportBusy=false;
 async function exportDashboardAsPng(button){
@@ -5546,10 +5668,18 @@ async function exportDashboardAsPng(button){
     // Clone the visible result, without changing/recomputing any query or record.
     snapshot=await createDashboardExportSnapshot(source);
     const renderer=await loadDashboardRenderer();
-    button.textContent='전체 이미지 저장 중…';
-    const result=await renderDashboardPng(renderer,snapshot,mobile);
-    downloadBlob(brand+'_종합기록_'+stamp+'_'+result.width+'x'+result.height+'.png',result.blob);
-    toast('종합기록 전체 이미지를 저장했습니다. ('+result.width+' × '+result.height+')'+(snapshot.unavailableImages?' · 불러오지 못한 이미지는 대체 표시했습니다.':''));
+    const pages=dashboardExportPages(snapshot),files=[];
+    for(let i=0;i<pages.length;i++){
+      button.textContent='이미지 만드는 중… '+(i+1)+' / '+pages.length;
+      const result=await renderDashboardPng(renderer,snapshot,mobile,pages[i],i,pages.length);
+      files.push({name:String(i+1).padStart(2,'0')+'_'+brand+'_종합기록_'+stamp+'.png',blob:result.blob});
+    }
+    if(files.length===1)downloadBlob(files[0].name,files[0].blob);
+    else{
+      button.textContent='이미지 ZIP 저장 중…';
+      downloadBlob(brand+'_종합기록_'+stamp+'_'+files.length+'장.zip',await dashboardPngZip(files));
+    }
+    toast((files.length===1?'종합기록 PNG를 저장했습니다.':'종합기록 PNG '+files.length+'장을 ZIP으로 저장했습니다. 번호 순서대로 올려 주세요.')+(snapshot.unavailableImages?' · 불러오지 못한 이미지는 대체 표시했습니다.':''));
   }catch(err){console.error(err);toast('이미지 저장 실패: '+err.message);}
   finally{
     if(snapshot) snapshot.cleanup();
