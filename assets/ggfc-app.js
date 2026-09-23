@@ -4386,7 +4386,7 @@ function pairStats(a,b,list){
   return {tog,vs};
 }
 
-/* ---------- V3.21.2 CHEMISTRY MAP NETWORK ---------- */
+/* ---------- V3.21.3 CHEMISTRY MAP FORCE NETWORK ---------- */
 function chemistryNemesis(target,list){
   const names=chemPlayers().filter(name=>name!==target);
   const rows=names.map(name=>{
@@ -4424,38 +4424,94 @@ function chemistryMapModel(target){
   const minScore=scores.length?Math.min(...scores):0, maxScore=scores.length?Math.max(...scores):100;
   return {analysis,partners:source,maxTogether,minScore,maxScore,peerLinks:chemistryMapPeerLinks(target,source),nemesis:chemistryNemesis(target,chemMatches())};
 }
+function chemistryMapForceLayout(nodes,cx,cy,W,H,maxP,relativeSize){
+  const total=nodes.length;
+  const points=nodes.map((row,i)=>{
+    const angle=-Math.PI/2+(Math.PI*2*i/total)+(i%2?0.055:-0.055);
+    const closeness=row.p/maxP;
+    // V3.21.2에서 확대한 130% 반경을 초기 앵커로 유지합니다.
+    const radius=(105+(1-closeness)*65)*1.30;
+    const tx=cx+Math.cos(angle)*radius*1.42, ty=cy+Math.sin(angle)*radius*.76;
+    return {row,i,r:relativeSize(row.score),x:tx,y:ty,tx,ty};
+  });
+  // Obsidian Graph처럼 노드끼리는 밀어내고, 원래 앵커/동행거리 쪽으로는 스프링 힘을 줍니다.
+  // 최대 12개 노드라 동기식 경량 계산으로도 충분하며 외부 라이브러리를 로드하지 않습니다.
+  const centerSafe=112;
+  for(let step=0;step<180;step++){
+    const cool=1-step/180;
+    points.forEach(p=>{
+      const spring=.028+.010*(1-cool);
+      p.x+=(p.tx-p.x)*spring;
+      p.y+=(p.ty-p.y)*spring;
+      const dx=p.x-cx,dy=p.y-cy,dist=Math.hypot(dx,dy)||1;
+      const minCenter=centerSafe+p.r;
+      if(dist<minCenter){const push=(minCenter-dist)*.42;p.x+=dx/dist*push;p.y+=dy/dist*push;}
+    });
+    for(let i=0;i<points.length;i++)for(let j=i+1;j<points.length;j++){
+      const a=points[i],b=points[j];let dx=b.x-a.x,dy=b.y-a.y,dist=Math.hypot(dx,dy)||.001;
+      // 점수/경기 라벨 공간까지 고려해 원끼리 단순 접촉보다 여유 있게 분리합니다.
+      const minDist=a.r+b.r+46;
+      if(dist<minDist){
+        const overlap=minDist-dist, push=overlap*(.30+.18*cool);
+        const ux=dx/dist,uy=dy/dist;
+        a.x-=ux*push;a.y-=uy*push;b.x+=ux*push;b.y+=uy*push;
+      }else if(dist<minDist+55){
+        // 가까운 노드 사이에 약한 반발력을 계속 줘 군집이 뭉치는 현상을 줄입니다.
+        const push=(minDist+55-dist)*.006*cool,ux=dx/dist,uy=dy/dist;
+        a.x-=ux*push;a.y-=uy*push;b.x+=ux*push;b.y+=uy*push;
+      }
+    }
+    points.forEach(p=>{
+      const padX=p.r+42,padTop=p.r+30,padBottom=p.r+58;
+      p.x=Math.max(padX,Math.min(W-padX,p.x));
+      p.y=Math.max(padTop,Math.min(H-padBottom,p.y));
+    });
+  }
+  // 마지막에는 스프링 힘을 끄고 충돌만 정리해 원/라벨 영역의 실제 겹침을 제거합니다.
+  for(let pass=0;pass<90;pass++){
+    let moved=false;
+    for(let i=0;i<points.length;i++)for(let j=i+1;j<points.length;j++){
+      const a=points[i],b=points[j];let dx=b.x-a.x,dy=b.y-a.y,dist=Math.hypot(dx,dy)||.001;
+      const minDist=a.r+b.r+47;
+      if(dist<minDist){
+        const push=(minDist-dist)/2+.35,ux=dx/dist,uy=dy/dist;
+        a.x-=ux*push;a.y-=uy*push;b.x+=ux*push;b.y+=uy*push;moved=true;
+      }
+    }
+    points.forEach(p=>{
+      const padX=p.r+42,padTop=p.r+30,padBottom=p.r+58;
+      p.x=Math.max(padX,Math.min(W-padX,p.x));
+      p.y=Math.max(padTop,Math.min(H-padBottom,p.y));
+    });
+    if(!moved)break;
+  }
+  return points;
+}
 function chemistryMapSvg(target,model){
   const W=900,H=590,cx=450,cy=280, nodes=model.partners;
   if(!nodes.length)return '<div class="empty chemistry-map-empty">함께 뛴 선수 기록이 없어 CHEMISTRY MAP을 만들 수 없습니다.</div>';
-  const total=nodes.length, maxP=model.maxTogether;
+  const maxP=model.maxTogether;
   const minScore=Number.isFinite(model.minScore)?model.minScore:0, maxScore=Number.isFinite(model.maxScore)?model.maxScore:100;
   const relativeSize=score=>{
     const safe=Math.max(0,Math.min(100,num(score)));
     const t=maxScore>minScore?(safe-minScore)/(maxScore-minScore):.5;
     return 25+t*19;
   };
-  const positions=nodes.map((row,i)=>{
-    const angle=-Math.PI/2+(Math.PI*2*i/total)+(i%2?0.055:-0.055);
-    const closeness=row.p/maxP;
-    // V3.21.2: 기존 배치 반경을 정확히 30% 확대해 주변 선수 간 간격 확보
-    const radius=(105+(1-closeness)*65)*1.30;
-    return {row,x:cx+Math.cos(angle)*radius*1.42,y:cy+Math.sin(angle)*radius*.76,i,r:relativeSize(row.score)};
-  });
+  const positions=chemistryMapForceLayout(nodes,cx,cy,W,H,maxP,relativeSize);
   const posByName=new Map(positions.map(p=>[p.row.name,p]));
   const peerLines=(model.peerLinks||[]).map(link=>{
     const a=posByName.get(link.a), b=posByName.get(link.b);if(!a||!b)return '';
     const score=Math.max(0,Math.min(100,num(link.score)));
     const width=(1.2+score/100*4.1).toFixed(2),opacity=(.28+score/100*.48).toFixed(2);
     const detail=link.directions.map(d=>esc(d.from)+' → '+esc(d.to)+' · '+d.p+'경기 · '+d.score+'점').join(' / ');
-    return '<line class="chem-map-peer-link'+(link.mutual?' mutual':'')+'" x1="'+a.x.toFixed(1)+'" y1="'+a.y.toFixed(1)+'" x2="'+b.x.toFixed(1)+'" y2="'+b.y.toFixed(1)+'" style="stroke-width:'+width+';opacity:'+opacity+'"><title>BEST LINK · '+detail+'</title></line>';
+    return '<line class="chem-map-peer-link'+(link.mutual?' mutual':'')+'" data-chem-a="'+esc(link.a)+'" data-chem-b="'+esc(link.b)+'" x1="'+a.x.toFixed(1)+'" y1="'+a.y.toFixed(1)+'" x2="'+b.x.toFixed(1)+'" y2="'+b.y.toFixed(1)+'" style="--chem-line-opacity:'+opacity+';stroke-width:'+width+';opacity:'+opacity+'"><title>BEST LINK · '+detail+'</title></line>';
   }).join('');
   const lines=positions.map(({row,x,y})=>{
     const width=(1.4+Math.max(0,Math.min(100,row.score))/100*7).toFixed(2);
     const opacity=(.28+Math.max(0,Math.min(100,row.score))/100*.58).toFixed(2);
-    return '<line class="chem-map-link" x1="'+cx+'" y1="'+cy+'" x2="'+x.toFixed(1)+'" y2="'+y.toFixed(1)+'" style="stroke-width:'+width+';opacity:'+opacity+'"><title>'+esc(target)+' + '+esc(row.name)+' · '+row.p+'경기 · 커플점수 '+row.score+'</title></line>';
+    return '<line class="chem-map-link" data-chem-a="'+esc(target)+'" data-chem-b="'+esc(row.name)+'" x1="'+cx+'" y1="'+cy+'" x2="'+x.toFixed(1)+'" y2="'+y.toFixed(1)+'" style="--chem-line-opacity:'+opacity+';stroke-width:'+width+';opacity:'+opacity+'"><title>'+esc(target)+' + '+esc(row.name)+' · '+row.p+'경기 · 커플점수 '+row.score+'</title></line>';
   }).join('');
   const partnerNodes=positions.map(({row,x,y,r})=>{
-    // 주변 12명은 사진을 전혀 요청하지 않고 이름만 렌더링해 네트워크 표시 속도를 개선합니다.
     const name=String(row.name||'?').trim();
     const fontSize=name.length>=5?10.2:name.length===4?11.4:12.8;
     return '<g class="chem-map-node" data-chem-focus="'+esc(row.name)+'" role="button" tabindex="0" aria-label="'+esc(row.name)+' 선수 중심으로 보기">'+
@@ -4470,7 +4526,7 @@ function chemistryMapSvg(target,model){
   const centerAvatar=centerPhoto
     ?'<defs><clipPath id="'+centerClip+'"><circle cx="'+cx+'" cy="'+cy+'" r="'+centerR+'"/></clipPath></defs><image href="'+esc(centerPhoto)+'" x="'+(cx-centerR)+'" y="'+(cy-centerR)+'" width="'+(centerR*2)+'" height="'+(centerR*2)+'" preserveAspectRatio="xMidYMid slice" clip-path="url(#'+centerClip+')" class="chem-map-photo"/>'
     :'<circle class="chem-map-center-fallback" cx="'+cx+'" cy="'+cy+'" r="'+centerR+'"/><text class="chem-map-center-initials" x="'+cx+'" y="'+(cy+7)+'">'+esc(String(target||'?').trim().slice(0,2))+'</text>';
-  return '<svg class="chemistry-map-svg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(target)+' 선수 Chemistry Map">'+
+  return '<svg class="chemistry-map-svg" data-chem-center="'+esc(target)+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(target)+' 선수 Chemistry Map">'+
     '<circle class="chem-map-orbit chem-map-orbit-one" cx="'+cx+'" cy="'+cy+'" r="163"/><circle class="chem-map-orbit chem-map-orbit-two" cx="'+cx+'" cy="'+cy+'" r="215"/>'+peerLines+lines+partnerNodes+
     '<g class="chem-map-center" tabindex="0" aria-label="기준선수 '+esc(target)+'"><circle class="chem-map-center-ring" cx="'+cx+'" cy="'+cy+'" r="60"/>'+centerAvatar+
     '<rect class="chem-map-center-label-bg" x="'+(cx-75)+'" y="'+(cy+65)+'" width="150" height="35" rx="17.5"/><text class="chem-map-center-name" x="'+cx+'" y="'+(cy+88)+'">'+esc(target)+'</text></g></svg>';
@@ -4489,12 +4545,34 @@ function chemistryMapSideHtml(target,model){
 function bindChemistryMapInteractions(){
   const map=$('#chemistryMap'),side=$('#chemistryMapSide');
   const focus=name=>{if(!name||name===chemSel)return;chemSel=name;chemOther='';renderChem();requestAnimationFrame(()=>$('#chemistryMap')?.scrollIntoView({block:'nearest',behavior:'smooth'}));};
+  const setLineFocus=name=>{
+    const svg=map?.querySelector('.chemistry-map-svg');if(!svg)return;
+    const center=svg.getAttribute('data-chem-center')||'';
+    svg.classList.toggle('chem-line-focus-mode',!!name);
+    svg.querySelectorAll('.chem-map-link,.chem-map-peer-link').forEach(line=>{
+      const a=line.getAttribute('data-chem-a')||'',b=line.getAttribute('data-chem-b')||'';
+      const active=!!name&&(a===name||b===name||(name===center&&(a===center||b===center)));
+      line.classList.toggle('chem-link-active',active);
+    });
+  };
   if(map){
     map.querySelectorAll('[data-chem-focus]').forEach(el=>{
-      const run=()=>focus(el.getAttribute('data-chem-focus'));
+      const name=el.getAttribute('data-chem-focus')||'',run=()=>focus(name);
       el.addEventListener('click',run);
       el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();run();}});
+      el.addEventListener('mouseenter',()=>setLineFocus(name));
+      el.addEventListener('mouseleave',()=>setLineFocus(''));
+      el.addEventListener('focus',()=>setLineFocus(name));
+      el.addEventListener('blur',()=>setLineFocus(''));
     });
+    const centerNode=map.querySelector('.chem-map-center');
+    if(centerNode){
+      const centerName=map.querySelector('.chemistry-map-svg')?.getAttribute('data-chem-center')||'';
+      centerNode.addEventListener('mouseenter',()=>setLineFocus(centerName));
+      centerNode.addEventListener('mouseleave',()=>setLineFocus(''));
+      centerNode.addEventListener('focus',()=>setLineFocus(centerName));
+      centerNode.addEventListener('blur',()=>setLineFocus(''));
+    }
   }
   if(side)side.querySelectorAll('[data-chem-other]').forEach(el=>el.addEventListener('click',()=>{
     const name=el.getAttribute('data-chem-other');if(!name||name===chemSel)return;
@@ -4507,7 +4585,7 @@ function renderChemistryMap(){
   if(!chemSel){map.innerHTML='<div class="empty chemistry-map-empty">분석할 선수를 선택해 주세요.</div>';side.innerHTML='';return;}
   const model=chemistryMapModel(chemSel);
   map.innerHTML=chemistryMapSvg(chemSel,model);side.innerHTML=chemistryMapSideHtml(chemSel,model);
-  if(note)note.textContent=(chemYear==='ALL'?'전체 연도':chemYear+'년')+' · 최대 12명 · 중심 거리는 동행경기, 원 크기는 선택 선수와의 커플점수 상대비교, 점선은 12명 사이 각 선수의 BEST PARTNER 연결입니다. 주변 선수는 이름으로 표시하며 마우스를 올리면 확대됩니다.';
+  if(note)note.textContent=(chemYear==='ALL'?'전체 연도':chemYear+'년')+' · 최대 12명 · Force Layout이 노드 겹침을 자동 보정합니다. 선수에 마우스를 올리면 해당 선수와 연결된 중심선/BEST PARTNER선만 강조됩니다. 중심 거리는 동행경기, 원 크기는 커플점수 상대비교입니다.';
   bindChemistryMapInteractions();
 }
 
