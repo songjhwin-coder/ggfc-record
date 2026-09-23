@@ -2670,7 +2670,7 @@ function playerTeamTimeline(player,cutoff){
       const team=teams.join(' · ');
       if(active&&active.team===team&&active.start.slice(0,4)===date.slice(0,4))return;
       if(active){active.end=[previousDate(date),active.start.slice(0,4)+'-12-31'].sort()[0];out.push(active);active=null;}
-      if(team)active={comp:competition,team,start:date,end:cutoff};
+      if(team)active={comp:competition,team,teams,start:date,end:cutoff};
     });
     if(active){active.end=[active.end,active.start.slice(0,4)+'-12-31'].sort()[0];out.push(active);}
   });
@@ -2679,7 +2679,8 @@ function playerTeamTimeline(player,cutoff){
 function previousDate(date){const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()-1);return d.toISOString().slice(0,10);}
 function renderPlayerTeamHistory(player,cutoff){
   const box=$('#playerCardTeamHistory'),rows=playerTeamTimeline(player,cutoff);if(!box)return;
-  box.innerHTML='<h4>TEAM HISTORY · 팀 이동 이력</h4><p class="note">'+esc(cutoff)+'까지 · 엑셀 팀스쿼드 적용일 기준 · 대회별 소속</p>'+(rows.length?'<ol class="player-team-timeline">'+rows.map(r=>'<li><b>'+esc(teamDisplayName(r.team))+'</b><span>'+esc(r.comp)+'</span><small>'+r.start+' ~ '+r.end+'</small></li>').join('')+'</ol>':'<p class="note">등록된 팀스쿼드 이력이 없습니다.</p>');
+  box.innerHTML='<h4>TEAM HISTORY · 팀 이동 이력</h4><p class="note">'+esc(cutoff)+'까지 · 엑셀 팀스쿼드 적용일 기준 · 대회별 소속</p>'+(rows.length?'<ol class="player-team-timeline">'+rows.map(r=>'<li><div class="history-team-identities">'+(r.teams||[r.team]).map(t=>'<span class="history-team-identity"><span class="history-team-logo"><b>'+esc(teamDisplayName(t).slice(0,2))+'</b>'+(teamLogo(t)?'<img src="'+esc(teamLogo(t))+'" alt="'+esc(teamDisplayName(t))+' 로고">':'')+'</span><b>'+esc(teamDisplayName(t))+'</b></span>').join('')+'</div><span>'+esc(r.comp)+'</span><small>'+r.start+' ~ '+r.end+'</small></li>').join('')+'</ol>':'<p class="note">등록된 팀스쿼드 이력이 없습니다.</p>');
+  box.querySelectorAll('.history-team-logo img').forEach(img=>img.addEventListener('error',()=>img.remove(),{once:true}));
 }
 function renderPlayerCurrentTeam(player,fallback){
   const today=new Date().toLocaleDateString('sv-SE'),key=normalizePlayerMatchKey(player);
@@ -4014,7 +4015,7 @@ function v319AchievementHtml(player,cutoff,compact=false){
 }
 function playerListAchievements(player,cutoff){
   const list=v319AchievementList(v319CareerStatsMap(cutoff)[player]||{});
-  return '<details class="player-list-achievements"><summary>ACHIEVEMENT · '+list.length+'</summary><div class="v319-badges">'+(list.length?list.map(a=>'<span class="v319-badge" title="'+esc(a.desc)+'">'+esc(a.icon+' '+a.name)+'</span>').join(''):'<span class="muted">달성 기록 없음</span>')+'</div></details>';
+  return '<div class="player-list-achievements"><div class="player-achievement-count">ACHIEVEMENT · '+list.length+'</div><div class="v319-badges">'+(list.length?list.map(a=>'<span class="v319-badge" title="'+esc(a.desc)+'">'+esc(a.icon+' '+a.name)+'</span>').join(''):'<span class="muted">달성 기록 없음</span>')+'</div></div>';
 }
 function renderPlayerAchievementBoard(players,cutoff){
   const box=$('#playerAchievementBoard');if(!box)return;
