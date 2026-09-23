@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>GGFC 기록센터 · 3.19.2</title>
-<link rel="stylesheet" href="assets/ggfc.css?v=3.19.1">
+<title>GGFC 기록센터 · 3.21.0</title>
+<link rel="stylesheet" href="assets/ggfc.css?v=3.21.0">
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <meta name="theme-color" content="#061f44"><script>if(new URLSearchParams(location.search).get("view")!=="desktop" && (window.GGFC_MOBILE_ENTRY || matchMedia("(max-width: 820px)").matches))document.documentElement.classList.add("ggfc-mobile");</script></head>
 <body>
@@ -42,7 +42,7 @@
     <button data-v="rep" id="repTab" class="admin-menu-tab" style="display:none"><span class="sidebar-icon">A2</span><span>대표승점 설정</span></button>
     <button data-v="data" id="dataTab" class="admin-menu-tab" style="display:none"><span class="sidebar-icon">A3</span><span>데이터 관리</span></button>
   </nav>
-  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.19.2 · 기록센터</span></footer>
+  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.21.0 · 기록센터</span></footer>
 </aside>
 <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" tabindex="-1" aria-label="메뉴 닫기" hidden></button>
 
@@ -483,7 +483,7 @@
 
   <!-- PLAYER ANALYSIS -->
   <section class="view" id="v-chem">
-    <div class="head"><h2>선수 분석</h2><p>선수별 <b>월별 경기수 · 승·무·패 · 득점 · 승점 · 승률 · 출석률</b> STATISTICS 변화와 베스트 커플·베스트 감독 기록을 분석하고, 두 선수의 기록·능력치 비교와 커플점수 분석을 각각 별도 창에서 확인합니다.</p></div>
+    <div class="head"><h2>선수 분석</h2><p>선수별 <b>월별 경기수 · 승·무·패 · 득점 · 승점 · 승률 · 출석률</b> STATISTICS와 <b>CHEMISTRY MAP</b>을 분석하고, 베스트 파트너·네메시스·베스트 감독 및 두 선수의 기록·능력치 비교를 확인합니다.</p></div>
     <div class="card" style="margin-bottom:16px">
       <div class="chem-analysis-toolbar">
         <div class="chem-analysis-field chem-year-field"><label for="chemYear">연도</label><select id="chemYear"></select></div>
@@ -496,6 +496,23 @@
         <span class="muted chem-analysis-note" id="chemCompareNote" role="status">기준 선수와 다른 상대 선수를 선택하면 비교할 수 있습니다.</span>
       </div>
       <div id="chemSum" style="margin-top:12px;font-size:13.5px"></div>
+    </div>
+
+    <div class="card chemistry-map-card" style="margin-bottom:16px">
+      <div class="dashboard-block-title chemistry-map-heading">
+        <div>
+          <div class="sec-t">CHEMISTRY MAP</div>
+          <div class="muted chemistry-map-note" id="chemMapNote">같은 팀 동행 기록을 관계망으로 표시합니다. 선수를 클릭하면 해당 선수를 중심으로 다시 분석합니다.</div>
+        </div>
+        <div class="chemistry-map-legend" aria-label="Chemistry Map 범례">
+          <span><i class="line-score"></i> 선 굵기 = 커플점수</span>
+          <span><i class="dot-distance"></i> 중심 거리 = 동행경기</span>
+        </div>
+      </div>
+      <div class="chemistry-map-layout">
+        <div class="chemistry-map-canvas" id="chemistryMap" aria-live="polite"></div>
+        <aside class="chemistry-map-side" id="chemistryMapSide" aria-live="polite"></aside>
+      </div>
     </div>
 
     <div class="card monthly-stat-card" style="margin-bottom:16px">
@@ -720,7 +737,7 @@
               <div id="playerCardBrandLogo" class="ggfc-player-card-brand-logo">GGFC</div>
               <div class="ggfc-player-card-brand-text"><span>GIFA</span><span id="playerCardYear" class="ggfc-player-card-brand-year">26</span></div>
             </div>
-            <div class="ggfc-player-card-edition">FOOTBALL<br>PLAYER CARD</div>
+            <div class="ggfc-player-card-edition">CAREER FRAME<br><strong id="playerCardFrameBadge">NORMAL</strong></div>
             <div class="ggfc-player-card-left">
               <span class="ggfc-player-card-rating-label">OVR</span>
               <div id="playerCardOVR" class="ggfc-player-card-ovr">—</div>
@@ -794,6 +811,7 @@
         </div>
         <section class="player-card-data-card v319-player-card-achievement" aria-label="선수 Achievement">
           <h4>CAREER · ACHIEVEMENTS</h4>
+          <div id="playerCardFrameProgress" class="career-frame-panel"></div>
           <div id="playerCardAchievements"></div>
         </section>
         <details class="player-card-sb-details">
@@ -879,5 +897,5 @@
 <script src="assets/ggfc-sync.js?v=3.19.1"></script>
 <script src="assets/ggfc-mobile.js?v=3.19.1"></script>
 <script src="assets/ggfc-details.js?v=3.19.1"></script>
-<script src="assets/ggfc-app.js?v=3.19.2"></script>
+<script src="assets/ggfc-app.js?v=3.21.0"></script>
 </body></html>
