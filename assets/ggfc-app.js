@@ -2569,7 +2569,7 @@ function openPlayerCardHistory(player,query){
   const years=[...new Set([...abilityYearList(),playerCardHistoryState.year])].filter(y=>/^\d{4}$/.test(y)).sort().reverse();
   $('#playerCardHistoryYear').innerHTML=years.map(y=>'<option value="'+y+'">'+y+' 시즌</option>').join('');$('#playerCardHistoryYear').value=playerCardHistoryState.year;$('#playerCardHistoryHalf').value=playerCardHistoryState.half;syncPlayerHistoryControls();
   drawPlayerCardHistory();
-  openPlayerSoccerBeeHistory(player,query);
+  openPlayerSoccerBeeHistory(player,query);renderPlayerSeasonGrowth();
   if(playerCardHistoryResize)playerCardHistoryResize.disconnect();
   if(typeof ResizeObserver!=='undefined'){
     const plots=[$('#playerCardHistoryPlot'),$('#playerCardSoccerBeePlot')].filter(Boolean),widths=new Map(plots.map(el=>[el,el.clientWidth]));
@@ -2659,6 +2659,55 @@ function playPlayerCardReveal(stats){
     },760);
   },520);
 }
+function playerTeamTimeline(player,cutoff){
+  const rows=squadRows().filter(r=>r.date<=cutoff),key=normalizePlayerMatchKey(player),out=[];
+  [...new Set(rows.map(r=>r.comp))].sort().forEach(competition=>{
+    const scoped=rows.filter(r=>r.comp===competition),dates=[...new Set(scoped.map(r=>r.date))].sort();let active=null;
+    dates.forEach(date=>{
+      const latest=new Map();scoped.filter(r=>r.date<=date&&r.date.slice(0,4)===date.slice(0,4)).forEach(r=>{if(!latest.has(r.team)||latest.get(r.team).date<r.date)latest.set(r.team,r);});
+      const memberships=[...latest.values()].filter(r=>(r.members||[]).some(m=>normalizePlayerMatchKey(m.player)===key)).sort((a,b)=>b.date.localeCompare(a.date));
+      const teams=memberships.length?memberships.filter(r=>r.date===memberships[0].date).map(r=>r.team).sort():[];
+      const team=teams.join(' · ');
+      if(active&&active.team===team&&active.start.slice(0,4)===date.slice(0,4))return;
+      if(active){active.end=[previousDate(date),active.start.slice(0,4)+'-12-31'].sort()[0];out.push(active);active=null;}
+      if(team)active={comp:competition,team,start:date,end:cutoff};
+    });
+    if(active){active.end=[active.end,active.start.slice(0,4)+'-12-31'].sort()[0];out.push(active);}
+  });
+  return out.sort((a,b)=>b.start.localeCompare(a.start)||compareNamesKo(a.comp,b.comp));
+}
+function previousDate(date){const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()-1);return d.toISOString().slice(0,10);}
+function renderPlayerTeamHistory(player,cutoff){
+  const box=$('#playerCardTeamHistory'),rows=playerTeamTimeline(player,cutoff);if(!box)return;
+  box.innerHTML='<h4>TEAM HISTORY · 팀 이동 이력</h4><p class="note">'+esc(cutoff)+'까지 · 엑셀 팀스쿼드 적용일 기준 · 대회별 소속</p>'+(rows.length?'<ol class="player-team-timeline">'+rows.map(r=>'<li><b>'+esc(teamDisplayName(r.team))+'</b><span>'+esc(r.comp)+'</span><small>'+r.start+' ~ '+r.end+'</small></li>').join('')+'</ol>':'<p class="note">등록된 팀스쿼드 이력이 없습니다.</p>');
+}
+function renderPlayerCurrentTeam(player,fallback){
+  const today=new Date().toLocaleDateString('sv-SE'),key=normalizePlayerMatchKey(player);
+  const matches=new Map((DB.matches||[]).map(m=>[String(m.id),m]));
+  const recent=(DB.attendance||[]).filter(r=>normalizePlayerMatchKey(r.player)===key&&normDate(matches.get(String(r.id))?.date)<=today).sort((a,b)=>String(matches.get(String(b.id))?.date||'').localeCompare(String(matches.get(String(a.id))?.date||'')))[0];
+  const roster=playerCardRoster(player,{year:today.slice(0,4)})||{};
+  const current=playerSquadDisplayTeam(player,{end:today},roster.team||recent?.team||fallback),logo=teamLogo(current),box=$('#playerCardCurrentTeam');
+  box.innerHTML='<span>CURRENT TEAM</span><div class="player-current-team-logo">'+(logo?'<img alt="'+esc(teamDisplayName(current))+' 로고" src="'+esc(logo)+'">':'<b>'+esc(current==='-'?'GGFC':teamDisplayName(current))+'</b>')+'</div><strong>'+esc(teamDisplayName(current))+'</strong><small>'+today+' 기준</small>';
+  box.querySelector('img')?.addEventListener('error',e=>{e.target.replaceWith(document.createTextNode(teamDisplayName(current)));},{once:true});
+}
+function playerSeasonGrowthRows(player,cutoff){
+  const years=[...new Set([...(DB.matches||[]).map(r=>normDate(r.date).slice(0,4)),...(DB.soccerbee||[]).filter(r=>normalizePlayerMatchKey(r.player)===normalizePlayerMatchKey(player)).map(r=>normDate(r.date).slice(0,4))])].filter(y=>/^\d{4}$/.test(y)).sort();
+  const get=date=>playerAbilityRecordAtDate(player,date.slice(0,4),abilityHalfForDate(date.slice(0,4),date),date,true);
+  return years.map(year=>{
+    const c=seasonCfg(year),start=[c.h1s,abilityCareerStartDate(),playerParticipationStart(player)].filter(Boolean).sort().pop(),end=[c.h2e,cutoff].sort()[0];
+    if(start>end)return null;
+    const before=previousDate(start),a=get(before),b=get(end),values={};
+    PLAYER_CARD_HISTORY_METRICS.forEach(m=>values[m.key]=num(b[m.key])-num(a[m.key]));
+    return {year,start,end,before,values};
+  }).filter(Boolean);
+}
+function renderPlayerSeasonGrowth(){
+  const state=playerCardHistoryState,box=$('#playerCardSeasonGrowth');if(!state||!box)return;
+  if(!abilitySystemEnabled()){box.innerHTML='<p class="note">능력치 시스템이 꺼져 있습니다.</p>';return;}
+  const cutoff=normDate(state.query.asOf||state.query.end),rows=playerSeasonGrowthRows(state.player,cutoff);
+  const max=Math.max(1,...rows.flatMap(r=>Object.values(r.values).map(Math.abs)));
+  box.innerHTML='<h4>SEASON GROWTH · 시즌별 성장량</h4><p class="note">카드 기준일 '+esc(cutoff)+'까지 · 시즌 시작 직전 대비 순변화. 결석·파울 감점과 SoccerBee 측정 변화를 포함합니다. 막대는 모든 시즌·항목에 같은 척도를 적용합니다.</p>'+(rows.length?'<div class="season-growth-grid">'+rows.map(r=>'<section><header><b>'+r.year+'</b><small>'+r.start+' ~ '+r.end+'</small></header>'+PLAYER_CARD_HISTORY_METRICS.map(m=>'<div class="season-growth-row"><span>'+m.label+'</span><div class="season-growth-track"><i class="'+(r.values[m.key]<0?'negative':'positive')+'" style="width:'+Math.abs(r.values[m.key])/max*50+'%"></i></div><b>'+playerCardHistoryDelta(r.values[m.key])+'</b></div>').join('')+'</section>').join('')+'</div>':'<p class="note">비교할 시즌 기록이 없습니다.</p>');
+}
 function openPlayerCard(player,query){
   const name=String(player||"").trim(); if(!name||isOwnGoalPlayer(name)) return;
   const cardInfo=resolvePlayerCardQuery(query);
@@ -2683,6 +2732,7 @@ function openPlayerCard(player,query){
   labels.forEach((k,i)=>{ const el=$("#playerCardStat"+k); if(el) el.textContent=abilities[i]===null?"—":String(abilities[i]); });
   renderPlayerCardPerformance(name,stat,playerCardCutoff,cardInfo);
   renderPlayerCardAchievements(name,playerCardCutoff);
+  renderPlayerTeamHistory(name,playerCardCutoff);renderPlayerCurrentTeam(name,team);
 
   const photoWrap=$("#playerCardPhotoWrap");
   photoWrap.title='';delete photoWrap.dataset.photoState;
@@ -3962,6 +4012,10 @@ function v319AchievementHtml(player,cutoff,compact=false){
   if(compact)return '<span class="v319-badge-count" title="Achievement '+list.length+'개">🏅 '+list.length+'</span>';
   return '<div class="v319-player-achievements">'+(chips?'<div class="v319-badges">'+chips+'</div>':v319InsightEmpty('아직 해금된 Achievement가 없습니다.'))+(next?'<div class="v319-next-milestone"><b>NEXT MILESTONE</b><span>'+esc(next.label)+' '+next.current+' / '+next.target+(next.unit==='경기'?'경기':next.unit)+'</span><div><i style="width:'+Math.max(2,Math.min(100,next.ratio*100))+'%"></i></div></div>':'')+'</div>';
 }
+function playerListAchievements(player,cutoff){
+  const list=v319AchievementList(v319CareerStatsMap(cutoff)[player]||{});
+  return '<details class="player-list-achievements"><summary>ACHIEVEMENT · '+list.length+'</summary><div class="v319-badges">'+(list.length?list.map(a=>'<span class="v319-badge" title="'+esc(a.desc)+'">'+esc(a.icon+' '+a.name)+'</span>').join(''):'<span class="muted">달성 기록 없음</span>')+'</div></details>';
+}
 function renderPlayerAchievementBoard(players,cutoff){
   const box=$('#playerAchievementBoard');if(!box)return;
   const rows=(players||[]).map(p=>{const stats=v319CareerStatsMap(cutoff)[p.player]||{},list=v319AchievementList(stats);return {player:p.player,count:list.length,list};}).sort((a,b)=>b.count-a.count||compareNamesKo(a.player,b.player));
@@ -3975,6 +4029,7 @@ const CAREER_FRAME_METRICS=[
 ];
 const CAREER_FRAME_TIERS=[
   {id:'NORMAL',name:'NORMAL',title:'커리어의 시작',thresholds:null},
+  {id:'BRONZE',name:'BRONZE',title:'첫 번째 커리어 발자취',thresholds:[20,10,10,40,2,10]},
   {id:'SILVER',name:'SILVER',title:'쌓여 가는 존재감',thresholds:[50,25,25,100,5,25]},
   {id:'GOLD',name:'GOLD',title:'팀을 빛내는 커리어',thresholds:[100,50,50,200,10,50]},
   {id:'LEGEND',name:'LEGEND',title:'GGFC에 남긴 발자취',thresholds:[200,100,100,500,25,100]}
@@ -3982,22 +4037,25 @@ const CAREER_FRAME_TIERS=[
 let careerFrameSettingsDirty=false;
 let analysisStartSettingsDirty=false;
 let careerFrameCardContext=null;
-function validateCareerFrameThresholds(value,counts={SILVER:1,GOLD:1,LEGEND:1}){
-  const required=[counts.SILVER,counts.GOLD,counts.LEGEND];
+function validateCareerFrameThresholds(value,counts={BRONZE:1,SILVER:1,GOLD:1,LEGEND:1}){
+  const required=[counts.BRONZE,counts.SILVER,counts.GOLD,counts.LEGEND];
   if(required.some(n=>!Number.isInteger(n)||n<1||n>6))return '충족 조건 수는 1~6개여야 합니다.';
-  if(required[0]>required[1]||required[1]>required[2])return '상위 등급의 충족 조건 수는 하위 등급 이상이어야 합니다.';
+  if(required.some((n,i)=>i>0&&required[i-1]>n))return '상위 등급의 충족 조건 수는 하위 등급 이상이어야 합니다.';
   for(const tier of CAREER_FRAME_TIERS.slice(1)){
     if(!Array.isArray(value?.[tier.id])||value[tier.id].length!==CAREER_FRAME_METRICS.length)return '모든 등급의 여섯 조건을 입력해 주세요.';
     for(const n of value[tier.id])if(!Number.isInteger(n)||n<1||n>1000000)return '조건은 1~1,000,000 사이의 정수로 입력해 주세요.';
   }
   for(let i=0;i<CAREER_FRAME_METRICS.length;i++){
-    if(!(value.SILVER[i]<value.GOLD[i]&&value.GOLD[i]<value.LEGEND[i]))return CAREER_FRAME_METRICS[i].label+' 조건은 SILVER < GOLD < LEGEND 순으로 커져야 합니다.';
+    if(!(value.BRONZE[i]<=value.SILVER[i]&&value.SILVER[i]<value.GOLD[i]&&value.GOLD[i]<value.LEGEND[i]))return CAREER_FRAME_METRICS[i].label+' 조건은 BRONZE ≤ SILVER < GOLD < LEGEND 순으로 커져야 합니다.';
   }
   return '';
 }
 function careerFrameTiers(){
-  const stored=DB.settings?.careerFrameThresholds;
-  const counts=DB.settings?.careerFrameRequiredCounts||{SILVER:1,GOLD:1,LEGEND:1};
+  const original=DB.settings?.careerFrameThresholds;
+  const stored=original?{...original}:null;
+  const counts={BRONZE:1,SILVER:1,GOLD:1,LEGEND:1,...DB.settings?.careerFrameRequiredCounts};
+  // Derive Bronze for legacy settings without mutating saved data or existing tiers.
+  if(stored&&!stored.BRONZE&&Array.isArray(stored.SILVER))stored.BRONZE=CAREER_FRAME_TIERS[1].thresholds.map((n,i)=>Math.max(1,Math.min(n,Math.floor(stored.SILVER[i]/2))));
   const valid=stored&&!validateCareerFrameThresholds(stored,counts);
   return CAREER_FRAME_TIERS.map(tier=>({...tier,required:valid?(counts[tier.id]||1):1,thresholds:tier.thresholds?(valid?stored[tier.id]:tier.thresholds).slice():null}));
 }
@@ -4087,7 +4145,7 @@ function renderCareerFrame(player,cutoff){
   }).join('')+'</div>':'<p class="career-frame-complete">최고 등급 LEGEND 달성 · 앞으로 쌓는 기록도 통산 업적에 계속 반영됩니다.</p>';
   const rules=careerFrameTiers().slice(1).map(tier=>'<li><b>'+tier.name+' ('+tier.required+'개)</b><span>'+CAREER_FRAME_METRICS.map((m,i)=>m.label.replace('통산 ','')+' '+tier.thresholds[i]+m.unit).join(' / ')+'</span></li>').join('');
   box.dataset.careerTier=state.tier.id;
-  box.innerHTML='<header><span>CAREER FRAME</span><strong>'+state.tier.name+'</strong></header><p class="career-frame-title">'+state.tier.title+'</p><p class="career-frame-basis">'+esc(date)+' 기준 · 전체 시즌·대회 통산 기록</p><p class="career-frame-earned">'+(state.earned.length?'현재 등급 달성 근거: '+state.earned.join(' · '):'아직 SILVER 기준에 도달하지 않았습니다.')+'</p>'+next+'<details class="career-frame-rules"><summary>등급 기준 전체 보기</summary><p>NORMAL은 기본 등급입니다. 각 등급은 관리자가 정한 충족 조건 수를 만족하면 적용됩니다. 누적 업적 개수나 능력치 점수는 사용하지 않습니다.</p><ul>'+rules+'</ul><p>출전은 경기 ID당 1회입니다. 같은 날 여러 경기에 출전하면 경기 수만큼 집계합니다. 시즌·조회 구간이 바뀌어도 기준일까지의 통산 기록을 사용하며, 과거 날짜 조회와 기록 정정 시 해당 기록에 맞춰 등급을 다시 계산합니다. 프레임은 OVR·능력치에 영향을 주지 않습니다.</p></details>';
+  box.innerHTML='<header><span>CAREER FRAME</span><strong>'+state.tier.name+'</strong></header><p class="career-frame-title">'+state.tier.title+'</p><p class="career-frame-basis">'+esc(date)+' 기준 · 전체 시즌·대회 통산 기록</p><p class="career-frame-earned">'+(state.earned.length?'현재 등급 달성 근거: '+state.earned.join(' · '):'아직 BRONZE 기준에 도달하지 않았습니다.')+'</p>'+next+'<details class="career-frame-rules"><summary>등급 기준 전체 보기</summary><p>NORMAL은 기본 등급입니다. 각 등급은 관리자가 정한 충족 조건 수를 만족하면 적용됩니다. 누적 업적 개수나 능력치 점수는 사용하지 않습니다.</p><ul>'+rules+'</ul><p>출전은 경기 ID당 1회입니다. 같은 날 여러 경기에 출전하면 경기 수만큼 집계합니다. 시즌·조회 구간이 바뀌어도 기준일까지의 통산 기록을 사용하며, 과거 날짜 조회와 기록 정정 시 해당 기록에 맞춰 등급을 다시 계산합니다. 프레임은 OVR·능력치에 영향을 주지 않습니다.</p></details>';
 }
 function renderPlayerCardAchievements(player,cutoff){
   const box=$('#playerCardAchievements');if(box)box.innerHTML=v319AchievementHtml(player,cutoff,false);
@@ -4457,18 +4515,18 @@ function renderPlayer(){
   const search=playerRecordSearchQuery(),matchesName=name=>!search||normalizePlayerMatchKey(name).includes(search);
   const careerCutoff=normDate(info.end)||normDate(info.asOf)||recordDates()[0]||"";
   const careerMap=v319CareerStatsMap(careerCutoff);
-  const allPlayers=queryPlayerStats(list).filter(p=>draftPlayerVisible(p.player,draftNames)).map(p=>{const achievements=v319AchievementList(careerMap[p.player]||{});const roster=playerCardRoster(p.player,info)||{};return Object.assign(p,{displayTeam:playerSquadDisplayTeam(p.player,info,p.mainTeam),frameState:careerFrameState(careerMap[p.player]),achievements,achievementCount:achievements.length,shirtNumber:roster.no??"",position:roster.pos||""});}).sort((a,b)=>String(a.player||"").localeCompare(String(b.player||""),"ko-KR"));
+  const allPlayers=queryPlayerStats(list).filter(p=>draftPlayerVisible(p.player,draftNames)).map(p=>{const achievements=v319AchievementList(careerMap[p.player]||{});const roster=playerCardRoster(p.player,info)||{};return Object.assign(p,{displayTeam:playerSquadDisplayTeam(p.player,info,p.mainTeam),frameState:careerFrameState(careerMap[p.player]),achievements,achievementCount:achievements.length,shirtNumber:roster.no??"",position:roster.pos||"",careerCutoff});}).sort((a,b)=>String(a.player||"").localeCompare(String(b.player||""),"ko-KR"));
   const ps=allPlayers.filter(p=>matchesName(p.player)),emptySearch='<div class="empty">검색한 이름과 일치하는 선수가 없습니다.</div>';
   if($('#playerRecordSearchStatus'))$('#playerRecordSearchStatus').textContent=(search?'검색 결과 ':'전체 ')+ps.length+'명 / '+allPlayers.length+'명 · 카드 등급은 조회 종료일 기준 통산 기록';
   if($('#playerRecordSearchClear'))$('#playerRecordSearchClear').disabled=!String($('#memberPlayerSearch')?.value||'');
   if($("#playerPeriodLabel")) $("#playerPeriodLabel").textContent+=' · 선수명단 등록 선수 '+allPlayers.length+'명 · 카드 등급은 조회 종료일 기준 통산 기록';
   $("#playerTable").innerHTML=tbl(
-    [{t:"선수"},{t:"주 소속"},{t:"등번호",n:1},{t:"포지션"},{t:"팀경기",n:1},{t:"출석",n:1},{t:"출석률",n:1},{t:"승",n:1},{t:"무",n:1},{t:"패",n:1},{t:"승률",n:1},{t:"득점",n:1},{t:"어시스트",n:1},{t:"개인파울",n:1},{t:"선방",n:1},{t:"MOM",n:1},{t:"승점",n:1},{t:"카드 등급 · 승급 진행률"},{t:"업적",n:1}],
-    ps.map(p=>[playerCardLink(p.player,playerFaceChip(p.player,false,info.year),info),'<span class="muted">'+teamChip(p.displayTeam)+'</span>',esc(String(p.shirtNumber??'')||'—'),esc(p.position||'—'),p.teamGames,p.att,'<b>'+p.attendanceRate+'%</b>',p.w,p.d,p.l,p.winRate+'%',p.g,p.a||0,p.f||0,p.sv||0,p.mom||0,'<b>'+p.pts+'</b>',careerFrameListHtml(p.frameState),v319AchievementHtml(p.player,careerCutoff,true)])
+    [{t:"선수"},{t:"주 소속"},{t:"등번호",n:1},{t:"포지션"},{t:"팀경기",n:1},{t:"출석",n:1},{t:"출석률",n:1},{t:"승",n:1},{t:"무",n:1},{t:"패",n:1},{t:"승률",n:1},{t:"득점",n:1},{t:"어시스트",n:1},{t:"개인파울",n:1},{t:"선방",n:1},{t:"MOM",n:1},{t:"승점",n:1},{t:"카드 등급 · 승급 진행률"},{t:"ACHIEVEMENT"}],
+    ps.map(p=>[playerCardLink(p.player,playerFaceChip(p.player,false,info.year),info),'<span class="muted">'+teamChip(p.displayTeam)+'</span>',esc(String(p.shirtNumber??'')||'—'),esc(p.position||'—'),p.teamGames,p.att,'<b>'+p.attendanceRate+'%</b>',p.w,p.d,p.l,p.winRate+'%',p.g,p.a||0,p.f||0,p.sv||0,p.mom||0,'<b>'+p.pts+'</b>',careerFrameListHtml(p.frameState),playerListAchievements(p.player,careerCutoff)])
   );
   if(search&&!ps.length)$('#playerTable').innerHTML=emptySearch;
   if($("#memberPlayerCards")) $("#memberPlayerCards").innerHTML=search&&!ps.length?emptySearch:mobilePlayerCards(ps,info);
-  renderPlayerAchievementBoard(ps,careerCutoff);
+
   const specials=DB.specials.filter(x=>{const d=normDate(x.date);return draftPlayerVisible(x.player,draftNames)&&matchesName(x.player)&&d&&(!info.start||d>=info.start)&&(!info.end||d<=info.end);}).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
   $("#specialTable").innerHTML=search&&!specials.length?'<div class="empty">검색한 선수의 특이사항 기록이 없습니다.</div>':tbl([{t:"날짜"},{t:"선수"},{t:"구분"},{t:"내용"}],specials.map(x=>[esc(x.date),playerCardLink(x.player,'<b>'+esc(x.player)+'</b>',info),'<span class="pill">'+esc(x.type)+'</span>',esc(x.memo)]));
 }
@@ -4512,49 +4570,48 @@ function chemistryMapBestBranches(target,partners,depth=2){
   const primaryNames=new Set((partners||[]).map(x=>x.name).filter(Boolean));
   const cache=new Map(),links=[],extras=new Map();
   const analysis=name=>{if(!cache.has(name))cache.set(name,chemistry(name));return cache.get(name);};
-  const bestOne=name=>{
+  const bestTwo=name=>{
     const all=analysis(name).mates.filter(x=>x.name&&x.name!==name);
     const qualified=all.filter(x=>x.p>=2);
-    return (qualified.length?qualified:all)[0]||null;
+    return (qualified.length?qualified:all).slice(0,2);
   };
   const addExtra=(name,level)=>{
     if(!name||name===target||primaryNames.has(name))return;
     if(!extras.has(name))extras.set(name,{name,level,sources:[],score:0,p:0});
     else extras.get(name).level=Math.min(extras.get(name).level,level);
   };
-  const addLink=(from,toRow,level)=>{
+  const addLink=(from,toRow,level,rank)=>{
     if(!from||!toRow?.name)return null;
-    const link={from,to:toRow.name,score:toRow.score,p:toRow.p,depth:level};
+    const link={from,to:toRow.name,score:toRow.score,p:toRow.p,depth:level,rank};
     links.push(link);
     addExtra(toRow.name,level);
     if(!primaryNames.has(toRow.name)&&toRow.name!==target){
       const ex=extras.get(toRow.name);
-      ex.sources.push({from,score:toRow.score,p:toRow.p,depth:level});
+      ex.sources.push({from,score:toRow.score,p:toRow.p,depth:level,rank});
       if(toRow.score>ex.score){ex.score=toRow.score;ex.p=toRow.p;}
     }
     return link;
   };
 
-  // 2단계: 기준선수의 BEST 12명 각각이 전체 선수 중 자신의 BEST #1을 선택합니다.
+  // 2단계: 기준선수의 BEST 12명 각각이 자신의 BEST #1·#2를 선택합니다.
   const stage2=[];
   (partners||[]).forEach(row=>{
-    const top=bestOne(row.name);if(!top)return;
-    const link=addLink(row.name,top,2);if(link)stage2.push(link);
+    bestTwo(row.name).forEach((top,i)=>{const link=addLink(row.name,top,2,i+1);if(link)stage2.push(link);});
   });
 
-  // 3단계: 2단계에서 새롭게 바깥에 나타난 BEST #1 선수만 한 번 더 확장합니다.
+  // 3단계: 2단계에서 새롭게 바깥에 나타난 선수의 BEST #1·#2를 확장합니다.
   // 이미 중앙/핵심 12명 안에 있는 선수는 2단계에서 자신의 BEST #1이 이미 계산되어 있어 중복 확장을 피합니다.
   if(maxDepth>=3){
     const frontier=[...new Set(stage2.map(x=>x.to).filter(name=>name&&name!==target&&!primaryNames.has(name)))];
     frontier.forEach(from=>{
       addExtra(from,2);
-      const top=bestOne(from);if(top)addLink(from,top,3);
+      bestTwo(from).forEach((top,i)=>addLink(from,top,3,i+1));
     });
   }
 
   // BEST #1 피지목 횟수로 CHEMISTRY HUB를 계산합니다. 동률은 연결점수 합 → 동행경기 합 → 이름순입니다.
   const hubMap=new Map();
-  links.forEach(link=>{
+  links.filter(link=>link.rank===1).forEach(link=>{
     if(!hubMap.has(link.to))hubMap.set(link.to,{name:link.to,count:0,scoreSum:0,pSum:0,sources:new Set()});
     const row=hubMap.get(link.to);row.count++;row.scoreSum+=num(link.score);row.pSum+=num(link.p);row.sources.add(link.from);
   });
@@ -4669,7 +4726,7 @@ function chemistryMapSvg(target,model){
     const a=pointFor(link.from),b=pointFor(link.to);if(!a||!b)return '';
     const score=Math.max(0,Math.min(100,num(link.score)));
     const width=(1.3+score/100*(link.depth===3?2.7:3.5)).toFixed(2),opacity=(link.depth===3?.28:.34)+score/100*(link.depth===3?.36:.44);
-    return '<line class="chem-map-best-link chem-depth-'+link.depth+'" data-chem-depth="'+link.depth+'" data-chem-a="'+esc(link.from)+'" data-chem-b="'+esc(link.to)+'" x1="'+a.x.toFixed(1)+'" y1="'+a.y.toFixed(1)+'" x2="'+b.x.toFixed(1)+'" y2="'+b.y.toFixed(1)+'" style="--chem-line-opacity:'+opacity.toFixed(2)+';stroke-width:'+width+';opacity:'+opacity.toFixed(2)+'"><title>'+link.depth+'단계 · '+esc(link.from)+'의 BEST #1 → '+esc(link.to)+' · '+link.p+'경기 · 커플점수 '+link.score+'</title></line>';
+    return '<line class="chem-map-best-link chem-rank-'+(link.rank||1)+' chem-depth-'+link.depth+'" data-chem-depth="'+link.depth+'" data-chem-a="'+esc(link.from)+'" data-chem-b="'+esc(link.to)+'" x1="'+a.x.toFixed(1)+'" y1="'+a.y.toFixed(1)+'" x2="'+b.x.toFixed(1)+'" y2="'+b.y.toFixed(1)+'" style="--chem-line-opacity:'+opacity.toFixed(2)+';stroke-width:'+width+';opacity:'+opacity.toFixed(2)+'"><title>'+link.depth+'단계 · '+esc(link.from)+'의 BEST #'+(link.rank||1)+' → '+esc(link.to)+' · '+link.p+'경기 · 커플점수 '+link.score+'</title></line>';
   }).join('');
   const centerLines=positions.map(({row,x,y})=>{
     const width=(1.4+Math.max(0,Math.min(100,row.score))/100*7).toFixed(2),opacity=(.28+Math.max(0,Math.min(100,row.score))/100*.58).toFixed(2);
@@ -4682,7 +4739,7 @@ function chemistryMapSvg(target,model){
       '<circle class="chem-map-best-node-ring" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(r+3)+'"/><circle class="chem-map-best-node-fill" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+r+'"/>'+
       '<text class="chem-map-best-node-name" style="font-size:'+fontSize+'px" x="'+x.toFixed(1)+'" y="'+(y+3.8).toFixed(1)+'">'+esc(name)+'</text>'+
       '<rect class="chem-map-best-badge-bg" x="'+(x-31).toFixed(1)+'" y="'+(y+r+7).toFixed(1)+'" width="62" height="17" rx="8.5"/>'+
-      '<text class="chem-map-best-badge" x="'+x.toFixed(1)+'" y="'+(y+r+19).toFixed(1)+'">BEST 1'+(level===3?' · L3':'')+(count>1?' ×'+count:'')+'</text>'+chemistryHubBadge(name,model.hub,x,y-r-29,108)+'</g>';
+      '<text class="chem-map-best-badge" x="'+x.toFixed(1)+'" y="'+(y+r+19).toFixed(1)+'">BEST '+[...new Set((row.sources||[]).map(s=>s.rank||1))].sort().join('/')+(level===3?' · L3':'')+(count>1?' ×'+count:'')+'</text>'+chemistryHubBadge(name,model.hub,x,y-r-29,108)+'</g>';
   }).join('');
   const partnerNodes=positions.map(({row,x,y,r})=>{
     const name=String(row.name||'?').trim(),fontSize=name.length>=5?10.2:name.length===4?11.4:12.8,hubClass=model.hub?.name===row.name?' is-chemistry-hub':'';
@@ -4809,8 +4866,8 @@ function renderChemistryMap(){
   if(note){
     const period=chemYear==='ALL'?'전체 연도':chemYear+'년';
     note.textContent=chemDepth===3
-      ?period+' · 기준선수 BEST 12명 → 각자의 BEST #1 → 바깥 BEST #1 선수의 BEST #1까지 3단계로 확장합니다. BEST #1 피지목 횟수가 가장 많은 선수를 CHEMISTRY HUB로 표시합니다.'
-      :period+' · 기준선수 BEST 12명 → 각 선수의 전체 기록 BEST #1까지 2단계로 표시합니다. BEST #1 피지목 횟수가 가장 많은 선수를 CHEMISTRY HUB로 표시합니다.';
+      ?period+' · 기준선수 BEST 12명 → 각자의 BEST #1·#2 → 바깥 선수의 BEST #1·#2까지 3단계로 확장합니다. BEST #1 피지목 횟수가 가장 많은 선수를 CHEMISTRY HUB로 표시합니다.'
+      :period+' · 기준선수 BEST 12명 → 각 선수의 전체 기록 BEST #1·#2까지 2단계로 표시합니다. BEST #1 피지목 횟수가 가장 많은 선수를 CHEMISTRY HUB로 표시합니다.';
   }
   bindChemistryMapInteractions();bindChemistryZoom();
 }
