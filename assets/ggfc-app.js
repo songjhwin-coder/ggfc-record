@@ -4776,11 +4776,12 @@ function bindChemistryMapInteractions(){
   const focus=name=>{if(!name||name===chemSel)return;chemSel=name;chemOther='';renderChem();requestAnimationFrame(()=>$('#chemistryMap')?.scrollIntoView({block:'nearest',behavior:'smooth'}));};
   const setLineFocus=name=>{
     const svg=map?.querySelector('.chemistry-map-svg');if(!svg)return;
-    const center=svg.getAttribute('data-chem-center')||'';svg.classList.toggle('chem-line-focus-mode',!!name);
+    const center=svg.getAttribute('data-chem-center')||'',connected=new Set(name?[name]:[]);svg.classList.toggle('chem-line-focus-mode',!!name);
     svg.querySelectorAll('.chem-map-link,.chem-map-best-link').forEach(line=>{
       const a=line.getAttribute('data-chem-a')||'',b=line.getAttribute('data-chem-b')||'';
-      const active=!!name&&(a===name||b===name||(name===center&&(a===center||b===center)));line.classList.toggle('chem-link-active',active);
+      const active=!!name&&(a===name||b===name||(name===center&&(a===center||b===center)));line.classList.toggle('chem-link-active',active);if(active){connected.add(a);connected.add(b);}
     });
+    svg.querySelectorAll('.chem-map-node,.chem-map-best-node,.chem-map-center').forEach(node=>{const player=node.getAttribute('data-chem-focus')||center;node.classList.toggle('chem-node-active',!!name&&connected.has(player));});
   };
   if(map){
     map.querySelectorAll('[data-chem-focus]').forEach(el=>{
