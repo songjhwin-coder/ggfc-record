@@ -3,8 +3,8 @@
 <head><script>window.GGFC_MOBILE_ENTRY=true;</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>GGFC 모바일 기록센터 · 3.21.11</title>
-<link rel="stylesheet" href="assets/ggfc.css?v=3.21.11">
+<title>GGFC 모바일 기록센터 · 3.21.12</title>
+<link rel="stylesheet" href="assets/ggfc-v3.21.12.css">
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <meta name="theme-color" content="#061f44"><script>if(new URLSearchParams(location.search).get("view")!=="desktop" && (window.GGFC_MOBILE_ENTRY || matchMedia("(max-width: 820px)").matches))document.documentElement.classList.add("ggfc-mobile");</script></head>
 <body>
@@ -42,11 +42,12 @@
     <button data-v="rep" id="repTab" class="admin-menu-tab" style="display:none"><span class="sidebar-icon">A2</span><span>대표승점 설정</span></button>
     <button data-v="data" id="dataTab" class="admin-menu-tab" style="display:none"><span class="sidebar-icon">A3</span><span>데이터 관리</span></button>
   </nav>
-  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.21.11 · 기록센터</span></footer>
+  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.21.12 · 기록센터</span></footer>
 </aside>
 <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" tabindex="-1" aria-label="메뉴 닫기" hidden></button>
 
 <main id="mainContent">
+  <div class="release-version" aria-label="현재 프로그램 버전">GGFC · V3.21.12</div>
   <section class="cloud-status" id="cloudStatus" role="status" aria-live="polite"><span id="cloudStatusText">공유 기록을 확인하고 있습니다…</span>
     <div class="cloud-actions"><button id="cloudRetry" class="btn sm" hidden>공유 저장 재시도</button><button id="cloudDownload" class="btn sm" hidden>미저장 내용 내려받기</button><button id="cloudReload" class="btn sm" hidden>서버 기록 다시 받기</button></div>
   </section>
@@ -514,6 +515,7 @@
           </div>
         </div>
       </div>
+      <p id="chemFocusStatus" class="chem-focus-status" aria-live="polite">선수에 커서를 올리면 직접 연결된 선수만 강조됩니다.</p>
       <div class="chemistry-map-layout">
         <div class="chemistry-map-canvas" id="chemistryMap" aria-live="polite"></div>
         <aside class="chemistry-map-side" id="chemistryMapSide" aria-live="polite"></aside>
@@ -917,8 +919,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<script src="assets/ggfc-sync.js?v=3.21.11"></script>
-<script src="assets/ggfc-mobile.js?v=3.21.11"></script>
+<script src="assets/ggfc-sync.js?v=3.21.12"></script>
+<script src="assets/ggfc-mobile.js?v=3.21.12"></script>
 <script src="assets/ggfc-details.js?v=3.19.1"></script>
-<script src="assets/ggfc-app.js?v=3.21.11"></script>
+<script src="assets/ggfc-app-v3.21.12.js"></script>
 </body></html>
