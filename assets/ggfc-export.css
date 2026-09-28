@@ -89,3 +89,15 @@ tbody tr:nth-child(even){background:#f8fafc}
 .poster-fit-content{display:flow-root}.poster-fit-content>table{max-width:100%}
 
 .poster-rank-player td:nth-child(2){white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
+
+/* V3.24.2: compact, aligned standing columns and larger league crests. */
+.poster-standing-table th:nth-child(1){width:60px}
+.poster-standing-table th:nth-child(2){width:20px}
+.poster-standing-table th:nth-child(3){width:64px}
+.poster-standing-table td{height:24px;padding:2px 0;text-align:center;vertical-align:middle}
+.poster-standing-table th{height:24px;padding:2px 0;vertical-align:middle;font-size:8px}
+.poster-standing-table .league-standing-logo,.poster-standing-table td:first-child .poster-league-logo,.poster-standing-table .league-standing-emblem img{width:54px;height:62px;display:block;margin:auto}
+.poster-standing-team .team-chip{justify-content:center}
+.poster-standing-league{position:relative;z-index:1}
+.poster-standing-league .league-standing-emblem{position:relative;z-index:1}
+.poster-rank-attendance td:nth-child(4),.poster-rank-scorers td:nth-child(4),.poster-rank-team td:nth-child(3){font-weight:900;color:var(--navy)}
