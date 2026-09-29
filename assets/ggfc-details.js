@@ -32,16 +32,15 @@ function matchDetailData(m){
   };
   const applied=matchTeamFouls(m),unassigned=[];
   const teams=[m.home,m.away].map((team,index)=>{
-    const members=new Map(),coaches=new Set();
+    const members=new Map(),coaches=new Set(),assistants=new Set();
     const get=name=>{
       if(!members.has(name))members.set(name,{player:name,att:false,g:0,a:0,f:0,sv:0,mom:0,ownGoal:isOwnGoalPlayer(name)});
       return members.get(name);
     };
     const squad=squadAtMatch(m,team);
-    (squad?.members||[]).forEach(r=>{get(r.player).squad=true;get(r.player).role=r.role;if(r.role==='감독')coaches.add(r.player);});
+    (squad?.members||[]).forEach(r=>{get(r.player).squad=true;get(r.player).role=r.role;if(r.role==='감독')coaches.add(r.player);if(r.role==='코치')assistants.add(r.player);});
     DETAIL_RECORD_KINDS.forEach(([kind])=>source[kind].forEach(r=>{
       if(resolveTeam(r,kind)!==String(team||'').trim())return;
-      if(kind==='attendance'&&String(r.coach||'').trim())coaches.add(String(r.coach).trim());
       const name=String(r.player||'').trim();if(!name)return;
       const row=get(name);
       if(kind==='attendance')row.att=true;
@@ -57,7 +56,7 @@ function matchDetailData(m){
       if(r.ownGoal)sum.ownGoal+=r.g;
       return sum;
     },{att:0,g:0,a:0,f:0,sv:0,mom:0,ownGoal:0});
-    return {team,rows,totals,coaches:[...coaches].sort(compareNamesKo),result:matchResult(m,team),points:detailMatchPoints(m,team),score:num(index===0?m.hs:m.as),rawFouls:num(index===0?m.hf:m.af),fouls:index===0?applied.home:applied.away,group:matchTeamGroup(m,team)};
+    return {team,rows,totals,coaches:[...coaches].sort(compareNamesKo),assistants:[...assistants].sort(compareNamesKo),squadDate:squad?.date||'',result:matchResult(m,team),points:detailMatchPoints(m,team),score:num(index===0?m.hs:m.as),rawFouls:num(index===0?m.hf:m.af),fouls:index===0?applied.home:applied.away,group:matchTeamGroup(m,team)};
   });
   DETAIL_RECORD_KINDS.forEach(([kind,label])=>source[kind].forEach(r=>{
     if(!resolveTeam(r,kind)||!String(r.player||'').trim())unassigned.push({kind,label,row:r});
@@ -75,7 +74,7 @@ function detailPlayerTable(team){
 }
 function detailUnassignedHtml(items){
   if(!items.length)return '';
-  const contents=({kind,row:r})=>kind==='attendance'?'출석'+(r.coach?' · 감독 '+r.coach:''):kind==='goals'?'득점 '+num(r.g)+' · 도움 '+num(r.a):kind==='fouls'?'개인파울 '+num(r.fouls):kind==='saves'?'선방 '+num(r.saves):'MOM '+num(r.mom);
+  const contents=({kind,row:r})=>kind==='attendance'?'출석':kind==='goals'?'득점 '+num(r.g)+' · 도움 '+num(r.a):kind==='fouls'?'개인파울 '+num(r.fouls):kind==='saves'?'선방 '+num(r.saves):'MOM '+num(r.mom);
   return '<section class="detail-section"><h3>소속팀·선수 확인이 필요한 기록</h3><p class="detail-note">아래 기록은 팀이나 선수를 확정할 수 없어 선수별 표에 포함하지 않았습니다.</p><div class="detail-table-wrap"><table class="detail-table"><thead><tr><th>구분</th><th>등록팀</th><th>선수</th><th>기록</th></tr></thead><tbody>'+items.map(x=>'<tr><td>'+esc(x.label)+'</td><td>'+esc(x.row.team||'미등록')+'</td><td>'+esc(x.row.player||'미등록')+'</td><td>'+esc(contents(x))+'</td></tr>').join('')+'</tbody></table></div></section>';
 }
 function matchDetailHtml(data){
@@ -86,7 +85,7 @@ function matchDetailHtml(data){
       (i===1?'<div class="detail-score"><b>'+num(m.hs)+' <span>:</span> '+num(m.as)+'</b>'+fixtureMomHtml(m)+'</div>':'')+
       '<div class="detail-score-team">'+fixtureLogoHtml(t.team)+'<strong>'+esc(teamDisplayName(t.team))+'</strong><span>'+detailResultLabel(t.result)+' · 승점 '+t.points+(t.group?' · '+esc(leagueGroupLabel(t.group)):'')+'</span></div>'
     ).join('')+'</div>'+(forfeitText(m)?'<p class="detail-notice">'+esc(forfeitText(m))+' · 승패와 승점은 몰수패 판정을 적용합니다.</p>':'')+
-    '<div class="detail-team-columns">'+data.teams.map(t=>'<section class="detail-section"><h3>'+teamChip(t.team)+'</h3><p class="detail-note">감독: '+esc(t.coaches.join(', ')||'미등록')+'</p>'+detailMetricGrid([
+    '<div class="detail-team-columns">'+data.teams.map(t=>'<section class="detail-section"><h3>'+teamChip(t.team)+'</h3><p class="detail-note">감독: '+esc(t.coaches.join(', ')||'미등록')+' · 코치: '+esc(t.assistants.join(', ')||'미등록')+(t.squadDate?' · '+esc(t.squadDate)+' 스쿼드 기준':' · 해당 경기일 이전 팀스쿼드 없음')+'</p>'+detailMetricGrid([
       ['팀 득점',t.score],['도움',t.totals.a],['적용 팀파울',t.fouls],['개인파울 합계',t.totals.f],['선방',t.totals.sv],['MOM',t.totals.mom]
     ])+'<p class="detail-foul-note">팀파울: 개인파울 기록이 있으면 그 합계, 없으면 기존 팀파울 값 적용 · 기존 팀파울 입력값 '+t.rawFouls+'</p>'+detailPlayerTable(t)+(t.totals.ownGoal?'<p class="detail-note">자책골 표기 '+t.totals.ownGoal+'골은 등록된 팀의 득점 기록에 포함됩니다.</p>':'')+
     (t.totals.g!==t.score?'<p class="detail-notice">팀 점수 '+t.score+'골 / 등록 득점자 합계 '+t.totals.g+'골</p>':'')+'</section>').join('')+'</div>'+
