@@ -79,7 +79,7 @@ function detailUnassignedHtml(items){
 }
 function matchDetailHtml(data){
   const m=data.match,round=recordMatchRoundNumber(m),ground=matchGround(m);
-  const meta=[normDate(m.date),m.comp,halfLabel(normHalf(m.half)),round?round+'R':'',m.round,m.no,ground?ground+'구장':''].filter(Boolean);
+  const meta=[normDate(m.date),m.comp,halfLabel(matchHalfKey(m)),round?round+'R':'',m.round,m.no,ground?ground+'구장':''].filter(Boolean);
   return '<div class="detail-match-meta">'+meta.map(v=>'<span>'+esc(v)+'</span>').join('')+'</div>'+
     '<div class="detail-scoreboard">'+data.teams.map((t,i)=>
       (i===1?'<div class="detail-score"><b>'+num(m.hs)+' <span>:</span> '+num(m.as)+'</b>'+fixtureMomHtml(m)+'</div>':'')+
