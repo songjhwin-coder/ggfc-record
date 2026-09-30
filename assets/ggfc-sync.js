@@ -4,8 +4,8 @@ const GGFC = (() => {
   let loginBusy=false;
   const state={ready:false,serverSeen:false,connected:false,authorized:false,user:null,revision:0,dirty:false,saving:false,busy:0,conflict:false,serial:0,latest:null,hasLatest:false,error:'',status:'공유 기록을 확인하고 있습니다…',savedAt:null,authGeneration:0};
   let database=null,auth=null,dataRef=null,readTimer=null,saveTimer=null,editLease=false;
-  const hasSettingsDraft=()=>!!((typeof careerFrameSettingsDirty!=='undefined'&&careerFrameSettingsDirty)||(typeof analysisStartSettingsDirty!=='undefined'&&analysisStartSettingsDirty));
-  function discardSettingsDraft(){if(typeof careerFrameSettingsDirty!=='undefined')careerFrameSettingsDirty=false;if(typeof analysisStartSettingsDirty!=='undefined')analysisStartSettingsDirty=false;}
+  const hasSettingsDraft=()=>!!((typeof careerFrameSettingsDirty!=='undefined'&&careerFrameSettingsDirty)||(typeof analysisStartSettingsDirty!=='undefined'&&analysisStartSettingsDirty)||(typeof cardDesignSettingsDirty!=='undefined'&&cardDesignSettingsDirty));
+  function discardSettingsDraft(){if(typeof cardDesignSettingsDirty!=='undefined')cardDesignSettingsDirty=false;if(typeof careerFrameSettingsDirty!=='undefined')careerFrameSettingsDirty=false;if(typeof analysisStartSettingsDirty!=='undefined')analysisStartSettingsDirty=false;}
   const fields=['matches','attendance','goals','saves','fouls','moms','specials','roster','soccerbee'];
   const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
   const copy=v=>JSON.parse(JSON.stringify(v));
