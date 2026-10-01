@@ -3089,3 +3089,7 @@ body:not(.admin-mode) .view>.head>p,body:not(.admin-mode) .view>.insight-page-he
 .ggfc-player-card:is([data-design="aurum"],[data-design="diamond"]) .ggfc-player-card-watermark{top:81%;filter:none}
 .ggfc-player-card:is([data-design="aurum"],[data-design="diamond"]) .ggfc-player-card-watermark[style*="none"]::after{color:#49340f;text-shadow:none}
 .ggfc-player-card:is([data-design="aurum"],[data-design="diamond"]) .ggfc-player-card-edition{top:244px;left:53px;width:88px}
+
+/* V3.25.3: Cutout images reveal the frame in Classic too. Keep the no-photo fallback. */
+.ggfc-player-card .ggfc-player-card-photo-wrap[data-photo-kind="cutout"]:has(>.ggfc-player-card-photo){background:transparent}
+.ggfc-player-card .ggfc-player-card-photo-wrap[data-photo-kind="cutout"]:has(>.ggfc-player-card-photo)>.ggfc-player-card-photo-fallback{visibility:hidden}
