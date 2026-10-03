@@ -10,7 +10,7 @@ function detailResultLabel(result){return {W:'승',D:'무',L:'패'}[result]||'�
 function detailMatchPoints(m,team){const r=matchResult(m,team);return r==='W'?3:r==='D'?1:0;}
 function detailMatchRows(kind,m){
   const id=detailMatchKey(m.id);
-  return id?(DB[kind]||[]).filter(r=>detailMatchKey(r.id)===id):[];
+  return id?(kind==='saves'?playerSaveRows():(DB[kind]||[])).filter(r=>detailMatchKey(r.id)===id):[];
 }
 function matchDetailData(m){
   const source=Object.fromEntries(DETAIL_RECORD_KINDS.map(([kind])=>[kind,detailMatchRows(kind,m)]));
@@ -49,9 +49,10 @@ function matchDetailData(m){
       if(kind==='saves')row.sv+=num(r.saves);
       if(kind==='moms')row.mom+=num(r.mom);
     }));
+    teamPlayerRecordLinks().matched.filter(r=>r.id===m.id&&r.team===team).forEach(r=>{const P=get(r.player);['sot','keyPass','defSuccess'].forEach(k=>{if(r[k]!==null)P[k]=num(P[k])+num(r[k]);});});
     const rows=[...members.values()].sort((a,b)=>Number(a.ownGoal)-Number(b.ownGoal)||compareNamesKo(a.player,b.player));
     const totals=rows.reduce((sum,r)=>{
-      for(const key of ['g','a','f','sv','mom'])sum[key]+=r[key];
+      for(const key of ['g','a','f','sv','mom','sot','keyPass','defSuccess'])sum[key]=num(sum[key])+num(r[key]);
       if(r.att&&!r.ownGoal)sum.att++;
       if(r.ownGoal)sum.ownGoal+=r.g;
       return sum;
@@ -68,9 +69,9 @@ function detailMetricGrid(items){
 }
 function detailPlayerTable(team){
   if(!team.rows.length)return '<div class="detail-empty">등록된 선수별 기록이 없습니다.</div>';
-  return '<p class="detail-scroll-hint">표를 좌우로 밀면 모든 기록을 볼 수 있습니다.</p><div class="detail-table-wrap" tabindex="0" aria-label="'+esc(teamDisplayName(team.team))+' 선수별 경기 기록 표"><table class="detail-table"><caption class="detail-visually-hidden">'+esc(teamDisplayName(team.team))+' 선수별 경기 기록</caption><thead><tr><th scope="col">선수</th><th scope="col">출석</th><th scope="col">득점</th><th scope="col">도움</th><th scope="col">개인파울</th><th scope="col">선방</th><th scope="col">MOM</th><th scope="col">승점</th></tr></thead><tbody>'+team.rows.map(r=>
-    '<tr><th scope="row" class="'+(r.att?'squad-present':'squad-absent')+'">'+esc(r.ownGoal?'자책골':r.player)+(r.role&&r.role!=='선수'?' <small>('+esc(r.role)+')</small>':'')+'</th><td>'+(r.ownGoal?'—':r.att?'<span class="detail-attended">출석</span>':'<span class="detail-missing">'+(r.squad?'미출석':'미등록')+'</span>')+'</td><td>'+r.g+'</td><td>'+r.a+'</td><td>'+r.f+'</td><td>'+r.sv+'</td><td>'+r.mom+'</td><td>'+(r.att&&!r.ownGoal?team.points:'—')+'</td></tr>'
-  ).join('')+'</tbody><tfoot><tr><th scope="row">합계</th><td>'+team.totals.att+'명</td><td>'+team.totals.g+'</td><td>'+team.totals.a+'</td><td>'+team.totals.f+'</td><td>'+team.totals.sv+'</td><td>'+team.totals.mom+'</td><td>'+team.totals.att*team.points+'</td></tr></tfoot></table></div>';
+  return '<p class="detail-scroll-hint">표를 좌우로 밀면 모든 기록을 볼 수 있습니다.</p><div class="detail-table-wrap" tabindex="0" aria-label="'+esc(teamDisplayName(team.team))+' 선수별 경기 기록 표"><table class="detail-table"><caption class="detail-visually-hidden">'+esc(teamDisplayName(team.team))+' 선수별 경기 기록</caption><thead><tr><th scope="col">선수</th><th scope="col">출석</th><th scope="col">득점</th><th scope="col">도움</th><th scope="col">개인파울</th><th scope="col">유효슛</th><th scope="col">키패스</th><th scope="col">수비성공</th><th scope="col">선방</th><th scope="col">MOM</th><th scope="col">승점</th></tr></thead><tbody>'+team.rows.map(r=>
+    '<tr><th scope="row" class="'+(r.att?'squad-present':'squad-absent')+'">'+esc(r.player)+(r.role&&r.role!=='선수'?' <small>('+esc(r.role)+')</small>':'')+'</th><td>'+(r.ownGoal?'—':r.att?'<span class="detail-attended">출석</span>':'<span class="detail-missing">'+(r.squad?'미출석':'미등록')+'</span>')+'</td><td>'+r.g+'</td><td>'+r.a+'</td><td>'+r.f+'</td><td>'+(r.sot??'—')+'</td><td>'+(r.keyPass??'—')+'</td><td>'+(r.defSuccess??'—')+'</td><td>'+r.sv+'</td><td>'+r.mom+'</td><td>'+(r.att&&!r.ownGoal?team.points:'—')+'</td></tr>'
+  ).join('')+'</tbody><tfoot><tr><th scope="row">합계</th><td>'+team.totals.att+'명</td><td>'+team.totals.g+'</td><td>'+team.totals.a+'</td><td>'+team.totals.f+'</td><td>'+team.totals.sot+'</td><td>'+team.totals.keyPass+'</td><td>'+team.totals.defSuccess+'</td><td>'+team.totals.sv+'</td><td>'+team.totals.mom+'</td><td>'+team.totals.att*team.points+'</td></tr></tfoot></table></div>';
 }
 function detailUnassignedHtml(items){
   if(!items.length)return '';
@@ -79,7 +80,7 @@ function detailUnassignedHtml(items){
 }
 function matchDetailHtml(data){
   const m=data.match,round=recordMatchRoundNumber(m),ground=matchGround(m);
-  const meta=[normDate(m.date),m.comp,halfLabel(matchHalfKey(m)),round?round+'R':'',m.round,m.no,ground?ground+'구장':''].filter(Boolean);
+  const meta=[normDate(m.date),matchCompetition(m),halfLabel(matchHalfKey(m)),round?round+'R':'',m.round,m.no,ground?ground+'구장':''].filter(Boolean);
   return '<div class="detail-match-meta">'+meta.map(v=>'<span>'+esc(v)+'</span>').join('')+'</div>'+
     '<div class="detail-scoreboard">'+data.teams.map((t,i)=>
       (i===1?'<div class="detail-score"><b>'+num(m.hs)+' <span>:</span> '+num(m.as)+'</b>'+fixtureMomHtml(m)+'</div>':'')+
@@ -87,7 +88,7 @@ function matchDetailHtml(data){
     ).join('')+'</div>'+(forfeitText(m)?'<p class="detail-notice">'+esc(forfeitText(m))+' · 승패와 승점은 몰수패 판정을 적용합니다.</p>':'')+
     '<div class="detail-team-columns">'+data.teams.map(t=>'<section class="detail-section"><h3>'+teamChip(t.team)+'</h3><p class="detail-note">감독: '+esc(t.coaches.join(', ')||'미등록')+' · 코치: '+esc(t.assistants.join(', ')||'미등록')+(t.squadDate?' · '+esc(t.squadDate)+' 스쿼드 기준':' · 해당 경기일 이전 팀스쿼드 없음')+'</p>'+detailMetricGrid([
       ['팀 득점',t.score],['도움',t.totals.a],['적용 팀파울',t.fouls],['개인파울 합계',t.totals.f],['선방',t.totals.sv],['MOM',t.totals.mom]
-    ])+'<p class="detail-foul-note">팀파울: 개인파울 기록이 있으면 그 합계, 없으면 기존 팀파울 값 적용 · 기존 팀파울 입력값 '+t.rawFouls+'</p>'+detailPlayerTable(t)+(t.totals.ownGoal?'<p class="detail-note">자책골 표기 '+t.totals.ownGoal+'골은 등록된 팀의 득점 기록에 포함됩니다.</p>':'')+
+    ])+'<p class="detail-foul-note">팀파울: 개인파울 기록이 있으면 그 합계, 없으면 기존 팀파울 값 적용 · 기존 팀파울 입력값 '+t.rawFouls+'</p>'+detailPlayerTable(t)+(t.totals.ownGoal?'<p class="detail-note">자책골·베네핏 표기 '+t.totals.ownGoal+'골은 등록된 팀의 득점 기록에 포함됩니다.</p>':'')+
     (t.totals.g!==t.score?'<p class="detail-notice">팀 점수 '+t.score+'골 / 등록 득점자 합계 '+t.totals.g+'골</p>':'')+'</section>').join('')+'</div>'+
     '<p class="detail-note">출석은 해당 경기의 출석 명단 기준입니다. 기록만 있고 출석이 미등록인 선수도 표시하며, 경기승점은 출석이 등록된 선수에게만 반영합니다.</p>'+detailUnassignedHtml(data.unassigned)+(m.memo||m.note?'<section class="detail-section"><h3>비고</h3><p class="detail-note detail-prewrap">'+esc([m.memo,m.note].filter(Boolean).join('\n'))+'</p></section>':'');
 }
@@ -175,7 +176,7 @@ function comparisonRadar(players){
 }
 function comparisonPairHtml(data){
   const {tog,vs}=data.pair,[a,b]=data.players;
-  const matchRows=(rows,opposed)=>rows.length?'<div class="detail-table-wrap"><table class="detail-table"><thead><tr><th>날짜 / 경기</th><th>대진 / 스코어</th><th>기준 선수 결과</th><th>'+esc(a.name)+' 득점</th><th>'+esc(b.name)+' 득점</th></tr></thead><tbody>'+rows.map(x=>'<tr><td>'+esc(x.m.date)+'<small>'+esc([x.m.comp,x.m.no,x.m.round].filter(Boolean).join(' · '))+'</small></td><td>'+esc(teamDisplayName(x.m.home))+' '+num(x.m.hs)+' : '+num(x.m.as)+' '+esc(teamDisplayName(x.m.away))+'</td><td>'+detailResultLabel(x.r)+'</td><td>'+num(x.ag)+'</td><td>'+num(x.bg)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="detail-empty">'+(opposed?'맞대결':'같은 팀 출석')+' 기록이 없습니다.</p>';
+  const matchRows=(rows,opposed)=>rows.length?'<div class="detail-table-wrap"><table class="detail-table"><thead><tr><th>날짜 / 경기</th><th>대진 / 스코어</th><th>기준 선수 결과</th><th>'+esc(a.name)+' 득점</th><th>'+esc(b.name)+' 득점</th></tr></thead><tbody>'+rows.map(x=>'<tr><td>'+esc(x.m.date)+'<small>'+esc([matchCompetition(x.m),x.m.no,x.m.round].filter(Boolean).join(' · '))+'</small></td><td>'+esc(teamDisplayName(x.m.home))+' '+num(x.m.hs)+' : '+num(x.m.as)+' '+esc(teamDisplayName(x.m.away))+'</td><td>'+detailResultLabel(x.r)+'</td><td>'+num(x.ag)+'</td><td>'+num(x.bg)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="detail-empty">'+(opposed?'맞대결':'같은 팀 출석')+' 기록이 없습니다.</p>';
   return '<section class="detail-section"><h3>함께 뛴 경기와 맞대결</h3><div class="compare-pair-grid"><div><h4>같은 팀 출석</h4><b>'+tog.p+'경기</b><p>'+tog.w+'승 '+tog.d+'무 '+tog.l+'패 · 승률 '+(tog.p?pct(tog.w,tog.p)+'%':'—')+'</p><p>'+esc(a.name)+' '+tog.ag+'골 / '+esc(b.name)+' '+tog.bg+'골</p></div><div><h4>서로 다른 팀 출석</h4><b>'+vs.p+'경기</b><p>'+esc(a.name)+' '+vs.aw+'승 · 무 '+vs.d+' · '+esc(b.name)+' '+vs.bw+'승</p><p>'+esc(a.name)+' '+vs.ag+'골 / '+esc(b.name)+' '+vs.bg+'골</p></div></div><details class="compare-match-list"><summary>같은 팀 출석 경기 전체 '+tog.p+'건</summary>'+matchRows(tog.rows,false)+'</details><details class="compare-match-list"><summary>맞대결 경기 전체 '+vs.p+'건</summary>'+matchRows(vs.rows,true)+'</details></section>';
 }
 function playerComparisonHtml(data){
