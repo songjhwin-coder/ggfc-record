@@ -267,7 +267,7 @@ const GGFC = (() => {
   }
 
   function installGuards(){
-    const selectors='#v-data,#v-rep,#v-abilitycfg,#seasonPanel,#soccerbeeUpload,#soccerbeeClear,#abilitySystemEnabled,#logoFilepick,#filepick,#soccerbeeFilepick';
+    const selectors='#v-abilityguide,#v-data,#v-rep,#v-abilitycfg,#seasonPanel,#soccerbeeUpload,#soccerbeeClear,#abilitySystemEnabled,#logoFilepick,#filepick,#soccerbeeFilepick';
     for(const type of ['click','change','input'])document.addEventListener(type,e=>{
       if(e.target.closest?.(selectors) && !canEdit()){
         e.preventDefault();e.stopImmediatePropagation();toast('관리자 인증과 서버 연결을 확인해 주세요.');
