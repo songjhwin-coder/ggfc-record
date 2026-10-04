@@ -3099,3 +3099,34 @@ body:not(.admin-mode) .view>.head>p,body:not(.admin-mode) .view>.insight-page-he
 .ggfc-player-card .ggfc-player-card-photo-wrap[data-photo-state="loading"]::after{content:'사진 불러오는 중';position:absolute;left:10px;right:10px;top:45%;z-index:30;padding:10px;background:#081a30cc;color:#fff;border-radius:5px;text-align:center;font-size:15px}
 
 .ability-guide-section{margin-top:16px}.ability-guide-section p{line-height:1.8;margin:12px 0}.ability-guide-section .tablewrap{margin:12px 0;max-width:100%;overflow:auto}.ability-guide-flow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}.ability-guide-flow>div{padding:18px;border-radius:8px;background:#e5f2ff;border-top:4px solid #277abd;color:#12365b;line-height:1.7}.ability-guide-flow>div:nth-child(2n){background:#e5f6ef;border-color:#218a6e}.ability-guide-flow>div:last-child{background:#fff1d6;border-color:#c0912a}@media(max-width:700px){.ability-guide-flow{grid-template-columns:1fr}}
+/* V3.25.7 · Optional player panels and eight cosmetic career tiers */
+.ggfc-panel-toggle{min-width:0;align-self:start}
+.ggfc-panel-toggle>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;list-style:none;color:#163352;font-size:14px;font-weight:800;line-height:1.5;min-height:32px}
+.ggfc-panel-toggle>summary::-webkit-details-marker{display:none}
+.ggfc-panel-toggle>summary::after{content:'보기 +';flex:none;font-size:11px;font-weight:700;color:#41627e;border:1px solid #cbd9e5;border-radius:20px;padding:4px 10px;background:#f3f7fb}
+.ggfc-panel-toggle[open]>summary::after{content:'접기 −'}
+.ggfc-panel-toggle[open]>summary{margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid #dce4ee}
+.ggfc-panel-toggle>summary:focus-visible{outline:3px solid #299c96;outline-offset:4px;border-radius:3px}
+.player-card-detail-grid>.ggfc-panel-toggle:not([open]),.player-card-history-grid>.ggfc-panel-toggle:not([open]){height:auto;min-height:0;padding:16px 18px}
+.player-card-detail-grid:has(>.ggfc-panel-toggle){align-items:start}
+.career-tier-options{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin:4px 0 16px}
+.career-tier-options label{display:grid;gap:6px;min-width:170px;max-width:100%;font-size:12px}
+.career-tier-options select{width:100%;max-width:280px}
+.career-frame-settings-tier legend{letter-spacing:.06em}
+.career-frame-rules li{grid-template-columns:115px minmax(0,1fr)}
+.career-frame-panel header strong{overflow-wrap:anywhere}
+.career-list-grade[data-tier="IRON"]{background:#e6ebf0;color:#526171}
+.career-list-grade[data-tier="PLATINUM"]{background:#d8f2ee;color:#176862}
+.career-list-grade[data-tier="DIAMOND"]{background:#e1f0ff;color:#286c9a}
+.career-list-grade[data-tier="MASTER"]{background:#f1e7fb;color:#75479e}
+.career-list-grade[data-tier="CHALLENGE"]{background:#fff0ca;color:#885619}
+.ggfc-player-card[data-career-tier="IRON"]{--frame-edge:#9caaba;--frame-accent:#70879b;--frame-badge:#e2e9f0}
+.ggfc-player-card[data-career-tier="PLATINUM"]{--frame-edge:#83d6c8;--frame-accent:#3b9f98;--frame-top:#0c343c;--frame-mid:#246165;--frame-bottom:#f0fffb;--frame-badge:#caffed}
+.ggfc-player-card[data-career-tier="DIAMOND"]{--frame-edge:#a5dbfb;--frame-accent:#398bc0;--frame-top:#102a48;--frame-mid:#355f89;--frame-bottom:#f3faff;--frame-badge:#d6f5ff}
+.ggfc-player-card[data-career-tier="MASTER"]{--frame-edge:#d3b4fa;--frame-accent:#9259c0;--frame-top:#241132;--frame-mid:#613b77;--frame-bottom:#faf3ff;--frame-badge:#edd8ff}
+.ggfc-player-card[data-career-tier="CHALLENGE"]{--frame-edge:#f3d58c;--frame-accent:#bd9342;--frame-top:#101b30;--frame-mid:#344b6c;--frame-bottom:#fffbf1;--frame-badge:#ffe6ac}
+.career-frame-panel[data-career-tier="PLATINUM"]{border-left-color:#398d83;background:#f0faf7}
+.career-frame-panel[data-career-tier="DIAMOND"]{border-left-color:#5299c6;background:#f0f8fe}
+.career-frame-panel[data-career-tier="MASTER"]{border-left-color:#9364b5;background:#faf5fe}
+.career-frame-panel[data-career-tier="CHALLENGE"]{border-left-color:#b88c38;background:#fffbf0}
+@media(max-width:620px){.ggfc-panel-toggle>summary{font-size:12px}.career-tier-options label{width:100%}.career-tier-options select{max-width:none}.career-frame-rules li{grid-template-columns:1fr}}

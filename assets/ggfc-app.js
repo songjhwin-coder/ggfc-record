@@ -319,7 +319,7 @@ const TEMPLATE = [
   { name:UNI.name, head:UNI.head, rows:UNI.rows, desc:UNI.desc },
   { name:"선수명단", head:SCHEMA.roster.head, sample:SCHEMA.roster.sample, desc:"시즌(출전 등 상태)과 연도는 구분합니다. 시작일자 이전은 능력치 성장·결석 및 커플 분석에서 제외합니다. 빈 시작일은 기존 방식입니다. 사진·포지션은 이 명단으로 연결합니다. 선수카드는 사진(URL) 배경삭제 열을 우선 사용하고, 일반 목록 사진은 사진(URL)을 사용합니다." },
   { name:"팀스쿼드", head:"날짜,대회,반기,그룹,팀,감독,코치,"+Array.from({length:15},(_,i)=>'선수'+(i+1)).join(','), rows:[['2026-03-01','정규리그','상반기','A','A특공대','박감독','','김철수','최민수','이준호','박도윤','장민석'],['2026-03-01','정규리그','상반기','A','풀파워','정감독','','이영호','한지훈','권태현','오세훈'],['2026-03-01','정규리그','상반기','B','어우씨','강감독','','정우성','배진우','신동혁','고상철'],['2026-03-01','정규리그','상반기','B','D져스','윤감독','','윤성민','임재훈','노경환','서지호','문태일']], desc:"날짜부터 다음 변경 전까지 적용할 팀별 전체 명단입니다. 반기·그룹은 필수이며 경기 분류의 기준입니다. 대회는 정규리그(공통 명단)를 그대로 사용해도 됩니다. 감독·코치도 포함하며, 선수1~15를 지원합니다. 실제 출석은 경기기록의 선수 칸으로 판단합니다." },
-  { name:"팀별 기록지", head:"날짜,대회,반기,라운드,경기번호,이름,유효슛,키패스,수비성공,선방", rows:[],desc:"날짜·라운드·경기번호·이름으로 실제 경기 출전에 연결합니다. 횟수는 0 이상 정수, 미기록은 빈칸입니다. 선방은 경기기록과 중복 합산하지 않습니다. 연결 확인은 능력치 운영 안내에서 확인합니다." },
+  { name:"팀별 기록지", head:"날짜,대회,반기,라운드,경기번호,팀명,이름,유효슛,키패스,수비성공,선방", rows:[],desc:"날짜·라운드·경기번호·팀명·이름으로 실제 경기 출전에 연결합니다. 팀명이 없는 구양식은 출전 팀이 유일할 때만 연결합니다. 횟수는 0 이상 정수, 미기록은 빈칸입니다. 선방은 경기기록과 중복 합산하지 않습니다. 연결 확인은 능력치 운영 안내에서 확인합니다." },
   { name:"스페셜기록", head:SCHEMA.specials.head, sample:SCHEMA.specials.sample, desc:SHEET_DESC.specials }
 ];
 const LABEL = Object.assign({ unified:"경기기록", roster:"선수명단", rosterDraft:"선수명단", squads:"팀스쿼드", teamRecords:"팀별 기록지" }, SHEET_OF);
@@ -615,24 +615,25 @@ function assertMatchMetadata(list=DB.matches,options){
 }
 
 /* Rev.4: independent per-player match records; raw rows persist in shared settings. */
-const TEAM_RECORD_HEAD='날짜,대회,반기,라운드,경기번호,이름,유효슛,키패스,수비성공,선방';
+const TEAM_RECORD_HEAD='날짜,대회,반기,라운드,경기번호,팀명,이름,유효슛,키패스,수비성공,선방';
 function applyTeamPlayerRecords(objs){
   const rows=[],seen=new Map();
   for(const o of objs){
     const player=String(pick(o,'이름','선수명','선수')||'').normalize('NFKC').trim();if(!player||player==='-')continue;
     const date=normDate(pick(o,'날짜','경기일','일자'));
-    const row={date,comp:String(pick(o,'대회')||'정규리그').trim(),half:normHalf(pick(o,'반기')),round:String(pick(o,'라운드','Round')||'').trim(),no:String(pick(o,'경기번호')||'').trim(),player};
+    const row={date,comp:String(pick(o,'대회')||'정규리그').trim(),half:normHalf(pick(o,'반기')),round:String(pick(o,'라운드','Round')||'').trim(),no:String(pick(o,'경기번호')||'').trim(),team:String(pick(o,'팀명','팀','소속팀')||'').normalize('NFKC').trim(),player};
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!row.round||!row.no)throw new Error('팀별 기록지: '+player+'의 날짜·라운드·경기번호를 확인하세요.');
     for(const [key,label] of Object.entries({sot:'유효슛',keyPass:'키패스',defSuccess:'수비성공',saves:'선방'})){
       const raw=String(pick(o,label)??'').trim();row[key]=raw===''?null:Number(raw);
       if(row[key]!==null&&(!Number.isInteger(row[key])||row[key]<0))throw new Error('팀별 기록지: '+player+' '+label+'는 0 이상의 정수 또는 빈칸이어야 합니다.');
     }
-    const key=JSON.stringify([date,isLeagueFamilyComp(row.comp)?'LEAGUE':compCompact(row.comp),row.round,row.no,normalizePlayerMatchKey(player)]);
+    const key=JSON.stringify([date,isLeagueFamilyComp(row.comp)?'LEAGUE':compCompact(row.comp),row.round,row.no,teamRecordTeamKey(row.team),normalizePlayerMatchKey(player)]);
     if(seen.has(key)){if(JSON.stringify(seen.get(key))!==JSON.stringify(row))throw new Error('팀별 기록지 중복값 충돌: '+date+' '+row.no+' '+row.round+' '+player);continue;}
     seen.set(key,row);rows.push(row);
   }
   DB.settings=DB.settings||{};DB.settings.teamPlayerRecords=rows;return rows.length;
 }
+function teamRecordTeamKey(value){return String(value||'').normalize('NFKC').replace(/\s/g,'').toUpperCase();}
 let teamPlayerRecordCache=null;
 function teamPlayerRecordLinks(){
   const raw=DB.settings?.teamPlayerRecords||[],refs=[raw,DB.matches,DB.attendance,DB.roster,DB.settings?.teamSquads];
@@ -647,12 +648,24 @@ function teamPlayerRecordLinks(){
     if(!player||isOwnGoalPlayer(player))reason='선수명단·경기기록에서 선수 확인 불가';
     else if(!fixtures.length)reason='일치 경기 없음: 날짜·라운드·경기번호 확인';
     const found=fixtures.flatMap(m=>[...(attendees.get(String(m.id)+'|'+normalizePlayerMatchKey(player))||[])].filter(t=>t===m.home||t===m.away).map(team=>({m,team})));
-    if(!reason&&found.length!==1)reason=found.length?'경기·팀 연결이 여러 건입니다':'해당 경기의 선수1~15에 출전 기록 없음';
+    const specified=teamRecordTeamKey(row.team);
+    const linked=specified?found.filter(x=>teamRecordTeamKey(x.team)===specified):found;
+    if(!reason&&specified&&!fixtures.some(m=>[m.home,m.away].some(t=>teamRecordTeamKey(t)===specified)))reason='입력 팀명이 해당 경기의 팀과 다릅니다';
+    if(!reason&&linked.length!==1)reason=linked.length?'경기·팀 연결이 여러 건입니다':specified?'입력 팀의 선수1~15에 출전 기록 없음':'해당 경기의 선수1~15에 출전 기록 없음';
     if(!reason&&!playerEligibleOn(player,row.date))reason='선수 참가 시작일 이전 기록';
     if(reason){issues.push({...row,reason});continue;}
-    matched.push({...row,player,id:found[0].m.id,team:found[0].team});
+    matched.push({...row,player,id:linked[0].m.id,inputTeam:row.team||'',team:linked[0].team});
   }
-  return teamPlayerRecordCache={refs,size:raw.length,matched,issues};
+  // Legacy and named-team rows may resolve to the same appearance. Never double count.
+  const groups=new Map();
+  matched.forEach(r=>{const k=JSON.stringify([r.id,r.team,r.player]);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(r);});
+  const unique=[];
+  for(const rows of groups.values()){
+    const values=r=>JSON.stringify(['sot','keyPass','defSuccess','saves'].map(k=>r[k]??null));
+    if(rows.some(r=>values(r)!==values(rows[0])))rows.forEach(r=>issues.push({...r,reason:'동일 경기·팀·선수 기록의 값이 충돌합니다'}));
+    else unique.push(rows[0]);
+  }
+  return teamPlayerRecordCache={refs,size:raw.length,matched:unique,issues};
 }
 function playerSaveRows(){
   const extra=teamPlayerRecordLinks().matched.filter(r=>r.saves!==null),keys=new Set(extra.map(r=>r.id+'|'+normalizePlayerMatchKey(r.player)));
@@ -677,8 +690,8 @@ function playerOpportunityCount(player,list,fallbackTeam){
 function teamRecordAuditHtml(){
  const data=teamPlayerRecordLinks();
  const scoreIssues=[];for(const m of DB.matches){for(const [team,score] of [[m.home,m.hs],[m.away,m.as]]){const goals=DB.goals.filter(g=>g.id===m.id&&g.team===team).reduce((a,g)=>a+num(g.g),0);if(goals!==num(score))scoreIssues.push([esc(m.date),esc(m.no+' / '+m.round),esc(team),num(score),goals]);}}
- const rows=(DB.settings?.teamPlayerRecords||[]).map(r=>{const bad=data.issues.find(x=>x.date===r.date&&x.round===r.round&&x.no===r.no&&x.player===r.player);return [esc(r.date),esc(r.no+' / '+r.round),esc(r.player),r.sot??'—',r.keyPass??'—',r.defSuccess??'—',r.saves??'—',bad?esc(bad.reason):'연결 완료'];});
- return '<h4>원본 득점 확인</h4><p>팀 점수와 득점자 합계 불일치 '+scoreIssues.length+'건. 누락된 득점자를 임의로 배정하지 않습니다.</p><div class="tablewrap">'+tbl(['날짜','경기','팀','팀 득점','득점자 합계'].map(t=>({t})),scoreIssues)+'</div><h4>신규 기록 연결</h4><p>팀별 기록지 '+rows.length+'행 · 연결 '+data.matched.length+'행 · 확인 필요 '+data.issues.length+'행. 확인 필요 기록은 보존하며 계산에서 제외합니다.</p><div class="tablewrap">'+tbl(['날짜','경기','선수','유효슛','키패스','수비성공','선방','상태'].map(t=>({t})),rows)+'</div>';
+ const rows=(DB.settings?.teamPlayerRecords||[]).map(r=>{const bad=data.issues.find(x=>x.date===r.date&&x.round===r.round&&x.no===r.no&&normalizePlayerMatchKey(x.player)===normalizePlayerMatchKey(r.player)&&teamRecordTeamKey(x.inputTeam??x.team)===teamRecordTeamKey(r.team));return [esc(r.date),esc(r.no+' / '+r.round),esc(r.team||'구양식 · 자동 확인'),esc(r.player),r.sot??'—',r.keyPass??'—',r.defSuccess??'—',r.saves??'—',bad?esc(bad.reason):'연결 완료'];});
+ return '<h4>원본 득점 확인</h4><p>팀 점수와 득점자 합계 불일치 '+scoreIssues.length+'건. 누락된 득점자를 임의로 배정하지 않습니다.</p><div class="tablewrap">'+tbl(['날짜','경기','팀','팀 득점','득점자 합계'].map(t=>({t})),scoreIssues)+'</div><h4>신규 기록 연결</h4><p>팀별 기록지 '+rows.length+'행 · 연결 '+data.matched.length+'행 · 확인 필요 '+data.issues.length+'행. 확인 필요 기록은 보존하며 계산에서 제외합니다.</p><div class="tablewrap">'+tbl(['날짜','경기','팀명','선수','유효슛','키패스','수비성공','선방','상태'].map(t=>({t})),rows)+'</div>';
 }
 
 function applyUnified(objs){
@@ -1336,8 +1349,8 @@ function renderHeaderLogo(){
   box.innerHTML=src?'<img src="'+src+'" alt="헤더 로고">':defaultHeaderLogoHtml();
 }
 function renderDisplaySettings(){
-  renderPlayerCardDesignSettings();
-  renderCareerFrameSettings();renderAnalysisStartSettings();
+  renderCareerFrameSettings();
+  renderPlayerCardDesignSettings();renderAnalysisStartSettings();
   if(careerFrameCardContext&&document.getElementById('playerCardMask')?.classList.contains('on'))renderCareerFrame(careerFrameCardContext.player,careerFrameCardContext.cutoff);
   const d=displaySettings();
   const brand=$("#menuBrandTitle"); if(brand) brand.textContent=d.brandTitle;
@@ -2190,41 +2203,60 @@ function parseSoccerBeeRows(rows){
   const missing=Object.entries(col).filter(([k,idx])=>idx<0&&!["matchSeq","minutes","distanceKm"].includes(k)).map(([k])=>k);
   if(missing.length) throw new Error("SoccerBee DB 1행 헤더 중 인식되지 않은 항목이 있습니다: "+missing.join(", "));
   const out=[];
-  rows.forEach(r=>{
-    const player=String(r[col.player]||"").trim(); const date=normDate(r[col.date]); if(!player||player==="-"||player==="이름"||!date||!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
-    const o={player,date}; Object.entries(col).forEach(([k,c])=>{if(k!=="player"&&k!=="date"&&c>=0)o[k]=String(r[c]??" ").trim()===""?null:num(r[c]);}); if(o.matchSeq!=null&&(!Number.isInteger(o.matchSeq)||o.matchSeq<1))throw new Error("경기순번은 1 이상의 정수여야 합니다: "+player);if(o.minutes!=null&&o.minutes<=0)throw new Error("출전시간은 양수 또는 빈칸이어야 합니다: "+player);out.push(o);
+  const headerEnd=Math.max(...['player','date'].map(k=>hdr.findIndex(r=>normalizeSoccerBeeHeader(r[col[k]])===(k==='date'?'날짜':'이름')||['선수','선수명','일자'].includes(normalizeSoccerBeeHeader(r[col[k]])))));
+  rows.forEach((r,index)=>{
+    if(index<=headerEnd)return;
+    const player=String(r[col.player]||'').trim();
+    if(!player){
+      if(String(r[col.date]??'').trim()||Object.entries(col).some(([k,c])=>!['player','date'].includes(k)&&c>=0&&String(r[c]??'').trim()))throw new Error('SoccerBee '+(index+1)+'행: 측정값에 선수명이 없습니다.');
+      return;
+    }
+    if(player==='-'||['이름','선수','선수명'].includes(player))return;
+    const date=normDate(r[col.date]);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw new Error('SoccerBee '+(index+1)+'행 '+player+': 날짜를 확인하세요.');
+    const o={player,date};
+    Object.entries(col).forEach(([k,c])=>{
+      if(k==='player'||k==='date'||c<0)return;
+      const raw=String(r[c]??'').trim().replace(/,/g,'');o[k]=raw===''?null:Number(raw);
+      if(o[k]!==null&&(!Number.isFinite(o[k])||o[k]<0))throw new Error('SoccerBee '+(index+1)+'행 '+player+': '+k+'는 0 이상의 숫자 또는 빈칸이어야 합니다.');
+    });
+    if(o.matchSeq!=null&&(!Number.isInteger(o.matchSeq)||o.matchSeq<1))throw new Error('경기순번은 1 이상의 정수여야 합니다: '+player);
+    if(o.minutes!=null&&o.minutes<=0)throw new Error('출전시간은 양수 또는 빈칸이어야 합니다: '+player);
+    out.push(o);
   });
   return out;
 }
 async function importSoccerBeeXlsx(buf){
-  const zip=await unzip(buf), get=n=>zip[n]||zip[n.replace(/^\//,"")]; const wb=xml(get("xl/workbook.xml")), rels=xml(get("xl/_rels/workbook.xml.rels"));
-  const relMap={}; [...rels.getElementsByTagName("Relationship")].forEach(r=>relMap[r.getAttribute("Id")]=r.getAttribute("Target"));
-  const ssFile=get("xl/sharedStrings.xml"), shared=ssFile?[...xml(ssFile).getElementsByTagName("si")].map(si=>si.textContent):[]; const stFile=get("xl/styles.xml"), dateStyles=dateStyleSet(stFile?xml(stFile):null);
-  let parsed=[],parseError=null;
-  for(const sh of [...wb.getElementsByTagName("sheet")]){
-    const rid=sh.getAttribute("r:id")||sh.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships","id"); let tgt=relMap[rid]||"";tgt=tgt.replace(/^\//,"");if(!tgt.startsWith("xl/"))tgt="xl/"+tgt;const f=get(tgt);if(!f)continue;
-    try{parsed=parseSoccerBeeRows(sheetRows(xml(f),shared,dateStyles));}catch(e){parseError=e;parsed=[];} if(parsed.length)break;
+  const zip=await unzip(buf), get=n=>zip[n]||zip[n.replace(/^\//,'')]; const wb=xml(get('xl/workbook.xml')), rels=xml(get('xl/_rels/workbook.xml.rels'));
+  const relMap={}; [...rels.getElementsByTagName('Relationship')].forEach(r=>relMap[r.getAttribute('Id')]=r.getAttribute('Target'));
+  const ssFile=get('xl/sharedStrings.xml'), shared=ssFile?[...xml(ssFile).getElementsByTagName('si')].map(si=>si.textContent):[]; const stFile=get('xl/styles.xml'), dateStyles=dateStyleSet(stFile?xml(stFile):null);
+  const parsed=[];let recognized=0;
+  for(const sh of [...wb.getElementsByTagName('sheet')]){
+    const rid=sh.getAttribute('r:id')||sh.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id');let tgt=(relMap[rid]||'').replace(/^\//,'');if(!tgt.startsWith('xl/'))tgt='xl/'+tgt;
+    const f=get(tgt);if(!f)continue;
+    const rows=sheetRows(xml(f),shared,dateStyles),hdr=rows.slice(0,6);
+    if(findSoccerBeeCol(hdr,['DPM'])<0&&findSoccerBeeCol(hdr,['최고속도'])<0)continue;
+    parsed.push(...parseSoccerBeeRows(rows));recognized++;
   }
-  if(!parsed.length) throw parseError||new Error("유효한 SoccerBee 측정 행을 찾지 못했습니다.");
-  ensureAbilityData();
-  const canonical=soccerBeeCanonicalPlayerMap();
-  if(!Object.keys(canonical).length) throw new Error("선수명단 DB가 없습니다. 통합 기록지를 먼저 업로드한 뒤 SoccerBee DB를 업로드하세요.");
-  const matched=[], unmatched=[];
-  const numbered=new Set(parsed.filter(r=>r.matchSeq!=null&&canonical[normalizePlayerMatchKey(r.player)]).map(r=>normalizePlayerMatchKey(r.player)+'|'+r.date));
-  DB.soccerbee=DB.soccerbee.filter(r=>r.matchSeq!=null||!numbered.has(normalizePlayerMatchKey(r.player)+'|'+normDate(r.date)));
-  parsed.forEach(r=>{
-    const key=normalizePlayerMatchKey(r.player), player=canonical[key]||"";
-    if(!player){unmatched.push(String(r.player||"").trim());return;}
-    const row=Object.assign({},r,{player,sourcePlayer:String(r.player||"").trim()});
-    const i=DB.soccerbee.findIndex(x=>normalizePlayerMatchKey(x.player)===normalizePlayerMatchKey(player)&&normDate(x.date)===row.date&&String(x.matchSeq??0)===String(row.matchSeq??0));
-    if(i>=0)DB.soccerbee[i]=row;else DB.soccerbee.push(row);
-    matched.push(row);
-  });
-  DB.soccerbee.sort((a,b)=>String(a.player).localeCompare(String(b.player),"ko")||normDate(a.date).localeCompare(normDate(b.date))||num(a.matchSeq)-num(b.matchSeq));
-  /* 업로드 결과를 후속 토스트/상태 표시에서 사용할 수 있도록 저장 */
-  importSoccerBeeXlsx.lastResult={parsed:parsed.length,matched:matched.length,unmatched:[...new Set(unmatched.filter(Boolean))],latest:Object.keys(soccerBeeLatestMap()).length};
-  if(!matched.length) throw new Error("선수명단 DB의 이름과 일치하는 SoccerBee 선수가 없습니다."+(unmatched.length?" 미매칭: "+[...new Set(unmatched)].slice(0,8).join(", "):""));
-  return matched.length;
+  if(!recognized)throw new Error('SoccerBee 양식의 시트를 찾지 못했습니다. 기존 DB는 유지됩니다.');
+  const canonical=soccerBeeCanonicalPlayerMap(),next=new Map(),unmatched=[];
+  for(const r of parsed){
+    const player=canonical[normalizePlayerMatchKey(r.player)];
+    if(!player){unmatched.push(r.player);continue;}
+    const row={...r,player,sourcePlayer:r.player},key=JSON.stringify([normalizePlayerMatchKey(player),r.date,r.matchSeq??0]);
+    if(next.has(key)){
+      const previous=next.get(key);
+      if(Object.keys(r).some(k=>k!=='player'&&previous[k]!==r[k]))throw new Error('SoccerBee 중복 측정값 충돌: '+player+' '+r.date+' #'+(r.matchSeq??'미지정')+'. 기존 DB는 유지됩니다.');
+    }else next.set(key,row);
+  }
+  if(unmatched.length)throw new Error('선수명단에 없는 이름: '+[...new Set(unmatched)].join(', ')+'. 통합 선수명단 또는 엑셀 이름을 수정하세요. 기존 DB는 유지됩니다.');
+  // Commit only after every recognized sheet and row has passed validation.
+  const before=DB.soccerbee||[],keyOf=r=>JSON.stringify([normalizePlayerMatchKey(r.player),normDate(r.date),r.matchSeq??0]);
+  const removed=before.filter(r=>!next.has(keyOf(r))).length;
+  DB.soccerbee=[...next.values()].sort((a,b)=>a.player.localeCompare(b.player,'ko')||a.date.localeCompare(b.date)||num(a.matchSeq)-num(b.matchSeq));
+  abilityPriorYearPoolCache=null;
+  importSoccerBeeXlsx.lastResult={parsed:parsed.length,matched:DB.soccerbee.length,removed,unmatched:[],latest:Object.keys(soccerBeeLatestMap()).length};
+  return DB.soccerbee.length;
 }
 
 function renderAbilityRules(){
@@ -2275,7 +2307,7 @@ function renderAbilityGuide(){
  const steps=(name,rows)=>table(['조건','적용값'],(rows||[]).map(r=>[name+' '+r.min+' 이상',r.value]));
  const keys=['pac','sho','pas','dri','def','phy'];
  root.innerHTML=section('적용 시스템 구성','<div class="ability-guide-flow"><div>선수명단<br>이름·시작일·포지션</div><div>SoccerBee<br>경기별 측정 → 일자 합산 → 초기 PAC·DRI·DEF·PHY</div><div>경기기록<br>득점·도움·출석·선방·파울·MOM</div><div>Career BASE<br>성장·결석·재측정 변화 누적</div><div>FORM<br>최근 '+f.window+'R 상태</div><div>CURRENT OVR<br>포지션 가중 BASE + FORM 보정</div></div><p>시작일 이전 기록과 조회 기준일 이후 기록은 제외합니다. 화면의 반기와 시즌은 조회 범위이며 Career는 설정된 시작 연도부터 누적합니다. 카드 장식 등급은 별도 Career Achievement 규칙입니다.</p>')+
- section('팀별 기록지 · Rev.4','<p>날짜·라운드·경기번호·이름을 경기기록의 실제 출전 선수에 연결합니다. 같은 키의 중복 행은 한 번만 읽고 값이 다르면 업로드를 중단합니다. 연결되지 않은 행은 아래 확인 목록에 보존하며 능력치에 반영하지 않습니다.</p><p>빈칸은 미기록, 0은 기록한 결과 0회입니다. 신규 기록이 없던 과거 경기에 감점을 만들지 않습니다. 선방은 같은 경기·선수의 팀별 기록지 입력값을 우선하고 경기기록 선방과 합산하지 않습니다. 팀별 기록지 선방이 빈칸이면 기존 선방을 사용합니다.</p>'+table(['기록','능력','1회 기본 가산','하루 기본 상한'],[['유효슛','SHO',c.teamRecords.sot.rate,c.teamRecords.sot.cap],['키패스','PAS',c.teamRecords.keyPass.rate,c.teamRecords.keyPass.cap],['수비성공','DEF',c.teamRecords.defSuccess.rate,c.teamRecords.defSuccess.cap],['선방','DEF','기존 선방 구간표','기존 선방 구간표']])+'<p>신규 기록 기본 가산 = min(하루 횟수 × 1회 가산, 하루 상한). 기존 기록·출석 가산에 더한 뒤 승점 배율 × 현재 능력 구간 배율 × FORM 성장 배율을 적용합니다. 상한은 이 배율 적용 전 값입니다. 유효슛·키패스에는 골·도움을 별도로 빼지 않으며 기존 골·도움 보상과 함께 소폭 반영합니다. 신규 지표는 FORM에 직접 중복 가산하지 않습니다. 사커비 초기 평가 비중은 유지합니다. 모든 가산과 상한은 관리자 능력치 설정에서 변경할 수 있습니다.</p>'+teamRecordAuditHtml())+
+ section('팀별 기록지 · 팀명 연결','<p>날짜·라운드·경기번호·팀명·이름을 경기기록의 실제 출전에 연결합니다. 팀명·팀·소속팀 열을 인식하고 입력 팀과 실제 출전 팀이 다르면 계산에서 제외합니다. 팀명이 없는 구양식은 실제 출전 팀이 유일할 때만 연결합니다. 같은 키의 중복 행은 한 번만 읽고 값이 다르면 업로드를 중단합니다. 연결되지 않은 행은 아래 확인 목록에 보존하며 능력치에 반영하지 않습니다.</p><p>빈칸은 미기록, 0은 기록한 결과 0회입니다. 신규 기록이 없던 과거 경기에 감점을 만들지 않습니다. 선방은 같은 경기·선수의 팀별 기록지 입력값을 우선하고 경기기록 선방과 합산하지 않습니다. 팀별 기록지 선방이 빈칸이면 기존 선방을 사용합니다.</p>'+table(['기록','능력','1회 기본 가산','하루 기본 상한'],[['유효슛','SHO',c.teamRecords.sot.rate,c.teamRecords.sot.cap],['키패스','PAS',c.teamRecords.keyPass.rate,c.teamRecords.keyPass.cap],['수비성공','DEF',c.teamRecords.defSuccess.rate,c.teamRecords.defSuccess.cap],['선방','DEF','기존 선방 구간표','기존 선방 구간표']])+'<p>신규 기록 기본 가산 = min(하루 횟수 × 1회 가산, 하루 상한). 기존 기록·출석 가산에 더한 뒤 승점 배율 × 현재 능력 구간 배율 × FORM 성장 배율을 적용합니다. 상한은 이 배율 적용 전 값입니다. 유효슛·키패스에는 골·도움을 별도로 빼지 않으며 기존 골·도움 보상과 함께 소폭 반영합니다. 신규 지표는 FORM에 직접 중복 가산하지 않습니다. 사커비 초기 평가 비중은 유지합니다. 모든 가산과 상한은 관리자 능력치 설정에서 변경할 수 있습니다.</p>'+teamRecordAuditHtml())+
  section('리그·집계 기준','<p>경기일 이전 또는 당일의 최신 팀스쿼드 그룹을 적용합니다. 슈퍼×슈퍼=슈퍼리그, 챌린지×챌린지=챌린지리그, 서로 다른 그룹=인터리그입니다. 컵대회 등 다른 대회명은 유지합니다.</p><p>선수 경기수는 경기ID별 출전 1회, 참석일수는 날짜별 1회입니다. 팀 누적 참석수는 날짜·팀·선수 조합을 한 번 셉니다. 출석률 분모는 조회기간의 당시 소속팀 경기 및 실제 출전 경기이며 팀 이동과 참가 시작일을 반영합니다. 개인 득점에서 자책골·베네핏은 제외하며 팀 득점은 원본 점수를 유지합니다.</p>')+
  section('업로드와 경기순번','<p>날짜 + 선수 + 경기순번을 키로 보존합니다. 같은 키 재업로드는 갱신하며 다른 경기순번은 추가합니다. 번호 없는 구형 데이터는 기존 측정으로 보존하되, 같은 날짜에 번호가 있는 새 기록이 들어오면 번호 없는 기록을 교체해 이중 합산을 막습니다.</p><p>같은 날 여러 경기: 횟수·거리는 합계, 최고속도는 최댓값, 나머지 지표는 출전시간 가중평균입니다. 출전시간 누락 시 평균 지표는 단순평균을 사용하고 10분 환산 횟수·거리는 평가에서 제외합니다. 출전시간과 거리를 입력하면 각각 분과 km로 보존합니다. 빠진 값은 0으로 간주하지 않습니다.</p>')+
  section('사커비 평가 계산','<p>기준표의 두 점 사이를 선형보간합니다: 점수 = 아래 점수 + (측정값 − 아래 기준값) ÷ (위 기준값 − 아래 기준값) × 점수 차이. 범위 밖은 양 끝 점수로 제한합니다.</p><p>능력별 지수 = Σ(지표 점수 × 가중치) ÷ 사용 가능한 가중치 합계. 사커비 초기 능력치 = '+sb.abilityMin+' + ('+sb.abilityMax+' − '+sb.abilityMin+') × 지수 ÷ 100. 미측정 PAC·DRI·DEF·PHY는 각각 '+keys.filter(k=>k in c.unassessed).map(k=>k.toUpperCase()+' '+c.unassessed[k]).join(', ')+'입니다. 상대 백분위는 참고 표시입니다.</p><p>10분당 스프린트 = 횟수 ÷ 출전시간 × 10. 10분당 스프린트 거리 = 거리(m) ÷ 출전시간 × 10. SPM은 입력값을 사용하며 누락 시 횟수 ÷ 출전시간으로 계산합니다. 총 이동거리는 입력 DPM이 없을 때 거리(km) × 1000 ÷ 출전시간으로 보완합니다.</p>'+table(['능력','현재 지표별 비중'],Object.entries(sb.weights).map(([k,w])=>[k.toUpperCase(),abilityWeightText(w)]))+table(['지표',...(sb.scorePoints||[]).map(x=>x+'점')],Object.entries(sb.criteria).map(([k,v])=>[abilityMetricLabel(k),...v]))+'<p>스프린트 기준표는 운영용 초기 기준이며 관리자 설정에서 조정할 수 있습니다. SPM·횟수·거리는 서로 관련되므로 합산 비중을 제한했습니다. 누락 지표가 있으면 남은 비중이 정규화되어 실제 비중은 달라집니다.</p>')+
@@ -2283,7 +2315,7 @@ function renderAbilityGuide(){
  section('상승 계산','<p>라운드 능력 증가 = (출석 가산 + 해당 능력의 기록 가산) × 라운드 승점 배율 × 현재 능력 구간 배율 × FORM 성장 배율.</p><p>SHO 득점 가산 = 득점 수 × '+c.goalPerGoal+'. 도움은 PAS, 선방은 DEF의 해당 구간값을 적용합니다. 구간값은 중복 합산하지 않습니다.</p>'+table(['능력','출석 가산','결석 직접 감점','MOM 1회 가산'],keys.map(k=>[k.toUpperCase(),c.attendance[k],c.absence[k],c.mom.firstSeasonBonus[k]||0]))+steps('도움',c.assistSteps)+steps('선방',c.saveSteps)+steps('승점',c.pointMultipliers)+steps('현재 능력',c.growthRates)+'<p>MOM 증가 = 해당 능력 MOM 가산 × MOM 횟수 × FORM 성장 배율. 매 이벤트 이후 '+c.scoreMin+'~'+c.scoreMax+'로 제한합니다.</p>')+
  section('하강과 재측정','<p>소속팀이 경기한 라운드에 출전·득점·도움·선방·파울·MOM 기록이 모두 없으면 결석 직접 감점이 적용됩니다. 파울은 아래 구간에 따라 DEF에서 직접 차감합니다.</p>'+steps('파울',c.foulPenaltySteps)+'<p>재측정 변화 = (새 사커비 평가 − 직전 평가) × '+sb.retestMultiplier+'. 같은 날 측정은 먼저 합산하며 재측정 변화는 일자당 한 번 반영합니다. 처음 측정한 날은 임시 능력을 실제 측정 평가값으로 교체합니다. 측정이 낮아지면 재측정 변화도 음수가 됩니다.</p>')+
  section('FORM 계산','<p>최근 '+f.window+'R 출전 비율을 0~5 출전 단계로 환산합니다. FORM 원점수 = 출전 단계 점수 + 연속 결석 감점 + 최근 라운드 성과의 가중평균. 이를 −5~5로 제한·반올림해 FORM 단계를 정합니다.</p>'+table(['출전 단계','점수'],entries(f.attendance))+table(['연속 결석R','감점'],entries(f.consecutiveAbsence))+table(['최근순','가중치'],f.recency.map((v,i)=>[i+1,v]))+table(['성과 지표','계수'],entries(f.events,k=>({goal:'득점당',assist:'도움당',savePer5:'선방 5개당',saveMax:'선방 상한',mom:'MOM(라운드당 최대 1)',foul:'파울당',win:'승리당',draw:'무승부당',loss:'패배당',roundMax:'성과 상한',roundMin:'성과 하한'})[k]||k))+table(['FORM 단계','OVR 보정','성장 배율'],Object.keys(f.ovrModifier).sort((a,b)=>Number(a)-Number(b)).map(k=>[k,f.ovrModifier[k],f.growthMultiplier[k]])))+
- section('등록된 경기별 측정값',table(['선수','날짜','경기순번','출전시간(분)','거리(km)','스프린트','SPM','스프린트거리(m)'],(DB.soccerbee||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)||a.player.localeCompare(b.player)||num(a.matchSeq)-num(b.matchSeq)).map(r=>[esc(r.player),esc(r.date),r.matchSeq??'기존',r.minutes??'—',r.distanceKm??'—',r.sprint??'—',r.spm??'—',r.sprintDistance??'—'])));
+ section('등록된 경기별 측정값','<p>사커비 DB는 마지막 업로드 엑셀 전체와 동기화합니다. 엑셀에서 삭제한 측정은 재업로드 시 DB·측정 그래프·능력치 계산에서도 제거됩니다. 유지할 과거 기록은 엑셀에 함께 두세요. 잘못된 형식·숫자·날짜·이름·중복값 충돌은 전체 업로드를 취소합니다.</p>'+table(['선수','날짜','경기순번','출전시간(분)','거리(km)','스프린트','SPM','스프린트거리(m)'],(DB.soccerbee||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)||a.player.localeCompare(b.player)||num(a.matchSeq)-num(b.matchSeq)).map(r=>[esc(r.player),esc(r.date),r.matchSeq??'기존',r.minutes??'—',r.distanceKm??'—',r.sprint??'—',r.spm??'—',r.sprintDistance??'—'])));
 }
 
 function renderAbilityConfig(){
@@ -2419,6 +2451,7 @@ function handleAbilitySortChange(e){
 }
 function syncAbilityAdminControls(){
   const box=$('#abilityAdminControls');if(box)box.hidden=!admin;
+  const initial=document.querySelector('[data-panel-toggle="sb-initial"]');if(initial)initial.hidden=!admin;
   ['abilityYear','abilityAsOfDate','abilityHalf','abilityDateLatest','abilityRefresh','abilitySystemEnabled','soccerbeeUpload','soccerbeeClear'].forEach(id=>{const el=$('#'+id);if(el)el.disabled=!admin;});
 }
 function applyAbilityNameSearch(){
@@ -2548,13 +2581,13 @@ function renderAbility(){
   if($("#soccerbeeStatusTitle")) $("#soccerbeeStatusTitle").textContent=selectedDate?"SoccerBee 경기일 기준 측정 현황":"SoccerBee 최신 측정 현황";
   if($("#soccerbeeStatusDesc")) $("#soccerbeeStatusDesc").textContent=selectedDate
     ? selectedDate+"까지 업로드된 측정 이력 중 선수별 최신 일자 합산값을 표시하며, 이후 측정값은 해당 기준일 능력치 계산에서 제외합니다."
-    : "업로드한 측정 이력은 삭제하지 않고 보존하며, 선수별 최신 일자 합산값을 고정 절대평가 기준표에 대입해 PAC·DRI·DEF·PHY를 계산합니다. 상대평가는 참고 백분위로만 사용합니다.";
+    : "마지막 업로드 엑셀에 포함된 측정 이력만 보존하며, 선수별 최신 일자 합산값을 고정 절대평가 기준표에 대입해 PAC·DRI·DEF·PHY를 계산합니다. 상대평가는 참고 백분위로만 사용합니다.";
   if($("#soccerbeeStatusNote")) $("#soccerbeeStatusNote").innerHTML=selectedDate
     ? '적용 원칙: <b>선수명단 DB 이름 매칭 → '+esc(selectedDate)+' 이하의 측정값 중 선수별 최신 일자 합산값 적용</b>. 선택 날짜 이후 측정값은 조회 능력치에 반영하지 않습니다.'
-    : '적용 원칙: <b>선수명단 DB 이름 매칭 → 선수별 최신 일자 합산값 → 절대평가</b>. 이전 기록은 History로 보존하며 상대평가는 능력치 결정에 사용하지 않습니다.';
+    : '적용 원칙: <b>선수명단 DB 이름 매칭 → 선수별 최신 일자 합산값 → 절대평가</b>. 엑셀에 남아 있는 이전 기록만 History로 표시하며, 엑셀에서 삭제한 기록은 재업로드 시 제거됩니다.';
   const sbRows=Object.values(latestSb).sort((a,b)=>String(a.player).localeCompare(String(b.player),"ko"));
   const sbEval=soccerBeeAbilityBaseMap(selectedDate||'');
-  const onlyRoot=$('#soccerbeeOnlySummary');if(onlyRoot)onlyRoot.innerHTML=sbRows.length?sbRows.map(r=>soccerBeeOnlyHtml(r.player,selectedDate||'',sbEval[r.player])).join(''):'<p class="empty">선택 기준일까지 사커비 측정 기록이 없습니다.</p>';
+  const onlyRoot=$('#soccerbeeOnlySummary');if(onlyRoot)onlyRoot.innerHTML=!admin?'':sbRows.length?sbRows.map(r=>soccerBeeOnlyHtml(r.player,selectedDate||'',sbEval[r.player])).join(''):'<p class="empty">선택 기준일까지 사커비 측정 기록이 없습니다.</p>';
   if($("#soccerbeeStatusTable"))$("#soccerbeeStatusTable").innerHTML=sbRows.length?tbl([
     {t:"선수"},{t:"측정일"},{t:"경기순번"},{t:"출전시간(분)"},{t:"거리(km)"},{t:"SB PAC",n:1},{t:"SB DRI",n:1},{t:"SB DEF",n:1},{t:"SB PHY",n:1},{t:"참고 백분위",n:1},{t:"에너지점수",n:1},{t:"DPM",n:1},{t:"활동범위(%)",n:1},{t:"평균속도(km/h)",n:1},{t:"최고속도(km/h)",n:1},
     {t:"HSR",n:1},{t:"HPM(c/min)",n:1},{t:"HSR거리(m)",n:1},{t:"HSR비율(%)",n:1},{t:"스프린트",n:1},{t:"SPM(c/min)",n:1},{t:"스프린트 거리(m)",n:1},{t:"스프린트 비율(%)",n:1},
@@ -4325,74 +4358,88 @@ const CAREER_FRAME_METRICS=[
   {key:'mom',label:'통산 MOM',unit:'회'}, {key:'w',label:'통산 승리',unit:'승'}
 ];
 const CAREER_FRAME_TIERS=[
-  {id:'NORMAL',name:'NORMAL',title:'커리어의 시작',thresholds:null},
-  {id:'BRONZE',name:'BRONZE',title:'첫 번째 커리어 발자취',thresholds:[20,10,10,40,2,10]},
-  {id:'SILVER',name:'SILVER',title:'쌓여 가는 존재감',thresholds:[50,25,25,100,5,25]},
-  {id:'GOLD',name:'GOLD',title:'팀을 빛내는 커리어',thresholds:[100,50,50,200,10,50]},
-  {id:'LEGEND',name:'LEGEND',title:'GGFC에 남긴 발자취',thresholds:[200,100,100,500,25,100]}
+  {id:'IRON',name:'IRON',title:'커리어의 시작',thresholds:null,design:'classic'},
+  {id:'BRONZE',name:'BRONZE',title:'첫 번째 커리어 발자취',thresholds:[20,10,10,40,2,10],design:'classic'},
+  {id:'SILVER',name:'SILVER',title:'쌓여 가는 존재감',thresholds:[50,25,25,100,5,25],design:'stadium'},
+  {id:'GOLD',name:'GOLD',title:'팀을 빛내는 커리어',thresholds:[100,50,50,200,10,50],design:'aurum'},
+  {id:'PLATINUM',name:'PLATINUM',title:'꾸준함으로 증명한 클래스',thresholds:[125,62,62,275,13,62],design:'neon'},
+  {id:'DIAMOND',name:'DIAMOND',title:'단단하게 빛나는 존재감',thresholds:[150,75,75,350,17,75],design:'diamond'},
+  {id:'MASTER',name:'MASTER',title:'경험으로 완성한 커리어',thresholds:[175,87,87,425,21,87],design:'ruby'},
+  {id:'CHALLENGE',name:'CHALLENGE',title:'GGFC에 남긴 발자취',thresholds:[200,100,100,500,25,100],design:'sapphire'}
 ];
 let careerFrameSettingsDirty=false;
 let analysisStartSettingsDirty=false;
 let careerFrameCardContext=null;
-function validateCareerFrameThresholds(value,counts={BRONZE:1,SILVER:1,GOLD:1,LEGEND:1}){
-  const required=[counts.BRONZE,counts.SILVER,counts.GOLD,counts.LEGEND];
+function validateCareerFrameThresholds(value,counts={}){
+  const tiers=CAREER_FRAME_TIERS.slice(1),required=tiers.map(t=>counts[t.id]??1);
   if(required.some(n=>!Number.isInteger(n)||n<1||n>6))return '충족 조건 수는 1~6개여야 합니다.';
   if(required.some((n,i)=>i>0&&required[i-1]>n))return '상위 등급의 충족 조건 수는 하위 등급 이상이어야 합니다.';
-  for(const tier of CAREER_FRAME_TIERS.slice(1)){
+  for(const tier of tiers){
     if(!Array.isArray(value?.[tier.id])||value[tier.id].length!==CAREER_FRAME_METRICS.length)return '모든 등급의 여섯 조건을 입력해 주세요.';
     for(const n of value[tier.id])if(!Number.isInteger(n)||n<1||n>1000000)return '조건은 1~1,000,000 사이의 정수로 입력해 주세요.';
   }
   for(let i=0;i<CAREER_FRAME_METRICS.length;i++){
-    if(!(value.BRONZE[i]<=value.SILVER[i]&&value.SILVER[i]<value.GOLD[i]&&value.GOLD[i]<value.LEGEND[i]))return CAREER_FRAME_METRICS[i].label+' 조건은 BRONZE ≤ SILVER < GOLD < LEGEND 순으로 커져야 합니다.';
+    if(tiers.some((t,j)=>j>0&&value[tiers[j-1].id][i]>value[t.id][i]))return CAREER_FRAME_METRICS[i].label+' 조건은 상위 등급일수록 같거나 커야 합니다.';
   }
   return '';
 }
 function careerFrameTiers(){
-  const original=DB.settings?.careerFrameThresholds;
-  const stored=original?{...original}:null;
-  const counts={BRONZE:1,SILVER:1,GOLD:1,LEGEND:1,...DB.settings?.careerFrameRequiredCounts};
-  // Derive Bronze for legacy settings without mutating saved data or existing tiers.
-  if(stored&&!stored.BRONZE&&Array.isArray(stored.SILVER))stored.BRONZE=CAREER_FRAME_TIERS[1].thresholds.map((n,i)=>Math.max(1,Math.min(n,Math.floor(stored.SILVER[i]/2))));
-  const valid=stored&&!validateCareerFrameThresholds(stored,counts);
-  return CAREER_FRAME_TIERS.map(tier=>({...tier,required:valid?(counts[tier.id]||1):1,thresholds:tier.thresholds?(valid?stored[tier.id]:tier.thresholds).slice():null}));
+  const source=DB.settings||{},stored=source.careerFrameThresholds||{},counts=source.careerFrameRequiredCounts||{},designs=source.careerFrameDesigns||{};
+  const valid=a=>Array.isArray(a)&&a.length===6&&a.every(n=>Number.isInteger(n)&&n>=1&&n<=1000000);
+  const thresholds={};
+  for(const t of CAREER_FRAME_TIERS.slice(1))if(valid(stored[t.id]))thresholds[t.id]=stored[t.id].slice();
+  // Read old settings without overwriting them. Preserve custom BRONZE/SILVER/GOLD/LEGEND values.
+  if(!thresholds.CHALLENGE&&valid(stored.LEGEND))thresholds.CHALLENGE=stored.LEGEND.slice();
+  if(!thresholds.BRONZE&&thresholds.SILVER)thresholds.BRONZE=CAREER_FRAME_TIERS[1].thresholds.map((n,i)=>Math.max(1,Math.min(n,Math.floor(thresholds.SILVER[i]/2))));
+  for(const id of ['BRONZE','SILVER','GOLD','CHALLENGE'])if(!thresholds[id])thresholds[id]=CAREER_FRAME_TIERS.find(t=>t.id===id).thresholds.slice();
+  ['PLATINUM','DIAMOND','MASTER'].forEach((id,j)=>{
+    if(!thresholds[id])thresholds[id]=thresholds.GOLD.map((n,i)=>Math.floor(n+(thresholds.CHALLENGE[i]-n)*(j+1)/4));
+  });
+  const count=id=>Number.isInteger(counts[id])&&counts[id]>=1&&counts[id]<=6?counts[id]:1;
+  const upperCount=counts.CHALLENGE??counts.LEGEND??count('GOLD');
+  return CAREER_FRAME_TIERS.map(t=>{
+    let required=count(t.id);
+    if(counts[t.id]===undefined&&['PLATINUM','DIAMOND','MASTER','CHALLENGE'].includes(t.id))required=upperCount;
+    const oldDesign=t.id==='IRON'?designs.NORMAL:t.id==='CHALLENGE'?designs.LEGEND:null;
+    const chosen=designs[t.id]||oldDesign||(t.id==='IRON'?source.playerCardDesign:null)||t.design;
+    return {...t,required,thresholds:t.thresholds?thresholds[t.id]:null,design:Object.hasOwn(CARD_DESIGN_LABELS,chosen)?chosen:t.design};
+  });
 }
+function careerDesignLabel(id){return CARD_DESIGN_LABELS[id]||CARD_DESIGN_LABELS.classic;}
 function renderCareerFrameSettings(tiers=careerFrameTiers(),force=false){
   const fields=document.getElementById('careerFrameSettingsFields');if(!fields)return;
   if(careerFrameSettingsDirty&&admin&&!force)return;
   if(!admin)careerFrameSettingsDirty=false;
   invalidateCareerPreview();
   const previewDate=document.getElementById('careerFramePreviewDate');if(previewDate&&!previewDate.value)previewDate.value=recordDates()[0]||'';
-  fields.innerHTML=tiers.slice(1).map(tier=>'<fieldset class="career-frame-settings-tier"><legend>'+tier.name+'</legend><label>승급에 필요한 조건 수 <select id="frame-count-'+tier.id+'"'+(!admin?' disabled':'')+'>'+[1,2,3,4,5,6].map(n=>'<option value="'+n+'"'+(n===(tier.required||1)?' selected':'')+'>'+n+'개'+(n===1?' (하나만)':n===6?' (모두)':' 이상')+'</option>').join('')+'</select></label><div class="career-frame-settings-inputs">'+CAREER_FRAME_METRICS.map((metric,i)=>'<label for="frame-'+tier.id+'-'+metric.key+'">'+metric.label+' ('+metric.unit+')<input id="frame-'+tier.id+'-'+metric.key+'" data-frame-tier="'+tier.id+'" data-frame-metric="'+i+'" type="number" min="1" max="1000000" step="1" required value="'+tier.thresholds[i]+'"'+(!admin?' disabled':'')+'></label>').join('')+'</div></fieldset>').join('');
+  fields.innerHTML=tiers.map(tier=>'<fieldset class="career-frame-settings-tier"><legend>'+tier.name+'</legend><div class="career-tier-options"><label>카드 디자인<select id="frame-design-'+tier.id+'" data-frame-design="'+tier.id+'"'+(!admin?' disabled':'')+'>'+Object.entries(CARD_DESIGN_LABELS).map(([id,label])=>'<option value="'+id+'"'+(id===tier.design?' selected':'')+'>'+label+'</option>').join('')+'</select></label><button type="button" class="btn" data-frame-preview="'+tier.id+'"'+(!admin?' disabled':'')+'>디자인 미리보기</button>'+(tier.thresholds?'<label>승급에 필요한 조건 수 <select id="frame-count-'+tier.id+'"'+(!admin?' disabled':'')+'>'+[1,2,3,4,5,6].map(n=>'<option value="'+n+'"'+(n===(tier.required||1)?' selected':'')+'>'+n+'개'+(n===1?' (하나만)':n===6?' (모두)':' 이상')+'</option>').join('')+'</select></label>':'<p class="note">기본 등급 · 승급 조건 없음</p>')+'</div>'+(tier.thresholds?'<div class="career-frame-settings-inputs">'+CAREER_FRAME_METRICS.map((metric,i)=>'<label for="frame-'+tier.id+'-'+metric.key+'">'+metric.label+' ('+metric.unit+')<input id="frame-'+tier.id+'-'+metric.key+'" data-frame-tier="'+tier.id+'" data-frame-metric="'+i+'" type="number" min="1" max="1000000" step="1" required value="'+tier.thresholds[i]+'"'+(!admin?' disabled':'')+'></label>').join('')+'</div>':'')+'</fieldset>').join('');
   ['careerFrameSettingsSave','careerFrameSettingsDefault','careerFrameSettingsCancel','careerFrameSettingsPreview'].forEach(id=>{const button=document.getElementById(id);if(button)button.disabled=!admin;});
-  const status=document.getElementById('careerFrameSettingsStatus');if(status)status.textContent='현재 저장된 기준입니다.';
+  const status=document.getElementById('careerFrameSettingsStatus');if(status)status.textContent='8단계 등급 기준과 카드 디자인입니다. 같은 기준을 여러 등급에 지정하면 충족한 가장 높은 등급이 적용됩니다.';
 }
 function readCareerFrameSettingsForm(){
-  const thresholds={},counts={};
-  CAREER_FRAME_TIERS.slice(1).forEach(tier=>{
+  const thresholds={},counts={},designs={};
+  CAREER_FRAME_TIERS.forEach(tier=>{
+    designs[tier.id]=document.getElementById('frame-design-'+tier.id)?.value||tier.design;
+    if(!tier.thresholds)return;
     thresholds[tier.id]=CAREER_FRAME_METRICS.map(metric=>{const raw=document.getElementById('frame-'+tier.id+'-'+metric.key)?.value.trim();return raw?Number(raw):NaN;});
     counts[tier.id]=Number(document.getElementById('frame-count-'+tier.id)?.value);
   });
-  return {thresholds,counts};
+  return {thresholds,counts,designs};
 }
 function saveCareerFrameSettings(){
   const status=document.getElementById('careerFrameSettingsStatus');
   if(!admin||!GGFC.canEdit()){if(status)status.textContent='관리자 인증과 서버 연결을 확인해 주세요.';return false;}
-  const {thresholds,counts}=readCareerFrameSettingsForm();
-  const error=validateCareerFrameThresholds(thresholds,counts);
+  const {thresholds,counts,designs}=readCareerFrameSettingsForm();
+  const error=validateCareerFrameThresholds(thresholds,counts)||(!CAREER_FRAME_TIERS.every(t=>Object.hasOwn(CARD_DESIGN_LABELS,designs[t.id]))?'카드 디자인을 다시 선택해 주세요.':'');
   if(error){status.textContent=error;return false;}
-  DB.settings=DB.settings||{};const previous=DB.settings.careerFrameThresholds,previousCounts=DB.settings.careerFrameRequiredCounts;
-  DB.settings.careerFrameThresholds=thresholds;DB.settings.careerFrameRequiredCounts=counts;
-  try{
-    const result=save();
-    if(!result?.cloudPending)throw result?.error||new Error('공유 저장을 시작하지 못했습니다.');
-  }catch(error){
-    if(previous===undefined)delete DB.settings.careerFrameThresholds;else DB.settings.careerFrameThresholds=previous;
-    if(previousCounts===undefined)delete DB.settings.careerFrameRequiredCounts;else DB.settings.careerFrameRequiredCounts=previousCounts;
-    status.textContent='저장 실패: '+error.message;return false;
-  }
-  careerFrameSettingsDirty=false;renderAll();renderCareerFrameSettings(careerFrameTiers(),true);
-  status.textContent='기준을 적용하고 공유 저장을 요청했습니다. 상단의 공유 저장 완료 표시를 확인해 주세요.';
-  toast('선수카드 등급 기준을 적용했습니다. 공유 저장 상태를 확인해 주세요.');return true;
+  DB.settings=DB.settings||{};
+  const keys=['careerFrameThresholds','careerFrameRequiredCounts','careerFrameDesigns'],previous=keys.map(k=>DB.settings[k]);
+  [thresholds,counts,designs].forEach((value,i)=>DB.settings[keys[i]]=value);
+  try{const result=save();if(!result?.cloudPending)throw result?.error||new Error('공유 저장을 시작하지 못했습니다.');}
+  catch(error){keys.forEach((k,i)=>{if(previous[i]===undefined)delete DB.settings[k];else DB.settings[k]=previous[i];});status.textContent='저장 실패: '+error.message;return false;}
+  careerFrameSettingsDirty=false;cardDesignSettingsDirty=false;renderAll();
+  status.textContent='등급 기준과 8개 등급별 디자인을 적용했습니다. 상단의 공유 저장 완료 표시를 확인해 주세요.';
+  toast('등급 기준과 카드 디자인을 적용했습니다. 공유 저장 상태를 확인해 주세요.');return true;
 }
 function careerFrameState(stats,tiers=careerFrameTiers()){
   const values=CAREER_FRAME_METRICS.map(m=>Math.max(0,num(stats?.[m.key])));
@@ -4415,17 +4462,17 @@ function invalidateCareerPreview(){
 }
 function previewCareerFrameSettings(){
   const box=document.getElementById('careerFramePreview');if(!admin||!box)return;
-  const {thresholds,counts}=readCareerFrameSettingsForm(),error=validateCareerFrameThresholds(thresholds,counts);
+  const {thresholds,counts,designs}=readCareerFrameSettingsForm(),error=validateCareerFrameThresholds(thresholds,counts);
   box.hidden=false;
   if(error){box.textContent=error;return;}
   const input=document.getElementById('careerFramePreviewDate');
   const cutoff=normDate(input.value)||recordDates()[0]||'';input.value=cutoff;
-  const proposed=CAREER_FRAME_TIERS.map(t=>({...t,required:counts[t.id]||1,thresholds:t.thresholds?thresholds[t.id]:null}));
+  const proposed=CAREER_FRAME_TIERS.map(t=>({...t,required:counts[t.id]||1,design:designs[t.id],thresholds:t.thresholds?thresholds[t.id]:null}));
   const current=careerFrameTiers(),stats=v319CareerStatsMap(cutoff);
   const names=[...new Set([...Object.keys(stats),...(DB.roster||[]).map(r=>r.player)].filter(n=>n&&!isOwnGoalPlayer(n)))].sort(compareNamesKo);
-  const changes=names.map(name=>({name,before:careerFrameState(stats[name],current).tier.id,after:careerFrameState(stats[name],proposed).tier.id})).filter(x=>x.before!==x.after);
-  const rank=id=>CAREER_FRAME_TIERS.findIndex(t=>t.id===id),up=changes.filter(x=>rank(x.after)>rank(x.before)).length;
-  box.innerHTML='<p><b>'+esc(cutoff||'전체 기록')+' 기준 · '+names.length+'명 비교</b><br>승급 '+up+'명 · 하향 '+(changes.length-up)+'명 · 유지 '+(names.length-changes.length)+'명</p><p class="note">저장 전 비교입니다. 실제 등급과 능력치는 변경되지 않습니다. 선수카드는 현재 저장된 기준으로 열립니다.</p>'+(changes.length?tbl([{t:'선수'},{t:'현재 등급'},{t:'변경 후 등급'},{t:'변경'}],changes.map(x=>[playerCardLink(x.name,esc(x.name),{asOf:cutoff,end:cutoff,allCompetitions:true}),x.before,x.after,rank(x.after)>rank(x.before)?'승급':'하향'])):'<p>등급이 바뀌는 선수가 없습니다.</p>');
+  const changes=names.map(name=>({name,before:careerFrameState(stats[name],current).tier,after:careerFrameState(stats[name],proposed).tier})).filter(x=>x.before.id!==x.after.id||x.before.design!==x.after.design);
+  const rank=tier=>CAREER_FRAME_TIERS.findIndex(t=>t.id===tier.id),up=changes.filter(x=>rank(x.after)>rank(x.before)).length,down=changes.filter(x=>rank(x.after)<rank(x.before)).length,skinOnly=changes.length-up-down;
+  box.innerHTML='<p><b>'+esc(cutoff||'전체 기록')+' 기준 · '+names.length+'명 비교</b><br>승급 '+up+'명 · 하향 '+down+'명 · 디자인만 변경 '+skinOnly+'명 · 변경 없음 '+(names.length-changes.length)+'명</p><p class="note">저장 전 비교입니다. 실제 등급과 능력치는 변경되지 않습니다. 선수카드는 현재 저장된 기준으로 열립니다.</p>'+(changes.length?tbl([{t:'선수'},{t:'현재 등급 / 디자인'},{t:'변경 후 등급 / 디자인'},{t:'변경'}],changes.map(x=>[playerCardLink(x.name,esc(x.name),{asOf:cutoff,end:cutoff,allCompetitions:true}),esc(x.before.name+' / '+careerDesignLabel(x.before.design)),esc(x.after.name+' / '+careerDesignLabel(x.after.design)),rank(x.after)>rank(x.before)?'승급':rank(x.after)<rank(x.before)?'하향':'디자인'])):'<p>등급이나 디자인이 바뀌는 선수가 없습니다.</p>');
 }
 function renderCareerFrame(player,cutoff){
   careerFrameCardContext={player,cutoff};
@@ -4439,10 +4486,10 @@ function renderCareerFrame(player,cutoff){
   const date=normDate(cutoff)||'전체 기록';
   const next=state.next?'<p class="career-frame-next"><b>'+state.next.name+'</b>까지 아래 6개 조건 중 <b>'+state.next.required+'개</b>를 달성하세요. (현재 '+state.routes.filter(r=>r.remaining===0).length+'개 충족)</p><div class="career-frame-routes">'+state.routes.map(route=>{
     return '<div class="career-frame-route"><span>'+route.label+'</span><b>'+route.value+' / '+route.target+' '+route.unit+'</b><progress max="'+route.target+'" value="'+Math.min(route.value,route.target)+'" aria-label="'+route.label+' '+route.value+' / '+route.target+'"></progress><small>'+route.remaining+' '+route.unit+' 남음</small></div>';
-  }).join('')+'</div>':'<p class="career-frame-complete">최고 등급 LEGEND 달성 · 앞으로 쌓는 기록도 통산 업적에 계속 반영됩니다.</p>';
+  }).join('')+'</div>':'<p class="career-frame-complete">최고 등급 CHALLENGE 달성 · 앞으로 쌓는 기록도 통산 업적에 계속 반영됩니다.</p>';
   const rules=careerFrameTiers().slice(1).map(tier=>'<li><b>'+tier.name+' ('+tier.required+'개)</b><span>'+CAREER_FRAME_METRICS.map((m,i)=>m.label.replace('통산 ','')+' '+tier.thresholds[i]+m.unit).join(' / ')+'</span></li>').join('');
   box.dataset.careerTier=state.tier.id;
-  box.innerHTML='<header><span>CAREER FRAME</span><strong>'+state.tier.name+'</strong></header><p class="career-frame-title">'+state.tier.title+'</p><p class="career-frame-basis">'+esc(date)+' 기준 · 전체 시즌·대회 통산 기록</p><p class="career-frame-earned">'+(state.earned.length?'현재 등급 달성 근거: '+state.earned.join(' · '):'아직 BRONZE 기준에 도달하지 않았습니다.')+'</p>'+next+'<details class="career-frame-rules"><summary>등급 기준 전체 보기</summary><p>NORMAL은 기본 등급입니다. 각 등급은 관리자가 정한 충족 조건 수를 만족하면 적용됩니다. 누적 업적 개수나 능력치 점수는 사용하지 않습니다.</p><ul>'+rules+'</ul><p>출전은 경기 ID당 1회입니다. 같은 날 여러 경기에 출전하면 경기 수만큼 집계합니다. 시즌·조회 구간이 바뀌어도 기준일까지의 통산 기록을 사용하며, 과거 날짜 조회와 기록 정정 시 해당 기록에 맞춰 등급을 다시 계산합니다. 프레임은 OVR·능력치에 영향을 주지 않습니다.</p></details>';
+  box.innerHTML='<header><span>CAREER FRAME</span><strong>'+state.tier.name+'</strong></header><p class="career-frame-title">'+state.tier.title+'</p><p class="career-frame-basis">'+esc(date)+' 기준 · 전체 시즌·대회 통산 기록</p><p class="career-frame-earned">'+(state.earned.length?'현재 등급 달성 근거: '+state.earned.join(' · '):'아직 BRONZE 기준에 도달하지 않았습니다.')+'</p>'+next+'<details class="career-frame-rules"><summary>등급 기준 전체 보기</summary><p>IRON은 기본 등급입니다. 각 등급은 관리자가 정한 충족 조건 수를 만족하면 적용됩니다. 누적 업적 개수나 능력치 점수는 사용하지 않습니다.</p><ul>'+rules+'</ul><p>출전은 경기 ID당 1회입니다. 같은 날 여러 경기에 출전하면 경기 수만큼 집계합니다. 시즌·조회 구간이 바뀌어도 기준일까지의 통산 기록을 사용하며, 과거 날짜 조회와 기록 정정 시 해당 기록에 맞춰 등급을 다시 계산합니다. 프레임은 OVR·능력치에 영향을 주지 않습니다.</p></details>';
 }
 function renderPlayerCardAchievements(player,cutoff){
   const box=$('#playerCardAchievements');if(box)box.innerHTML=v319AchievementHtml(player,cutoff,false);
@@ -4784,19 +4831,26 @@ function renderTeamPointsChart(list,info){
   const legend='<div class="team-points-chart-legend">'+series.map(s=>'<span><i style="background:'+s.color+'"></i>'+teamChip(s.team)+'</span>').join('')+'</div>';
   box.innerHTML=svg+legend;
 }
+function teamScorersForMatches(list,team){
+  const ids=new Set(list.filter(m=>m.home===team||m.away===team).map(m=>m.id)),players=new Map();
+  const get=name=>{const key=normalizePlayerMatchKey(name);if(!players.has(key))players.set(key,{player:name,g:0,appearances:new Set()});return players.get(key);};
+  for(const r of DB.goals||[])if(ids.has(r.id)&&r.team===team&&!isOwnGoalPlayer(r.player))get(r.player).g+=num(r.g);
+  for(const r of DB.attendance||[])if(ids.has(r.id)&&r.team===team&&!isOwnGoalPlayer(r.player))get(r.player).appearances.add(r.id);
+  return [...players.values()].filter(p=>p.g>0).map(({player,g,appearances})=>({player,g,att:appearances.size})).sort((a,b)=>b.g-a.g||a.att-b.att||a.player.localeCompare(b.player,'ko'));
+}
 function renderTeam(){
   renderLinkedRecordControls("team");
   const info=recordQueryInfo(), list=info.list||[];
   if($("#teamPeriodLabel")) $("#teamPeriodLabel").textContent=info.label+" · "+list.length+"경기";
   teamStandingFromList($("#teamTable"),list);
   renderTeamPointsChart(list,info);
-  const ts=statsFromMatches(list).slice().sort((a,b)=>leagueTeamDisplayOrder(a.team)-leagueTeamDisplayOrder(b.team) || teamDisplayName(a.team).localeCompare(teamDisplayName(b.team),"ko")), ps=queryPlayerStats(list);
+  const ts=statsFromMatches(list).slice().sort((a,b)=>leagueTeamDisplayOrder(a.team)-leagueTeamDisplayOrder(b.team) || teamDisplayName(a.team).localeCompare(teamDisplayName(b.team),"ko"));
   $("#teamCards").innerHTML = ts.map(t=>{
-    const top=ps.filter(p=>p.mainTeam===t.team&&p.g>0).sort((a,b)=>b.g-a.g||a.att-b.att||a.player.localeCompare(b.player)).slice(0,3);
+    const top=teamScorersForMatches(list,t.team).slice(0,3);
     return '<div class="card"><div style="font-weight:650;margin-bottom:2px">'+teamChip(t.team)+'</div>'+ 
       '<div class="muted" style="font-size:12.5px;margin-bottom:14px">'+esc(info.label)+' · '+t.p+'경기 · 승점 '+t.pts+' · 승률 '+pct(t.w,t.p)+'%</div>'+ 
       '<div class="bar" style="margin-bottom:14px"><i style="width:'+pct(t.w,t.p)+'%;background:'+teamRecordColor(t.team)+'"></i></div>'+ 
-      '<div class="sec-t" style="margin-bottom:6px">조회 구간 주요 득점</div>'+ 
+      '<div class="sec-t" style="margin-bottom:6px">조회 구간 주요 득점 <small>해당 팀 출전 기록</small></div>'+ 
       (top.length?top.map(p=>'<div style="font-size:13px;display:flex;justify-content:space-between"><span>'+esc(p.player)+'</span><span class="muted">'+p.g+'골 · '+p.att+'출석</span></div>').join(""):'<div class="muted" style="font-size:13px">기록 없음</div>')+'</div>';
   }).join("")||'';
 }
@@ -5542,7 +5596,7 @@ function buildRecordXlsx(){
   const rs = rosterStats().filter(r=>draftPlayerVisible(r.player,registered));
   return [
     { name:UNI.name, head:UNI.head, rows:mrows },
-    { name:'팀별 기록지',head:TEAM_RECORD_HEAD,rows:(DB.settings?.teamPlayerRecords||[]).map(r=>[r.date,r.comp,halfLabel(r.half),r.round,r.no,r.player,r.sot??'',r.keyPass??'',r.defSuccess??'',r.saves??'']) },
+    { name:'팀별 기록지',head:TEAM_RECORD_HEAD,rows:(DB.settings?.teamPlayerRecords||[]).map(r=>[r.date,r.comp,halfLabel(r.half),r.round,r.no,r.team||'',r.player,r.sot??'',r.keyPass??'',r.defSuccess??'',r.saves??'']) },
     { name:"선수명단", head:"연도,팀,등번호,선수,영문이름,포지션,비고,사진(URL),사진(URL) 배경삭제,시즌,시작일자,출석,팀경기수,출석률,득점누계,어시스트누계,개인파울누계,선방누계,MOM누계",
       rows: rs.map(r=>{
         const raw=(DB.roster||[]).find(x=>String(x.player||"").trim()===String(r.player||"").trim() && String(x.year||"").trim()===String(r.year||"").trim()) ||
@@ -5725,7 +5779,7 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape" && $("#playerCardMa
 function goTab(v){
   /* 데이터 관리와 대표승점 설정은 관리자 로그인 상태에서만 접근할 수 있다. */
   if((v==="data" || v==="rep" || v==="abilitycfg" || v==="abilityguide") && !admin) v="dash";
-  const b = $$("#tabs button").find(x=>x.dataset.v===v); if(!b) return;
+  const b = $$("#tabs button").find(x=>x.dataset.v===(v==='cal'?'dash':v)); if(!b) return;
   $$("#tabs button").forEach(x=>x.classList.toggle("on",x===b));
   $$("section.view").forEach(s=>s.classList.toggle("on", s.id==="v-"+v));
   syncMobileNav(v);
@@ -6312,7 +6366,7 @@ if($("#soccerbeeFilepick")) $("#soccerbeeFilepick").onchange=async e=>{
     const n=await importSoccerBeeXlsx(await f.arrayBuffer()), result=importSoccerBeeXlsx.lastResult||{};
     abilityPriorYearPoolCache=null;save();renderAll();
     const miss=(result.unmatched||[]);
-    toast("SoccerBee "+n+"건 이름 매칭 완료 · 최신 적용 "+(result.latest||0)+"명"+(miss.length?" · 미매칭 "+miss.length+"명":""));
+    toast("SoccerBee 엑셀 동기화 완료 · "+n+"건 적용 · 엑셀에서 빠진 기존 "+(result.removed||0)+"건 삭제 · 최신 적용 "+(result.latest||0)+"명");
     if(miss.length) console.warn("SoccerBee 선수명 미매칭:",miss);
   }catch(err){toast("SoccerBee 불러오기 실패: "+err.message);}
 };
@@ -6676,7 +6730,7 @@ async function createDashboardExportSnapshot(source){
   try{
     const doc=frame.contentDocument;doc.documentElement.lang='ko';
     const base=doc.createElement('base');base.href=document.baseURI;doc.head.appendChild(base);
-    const style=doc.createElement('link');style.rel='stylesheet';style.href=new URL('assets/ggfc-export.css?v=3.25.6',document.baseURI).href;
+    const style=doc.createElement('link');style.rel='stylesheet';style.href=new URL('assets/ggfc-export.css?v=3.25.7',document.baseURI).href;
     const ready=settleExportResource(style,12000,()=>!!style.sheet);doc.head.appendChild(style);await ready;
     if(!style.sheet)throw new Error('출력 스타일을 불러오지 못했습니다.');
     const root=buildReferencePoster(doc,source);doc.body.appendChild(root);
@@ -6773,18 +6827,33 @@ if(displayNameReset) displayNameReset.onclick=()=>{
   save(); renderAll(); toast("기본 표시명으로 복원했습니다.");
 };
 
+document.getElementById('careerFrameSettingsFields').addEventListener('click',e=>{
+  const button=e.target.closest('[data-frame-preview]');if(!button||!admin)return;
+  document.getElementById('cardDesignTier').value=button.dataset.framePreview;renderPlayerCardDesignSettings(true);
+  document.getElementById('cardDesignSettings').scrollIntoView({behavior:'smooth',block:'center'});
+});
+document.querySelectorAll('[data-panel-toggle]').forEach(panel=>{
+  const key='ggfc.panel.'+panel.dataset.panelToggle;
+  try{panel.open=localStorage.getItem(key)==='open';}catch{}
+  panel.addEventListener('toggle',()=>{
+    try{localStorage.setItem(key,panel.open?'open':'closed');}catch{}
+    if(panel.open&&panel.dataset.panelToggle==='ability-history')drawPlayerCardHistory();
+    if(panel.open&&panel.dataset.panelToggle==='soccerbee-history')drawPlayerSoccerBeeHistory();
+  });
+});
 document.getElementById('careerFrameSettingsPreview').onclick=previewCareerFrameSettings;
 document.getElementById('careerFramePreviewDate').oninput=invalidateCareerPreview;
 document.getElementById('careerFrameSettingsSave').onclick=saveCareerFrameSettings;
-document.getElementById('careerFrameSettingsFields').addEventListener('input',()=>{
+document.getElementById('careerFrameSettingsFields').addEventListener('input',e=>{
+  if(e.target.dataset.frameDesign){document.getElementById('cardDesignTier').value=e.target.dataset.frameDesign;renderPlayerCardDesignSettings(true);}
   careerFrameSettingsDirty=true;invalidateCareerPreview();GGFC.refreshUI();document.getElementById('careerFrameSettingsStatus').textContent='변경한 기준은 아직 저장되지 않았습니다.';
 });
 document.getElementById('careerFrameSettingsDefault').onclick=()=>{
-  if(!admin)return;renderCareerFrameSettings(CAREER_FRAME_TIERS,true);careerFrameSettingsDirty=true;GGFC.refreshUI();
+  if(!admin)return;renderCareerFrameSettings(CAREER_FRAME_TIERS,true);careerFrameSettingsDirty=true;renderPlayerCardDesignSettings(true);GGFC.refreshUI();
   document.getElementById('careerFrameSettingsStatus').textContent='기본값을 입력했습니다. 적용하려면 기준 저장을 눌러 주세요.';
 };
 document.getElementById('careerFrameSettingsCancel').onclick=()=>{
-  if(!admin)return;careerFrameSettingsDirty=false;renderCareerFrameSettings(careerFrameTiers(),true);GGFC.refreshUI();
+  if(!admin)return;careerFrameSettingsDirty=false;cardDesignSettingsDirty=false;renderCareerFrameSettings(careerFrameTiers(),true);renderPlayerCardDesignSettings(true);GGFC.refreshUI();
 };
 
 function renderAnalysisStartSettings(){

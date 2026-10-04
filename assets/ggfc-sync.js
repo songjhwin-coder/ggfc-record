@@ -312,7 +312,7 @@ const GGFC = (() => {
         draft.settings.display={brandTitle:document.querySelector('#brandTitleInput').value.trim(),leagueA:document.querySelector('#leagueANameInput').value.trim(),leagueB:document.querySelector('#leagueBNameInput').value.trim()};
       }
       if(typeof careerFrameSettingsDirty!=='undefined'&&careerFrameSettingsDirty){
-        const form=readCareerFrameSettingsForm();draft.settings.careerFrameThresholds=form.thresholds;draft.settings.careerFrameRequiredCounts=form.counts;
+        const form=readCareerFrameSettingsForm();draft.settings.careerFrameThresholds=form.thresholds;draft.settings.careerFrameRequiredCounts=form.counts;draft.settings.careerFrameDesigns=form.designs;
       }
       if(typeof analysisStartSettingsDirty!=='undefined'&&analysisStartSettingsDirty)draft.settings.analysisStartPlayer=document.getElementById('analysisStartPlayer').value;
       download('GGFC_미저장기록.json',JSON.stringify(draft,null,2),'application/json');
