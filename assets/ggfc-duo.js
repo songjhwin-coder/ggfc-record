@@ -1,4 +1,4 @@
-/* GGFC DUO TYPE v1 — deterministic, local, read-only. */
+/* GGFC DUO TYPE v2 — deterministic, local, read-only. */
 const DUO_MIN_GAMES=5,DUO_MIN_POOL=4;
 const duoValid=v=>v!==null&&v!==undefined&&String(v).trim()!==''&&Number.isFinite(Number(v));
 const duoClamp=v=>Math.max(0,Math.min(100,v));
@@ -26,7 +26,7 @@ const DUO_TYPES=[
  {id:'technicians',name:'테크니션 듀오',en:'TECHNICIANS',icon:'🎨',formula:'H(0.6C+0.4D)',condition:'두 선수 C≥65, D≥65',weights:[['C',.6],['D',.4]],gate:(a,b)=>duoBoth(a,b,'C',65)&&duoBoth(a,b,'D',65)},
  {id:'press',name:'압박 듀오',en:'HIGH PRESS',icon:'⚔️',formula:'H(0.4W+0.35S+0.25P)',condition:'두 선수 W≥65, S≥60, P≥55',weights:[['W',.4],['S',.35],['P',.25]],gate:(a,b)=>duoBoth(a,b,'W',65)&&duoBoth(a,b,'S',60)&&duoBoth(a,b,'P',55)},
  {id:'winners',name:'승리 듀오',en:'WINNING PAIR',icon:'👑',formula:'H(0.5W+0.5P)',condition:'동행≥10, 실제 승률≥70%',weights:[['W',.5],['P',.5]],gate:(a,b,p)=>p.p>=10&&p.winRate>=70},
- {id:'bond',name:'찰떡 듀오',en:'PERFECT BOND',icon:'❤️',formula:'0.6B+0.4H(W)',condition:'동행≥10, 기존 대칭 커플점수≥75, 동행비율≥50%',custom:(a,b,p)=>duoMean([[p.bondPercent,.6],[duoH(a.W,b.W),.4]]),gate:(a,b,p)=>p.p>=10&&p.chemRaw>=75&&p.bond>=.5},
+ {id:'bond',name:'찰떡 듀오',en:'PERFECT BOND',icon:'❤️',formula:'0.6B+0.4H(W)',condition:'동행≥10, 신규 보너스 포함 대칭 커플점수≥75, 동행비율≥50%',custom:(a,b,p)=>duoMean([[p.bondPercent,.6],[duoH(a.W,b.W),.4]]),gate:(a,b,p)=>p.p>=10&&p.chemRaw>=75&&p.bond>=.5},
  {id:'makers',name:'메이커 듀오',en:'DUAL CREATORS',icon:'🎯',formula:'H(C)',condition:'두 선수 C≥70',weights:[['C',1]],gate:(a,b)=>duoBoth(a,b,'C',70)},
  {id:'bulldozers',name:'불도저 듀오',en:'BULLDOZERS',icon:'💪',formula:'H(0.65P+0.35A)',condition:'두 선수 P≥70, A≥55',weights:[['P',.65],['A',.35]],gate:(a,b)=>duoBoth(a,b,'P',70)&&duoBoth(a,b,'A',55)},
  {id:'attack',name:'공격본능 듀오',en:'ATTACK INSTINCT',icon:'💥',formula:'H(G)',condition:'두 선수 G≥70',weights:[['G',1]],gate:(a,b)=>duoBoth(a,b,'G',70)},
@@ -40,8 +40,9 @@ const DUO_TYPES=[
 ];
 let duoCache=null,duoReturnFocus=null;
 function duoBuildContext(){
-  const list=uniqueRecordMatches(chemMatches()),signature=JSON.stringify([chemYear,comp,DB.matches,DB.attendance,DB.goals,DB.fouls,DB.soccerbee,DB.roster,DB.settings]);
+  const list=uniqueRecordMatches(chemMatches()),signature=JSON.stringify([chemYear,comp,DB.matches,DB.attendance,DB.goals,DB.fouls,DB.saves,DB.soccerbee,DB.roster,DB.settings]);
   if(duoCache?.signature===signature)return duoCache;
+  const measuredRecords=explicitPerformanceRows();
   const names=[...new Set(analysisAttendance(list).map(r=>String(r.player||'').trim()).filter(n=>n&&!isOwnGoalPlayer(n)))].sort(compareNamesKo),profiles=new Map(names.map(name=>[name,{name,parts:[],seasonProof:[]}]));
   const years=[...new Set(list.map(m=>normDate(m.date).slice(0,4)))].sort(),population=[];
   years.forEach(year=>{
@@ -59,14 +60,29 @@ function duoBuildContext(){
       const ability=abilitySystemEnabled()?playerAbilityRecordAtDate(name,year,abilityHalfForDate(year,end),end,true):{};
       const sb=soccerBeePlayerRows(name,end).filter(r=>normDate(r.date).startsWith(year));
       const measured=k=>{const row=sb.slice().reverse().find(r=>duoValid(r[k])&&Number(r[k])>=0);return row?Number(row[k]):null;};
+      const newRecords={};
+      for(const field of ['sot','keyPass','defSuccess','saves']){
+        const rows=measuredRecords.filter(r=>validRow(r)&&duoValid(r[field])),games=new Set(rows.map(r=>detailMatchKey(r.id))).size,total=rows.reduce((s,r)=>s+num(r[field]),0);
+        newRecords[field]={games,total:games?total:null,rate:games?total/games:null,coverage:games/ids.size};
+      }
       const coverage=recordedFouls.size/ids.size;
-      raw.push({name,games:ids.size,attendance:duoClamp(ids.size/Math.max(ids.size,expected)*100),gpg:g/ids.size,apg:duoValid(assists)?assists/ids.size:null,points:duoValid(assists)?(g+assists)/ids.size:null,foul:coverage>=.8?fouls.reduce((v,r)=>v+num(r.fouls),0)/recordedFouls.size:null,coverage,pac:ability.pac??null,sho:ability.sho??null,pas:ability.pas??null,dri:ability.dri??null,def:ability.def??null,phy:ability.phy??null,maxSpeed:measured('maxSpeed'),hpm:measured('hpm'),spm:measured('spm'),dpm:measured('dpm'),energy:measured('energy'),sbDate:sb.at(-1)?.date||''});
+      raw.push({name,newRecords,games:ids.size,attendance:duoClamp(ids.size/Math.max(ids.size,expected)*100),gpg:g/ids.size,apg:duoValid(assists)?assists/ids.size:null,points:duoValid(assists)?(g+assists)/ids.size:null,foul:coverage>=.8?fouls.reduce((v,r)=>v+num(r.fouls),0)/recordedFouls.size:null,coverage,pac:ability.pac??null,sho:ability.sho??null,pas:ability.pas??null,dri:ability.dri??null,def:ability.def??null,phy:ability.phy??null,maxSpeed:measured('maxSpeed'),hpm:measured('hpm'),spm:measured('spm'),dpm:measured('dpm'),energy:measured('energy'),sbDate:sb.at(-1)?.date||''});
     });
     const pool=raw.filter(r=>r.games>=DUO_MIN_GAMES);population.push({year,players:pool.length,end});
     raw.forEach(r=>{
       const norm=k=>r.games>=5?duoPercentile(r[k],pool.map(v=>v[k]),k==='foul'):null;
       const n={};['pac','sho','pas','dri','def','phy','maxSpeed','hpm','spm','dpm','energy','gpg','apg','points','attendance','foul'].forEach(k=>n[k]=norm(k));
       const axes={S:duoMean([[n.maxSpeed,.35],[n.spm,.2],[n.pac,.3],[n.hpm,.15]]),W:duoMean([[n.dpm,.35],[n.energy,.2],[n.attendance,.25],[n.phy,.2]]),A:duoMean([[n.gpg,.5],[n.sho,.3],[n.points,.2]]),C:duoMean([[n.apg,.5],[n.pas,.3],[n.dri,.2]]),P:duoMean([[n.phy,.45],[n.def,.4],[n.dpm,.15]]),F:n.foul,D:n.dri,G:n.points,T:n.attendance};
+      const qualified=(row,key)=>row.newRecords[key].games>=5&&row.newRecords[key].coverage>=.5;
+      const recordPercent={};
+      for(const key of ['sot','keyPass','defSuccess','saves']){
+        const candidates=pool.filter(p=>qualified(p,key));
+        recordPercent[key]=qualified(r,key)&&candidates.length>=4?duoPercentile(r.newRecords[key].rate,candidates.map(p=>p.newRecords[key].rate)):null;
+        r.newRecords[key].population=candidates.length;r.newRecords[key].percentile=recordPercent[key];
+      }
+      axes.A=duoMean([[axes.A,.8],[recordPercent.sot,.2]]);
+      axes.C=duoMean([[axes.C,.75],[recordPercent.keyPass,.25]]);
+      axes.P=duoMean([[axes.P,.7],[recordPercent.defSuccess,.2],[recordPercent.saves,.1]]);
       const profile=profiles.get(r.name);profile.parts.push({games:r.games,axes,raw:r});profile.seasonProof.push({year,population:pool.length,...r,axes});
     });
   });
@@ -103,7 +119,7 @@ function duoDnaSvg(r){
   const point=(i,v)=>{const a=(-90+i*72)*Math.PI/180;return [170+Math.cos(a)*v,155+Math.sin(a)*v];},pts=v=>values.map((_,i)=>point(i,v).join(',')).join(' ');
   return '<svg class="duo-dna" viewBox="0 0 340 320" role="img" aria-label="DUO DNA · 숫자와 미측정 여부는 아래 목록에서 확인"><g fill="none" stroke="#cbd8e8">'+[25,50,75,100].map(v=>'<polygon points="'+pts(v)+'"/>').join('')+'</g><polygon fill="#245e9f33" stroke="#245e9f" stroke-width="2" points="'+values.map((v,i)=>point(i,duoValid(v)?v:0).join(',')).join(' ')+'"/>'+labels.map((l,i)=>{const p=point(i,129);return '<text x="'+p[0]+'" y="'+p[1]+'" text-anchor="middle" fill="#061f44" font-size="10" font-weight="700">'+l+'</text>';}).join('')+'</svg><div class="duo-dna-values">'+labels.map((label,i)=>'<div><span>'+label+'</span><b>'+duoNumber(values[i])+'</b></div>').join('')+'</div><small>—는 비교 자료 부족입니다. 그래프에서는 중심점으로 표시합니다.</small>';
 }
-function duoProfileHtml(p){return '<section><h4>'+esc(p.name)+'</h4><dl class="duo-profile">'+[['S','SPEED'],['A','ATTACK'],['C','CREATION'],['W','WORK'],['P','POWER'],['F','CLEAN']].map(([k,label])=>'<div><dt>'+label+'</dt><dd>'+duoNumber(p[k])+'</dd></div>').join('')+'</dl><p>'+p.games+'경기 · 참석률 '+duoNumber(p.attendance)+'%</p><details><summary>시즌별 원자료·표본 확인</summary>'+p.seasonProof.map(x=>'<p><b>'+x.year+' · 비교 '+x.population+'명</b><br>'+x.games+'경기 · 득점/경기 '+duoNumber(x.gpg)+' · 도움/경기 '+duoNumber(x.apg)+'<br>최고속도 '+duoNumber(x.maxSpeed)+' km/h · DPM '+duoNumber(x.dpm)+'<br>SoccerBee '+esc(x.sbDate||'측정 없음')+' · 파울 명시 기록 '+Math.round(x.coverage*100)+'%</p>').join('')+'</details></section>';}
+function duoProfileHtml(p){return '<section><h4>'+esc(p.name)+'</h4><dl class="duo-profile">'+[['S','SPEED'],['A','ATTACK'],['C','CREATION'],['W','WORK'],['P','POWER'],['F','CLEAN']].map(([k,label])=>'<div><dt>'+label+'</dt><dd>'+duoNumber(p[k])+'</dd></div>').join('')+'</dl><p>'+p.games+'경기 · 참석률 '+duoNumber(p.attendance)+'%</p><details><summary>시즌별 원자료·표본 확인</summary>'+p.seasonProof.map(x=>'<p><b>'+x.year+' · 비교 '+x.population+'명</b><br>'+x.games+'경기 · 득점/경기 '+duoNumber(x.gpg)+' · 도움/경기 '+duoNumber(x.apg)+'<br>최고속도 '+duoNumber(x.maxSpeed)+' km/h · DPM '+duoNumber(x.dpm)+'<br>SoccerBee '+esc(x.sbDate||'측정 없음')+' · 파울 명시 기록 '+Math.round(x.coverage*100)+'%</p><ul>'+PARTNER_RECORD_RULES.map(rule=>{const m=x.newRecords[rule.key];return '<li>'+rule.label+': '+duoNumber(m.rate)+'회/기록경기 · '+m.games+'경기 · 기록률 '+Math.round(m.coverage*100)+'% · 비교 '+m.population+'명 · '+(duoValid(m.percentile)?'백분위 '+duoNumber(m.percentile):'직접 반영 대기 (표본 부족)')+'</li>';}).join('')+'</ul>').join('')+'</details></section>';}
 function duoWhyHtml(main,one,two){
   const labels={S:'속도',A:'공격',C:'창출',W:'활동',P:'파워',F:'저파울',D:'드리블',G:'공격포인트',T:'참석률',B:'동행비율'};
   const used=[...new Set(main.formula.match(/[SACWPF DGTB]/g)||[])].filter(k=>labels[k]&&k!=='B');
@@ -115,11 +131,12 @@ function openDuoDialog(a,b){
   const main=r.main,p=r.pair,label=!p||p.p<5?'분석중':main?main.icon+' '+main.name:'뚜렷한 유형 없음';
   const scope=chemYear==='ALL'?'전체 연도 · 시즌별 백분위 출전 가중평균':chemYear+' 시즌 백분위';
   const missing=[r.one,r.two].filter(Boolean).filter(x=>!x.seasonProof.some(y=>y.sbDate)).map(x=>x.name);
-  document.getElementById('duoDialogContent').innerHTML='<header class="duo-heading"><span>GGFC DUO TYPE · v1</span><h2 id="duoTitle">'+esc(label)+'</h2><p>'+esc(r.names.join(' × '))+'</p><small>'+esc(scope)+' · '+esc(comp==='ALL'?'전체 대회':comp)+'</small></header>'+
+  document.getElementById('duoDialogContent').innerHTML='<header class="duo-heading"><span>GGFC DUO TYPE · v2</span><h2 id="duoTitle">'+esc(label)+'</h2><p>'+esc(r.names.join(' × '))+'</p><small>'+esc(scope)+' · '+esc(comp==='ALL'?'전체 대회':comp)+'</small></header>'+
     '<div class="duo-score"><strong>'+ (main?duoNumber(main.score):'—')+'</strong><span>'+(p?.p>=10?'STANDARD · 동행 10경기 이상':p?.p>=5?'LOW CONFIDENCE · 동행 5~9경기':'분석중 · 동행 5경기 필요')+'</span></div>'+(r.sub?'<p class="duo-sub">SUB TYPE · '+r.sub.icon+' '+esc(r.sub.name)+' '+duoNumber(r.sub.score)+'</p>':'')+
     (r.reason?'<p class="duo-notice">'+esc(r.reason)+'</p>':'')+(missing.length?'<p class="duo-notice">SoccerBee 미측정: '+esc(missing.join(', '))+'. 사용 가능한 경기기록·능력치로 가중치를 재배분했습니다.</p>':'')+
-    (p?'<div class="duo-match-proof"><b>실제 동행 '+p.p+'경기</b><span>'+p.w+'승 '+p.d+'무 '+p.l+'패 · 승률 '+duoNumber(p.winRate)+'%</span><span>합산 '+p.goals+'골 · 동행 비율 '+duoNumber(p.bond*100)+'% · 기존 대칭 커플점수 '+duoNumber(p.chemRaw)+'</span></div>':'')+
+    (p?'<div class="duo-match-proof"><b>실제 동행 '+p.p+'경기</b><span>'+p.w+'승 '+p.d+'무 '+p.l+'패 · 승률 '+duoNumber(p.winRate)+'%</span><span>합산 '+p.goals+'골 · 동행 비율 '+duoNumber(p.bond*100)+'% · 신규 보너스 포함 대칭 커플점수 '+duoNumber(p.chemRaw)+'</span></div>':'')+
     (r.one&&r.two?'<div class="duo-main-grid"><section><h3>DUO DNA</h3>'+duoDnaSvg(r)+'</section><section><h3>WHY THIS DUO?</h3>'+(main?duoWhyHtml(main,r.one,r.two)+'<p>'+esc(main.formula)+' · 특성 '+duoNumber(main.base)+'점</p>'+(main.roles?'<p>'+main.roles.map((n,i)=>esc(n)+' → '+esc(main.roleLabels[i])).join('<br>')+'</p>':'')+'<p>특성 '+duoNumber(main.base)+' × 70%<br>동행 성적 '+duoNumber(p.performance)+' × 20%<br>CHEMISTRY '+duoNumber(p.K)+' × 10%</p>':'<p>'+esc(r.reason||'자료를 확인해 주세요.')+'</p>')+'<p class="note">별명은 기록으로 추정한 스타일입니다. 패스 경로·위치 추적·실제 침투 장면을 증명하지 않으며 OVR과 카드 등급에 영향을 주지 않습니다.</p></section></div><div class="duo-profiles">'+duoProfileHtml(r.one)+duoProfileHtml(r.two)+'</div>':'')+
+    '<details class="duo-record-method"><summary>신규 4개 기록 반영 기준</summary>'+newRecordMethodHtml()+'</details>'+
     '<details class="duo-rule-book"><summary>20종 계산식과 판정 기준</summary><p>S 속도 · A 공격 · C 창출 · W 활동 · P 파워 · F 저파울 백분위 · D DRI 백분위 · G 공격포인트/경기 백분위 · T 참석률 백분위 · B 동행비율 백분위.</p><p>H(x)=두 선수 중 낮은 값×60%+평균×40%. X는 역할을 바꿔 계산한 H 중 조건을 만족하는 높은 값입니다. 특성≥65, 최종≥65인 유형만 선정하며 서브는 메인과 10점 이내입니다. 조건은 초기 설계값입니다.</p><div class="duo-rules-table">'+tbl([{t:'유형'},{t:'특성 계산식'},{t:'필수 조건'}],DUO_TYPES.map(t=>[esc(t.icon+' '+t.name),esc(t.formula),esc(t.condition)]))+'</div></details>';
   if(!dialog.open)dialog.showModal();dialog.querySelector('[data-duo-close]').focus();
 }

@@ -19,7 +19,7 @@ function applyPlayerCardDesign(card,design){
     const svg=CARD_DESIGN_EMBEDDED_ART[card.dataset.design];
     if(svg){frame.onerror=null;frame.dataset.artSource='embedded';frame.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);}
   };
-  if(frame.dataset.artDesign!==card.dataset.design){frame.dataset.artDesign=card.dataset.design;frame.dataset.artSource='file';frame.src=frameSrc+'?v=3.25.7';}
+  if(frame.dataset.artDesign!==card.dataset.design){frame.dataset.artDesign=card.dataset.design;frame.dataset.artSource='file';frame.src=frameSrc+'?v=3.25.8';}
   const name=card.querySelector('.ggfc-player-card-name');
   if(name)card.style.setProperty('--neon-name-size',Array.from(name.textContent).length>22?'23px':Array.from(name.textContent).length>16?'28px':'34px');
 }

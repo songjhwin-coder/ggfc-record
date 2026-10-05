@@ -3130,3 +3130,20 @@ body:not(.admin-mode) .view>.head>p,body:not(.admin-mode) .view>.insight-page-he
 .career-frame-panel[data-career-tier="MASTER"]{border-left-color:#9364b5;background:#faf5fe}
 .career-frame-panel[data-career-tier="CHALLENGE"]{border-left-color:#b88c38;background:#fffbf0}
 @media(max-width:620px){.ggfc-panel-toggle>summary{font-size:12px}.career-tier-options label{width:100%}.career-tier-options select{max-width:none}.career-frame-rules li{grid-template-columns:1fr}}
+/* V3.25.8: existing player-card skins, lazily rendered squad gallery. */
+.ts-card-gallery{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:18px 12px;align-items:start;justify-items:center}
+.ts-player-card-button{border:0;background:transparent;color:inherit;padding:0;min-width:0;text-align:center;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px;width:200px;border-radius:10px}
+.ts-player-card-button:focus-visible{outline:3px solid var(--accent,#2783de);outline-offset:4px}
+.ts-player-card-stage{position:relative;display:block;width:200px;height:300px;flex:none}
+.ts-card-gallery .ggfc-player-card{width:400px!important;height:600px!important;max-width:none!important;margin:0!important;transform:scale(.5)!important;transform-origin:top left!important;position:absolute;inset:0;text-align:left}
+.ts-card-gallery .ggfc-player-card-content{width:100%;height:100%;transform:none!important}
+.ts-player-card-caption{font:700 13px/1.5 inherit;color:var(--text,#14395a)}
+.ts-player-card-button small{font-size:11px}
+.goalkeeper-analysis{margin-top:24px;border-top:1px solid var(--line,#d4e1ee);padding-top:20px}
+.gk-table table{min-width:1000px}.gk-table th,.gk-table td{text-align:center!important}
+.gk-method,.new-record-method,.chem-record-method,.duo-record-method{font-size:13px;line-height:1.8;margin:12px 0}
+.gk-method summary,.chem-record-method summary,.duo-record-method summary{cursor:pointer;font-weight:700}
+.player-card-goalkeeper{padding:16px;border:1px solid var(--line,#d4e1ee);border-radius:12px;margin:16px 0}
+.player-card-goalkeeper>.player-card-metric{display:inline-flex;flex-direction:column;margin:6px 16px 6px 0}
+.couple-score-bar .recordPoints,.couple-key.recordPoints{background:#148c81}
+@media(max-width:620px){.ts-card-gallery{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 4px;padding:12px 6px}.ts-player-card-button,.ts-player-card-stage{width:144px}.ts-player-card-stage{height:216px}.ts-card-gallery .ggfc-player-card{transform:scale(.36)!important}.ts-player-card-caption{font-size:12px}}
