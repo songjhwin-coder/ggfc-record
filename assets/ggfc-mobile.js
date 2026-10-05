@@ -10,6 +10,7 @@ function mobileAbilityCards(rows,prevMap){
 }
 function syncMobileNav(v){
   document.querySelectorAll('[data-mobile-tab]').forEach(el=>{el.classList.toggle('on',el.dataset.mobileTab===v);if(el.dataset.mobileTab===v)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');});
+  const nav=document.querySelector('.member-nav'),active=nav?.querySelector('[data-mobile-tab].on');if(nav&&active){const x=active.offsetLeft,y=nav.scrollLeft;if(x<y||x+active.offsetWidth>y+nav.clientWidth)nav.scrollLeft=Math.max(0,x-(nav.clientWidth-active.offsetWidth)/2);}
 }
 function closeMemberSidebar(restoreFocus=false){
   const panel=document.querySelector('#ggfcSidebar'),more=document.querySelector('#memberMore');

@@ -624,7 +624,9 @@ function applyTeamPlayerRecords(objs){
     const row={date,comp:String(pick(o,'대회')||'정규리그').trim(),half:normHalf(pick(o,'반기')),round:String(pick(o,'라운드','Round')||'').trim(),no:String(pick(o,'경기번호')||'').trim(),team:String(pick(o,'팀명','팀','소속팀')||'').normalize('NFKC').trim(),player};
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!row.round||!row.no)throw new Error('팀별 기록지: '+player+'의 날짜·라운드·경기번호를 확인하세요.');
     for(const [key,label] of Object.entries({sot:'유효슛',keyPass:'키패스',defSuccess:'수비성공',saves:'선방'})){
-      const raw=String(pick(o,label)??'').trim();row[key]=raw===''?null:Number(raw);
+      const values=key==='saves'?Object.entries(o).filter(([header])=>['선방','키퍼선방','골키퍼선방','세이브'].includes(header.replace(/\s/g,''))).map(([,v])=>String(v??'').trim()).filter(Boolean):[];
+      if(new Set(values.map(Number)).size>1)throw new Error('팀별 기록지: '+player+'의 선방 열 값이 서로 다릅니다.');
+      const raw=key==='saves'?(values[0]??''):String(pick(o,label)??'').trim();row[key]=raw===''?null:Number(raw);
       if(row[key]!==null&&(!Number.isInteger(row[key])||row[key]<0))throw new Error('팀별 기록지: '+player+' '+label+'는 0 이상의 정수 또는 빈칸이어야 합니다.');
     }
     const key=JSON.stringify([date,isLeagueFamilyComp(row.comp)?'LEAGUE':compCompact(row.comp),row.round,row.no,teamRecordTeamKey(row.team),normalizePlayerMatchKey(player)]);
@@ -686,12 +688,14 @@ function parseKeeperCell(text){
 }
 function goalkeeperRecordData(list=DB.matches){
   const byId=new Map(list.map(m=>[String(m.id),m])),canonical=soccerBeeCanonicalPlayerMap(),rows=[],issues=[];
-  const seen=new Map();
+  const seen=new Map(),cellTexts=new Map();
+  for(const cell of DB.settings?.goalkeeperEntries||[]){const key=String(cell.id)+'|'+cell.team;if(!cellTexts.has(key))cellTexts.set(key,new Set());cellTexts.get(key).add(String(cell.text||'').trim());}
   for(const cell of DB.settings?.goalkeeperEntries||[]){
     const m=byId.get(String(cell.id));if(!m)continue;
     const fail=reason=>issues.push({...cell,reason});
     if(normDate(m.date)!==cell.date||String(m.no)!==String(cell.no)||String(m.round)!==String(cell.round)||![m.home,m.away].includes(cell.team)){fail('경기 연결을 확인하세요. 통합 엑셀을 다시 업로드하세요.');continue;}
     const key=String(m.id)+'|'+cell.team;
+    if(cellTexts.get(key)?.size>1){fail('동일 경기·팀의 키퍼실점 값이 충돌하여 분석에서 제외합니다');continue;}
     if(seen.has(key)){if(seen.get(key)!==cell.text)fail('동일 경기·팀의 키퍼실점 입력이 중복됩니다');continue;}seen.set(key,cell.text);
     const parsed=parseKeeperCell(cell.text);parsed.issues.forEach(fail);
     // A malformed cell is retained for correction; partial values never enter analysis.
@@ -5019,8 +5023,9 @@ function filterPlayerRecordRows(){
 }
 function bindPlayerRecordSearch(){
  const input=$('#memberPlayerSearch'),clear=$('#playerRecordSearchClear');
- if(input){input.oninput=e=>{if(!e.isComposing)filterPlayerRecordRows();};input.oncompositionend=filterPlayerRecordRows;}
- if(clear)clear.onclick=()=>{input.value='';filterPlayerRecordRows();input.focus();};
+ const update=()=>{filterPlayerRecordRows();const table=$('#playerTable');if(table){table.scrollTop=0;table.scrollLeft=0;}};
+ if(input){input.oninput=update;input.oncompositionupdate=()=>{requestAnimationFrame(update);};input.oncompositionend=update;input.onsearch=update;}
+ if(clear)clear.onclick=()=>{input.value='';update();input.focus();};
 }
 
 function playerSquadDisplayTeam(player,info={}){
@@ -5916,9 +5921,58 @@ function renderData(){
   renderRecordDataValidation();
 }
 let activeView='dash';
+/* GGFC BEST 5: deterministic match-day selection, never writes awards or abilities. */
+let best5Date='';
+const BEST5_ROLES=[{id:'PV',name:'PIVO',label:'공격',weights:{g:40,a:20,sot:5,keyPass:5}},{id:'AL',name:'ALA · L',label:'중앙·왼쪽',weights:{g:25,a:30,keyPass:10,defSuccess:5}},{id:'AL',name:'ALA · R',label:'중앙·오른쪽',weights:{g:25,a:30,keyPass:10,defSuccess:5}},{id:'FS',name:'FIXO',label:'수비',weights:{g:10,a:15,defSuccess:30,keyPass:5,clean:10}}];
+function best5MatchList(date){return uniqueRecordMatches(recordBaseMatches().filter(m=>normDate(m.date)===date&&[m.hs,m.as].every(v=>v!==null&&v!==undefined&&String(v).trim()!==''&&Number.isFinite(Number(v)))));}
+function best5Model(date){
+ const list=best5MatchList(date),byId=new Map(list.map(m=>[detailMatchKey(m.id),m])),appearances=new Map(),players=new Map();
+ analysisAttendance(list).forEach(r=>{const id=detailMatchKey(r.id),m=byId.get(id),name=String(r.player||'').trim(),team=String(r.team||'').trim();if(!m||!name||isOwnGoalPlayer(name)||![m.home,m.away].includes(team))return;const key=JSON.stringify([id,name]);if(!appearances.has(key))appearances.set(key,{id,name,teams:new Set()});appearances.get(key).teams.add(team);});
+ [...appearances.values()].filter(r=>r.teams.size===1).forEach(r=>{const team=[...r.teams][0],m=byId.get(r.id),result=matchResult(m,team);if(!result)return;if(!players.has(r.name))players.set(r.name,{name:r.name,games:0,w:0,d:0,l:0,teams:new Set(),appearances:new Map(),g:0,a:0,mom:0,f:0,fGames:new Set(),records:{}});const p=players.get(r.name);p.games++;p[result.toLowerCase()]++;p.teams.add(team);p.appearances.set(r.id,team);});
+ const canonical=new Map([...players].map(([name,p])=>[normalizePlayerMatchKey(name),p]));
+ const target=r=>{const p=canonical.get(normalizePlayerMatchKey(r.player));return p&&p.appearances.get(detailMatchKey(r.id))===String(r.team||'').trim()?p:null;};
+ (DB.goals||[]).forEach(r=>{const p=target(r);if(p){p.g+=num(r.g);p.a+=num(r.a);}});
+ (DB.moms||[]).forEach(r=>{const p=target(r);if(p)p.mom+=num(r.mom);});
+ (DB.fouls||[]).forEach(r=>{const p=target(r);if(p&&r.fouls!==null&&r.fouls!==undefined){p.f+=num(r.fouls);p.fGames.add(detailMatchKey(r.id));}});
+ explicitPerformanceRows().forEach(r=>{const p=target(r);if(!p)return;for(const key of ['sot','keyPass','defSuccess','saves']){if(r[key]===null||r[key]===undefined)continue;const x=p.records[key]||(p.records[key]={total:0,ids:new Set()});x.total+=num(r[key]);x.ids.add(detailMatchKey(r.id));}});
+ const keeper=goalkeeperStats(list),all=[...players.values()].sort((a,b)=>compareNamesKo(a.name,b.name));
+ const cap=(x,max)=>Math.max(0,Math.min(1,x/max));
+ all.forEach(p=>{
+  p.position=normalizeAbilityPosition(playerCardRoster(p.name,{year:date.slice(0,4),asOf:date})?.pos);p.result=20*(p.w+.5*p.d)/p.games;p.momPoints=10*cap(p.mom/p.games,1);
+  const measure=(key,limit)=>{const r=p.records[key];return r?cap(r.total/r.ids.size,limit)*r.ids.size/p.games:0;};
+  p.field=BEST5_ROLES.map(role=>{const base={g:cap(p.g/p.games,role.id==='FS'?1:2),a:cap(p.a/p.games,1),sot:measure('sot',3),keyPass:measure('keyPass',2),defSuccess:measure('defSuccess',role.id==='FS'?4:3),clean:p.fGames.size?(1-cap(p.f/p.fGames.size,2))*p.fGames.size/p.games:0};const parts=[{label:'팀 결과',points:p.result},{label:'MOM',points:p.momPoints},...Object.entries(role.weights).map(([key,weight])=>({label:({g:'득점',a:'도움',sot:'유효슛',keyPass:'키패스',defSuccess:'수비성공',clean:'파울 관리'})[key],points:weight*base[key]}))];return {score:parts.reduce((s,r)=>s+r.points,0),parts,positionMatch:p.position===role.id};});
+  p.gk=keeper.players.find(k=>normalizePlayerMatchKey(k.player)===normalizePlayerMatchKey(p.name));
+  const rows=(p.gk?.rows||[]).filter(r=>p.appearances.get(detailMatchKey(r.id))===r.team),good=rows.filter(r=>r.minutes!==null&&!r.warning),paired=good.filter(r=>r.saves!==null);
+  const minutes=good.reduce((s,r)=>s+r.minutes,0),ga=good.reduce((s,r)=>s+r.ga,0),pm=paired.reduce((s,r)=>s+r.minutes,0),sv=paired.reduce((s,r)=>s+r.saves,0),pga=paired.reduce((s,r)=>s+r.ga,0),rate=sv+pga?sv/(sv+pga):null;
+  const parts=[{label:'팀 결과',points:p.result/2},{label:'선방률',points:rate===null?0:40*rate*Math.min(pm/30,1)},{label:'실점/15분',points:minutes?30*(1-cap(15*ga/minutes,4))*Math.min(minutes/30,1):0},{label:'선방/15분',points:pm?20*cap(15*sv/pm,5)*Math.min(pm/30,1):0}];
+  p.keeper={score:parts.reduce((s,r)=>s+r.points,0),parts,minutes,ga,pairedMinutes:pm,saveRate:rate,ga15:minutes?15*ga/minutes:null,saves15:pm?15*sv/pm:null,evidence:rows.some(r=>r.minutes>0||r.saves>0),complete:minutes>=30&&pm===minutes&&rate!==null&&good.length===rows.length&&!rows.some(r=>r.warning),warnings:rows.filter(r=>r.warning).length};
+ });
+ const evidence=all.filter(p=>p.keeper.evidence),gkPool=evidence.length?evidence:all.filter(p=>p.position==='GR');
+ gkPool.sort((a,b)=>b.keeper.score-a.keeper.score||b.keeper.pairedMinutes-a.keeper.pairedMinutes||b.keeper.minutes-a.keeper.minutes||compareNamesKo(a.name,b.name));
+ const goalkeeper=gkPool[0]||null,candidates=all.filter(p=>p!==goalkeeper);
+ // Maximum total role score, with no duplicate player. Position is a tie-break only.
+ const dp=Array(16).fill(null);dp[0]={score:0,fit:0,picks:Array(4).fill(null)};
+ candidates.forEach(p=>{const prev=dp.slice();for(let mask=0;mask<16;mask++){const state=prev[mask];if(!state)continue;for(let i=0;i<4;i++){if(mask&(1<<i))continue;const next=mask|(1<<i),score=state.score+p.field[i].score,fit=state.fit+Number(p.field[i].positionMatch),current=dp[next];if(!current||score>current.score+1e-9||(Math.abs(score-current.score)<1e-9&&fit>current.fit)){const picks=state.picks.slice();picks[i]=p;dp[next]={score,fit,picks};}}}});
+ const best=dp.filter(Boolean).sort((a,b)=>b.picks.filter(Boolean).length-a.picks.filter(Boolean).length||b.score-a.score||b.fit-a.fit)[0];
+ const slots=BEST5_ROLES.map((role,i)=>({role,player:best.picks[i],score:best.picks[i]?.field[i].score,parts:best.picks[i]?.field[i].parts}));slots.push({role:{id:'GR',name:'GOLEIRO',label:'골키퍼'},player:goalkeeper,score:goalkeeper?.keeper.score,parts:goalkeeper?.keeper.parts});
+ return {date,list,all,slots,keeper,selected:slots.filter(s=>s.player).length,goalkeeper};
+}
+function best5MethodHtml(){return '<details class="best5-method"><summary>BEST 5 선정 기준 · 점수 계산 보기</summary><p>당일·선택 대회의 실제 출전 선수만 대상입니다. 통산 능력치, 카드 등급, 사커비는 사용하지 않습니다. 기록 기반의 GGFC 초기 선정 규칙이며 운영상 참고 지표입니다. 기록이 추가되거나 수정되면 다시 계산하고 업적·OVR에 자동 가산하지 않습니다.</p><p>필드 공통: 팀 결과 20×(승+0.5×무)/출전경기 + MOM 10×min(MOM/경기,1). 아래 지표는 가중치×min(경기당 기록/기준,1)입니다. 미기록 항목은 가산하지 않고, 기록 경기만 있는 항목은 기록률(기록경기/출전경기)을 곱합니다. 파울 관리는 10×(1−min(기록경기당 파울/2,1))×기록률입니다.</p>'+tbl([{t:'역할'},{t:'득점'},{t:'도움'},{t:'유효슛'},{t:'키패스'},{t:'수비성공'},{t:'파울 관리'}],[['PV','40 / 기준2','20 / 기준1','5 / 기준3','5 / 기준2','—','—'],['AL × 2','25 / 기준2','30 / 기준1','—','10 / 기준2','5 / 기준3','—'],['FS','10 / 기준1','15 / 기준1','—','5 / 기준2','30 / 기준4','최대10']])+'<p>골키퍼: 팀 결과 최대10 + 선방률×40 + (1−min(실점/15분÷4,1))×30 + min(선방/15분÷5,1)×20. 세 키퍼 지표에는 각각 사용한 기록시간/30분(최대1)을 곱합니다. 선방률은 선방/(선방+키퍼실점)입니다. 선방과 실점·시간이 같은 경기·팀·선수에 연결된 경우만 선방률·선방/15분을 계산합니다. 실점 합계 불일치 경기는 BEST 5의 키퍼 비율 점수에서 제외합니다.</p><p>골키퍼는 실제 시간 또는 양수 선방 기록이 있는 선수 중 선정합니다. 그 기록이 전혀 없으면 당일 출전한 명단상 GR/GK를 잠정 후보로 사용합니다. 둘 다 없으면 골키퍼 칸을 비웁니다. 골키퍼 선정 후 필드 4자리는 중복 없이 역할 점수 합계가 가장 높은 조합을 선택합니다. 동점은 명단 포지션 일치 수, 이름순 순회 결과로 결정하며 골키퍼 동점은 연결시간·수행시간·이름순입니다. 좌우 AL 배치는 실제 활동 위치를 의미하지 않습니다.</p><p>득점·도움은 경기당 횟수이며 필드 출전시간이 없어 분당 평가는 하지 않습니다. 미기록은 실제 0과 다릅니다. 기록이 충분한 선수에게 가산 기회가 더 많으므로 일부 기록만 있는 날의 결과는 잠정값입니다. 30분 기준·배점은 고정된 초기 운영값입니다.</p></details>';}
+function renderBest5(){
+ const root=document.getElementById('best5Content'),select=document.getElementById('best5Date');if(!root||!select)return;
+ const dates=[...new Set(recordBaseMatches().map(m=>normDate(m.date)).filter(Boolean))].sort().reverse();if(!dates.includes(best5Date))best5Date=dates[0]||'';
+ select.innerHTML=dates.length?dates.map(d=>'<option value="'+esc(d)+'"'+(d===best5Date?' selected':'')+'>'+esc(d)+'</option>').join(''):'<option value="">경기 기록 없음</option>';select.disabled=!dates.length;select.onchange=()=>{best5Date=select.value;renderBest5();};document.getElementById('best5Latest').onclick=()=>{best5Date=dates[0]||'';renderBest5();};
+ const data=best5Model(best5Date),query={year:best5Date.slice(0,4),start:best5Date,end:best5Date,asOf:best5Date},n=v=>Number(v).toFixed(1),record=(p,key)=>p.records[key]?p.records[key].total+'회 · '+p.records[key].ids.size+'/'+p.games+'경기 기록':'미기록';
+ const token=(slot,i)=>{const p=slot.player;return '<div class="best5-position best5-pos-'+i+'"><span class="best5-role">'+slot.role.name+'</span>'+(p?playerCardLink(p.name,playerFaceChip(p.name,true,query.year),query)+'<span class="best5-team">'+esc([...p.teams].map(teamDisplayName).join(' · '))+'</span><strong>'+n(slot.score)+' <small>기록점수</small></strong>':'<span class="best5-vacant">미선정</span><small>출전·포지션 기록 확인</small>')+'</div>';};
+ const explanation=slot=>{const p=slot.player;if(!p)return '<article class="best5-reason"><h3>'+slot.role.name+' · 미선정</h3><p>해당 역할을 배치할 출전 후보가 부족합니다. 골키퍼는 수행기록 또는 출전 선수의 GR/GK 포지션을 확인하세요.</p></article>';
+ const incomplete=['sot','keyPass','defSuccess'].some(k=>(p.records[k]?.ids.size||0)<p.games),gk=slot.role.id==='GR';
+ return '<article class="best5-reason"><header><span>'+slot.role.name+'</span><h3>'+playerCardLink(p.name,esc(p.name),query)+'</h3><b>'+n(slot.score)+'점</b></header><p>'+p.games+'경기 · '+p.w+'승 '+p.d+'무 '+p.l+'패 · '+p.g+'골 '+p.a+'도움 · MOM '+p.mom+'회</p><p>'+(gk?'키퍼 시간 '+(p.gk?.gkGames?n(p.gk.minutes)+'분':'미기록')+' · 키퍼실점 '+(p.gk?.gkGames?p.gk.ga+'골':'미기록')+' · 선방 '+record(p,'saves'):'유효슛 '+record(p,'sot')+'<br>키패스 '+record(p,'keyPass')+'<br>수비성공 '+record(p,'defSuccess'))+'</p><ul>'+slot.parts.map(x=>'<li>'+x.label+' <b>'+n(x.points)+'점</b></li>').join('')+'</ul><p class="best5-proof">'+(gk?'골키퍼 후보 중 가장 높은 기록점수입니다. '+(p.keeper.complete?'선방·실점·시간 연결 완료.':'잠정 선정 · 선방/실점 연결 또는 30분 표본이 부족합니다. ')+(p.keeper.warnings?'실점 배정 불일치 경기는 비율 점수에서 제외했습니다.':''):'필드 4자리의 역할별 합계가 가장 높은 조합에 포함됩니다. 명단 포지션 '+esc(p.position||'미등록')+' · 배치 '+slot.role.id+'. '+(incomplete?'신규 기록 일부 미입력으로 잠정 평가입니다.':''))+'</p></article>';};
+ root.innerHTML='<div class="best5-summary"><div><span>MATCHDAY SELECTION</span><h2>'+esc(best5Date||'경기 기록 없음')+'</h2><p>'+esc(comp==='ALL'?'전체 대회':comp)+' · '+data.list.length+'경기 · 후보 '+data.all.length+'명</p></div><b>'+data.selected+' / 5 <small>선정</small></b></div><p class="best5-notice">기록 업로드 후 자동 계산 · 1–2–1 + GK 배치 · 이름을 누르면 선수카드가 열립니다. 미기록 지표와 짧은 표본이 있으면 잠정 선정으로 보세요.</p><div class="best5-pitch" role="group" aria-label="GGFC BEST 5 풋살장"><div class="best5-field-lines" aria-hidden="true"><i class="best5-circle"></i><i class="best5-box top"></i><i class="best5-box bottom"></i></div>'+data.slots.map(token).join('')+'</div><div class="best5-section-title"><h2>WHY GGFC BEST 5?</h2><p>당일 실적과 역할별 기여 점수</p></div><div class="best5-reasons">'+data.slots.map(explanation).join('')+'</div>'+best5MethodHtml()+'<details class="best5-audit"><summary>골키퍼 기록 연결 점검 · '+data.keeper.issues.length+'건 확인 필요</summary>'+goalkeeperTableHtml(data.keeper,query)+goalkeeperMethodHtml()+(data.keeper.issues.length?'<ul>'+data.keeper.issues.map(r=>'<li>'+esc(r.team+' · '+r.no+' / '+r.round+' · '+r.reason)+'</li>').join('')+'</ul>':'')+'</details>';
+}
+
 function renderActiveView(v){
   if(['data','rep','abilitycfg','abilityguide'].includes(v)&&!admin)v='dash';
-  const renderers={insights:renderInsights,dash:renderDash,cal:renderCal,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide};
+  const renderers={best5:renderBest5,insights:renderInsights,dash:renderDash,cal:renderCal,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide};
   activeView=renderers[v]?v:'dash';renderers[activeView]();
 }
 function renderAll(){
