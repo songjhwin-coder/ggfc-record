@@ -748,7 +748,7 @@ function goalkeeperTableHtml(data,query){
 function goalkeeperMethodHtml(){return '<details class="gk-method"><summary>계산 기준 · 기록이 부족할 때</summary><p>선방률 = 선방 ÷ (선방 + 키퍼실점) × 100. 같은 경기·팀·선수의 선방과 키퍼실점이 모두 있는 경기만 합산합니다. 두 값이 모두 0이면 —입니다.</p><p>실점/15분 = 키퍼실점 합계 ÷ 기록된 키퍼 수행시간 × 15. 선방/15분은 선방과 시간이 함께 있는 경기만 합산합니다. 선방률은 시간으로 나누는 지표가 아닙니다. 빈칸은 미기록이며 실제 0회는 0을 입력하세요.</p><p>키퍼 시간은 분 단위입니다. 7.5 또는 7:30은 7분 30초입니다. 팀 실점과 키퍼실점 합계가 다르면 입력값 기준으로 계산하되 확인 표시를 붙입니다. 시간·연결 경기 수가 적은 표본은 단순 순위 비교를 피하세요. 지표는 개인 분석용이며 신규 실점 감점을 능력치에 자동 추가하지 않습니다.</p></details>';}
 function renderGoalkeeperAnalysis(info){
   const box=document.getElementById('goalkeeperAnalysis');if(!box)return;
-  const data=goalkeeperStats(info.list||[]),search=playerRecordSearchQuery();
+  const data=goalkeeperStats(info.list||[]),search='';
   if(search)data.players=data.players.filter(p=>normalizePlayerMatchKey(p.player).includes(search));
   box.innerHTML='<div class="dashboard-block-title"><div class="sec-t">GOALKEEPER · 골키퍼 분석</div><div class="dashboard-block-note">'+esc(info.label)+'</div></div>'+goalkeeperTableHtml(data,info)+goalkeeperMethodHtml();
 }
@@ -1390,7 +1390,7 @@ function partnerRecordBonus(a,b,shared,rows){
   return {bonus:metrics.reduce((s,r)=>s+r.points,0),metrics};
 }
 function partnerRecordSummary(row){return (row.recordMetrics||[]).map(r=>r.label+' '+(r.total===null?'미기록':r.total+'회 / '+r.games+'경기')).join(' · ');}
-function newRecordMethodHtml(){return '<section class="new-record-method"><h4>베스트커플 · DUO 신규 기록 반영 (V3.25.8)</h4><p>같은 경기·팀에 실제 함께 출전한 두 선수의 명시 기록만 커플 보너스에 포함합니다. 기존 점수 = 승률×0.5 + 동행 비율×0.3 + min(동행 경기당 본인 득점×33,100)×0.2. 최종 = round(min(100, 기존 점수 + 신규 기록 보너스)). 감독점수는 유지합니다.</p><p>항목별 보너스 = 8 × 가중치 × min(기록 경기당 두 선수의 확인된 합계 ÷ 기준,1) × min(기록 경기 수÷5,1) × (기록 경기 수÷동행 경기 수). 유효슛 25%/기준 4회, 키패스 25%/3회, 수비성공 30%/6회, 선방 20%/4회. 총 보너스 최대 8점이며 100점 상한에서 실제 반영량은 작아질 수 있습니다. 기준은 GGFC 초기 운영값입니다.</p><p>빈칸은 0이 아닙니다. 두 선수 중 한 명만 기록한 경기는 확인된 횟수만 합산합니다. 표본·기록 비율로 보너스를 축소하므로 오래된 미기록 경기 때문에 감점하지 않습니다. 실제 두 선수 사이의 패스나 득점 연결을 입증하는 지표는 아닙니다.</p><p>DUO는 시즌별로 항목을 기록한 경기당 평균을 선수 간 백분위로 환산합니다. 항목별 기록 5경기 이상, 본인 출전 대비 기록률 50% 이상, 비교 가능 선수 4명 이상이어야 직접 반영합니다. ATTACK=기존 축 80%+유효슛 20%, CREATION=기존 축 75%+키패스 25%, POWER=기존 축 70%+수비성공 20%+선방 10%. 사용 불가능한 항목은 제외하고 남은 가중치를 재정규화합니다. 선방 횟수는 수비 관여도이며 키퍼 능력의 절대평가가 아닙니다.</p><p>DUO 최종의 특성 70%·동행 성적 20%·CHEMISTRY 10%와 20종 분류 조건은 유지합니다. CHEMISTRY에는 신규 커플점수가 연결됩니다. 기존 SHO/PAS/DEF의 기록 성장에 더해 직접 관여 지표를 작은 비중으로 반영하므로 효과가 완전히 독립적이지는 않습니다. 사커비 배점과 능력치 상승·하강 계수는 이번 변경에서 유지합니다.</p></section>';}
+function newRecordMethodHtml(){return '<section class="new-record-method"><h4>베스트커플 · DUO 신규 기록 반영 (V3.25.9)</h4><p>같은 경기·팀에 실제 함께 출전한 두 선수의 명시 기록만 커플 보너스에 포함합니다. 기존 점수 = 승률×0.5 + 동행 비율×0.3 + min(동행 경기당 본인 득점×33,100)×0.2. 최종 = round(min(100, 기존 점수 + 신규 기록 보너스)). 감독점수는 유지합니다.</p><p>항목별 보너스 = 8 × 가중치 × min(기록 경기당 두 선수의 확인된 합계 ÷ 기준,1) × min(기록 경기 수÷5,1) × (기록 경기 수÷동행 경기 수). 유효슛 25%/기준 4회, 키패스 25%/3회, 수비성공 30%/6회, 선방 20%/4회. 총 보너스 최대 8점이며 100점 상한에서 실제 반영량은 작아질 수 있습니다. 기준은 GGFC 초기 운영값입니다.</p><p>빈칸은 0이 아닙니다. 두 선수 중 한 명만 기록한 경기는 확인된 횟수만 합산합니다. 표본·기록 비율로 보너스를 축소하므로 오래된 미기록 경기 때문에 감점하지 않습니다. 실제 두 선수 사이의 패스나 득점 연결을 입증하는 지표는 아닙니다.</p><p>DUO는 시즌별로 항목을 기록한 경기당 평균을 선수 간 백분위로 환산합니다. 항목별 기록 5경기 이상, 본인 출전 대비 기록률 50% 이상, 비교 가능 선수 4명 이상이어야 직접 반영합니다. ATTACK=기존 축 80%+유효슛 20%, CREATION=기존 축 75%+키패스 25%, POWER=기존 축 70%+수비성공 20%+선방 10%. 사용 불가능한 항목은 제외하고 남은 가중치를 재정규화합니다. 선방 횟수는 수비 관여도이며 키퍼 능력의 절대평가가 아닙니다.</p><p>DUO 최종의 특성 70%·동행 성적 20%·CHEMISTRY 10%와 20종 분류 조건은 유지합니다. CHEMISTRY에는 신규 커플점수가 연결됩니다. 기존 SHO/PAS/DEF의 기록 성장에 더해 직접 관여 지표를 작은 비중으로 반영하므로 효과가 완전히 독립적이지는 않습니다. 사커비 배점과 능력치 상승·하강 계수는 이번 변경에서 유지합니다.</p></section>';}
 
 function chemistry(target,list){
   const ms=uniqueRecordMatches(list||chemMatches()), M=new Map(ms.map(m=>[detailMatchKey(m.id),m]));
@@ -2692,11 +2692,11 @@ function renderAbility(){
     const compareText=cutoff
       ? ('기준 '+cutoff+(cmp.latest?' · 최근 경기 '+cmp.latest:' · 선택 경기일까지 경기 없음')+(cmp.previous?' / 비교 '+cmp.previous:''))
       : (cmp.latest?(cmp.previous?'최근 '+cmp.latest+' / 비교 '+cmp.previous:'최근 '+cmp.latest+' / 비교일 없음'):'기록 없음');
-    const table=rows.length?'<div class="tablewrap ability-table-wrap"><table class="ability-table"><thead><tr>'+abilitySortHeader('player','선수')+'<th>팀</th><th>평가</th><th>시스템</th>'+ABILITY_SORT_FIELDS.slice(1).map(([key,label])=>abilitySortHeader(key,label)).join('')+'<th>출석R</th><th>누적 결석R</th><th>기준R</th><th>골</th><th>도움</th><th>개인파울</th><th>선방</th><th>MOM</th><th>승점</th><th>Career 누적 결석감점</th></tr></thead><tbody>'+rows.map(r=>{
+    const table=rows.length?'<div class="tablewrap ability-table-wrap"><table class="ability-table"><thead><tr>'+abilitySortHeader('player','선수')+'<th>팀</th>'+ABILITY_SORT_FIELDS.slice(1).map(([key,label])=>abilitySortHeader(key,label)).join('')+'<th>출석R</th><th>누적 결석R</th><th>기준R</th><th>골</th><th>도움</th><th>개인파울</th><th>선방</th><th>MOM</th><th>승점</th><th>Career 누적 결석감점</th><th>평가</th><th>시스템</th></tr></thead><tbody>'+rows.map(r=>{
       const p=prevMap[r.player]||null, abs=r.absence||{rounds:0,penalty:{}}, ap=abs.penalty||{};
-      return '<tr><td>'+playerCardLink(r.player,playerFaceChip(r.player,false,r.info?.year||abilityYear),Object.assign({},r.info,{asOf:r.cutoffDate,allCompetitions:true}))+'</td><td>'+(r.team?teamChip(r.team):'<span class="muted">—</span>')+'</td><td><span class="ability-status '+(r.measured?'':'unassessed')+'">'+(r.measured?'SB '+esc(r.sbDate):'68P · PROVISIONAL')+'</span></td>'+ 
-        '<td><span class="ability-mode compare">BASE+FORM</span></td><td><b>'+abilityScoreWithDelta(r.currentOvr,p&&p.currentOvr)+'</b><small class="ability-form-inline '+(r.form.level>0?'hot':r.form.level<0?'cold':'normal')+'">'+esc(r.form.status.icon)+' '+(r.form.level>0?'+':'')+r.form.level+'</small></td><td><span class="ability-base-number">'+fmtAbility(r.baseOvrRaw)+'</span><small class="ability-progress-inline">→ '+r.nextBaseOvr+' · '+Math.round(r.ovrProgress)+'%</small></td><td>'+abilityScoreWithDelta(r.pac,p&&p.pac)+'</td><td>'+abilityScoreWithDelta(r.sho,p&&p.sho)+'</td><td>'+abilityScoreWithDelta(r.pas,p&&p.pas)+'</td><td>'+abilityScoreWithDelta(r.dri,p&&p.dri)+'</td><td>'+abilityScoreWithDelta(r.def,p&&p.def)+'</td><td>'+abilityScoreWithDelta(r.phy,p&&p.phy)+'</td>'+ 
-        '<td>'+r.summary.att+'</td><td>'+num(abs.rounds)+'</td><td><b>'+num(r.summary.att+num(abs.rounds))+' / '+num(r.summary.progress)+'R</b></td><td>'+r.summary.g+'</td><td>'+r.summary.a+'</td><td>'+r.summary.f+'</td><td>'+r.summary.sv+'</td><td>'+r.summary.mom+'</td><td>'+r.summary.pts+'</td><td><span class="ability-growth negative">SHO '+fmtGrowth(num(ap.sho))+' · PAS '+fmtGrowth(num(ap.pas))+' · DRI '+fmtGrowth(num(ap.dri))+' · DEF '+fmtGrowth(num(ap.def))+' · PHY '+fmtGrowth(num(ap.phy))+'</span></td></tr>';
+      return '<tr><td>'+playerCardLink(r.player,playerFaceChip(r.player,false,r.info?.year||abilityYear),Object.assign({},r.info,{asOf:r.cutoffDate,allCompetitions:true}))+'</td><td>'+(r.team?teamChip(r.team):'<span class="muted">—</span>')+'</td><td><b>'+abilityScoreWithDelta(r.currentOvr,p&&p.currentOvr)+'</b><small class="ability-form-inline '+(r.form.level>0?'hot':r.form.level<0?'cold':'normal')+'">'+esc(r.form.status.icon)+' '+(r.form.level>0?'+':'')+r.form.level+'</small></td><td><span class="ability-base-number">'+fmtAbility(r.baseOvrRaw)+'</span><small class="ability-progress-inline">→ '+r.nextBaseOvr+' · '+Math.round(r.ovrProgress)+'%</small></td><td>'+abilityScoreWithDelta(r.pac,p&&p.pac)+'</td><td>'+abilityScoreWithDelta(r.sho,p&&p.sho)+'</td><td>'+abilityScoreWithDelta(r.pas,p&&p.pas)+'</td><td>'+abilityScoreWithDelta(r.dri,p&&p.dri)+'</td><td>'+abilityScoreWithDelta(r.def,p&&p.def)+'</td><td>'+abilityScoreWithDelta(r.phy,p&&p.phy)+'</td>'+ 
+        '<td>'+r.summary.att+'</td><td>'+num(abs.rounds)+'</td><td><b>'+num(r.summary.att+num(abs.rounds))+' / '+num(r.summary.progress)+'R</b></td><td>'+r.summary.g+'</td><td>'+r.summary.a+'</td><td>'+r.summary.f+'</td><td>'+r.summary.sv+'</td><td>'+r.summary.mom+'</td><td>'+r.summary.pts+'</td><td><span class="ability-growth negative">SHO '+fmtGrowth(num(ap.sho))+' · PAS '+fmtGrowth(num(ap.pas))+' · DRI '+fmtGrowth(num(ap.dri))+' · DEF '+fmtGrowth(num(ap.def))+' · PHY '+fmtGrowth(num(ap.phy))+'</span></td><td><span class="ability-status '+(r.measured?'':'unassessed')+'">'+(r.measured?'SB '+esc(r.sbDate):'68P · PROVISIONAL')+'</span></td>'+ 
+        '<td><span class="ability-mode compare">BASE+FORM</span></td></tr>';
     }).join('')+'</tbody></table></div>':'<div class="empty">'+label+' 선수 데이터가 없습니다.</div>';
     return '<div class="ability-half-section" data-ability-half="'+half+'"><div class="ability-half-head"><div><div class="ability-half-title">'+label+(cutoff?' · '+cutoff+' 기준':'')+'</div><div class="ability-half-meta">'+cmp.info.start+' ~ '+cmp.info.end+' · 선택 경기일까지 최종 기준 '+abilityPeriodRoundBasis(cmp.info,cutoff||cmp.latest||cmp.info.end)+'R · 개인 기준R=시작일 이후 소속팀 경기일 수 · 출석R+결석R=개인 기준R · 능력치 성장은 이전 시즌부터 연속 누적</div></div><div class="ability-half-compare">'+compareText+'</div></div>'+abilitySortToolbar(half)+table+mobileAbilityCards(rows,prevMap)+'<div class="empty" data-ability-search-empty hidden>'+label+'에서 검색한 이름과 일치하는 선수가 없습니다.</div></div>';
   };
@@ -3797,16 +3797,22 @@ function scopedPeriodInfo(kind){
   return {start,end,label,list,year,mode,half:activeHalf,segment:segment||"ALL",segmentIndex,asOf:latestInScope||end};
 }
 function rankingQueryInfo(){return scopedPeriodInfo("ranking");}
-function memberDashboardHalfInfo(){
-  const date=ensureDashboardDate(),year=date.slice(0,4),cfg=seasonCfg(year),half=dateHalfKey(date)||(date>=cfg.h2s?'H2':'H1');
+function memberDashboardHalfInfo(reference){
+  const date=reference||ensureDashboardDate(),year=date.slice(0,4),cfg=seasonCfg(year),half=dateHalfKey(date)||(date>=cfg.h2s?'H2':'H1');
   const start=half==='H2'?cfg.h2s:cfg.h1s,end=half==='H2'?cfg.h2e:cfg.h1e;
   return {year,half,mode:half,start,end,asOf:end,exactScope:true,label:year+'년 '+(half==='H2'?'하반기':'상반기')+' 전체',list:uniqueRecordMatches(recordBaseMatches().filter(m=>normDate(m.date)>=start&&normDate(m.date)<=end))};
 }
-function dashboardRankingInfo(info){return admin?{...(info||rankingQueryInfo()),exactScope:true}:memberDashboardHalfInfo();}
+function dashboardRankingInfo(info){return admin?{...(info||rankingQueryInfo()),exactScope:true}:memberDashboardHalfInfo(latestMatchDate());}
 function h2hQueryInfo(){return admin?scopedPeriodInfo('h2h'):memberDashboardHalfInfo();}
+function dashboardStandingInfo(){
+  if(admin)return recordQueryInfo();
+  const ctx=latestDbPeriodContext();if(!ctx)return {...memberDashboardHalfInfo(),list:[]};
+  const start=ctx.segmentStart||ctx.halfStart,end=ctx.segmentEnd||ctx.halfEnd;
+  return {year:ctx.year,half:ctx.half,start,end,asOf:ctx.date,label:ctx.year+'년 '+(ctx.half==='H2'?'하반기':'상반기')+(ctx.segment==='ALL'?' 전체':' '+ctx.segment+'구간'),list:uniqueRecordMatches(recordBaseMatches().filter(m=>normDate(m.date)>=start&&normDate(m.date)<=end))};
+}
 function renderDashboardStanding(){
   const box=document.getElementById('exportTeamStandingSection');if(!box)return;
-  const info=dashboardRankingInfo();
+  const info=dashboardStandingInfo();
   box.innerHTML='<div class="record-period-head"><div class="record-period-heading"><div class="sec-t">팀 순위 및 누적 기록</div><span class="record-round-range">'+esc(recordRoundRangeLabel(info.list))+'</span></div><div class="record-period-label">'+esc(info.label)+' · '+esc(info.start)+' ~ '+esc(info.end)+'</div></div><div class="tablewrap record-standing-table">'+teamStandingGroupedHtml(info.list)+'</div>';
 }
 /* 랭킹 5종의 조회기간 표기는 세부 구간 날짜가 아니라 해당 시즌의 상/하반기를 명확하게 보여준다. */
@@ -4487,8 +4493,9 @@ function v319AchievementHtml(player,cutoff,compact=false){
 }
 function playerListAchievements(player,cutoff){
   const list=v319AchievementList(v319CareerStatsMap(cutoff)[player]||{});
-  return '<div class="player-list-achievements"><div class="player-achievement-count">ACHIEVEMENT · '+list.length+'</div><div class="v319-badges">'+(list.length?list.map(a=>'<span class="v319-badge" title="'+esc(a.desc)+'">'+esc(a.icon+' '+a.name)+'</span>').join(''):'<span class="muted">달성 기록 없음</span>')+'</div></div>';
+  return '<details class="player-list-achievements"><summary>ACHIEVEMENT · '+list.length+'</summary><div class="v319-badges">'+(list.length?list.map(a=>'<span class="v319-badge" title="'+esc(a.desc)+'">'+esc(a.icon+' '+a.name)+'</span>').join(''):'<span class="muted">달성 기록 없음</span>')+'</div></details>';
 }
+
 function renderPlayerAchievementBoard(players,cutoff){
   const box=$('#playerAchievementBoard');if(!box)return;
   const rows=(players||[]).map(p=>{const stats=v319CareerStatsMap(cutoff)[p.player]||{},list=v319AchievementList(stats);return {player:p.player,count:list.length,list};}).sort((a,b)=>b.count-a.count||compareNamesKo(a.player,b.player));
@@ -4651,7 +4658,6 @@ function sharedRanks(list,valueFn){
 function renderDashboardQueryRankings(info){
   // 관리자는 선택 범위, 회원은 선택 경기일의 반기 전체를 동일하게 적용한다.
   info=dashboardRankingInfo(info);
-  renderDashboardStanding();
   const list=info.list||[], period=info.label+" · "+list.length+"경기 기준";
   if($("#dashScorerQueryNote")) $("#dashScorerQueryNote").textContent=period+" · 득점 ↓ · 경기수 ↑ · 동률이면 이름순";
   if($("#dashAttendanceQueryNote")) $("#dashAttendanceQueryNote").textContent=period+" · 출석률은 경기일별 소속팀의 참가 가능 경기 수 대비 실제 출전 횟수입니다. 출석률이 같으면 경기수·득점과 관계없이 이름순";
@@ -5000,11 +5006,23 @@ function renderTeam(){
   }).join("")||'';
 }
 function playerRecordSearchQuery(){return normalizePlayerMatchKey($('#memberPlayerSearch')?.value||'');}
-function bindPlayerRecordSearch(){
-  const input=$('#memberPlayerSearch'),clear=$('#playerRecordSearchClear');
-  if(input)input.oninput=()=>renderPlayer();
-  if(clear)clear.onclick=()=>{if(input){input.value='';renderPlayer();input.focus();}};
+function filterPlayerRecordRows(){
+ const query=playerRecordSearchQuery(),rows=[...document.querySelectorAll('#playerTable tbody tr')];let count=0;
+ const match=name=>!query||normalizePlayerMatchKey(name).includes(query);
+ rows.forEach(row=>{row.hidden=!match(row.dataset.playerName||'');if(!row.hidden)count++;});
+ document.querySelectorAll('#memberPlayerCards [data-member-name]').forEach(el=>el.hidden=!match(el.dataset.memberName));
+ document.querySelectorAll('#specialTable tbody tr').forEach(row=>row.hidden=!match(row.cells[1]?.textContent||''));
+ document.querySelectorAll('#goalkeeperAnalysis tbody tr').forEach(row=>row.hidden=!match(row.cells[0]?.textContent||''));
+ $('#playerRecordSearchStatus').textContent=(query?'검색 결과 ':'전체 ')+count+'명 / '+rows.length+'명 · 조회 종료일 기준';
+ $('#playerRecordSearchClear').disabled=!query;
+ let empty=$('#playerSearchEmpty');if(!empty){empty=document.createElement('p');empty.id='playerSearchEmpty';empty.className='empty';$('#playerTable').after(empty);}empty.textContent='검색한 이름과 일치하는 선수가 없습니다.';empty.hidden=!query||count>0;
 }
+function bindPlayerRecordSearch(){
+ const input=$('#memberPlayerSearch'),clear=$('#playerRecordSearchClear');
+ if(input){input.oninput=e=>{if(!e.isComposing)filterPlayerRecordRows();};input.oncompositionend=filterPlayerRecordRows;}
+ if(clear)clear.onclick=()=>{input.value='';filterPlayerRecordRows();input.focus();};
+}
+
 function playerSquadDisplayTeam(player,info={}){
   const teams=squadPlayerTeams(squadQueryContext(info),player);
   // Missing/ambiguous squad membership must not silently resurrect an old match team.
@@ -5017,7 +5035,7 @@ function renderPlayer(){
   renderGoalkeeperAnalysis(info);
   if($("#playerPeriodLabel")) $("#playerPeriodLabel").textContent=info.label+" · "+list.length+"경기";
   const draftNames=draftPlayerNameSet(info.year);
-  const search=playerRecordSearchQuery(),matchesName=name=>!search||normalizePlayerMatchKey(name).includes(search);
+  const search='',matchesName=()=>true;
   const careerCutoff=normDate(info.end)||normDate(info.asOf)||recordDates()[0]||"";
   const careerMap=v319CareerStatsMap(careerCutoff);
   const allPlayers=queryPlayerStats(list).filter(p=>draftPlayerVisible(p.player,draftNames)).map(p=>{const achievements=v319AchievementList(careerMap[p.player]||{});const roster=playerCardRoster(p.player,info)||{};const abilityYearForCard=(careerCutoff||String(info.year||'')).slice(0,4)||abilityYearList()[0], ability=abilitySystemEnabled()&&/^20\d{2}$/.test(abilityYearForCard)?playerAbilityRecordAtDate(p.player,abilityYearForCard,abilityHalfForDate(abilityYearForCard,careerCutoff),careerCutoff,true):null;return Object.assign(p,{displayTeam:playerSquadDisplayTeam(p.player,info,p.mainTeam),frameState:careerFrameState(careerMap[p.player]),achievements,achievementCount:achievements.length,shirtNumber:roster.no??"",position:roster.pos||"",careerCutoff,ability});}).sort((a,b)=>String(a.player||"").localeCompare(String(b.player||""),"ko-KR"));
@@ -5026,15 +5044,17 @@ function renderPlayer(){
   if($('#playerRecordSearchClear'))$('#playerRecordSearchClear').disabled=!String($('#memberPlayerSearch')?.value||'');
   if($("#playerPeriodLabel")) $("#playerPeriodLabel").textContent+=' · 선수명단 등록 선수 '+allPlayers.length+'명 · 카드 등급은 조회 종료일 기준 통산 기록';
   $("#playerTable").innerHTML=tbl(
-    [{t:"선수"},{t:"주 소속"},{t:"등번호",n:1},{t:"포지션"},{t:"CURRENT",n:1},{t:"BASE",n:1},{t:"FORM"},{t:"SB"},{t:"팀경기",n:1},{t:"출석",n:1},{t:"출석률",n:1},{t:"승",n:1},{t:"무",n:1},{t:"패",n:1},{t:"승률",n:1},{t:"득점",n:1},{t:"어시스트",n:1},{t:"개인파울",n:1},{t:"유효슛",n:1},{t:"키패스",n:1},{t:"수비성공",n:1},{t:"선방",n:1},{t:"MOM",n:1},{t:"승점",n:1},{t:"카드 등급 · 승급 진행률"},{t:"ACHIEVEMENT"}],
-    ps.map(p=>[playerCardLink(p.player,playerFaceChip(p.player,false,info.year),info),'<span class="muted">'+teamChip(p.displayTeam)+'</span>',esc(String(p.shirtNumber??'')||'—'),esc(p.position||'—'),p.ability?'<b>'+p.ability.currentOvr+'</b>':'—',p.ability?fmtAbility(p.ability.baseOvrRaw):'—',p.ability?'<span class="ability-form-inline '+(p.ability.form.level>0?'hot':p.ability.form.level<0?'cold':'normal')+'">'+esc(p.ability.form.status.icon)+' '+(p.ability.form.level>0?'+':'')+p.ability.form.level+'</span>':'—',p.ability?(p.ability.measured?'MEASURED':'68P'):'—',p.teamGames,p.att,'<b>'+p.attendanceRate+'%</b>',p.w,p.d,p.l,p.winRate+'%',p.g,p.a||0,p.f||0,p.sot??'—',p.keyPass??'—',p.defSuccess??'—',p.sv||0,p.mom||0,'<b>'+p.pts+'</b>',careerFrameListHtml(p.frameState),playerListAchievements(p.player,careerCutoff)])
+    [{t:"선수"},{t:"카드 등급 · 승급 진행률"},{t:"주 소속"},{t:"등번호",n:1},{t:"포지션"},{t:"CURRENT",n:1},{t:"BASE",n:1},{t:"FORM"},{t:"SB"},{t:"팀경기",n:1},{t:"출석",n:1},{t:"출석률",n:1},{t:"승",n:1},{t:"무",n:1},{t:"패",n:1},{t:"승률",n:1},{t:"득점",n:1},{t:"어시스트",n:1},{t:"개인파울",n:1},{t:"유효슛",n:1},{t:"키패스",n:1},{t:"수비성공",n:1},{t:"선방",n:1},{t:"MOM",n:1},{t:"승점",n:1},{t:"ACHIEVEMENT"}],
+    ps.map(p=>[playerCardLink(p.player,playerFaceChip(p.player,false,info.year),info),careerFrameListHtml(p.frameState),'<span class="muted">'+teamChip(p.displayTeam)+'</span>',esc(String(p.shirtNumber??'')||'—'),esc(p.position||'—'),p.ability?'<b>'+p.ability.currentOvr+'</b>':'—',p.ability?fmtAbility(p.ability.baseOvrRaw):'—',p.ability?'<span class="ability-form-inline '+(p.ability.form.level>0?'hot':p.ability.form.level<0?'cold':'normal')+'">'+esc(p.ability.form.status.icon)+' '+(p.ability.form.level>0?'+':'')+p.ability.form.level+'</span>':'—',p.ability?(p.ability.measured?'MEASURED':'68P'):'—',p.teamGames,p.att,'<b>'+p.attendanceRate+'%</b>',p.w,p.d,p.l,p.winRate+'%',p.g,p.a||0,p.f||0,p.sot??'—',p.keyPass??'—',p.defSuccess??'—',p.sv||0,p.mom||0,'<b>'+p.pts+'</b>',playerListAchievements(p.player,careerCutoff)])
   );
+  $('#playerTable').querySelectorAll('tbody tr').forEach((row,i)=>row.dataset.playerName=ps[i].player);
   if(search&&!ps.length)$('#playerTable').innerHTML=emptySearch;
   if($("#memberPlayerCards")) $("#memberPlayerCards").innerHTML=search&&!ps.length?emptySearch:mobilePlayerCards(ps,info);
 
   const specials=DB.specials.filter(x=>{const d=normDate(x.date);return draftPlayerVisible(x.player,draftNames)&&matchesName(x.player)&&d&&(!info.start||d>=info.start)&&(!info.end||d<=info.end);}).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
-  $("#specialTable").innerHTML=search&&!specials.length?'<div class="empty">검색한 선수의 특이사항 기록이 없습니다.</div>':tbl([{t:"날짜"},{t:"선수"},{t:"구분"},{t:"내용"}],specials.map(x=>[esc(x.date),playerCardLink(x.player,'<b>'+esc(x.player)+'</b>',info),'<span class="pill">'+esc(x.type)+'</span>',esc(x.memo)]));
+  $("#specialTable").innerHTML=search&&!specials.length?'<div class="empty">검색한 선수의 특이사항 기록이 없습니다.</div>':tbl([{t:"날짜"},{t:"선수"},{t:"구분"},{t:"내용"}],specials.map(x=>[esc(x.date),playerCardLink(x.player,'<b>'+esc(x.player)+'</b>',info),'<span class="pill">'+esc(x.type)+'</span>',esc(x.memo)]));  filterPlayerRecordRows();
 }
+
 function pairStats(a,b,list){
   const ms=uniqueRecordMatches(list||chemMatches()), ids=new Set(ms.map(m=>detailMatchKey(m.id)));
   const goal=analysisGoalLookup(ms);
@@ -6877,7 +6897,7 @@ async function createDashboardExportSnapshot(source){
   try{
     const doc=frame.contentDocument;doc.documentElement.lang='ko';
     const base=doc.createElement('base');base.href=document.baseURI;doc.head.appendChild(base);
-    const style=doc.createElement('link');style.rel='stylesheet';style.href=new URL('assets/ggfc-export.css?v=3.25.8',document.baseURI).href;
+    const style=doc.createElement('link');style.rel='stylesheet';style.href=new URL('assets/ggfc-export.css?v=3.25.9',document.baseURI).href;
     const ready=settleExportResource(style,12000,()=>!!style.sheet);doc.head.appendChild(style);await ready;
     if(!style.sheet)throw new Error('출력 스타일을 불러오지 못했습니다.');
     const root=buildReferencePoster(doc,source);doc.body.appendChild(root);

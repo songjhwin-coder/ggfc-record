@@ -3147,3 +3147,21 @@ body:not(.admin-mode) .view>.head>p,body:not(.admin-mode) .view>.insight-page-he
 .player-card-goalkeeper>.player-card-metric{display:inline-flex;flex-direction:column;margin:6px 16px 6px 0}
 .couple-score-bar .recordPoints,.couple-key.recordPoints{background:#148c81}
 @media(max-width:620px){.ts-card-gallery{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 4px;padding:12px 6px}.ts-player-card-button,.ts-player-card-stage{width:144px}.ts-player-card-stage{height:216px}.ts-card-gallery .ggfc-player-card{transform:scale(.36)!important}.ts-player-card-caption{font-size:12px}}
+/* V3.25.9 compact, scrollable record tables */
+.head.insight-page-head h2{color:#fff;margin:0}.head.insight-page-head p{color:#b8cadf;margin-top:8px}.head.insight-page-head label{color:#fff}.head.insight-page-head .insight-date-controls{margin-top:10px}
+#playerTable,.ability-table-wrap{max-height:min(68vh,680px);overflow:auto;position:relative;isolation:isolate;scrollbar-gutter:stable}
+#playerTable table,.ability-table{border-collapse:separate;border-spacing:0}
+#playerTable thead th,.ability-table thead th{position:sticky!important;top:0;z-index:5;background:#edf2f8!important;color:#173b61!important;box-shadow:0 1px 0 #c9d6e5;text-align:center}
+#playerTable thead th:first-child{z-index:7}#playerTable tbody tr{height:86px}#playerTable tbody tr[hidden],#memberPlayerCards [hidden],#specialTable tr[hidden],#goalkeeperAnalysis tr[hidden]{display:none!important}
+#playerTable th:nth-child(2),#playerTable td:nth-child(2){width:140px;min-width:140px;max-width:140px;white-space:normal}
+#playerTable .career-list-progress{min-width:0;width:100%;gap:4px;padding:3px 0}#playerTable .career-list-progress small{white-space:normal;font-size:10px;line-height:1.35}
+#playerTable th:nth-child(3),#playerTable td:nth-child(3){width:140px}#playerTable th:nth-last-child(2),#playerTable td:nth-last-child(2){width:70px}
+#playerTable th:last-child,#playerTable td:last-child{width:240px}
+#playerTable .player-list-achievements{margin:0}#playerTable .player-list-achievements summary{padding:10px 0;white-space:nowrap;text-align:center;cursor:pointer}
+#playerTable .player-list-achievements .v319-badges{max-height:180px;overflow:auto}
+#abilityRiserCard>summary{font-size:16px;font-weight:800;cursor:pointer;color:#14395a;padding:4px 0}#abilityRiserCard>.dashboard-block-title .sec-t{display:none}#abilityRiserCard>.dashboard-block-title{margin-top:12px}
+.ggfc-player-card[data-design="classic"]{scale:.90;transform-origin:top left}
+.ability-table td:nth-child(3),.ability-table td:nth-child(4){min-width:96px}
+
+.head.insight-page-head{display:block}.insight-date-controls{margin-bottom:20px}.ggfc-player-card[data-design="classic"]{translate:5% 5%}
+#playerTable table{table-layout:fixed;width:2260px;min-width:2260px}#playerTable th:nth-child(9),#playerTable td:nth-child(9){width:100px}#playerTable th:nth-child(8),#playerTable td:nth-child(8){width:70px}
