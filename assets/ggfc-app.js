@@ -3218,6 +3218,7 @@ function openPlayerCard(player,query){
   club.style.backgroundImage=tLogo?'url("'+tLogo+'")':'none';
   club.textContent=tLogo?'':(team?teamDisplayName(team):'GGFC');
   club.title=team?teamDisplayName(team):"";
+  updatePlayerCardTeamRibbons(club.closest(".ggfc-player-card"));
 
   const brand=$("#playerCardBrandLogo");
   brand.style.backgroundImage=hLogo?'url("'+hLogo+'")':'none';

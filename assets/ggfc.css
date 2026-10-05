@@ -3193,3 +3193,41 @@ body:not(.admin-mode) .view>.head>p,body:not(.admin-mode) .view>.insight-page-he
 .best5-scope-note{font-size:12px;line-height:1.7;color:#61798c}
 @media(min-width:821px){html:not(.ggfc-mobile) .best5-position .player-face{width:67.6px;height:67.6px}html:not(.ggfc-mobile) .best5-pitch{height:820px}}
 @media(max-width:620px){.best5-groups{gap:7px}.best5-group{padding:12px 4px}.best5-group>span{font-size:13px}.best5-group>strong{font-size:20px}}
+
+/* V3.25.13 — four additional reference-inspired card frames */
+.ggfc-player-card:is([data-design="marble"],[data-design="royalbanner"],[data-design="neonrift"]) .ggfc-player-card-stats{top:416px;left:70px;width:260px;grid-template-columns:1fr 1px 1fr;gap:20px;padding-top:0}
+.ggfc-player-card:is([data-design="marble"],[data-design="royalbanner"],[data-design="neonrift"]) .ggfc-player-card-stat-col{display:flex;flex-direction:column;gap:11px}
+.ggfc-player-card:is([data-design="marble"],[data-design="royalbanner"],[data-design="neonrift"]) .ggfc-player-card-stat-row{flex-direction:row;align-items:baseline;justify-content:space-between;gap:7px}
+.ggfc-player-card:is([data-design="marble"],[data-design="royalbanner"],[data-design="neonrift"]) .ggfc-player-card-stat-value{width:37px;font-size:25px;text-align:right}
+.ggfc-player-card:is([data-design="marble"],[data-design="royalbanner"],[data-design="neonrift"]) .ggfc-player-card-stat-label{font-size:19px;letter-spacing:.4px}
+.ggfc-player-card:is([data-design="marble"],[data-design="royalbanner"],[data-design="neonrift"]) .ggfc-player-card-divider{display:block;position:static;height:100px;width:1px;background:#d6bd6855;align-self:center}
+.ggfc-player-card:is([data-design="marble"],[data-design="royalbanner"],[data-design="neonrift"]) .ggfc-player-card-national{top:249px;left:79px;width:32px;height:22px}
+.ggfc-player-card:is([data-design="marble"],[data-design="royalbanner"],[data-design="neonrift"]) .ggfc-player-card-club{top:284px;left:74px;width:42px;height:42px}
+.ggfc-player-card:is([data-design="marble"],[data-design="royalbanner"],[data-design="neonrift"]) .ggfc-player-card-watermark{display:none}
+.ggfc-player-card[data-design="marble"] .ggfc-player-card-content{text-shadow:none;color:#786126}
+.ggfc-player-card[data-design="marble"] :is(.ggfc-player-card-ovr,.ggfc-player-card-pos,.ggfc-player-card-name,.ggfc-player-card-stat-value){color:#776023;text-shadow:none}
+.ggfc-player-card[data-design="marble"] :is(.ggfc-player-card-rating-label,.ggfc-player-card-stat-label,.ggfc-player-card-brand-text,.ggfc-player-card-brand-year){color:#8c763c;text-shadow:none}
+.ggfc-player-card[data-design="marble"] .ggfc-player-card-photo-fallback{color:#9d884e;background:radial-gradient(ellipse,#c3b89a55,#fff0 72%)}
+.ggfc-player-card[data-design="marble"] .ggfc-player-card-club{color:#776023;filter:none;text-shadow:none}
+.ggfc-player-card[data-design="marble"] .ggfc-player-card-edition :is(strong,#playerCardFrameBadge){background:#eee9da;color:#786126;border-color:#b5a36a}
+.ggfc-player-card[data-design="ironprism"] :is(.ggfc-player-card-stat-value,.ggfc-player-card-pos){color:#f7e3a4}
+.ggfc-player-card[data-design="ironprism"] .ggfc-player-card-stat-label{color:#d8be72}
+.ggfc-player-card[data-design="ironprism"] .ggfc-player-card-photo-wrap{height:309px}
+.ggfc-player-card[data-design="neonrift"] :is(.ggfc-player-card-stat-label,.ggfc-player-card-pos,.ggfc-player-card-rating-label){color:#a3ffe5}
+.ggfc-player-card[data-design="neonrift"] .ggfc-player-card-divider{background:#59d8c566}
+.ggfc-player-card[data-design="neonrift"] .ggfc-player-card-edition :is(strong,#playerCardFrameBadge){background:#102b32;border-color:#50e9c5;color:#b2fff0}
+.ggfc-player-card[data-design="royalbanner"] .ggfc-player-card-brand{top:71px}
+.ggfc-player-card[data-design="royalbanner"] .ggfc-player-card-rating-label{left:64px;width:84px;top:108px}
+.ggfc-player-card[data-design="royalbanner"] .ggfc-player-card-ovr{left:62px;width:90px;top:122px;font-size:66px}
+.ggfc-player-card[data-design="royalbanner"] .ggfc-player-card-pos{left:67px;width:80px;top:195px;font-size:21px}
+.ggfc-player-card[data-design="royalbanner"] .ggfc-player-card-photo-wrap{right:66px;width:237px;top:91px;height:302px}
+.ggfc-player-card[data-design="royalbanner"] .ggfc-player-card-name{left:81px;width:238px;top:366px;font-size:min(var(--neon-name-size,34px),30px)}
+.ggfc-player-card[data-design="royalbanner"] .ggfc-player-card-stats{left:86px;width:228px;gap:13px}
+.ggfc-player-card[data-design="royalbanner"] .ggfc-player-card-stat-label{font-size:17px}
+.ggfc-player-card[data-design="royalbanner"] .ggfc-player-card-stat-value{font-size:23px}
+.ggfc-player-card[data-design="royalbanner"] .ggfc-player-card-edition{top:553px;left:150px;width:100px}
+.ggfc-player-card[data-design="royalbanner"] .ggfc-player-card-edition :is(strong,#playerCardFrameBadge){font-size:8px;padding:3px 4px;border:0;background:none;color:#fce5a2}
+.card-team-ribbon{position:absolute;top:217px;width:24px;height:276px;z-index:4;display:grid;place-items:center;pointer-events:none;color:#f8db80;text-shadow:0 1px 2px #2e071b;font-family:inherit;font-size:14px;font-weight:800;letter-spacing:1px}
+.card-team-ribbon-left{left:15px}.card-team-ribbon-right{right:15px}
+.card-team-ribbon>span{position:absolute;left:50%;top:50%;display:block;width:260px;white-space:nowrap;text-align:center;overflow:hidden;text-overflow:ellipsis;line-height:24px}
+.card-team-ribbon-left>span{transform:translate(-50%,-50%) rotate(-90deg)}.card-team-ribbon-right>span{transform:translate(-50%,-50%) rotate(90deg)}
