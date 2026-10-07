@@ -3231,3 +3231,7 @@ body:not(.admin-mode) .view>.head>p,body:not(.admin-mode) .view>.insight-page-he
 .card-team-ribbon-left{left:15px}.card-team-ribbon-right{right:15px}
 .card-team-ribbon>span{position:absolute;left:50%;top:50%;display:block;width:260px;white-space:nowrap;text-align:center;overflow:hidden;text-overflow:ellipsis;line-height:24px}
 .card-team-ribbon-left>span{transform:translate(-50%,-50%) rotate(-90deg)}.card-team-ribbon-right>span{transform:translate(-50%,-50%) rotate(90deg)}
+
+/* V3.25.14 — administrator photo audit */
+.photo-audit[hidden]{display:none!important}.photo-audit .row{flex-wrap:wrap;gap:10px}.photo-audit .row label{display:flex;align-items:center;gap:6px;font-size:13px}.photo-audit table{min-width:680px;table-layout:fixed}.photo-audit table th:first-child{width:100px}.photo-audit table th:last-child{width:180px}.photo-audit-badge{display:inline-block;padding:3px 8px;border-radius:4px;background:#edf2f7;color:#496075;font-size:12px;font-weight:700}.photo-audit-ok{color:#087a65;background:#e0f5ee}.photo-audit-error,.photo-audit-invalid{color:#a52d44;background:#fce9ed}.photo-audit-timeout{color:#856013;background:#fff1cf}.photo-audit-url{display:block;font-size:11px;margin-top:6px;overflow-wrap:anywhere;max-height:55px;overflow:auto;color:var(--text2)}
+.photo-audit td{white-space:normal;overflow-wrap:anywhere}

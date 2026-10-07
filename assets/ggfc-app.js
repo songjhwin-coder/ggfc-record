@@ -3204,12 +3204,12 @@ function openPlayerCard(player,query){
   if(normalizePlayerPhotoUrl(photo)){
     const img=document.createElement('img');img.className='ggfc-player-card-photo';
     img.alt=name+' 선수 사진';img.decoding='async';img.referrerPolicy='no-referrer';
-    img.dataset.playerPhotoSource=photo;img.dataset.photoIndex='0';img.dataset.useCutoutCache=String(!!cutout);
+    img.dataset.playerPhotoSource=photo;img.dataset.photoIndex='0';
     photoWrap.dataset.photoState='loading';
     img.addEventListener('load',()=>{if(!img.isConnected)return;photoWrap.dataset.photoState='loaded';updatePlayerCardPhotoStatus();});
     if(cutout&&normalizePlayerPhotoUrl(roster.photo)&&normalizePlayerPhotoUrl(roster.photo)!==cutout)img.dataset.playerPhotoFallback=roster.photo;
     img.addEventListener('error',()=>handlePlayerPhotoError(img));
-    img.src=playerPhotoCandidates(photo,!!cutout)[0];
+    img.src=playerPhotoCandidates(photo)[0];
     photoWrap.appendChild(img);
   }
   updatePlayerCardPhotoStatus();
@@ -5445,15 +5445,14 @@ function updatePlayerCardPhotoStatus(){
   box.hidden=!admin;
   const img=wrap.querySelector('img'),kind=wrap.dataset.photoKind==='cutout'?'사진(URL) 배경삭제':'사진(URL)',state=wrap.dataset.photoState;
   if(state==='loading')box.textContent=kind+' · 사진을 불러오는 중입니다.';
-  else if(state==='loaded')box.textContent=kind+' · 표시 완료'+(img?.getAttribute('src')?.includes('assets/player-cutouts/')?' (동봉 원본)':'');
+  else if(state==='loaded')box.textContent=kind+' · 표시 완료';
   else if(state==='original-fallback')box.textContent='배경삭제 사진 연결 실패 · 기존 사진으로 전환 중입니다.';
   else if(state==='unavailable')box.textContent='사진을 불러오지 못했습니다. 엑셀 URL과 공개 설정을 확인해 주세요.';
   else box.textContent='등록된 사진 URL이 없습니다.';
 }
-function playerPhotoCandidates(source,preferLocal=false){
+function playerPhotoCandidates(source){
   const first=normalizePlayerPhotoUrl(source);if(!first)return [];
-  const local=preferLocal&&typeof PLAYER_CUTOUT_ASSETS!=='undefined'?PLAYER_CUTOUT_ASSETS[first]:null;
-  const urls=local?[local,first]:[first];
+  const urls=[first];
   try{
     const u=new URL(first);
     if(u.hostname==='drive.google.com'&&u.searchParams.has('id')){
@@ -5467,13 +5466,13 @@ function playerPhotoCandidates(source,preferLocal=false){
 }
 function handlePlayerPhotoError(img){
   if(!img.isConnected)return;
-  const sources=playerPhotoCandidates(img.dataset.playerPhotoSource||'',img.dataset.useCutoutCache==='true');
+  const sources=playerPhotoCandidates(img.dataset.playerPhotoSource||'');
   const next=(Number(img.dataset.photoIndex)||0)+1;
   if(next<sources.length){img.dataset.photoIndex=String(next);img.src=sources[next];return;}
   const wrapper=img.parentElement||img.parentNode;
   const fallback=img.dataset.playerPhotoFallback;delete img.dataset.playerPhotoFallback;
   if(fallback&&playerPhotoCandidates(fallback).length){
-    img.dataset.playerPhotoSource=fallback;img.dataset.photoIndex='0';img.dataset.useCutoutCache='false';
+    img.dataset.playerPhotoSource=fallback;img.dataset.photoIndex='0';
     if(wrapper){wrapper.dataset.photoKind='original';wrapper.dataset.photoState='original-fallback';wrapper.title='배경삭제 사진을 불러오지 못해 기존 사진(URL)을 표시합니다.';}
     img.src=playerPhotoCandidates(fallback)[0];if(wrapper?.id==='playerCardPhotoWrap')updatePlayerCardPhotoStatus();return;
   }
@@ -5900,6 +5899,73 @@ function renderRecordDataValidation(){
     table.innerHTML+='<h4>스쿼드·시작일 확인</h4><p>출석 원본은 유지합니다. 시작일 이전 또는 해당 팀 스쿼드에 없는 출석은 커플 분석에서 제외하며, 팀을 임의로 변경하지 않습니다. 용병 출전이라면 해당 날짜 스쿼드에 반영해 주세요.</p>'+tbl([{t:'경기일'},{t:'선수'},{t:'출석팀'},{t:'스쿼드 소속'},{t:'확인 내용'}],squadIssues.map(r=>[r.date,esc(r.player),esc(r.team),esc(r.assigned),esc(r.reason)]));
   }
 }
+// On-demand, browser-only image checks. Never writes player records or URLs.
+let photoAuditState={signature:'',rows:[],running:false,run:0,cancel:new Set(),checked:0,total:0,finished:'',notice:''};
+function photoAuditSourceRows(){
+ const rows=draftRosterRows('ALL'),year=rows.map(r=>String(r.year||'').match(/20\d{2}/)?.[0]).filter(Boolean).sort().pop()||String(new Date().getFullYear());
+ return [...new Set(rows.map(r=>String(r.player||'').trim()).filter(Boolean))].sort(compareNamesKo).map(name=>{
+  const r=playerCardRoster(name,{year})||{};
+  return {name,year,cutout:String(r.photoCutout||'').trim(),original:String(r.photo||'').trim()};
+ });
+}
+function photoAuditStop(render=true){
+ const state=photoAuditState;state.run++;state.running=false;
+ [...state.cancel].forEach(fn=>fn());state.cancel.clear();
+ state.rows.forEach(r=>['cutout','original'].forEach(k=>{if(['waiting','loading'].includes(r[k].status))r[k].status='stopped';}));
+ if(render){state.notice="점검을 중단했습니다. 다시 점검할 수 있습니다.";renderPlayerPhotoAudit();}
+}
+function photoAuditProbe(url,token,timeoutMs=8000){
+ return new Promise(resolve=>{
+  const image=new Image();let settled=false,timer;
+  const finish=status=>{if(settled)return;settled=true;clearTimeout(timer);image.onload=image.onerror=null;photoAuditState.cancel.delete(cancel);if(status!=='ok')image.removeAttribute('src');resolve(status);};
+  const cancel=()=>finish('stopped');photoAuditState.cancel.add(cancel);
+  image.referrerPolicy='no-referrer';image.onload=()=>finish(image.naturalWidth>0?'ok':'error');image.onerror=()=>finish('error');
+  timer=setTimeout(()=>finish('timeout'),timeoutMs);
+  if(token!==photoAuditState.run||!admin)cancel();else image.src=url;
+ });
+}
+async function startPlayerPhotoAudit(){
+ if(!admin||photoAuditState.running)return;
+ renderPlayerPhotoAudit();const state=photoAuditState,token=++state.run,jobs=new Map();
+ state.running=true;state.finished='';state.notice='';state.checked=0;
+ state.rows.forEach(row=>['cutout','original'].forEach(key=>{
+  const cell=row[key];cell.status=!cell.raw?'empty':!cell.url?'invalid':'waiting';
+  if(cell.url){if(!jobs.has(cell.url))jobs.set(cell.url,[]);jobs.get(cell.url).push(cell);}
+ }));
+ const queue=[...jobs];state.total=queue.length;let next=0;renderPlayerPhotoAudit();
+ const worker=async()=>{while(next<queue.length&&token===state.run&&admin){
+  const [url,cells]=queue[next++];cells.forEach(c=>c.status='loading');renderPlayerPhotoAudit();
+  if(token!==state.run)break;
+  const status=await photoAuditProbe(url,token);
+  if(token!==state.run||!admin)break;
+  cells.forEach(c=>c.status=status);state.checked++;renderPlayerPhotoAudit();
+ }};
+ await Promise.all(Array.from({length:Math.min(4,queue.length)},worker));
+ if(token!==state.run||!admin)return;
+ state.running=false;state.finished=new Date().toLocaleString('ko-KR');renderPlayerPhotoAudit();
+}
+function renderPlayerPhotoAudit(){
+ const box=document.getElementById('playerPhotoAudit');if(!box)return;box.hidden=!admin;if(!admin)return;
+ const state=photoAuditState,source=photoAuditSourceRows(),signature=JSON.stringify(source);
+ if(signature!==state.signature){
+  const had=!!state.signature;photoAuditStop(false);state.signature=signature;state.checked=0;state.total=0;state.finished='';
+  state.notice=had?'선수 사진 정보가 변경되었습니다. 다시 점검해 주세요.':'';
+  state.rows=source.map(row=>({name:row.name,year:row.year,...Object.fromEntries(['cutout','original'].map(k=>[k,{raw:row[k],url:normalizePlayerPhotoUrl(row[k]),status:row[k]?'idle':'empty'}]))}));
+ }
+ const bad=s=>['error','timeout','invalid'].includes(s),issue=r=>bad(r.cutout.status)||bad(r.original.status)||(!r.cutout.raw&&!r.original.raw);
+ const failLinks=state.rows.reduce((n,r)=>n+Number(bad(r.cutout.status))+Number(bad(r.original.status)),0),missing=state.rows.filter(r=>!r.cutout.raw&&!r.original.raw).length;
+ const start=document.getElementById('photoAuditStart'),stop=document.getElementById('photoAuditStop'),filter=document.getElementById('photoAuditIssuesOnly');
+ start.disabled=state.running||!state.rows.length;stop.disabled=!state.running;start.onclick=startPlayerPhotoAudit;stop.onclick=()=>photoAuditStop();filter.onchange=renderPlayerPhotoAudit;
+ document.getElementById('photoAuditStatus').textContent=state.rows.length+'명 · '+(state.running?'점검 중 '+state.checked+'/'+state.total+'개 URL':state.finished?'점검 완료 · '+state.finished:state.checked?'점검 중단 · '+state.checked+'/'+state.total+'개 URL':'점검 대기')+' · 실패/확인 필요 '+failLinks+'개 · 사진 미등록 '+missing+'명'+(state.notice?' · '+state.notice:'');
+ const labels={idle:'점검 전',empty:'미등록',invalid:'주소 형식 확인',waiting:'대기',loading:'점검 중',ok:'정상',error:'불러오기 실패',timeout:'시간초과',stopped:'중단'};
+ const cell=c=>'<span class="photo-audit-badge photo-audit-'+c.status+'">'+labels[c.status]+'</span>'+(c.url&&/^https?:/i.test(c.url)?'<a class="photo-audit-url" href="'+esc(c.url)+'" target="_blank" rel="noopener noreferrer" title="'+esc(c.url)+'">'+esc(c.url)+'</a>':c.raw?'<span class="photo-audit-url">'+esc(c.url?.startsWith('data:')?'내장 이미지':c.raw)+'</span>':'');
+ const shown=filter.checked?state.rows.filter(issue):state.rows;
+ document.getElementById('photoAuditResults').innerHTML=shown.length?tbl([{t:'선수'},{t:'사진(URL) 배경삭제'},{t:'사진(URL)'},{t:'확인 내용'}],shown.map(r=>{
+  const note=bad(r.cutout.status)&&r.original.status==='ok'?'일반 사진으로 대체 가능':!r.cutout.raw&&!r.original.raw?'사진 URL 미등록':r.cutout.status==='ok'?'배경삭제 사진 사용':!r.cutout.raw&&r.original.status==='ok'?'일반 사진 사용':bad(r.cutout.status)||bad(r.original.status)?'URL·공개 상태 확인 후 다시 점검':'';
+  return [esc(r.name),cell(r.cutout),cell(r.original),note];
+ })):'<p class="note">'+(state.running?'점검 중입니다. 실패가 확인되면 여기에 표시됩니다.':state.finished?'확인이 필요한 선수가 없습니다.':state.rows.length?'점검 시작을 누르거나 전체 표시로 전환하세요.':'선수명단을 먼저 업로드하세요.')+'</p>';
+}
+
 function renderData(){
   $("#dataStat").innerHTML = tbl([{t:"데이터"},{t:"건수",n:1},{t:"비고"}],[
     ["경기", DB.matches.length, '<span class="muted">'+esc(compList().join(", ")||"—")+'</span>'],
@@ -5920,6 +5986,7 @@ function renderData(){
   renderDisplaySettings();
   renderLogoManager();
   renderRecordDataValidation();
+  renderPlayerPhotoAudit();
 }
 let activeView='dash';
 /* Weekly Best 5: deterministic match-day selection, never writes awards or abilities. */
@@ -6531,7 +6598,7 @@ bindLinkedRecordEvents("player");
 
 function setAdmin(v){
   v=!!v && GGFC.authorized;
-  admin=v;syncAbilityAdminControls();
+  admin=v;if(!v){photoAuditStop(false);const photoAuditBox=document.getElementById("playerPhotoAudit");if(photoAuditBox)photoAuditBox.hidden=true;}syncAbilityAdminControls();
   document.body.classList.toggle("admin-mode", !!v);
   if(!v) $("#seasonPanel").style.display="none";
   $("#lockBadge").className="badge "+(v?"open":"locked");

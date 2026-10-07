@@ -179,9 +179,9 @@ function squadPlayerCard(member,team,query,careerMap){
  const wrap=card.querySelector('.ggfc-player-card-photo-wrap'),cutout=normalizePlayerPhotoUrl(roster.photoCutout),photo=cutout?roster.photoCutout:roster.photo;
  wrap.title='';wrap.dataset.photoState='empty';wrap.dataset.photoKind=cutout?'cutout':'original';wrap.innerHTML='<div class="ggfc-player-card-photo-fallback">'+esc(playerInitials(member.name))+'</div>';
  if(normalizePlayerPhotoUrl(photo)){
-  const img=document.createElement('img');img.className='ggfc-player-card-photo';img.alt=member.name+' 선수 사진';img.loading='lazy';img.decoding='async';img.referrerPolicy='no-referrer';img.dataset.playerPhotoSource=photo;img.dataset.photoIndex='0';img.dataset.useCutoutCache=String(!!cutout);
+  const img=document.createElement('img');img.className='ggfc-player-card-photo';img.alt=member.name+' 선수 사진';img.loading='lazy';img.decoding='async';img.referrerPolicy='no-referrer';img.dataset.playerPhotoSource=photo;img.dataset.photoIndex='0';
   if(cutout&&normalizePlayerPhotoUrl(roster.photo)&&normalizePlayerPhotoUrl(roster.photo)!==cutout)img.dataset.playerPhotoFallback=roster.photo;
-  img.onload=()=>wrap.dataset.photoState='loaded';img.onerror=()=>handlePlayerPhotoError(img);img.src=playerPhotoCandidates(photo,!!cutout)[0];wrap.append(img);
+  img.onload=()=>wrap.dataset.photoState='loaded';img.onerror=()=>handlePlayerPhotoError(img);img.src=playerPhotoCandidates(photo)[0];wrap.append(img);
  }
  card.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));applyPlayerCardDesign(card,tier.design);
  const stage=document.createElement('span');stage.className='ts-player-card-stage';stage.append(card);button.append(stage);
