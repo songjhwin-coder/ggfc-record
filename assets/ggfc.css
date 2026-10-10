@@ -3235,3 +3235,10 @@ body:not(.admin-mode) .view>.head>p,body:not(.admin-mode) .view>.insight-page-he
 /* V3.25.14 — administrator photo audit */
 .photo-audit[hidden]{display:none!important}.photo-audit .row{flex-wrap:wrap;gap:10px}.photo-audit .row label{display:flex;align-items:center;gap:6px;font-size:13px}.photo-audit table{min-width:680px;table-layout:fixed}.photo-audit table th:first-child{width:100px}.photo-audit table th:last-child{width:180px}.photo-audit-badge{display:inline-block;padding:3px 8px;border-radius:4px;background:#edf2f7;color:#496075;font-size:12px;font-weight:700}.photo-audit-ok{color:#087a65;background:#e0f5ee}.photo-audit-error,.photo-audit-invalid{color:#a52d44;background:#fce9ed}.photo-audit-timeout{color:#856013;background:#fff1cf}.photo-audit-url{display:block;font-size:11px;margin-top:6px;overflow-wrap:anywhere;max-height:55px;overflow:auto;color:var(--text2)}
 .photo-audit td{white-space:normal;overflow-wrap:anywhere}
+
+/* V3.25.15 — temporary administrator-only Team Stats navigation. */
+.temp-team-menu,.sidebar-temp-title{display:none!important}
+body.admin-mode .temp-team-menu{display:flex!important}
+body.admin-mode .sidebar-temp-title{display:block!important}
+.sidebar-temp-title{margin-top:16px;padding:15px 11px 8px;border-top:1px solid rgba(255,255,255,.15);color:#a5b5cc;font-size:9.5px;font-weight:950;letter-spacing:.16em}
+body:not(.admin-mode) #v-team{display:none!important}

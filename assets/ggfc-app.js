@@ -2891,7 +2891,14 @@ function playerCardHistoryRange(query,mode){
   return {start,end,mode};
 }
 function playerCardAbilityHistory(player,query,mode,cache){
-  const range=playerCardHistoryRange(query,mode);range.start=[range.start,playerParticipationStart(player)].sort().pop();const {start,end}=range;
+  const range=playerCardHistoryRange(query,mode);range.start=[range.start,playerParticipationStart(player)].sort().pop();
+  // A period boundary is not a record. Keep absence-relevant match days and
+  // this player's SoccerBee measurements, bounded by the selected card date.
+  const requestedEnd=range.end;
+  range.end=[...(DB.matches||[]).map(m=>normDate(m.date)),
+    ...(DB.soccerbee||[]).filter(r=>normalizePlayerMatchKey(r.player)===normalizePlayerMatchKey(player)).map(r=>normDate(r.date))]
+    .filter(d=>d&&requestedEnd&&d<=requestedEnd).sort().pop()||'';
+  const {start,end}=range;
   if(!end||start>end)return Object.assign(range,{rows:[],eventCount:0});
   const matchDates=new Set((DB.matches||[]).map(m=>normDate(m.date)).filter(d=>d&&d>=start&&d<=end));
   const sbDates=new Set((DB.soccerbee||[]).filter(r=>normalizePlayerMatchKey(r.player)===normalizePlayerMatchKey(player)).map(r=>normDate(r.date)).filter(d=>d&&d>=start&&d<=end));
@@ -2906,7 +2913,7 @@ function playerCardAbilityHistory(player,query,mode,cache){
     if(date===start)tags.push('기간 시작');
     if(matchDates.has(date))tags.push('경기 종료');
     if(sbDates.has(date))tags.push('SoccerBee 측정');
-    if(date===end)tags.push('선택 기준일');
+    if(date===end)tags.push('최종 기록일');
     return {date,values,tag:tags.join(' · ')};
   });
   return Object.assign(range,{rows,eventCount:new Set([...matchDates,...sbDates]).size});
@@ -2997,7 +3004,7 @@ function drawPlayerOvrHistory(history){
   svg+='<line id="playerOvrCursor" x1="'+xs.at(-1)+'" x2="'+xs.at(-1)+'" y1="'+T+'" y2="'+(H-B)+'" class="ovr-cursor"/>';
   [...new Set([0,rows.length-1])].forEach(i=>svg+='<text x="'+xs[i]+'" y="'+(H-10)+'" text-anchor="'+(rows.length===1?'middle':i===0?'start':'end')+'">'+esc(rows[i].date)+'</text>');
   plot.innerHTML=svg+'</svg>';
-  $('#playerOvrNote').textContent=history.start+' ~ '+history.end+' · 카드와 동일한 CURRENT OVR (BASE + FORM) · 아래 능력치 변화와 조회기간 연동';
+  $('#playerOvrNote').textContent=history.start+' ~ '+history.end+' · 카드와 동일한 CURRENT OVR (BASE + FORM) · 최종 기록일까지 표시 · 아래 능력치 변화와 조회기간 연동';
   const chart=plot.querySelector('svg');
   chart.onpointermove=chart.onpointerdown=e=>{const rect=chart.getBoundingClientRect(),x=(e.clientX-rect.left)/rect.width*W;let closest=0;xs.forEach((v,i)=>{if(Math.abs(v-x)<Math.abs(xs[closest]-x))closest=i;});selectPlayerCardHistoryPoint(closest);};
 }
@@ -6047,7 +6054,7 @@ function renderBest5(){
 }
 
 function renderActiveView(v){
-  if(['data','rep','abilitycfg','abilityguide'].includes(v)&&!admin)v='dash';
+  if(['data','rep','abilitycfg','abilityguide','team'].includes(v)&&!admin)v='dash';
   const renderers={best5:renderBest5,insights:renderInsights,dash:renderDash,cal:renderCal,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide};
   activeView=renderers[v]?v:'dash';renderers[activeView]();
 }
@@ -6074,7 +6081,7 @@ $("#playerCardClose").onclick=closePlayerCard;
 document.addEventListener("keydown",e=>{ if(e.key==="Escape" && $("#playerCardMask").classList.contains("on")) closePlayerCard(); });
 function goTab(v){
   /* 데이터 관리와 대표승점 설정은 관리자 로그인 상태에서만 접근할 수 있다. */
-  if((v==="data" || v==="rep" || v==="abilitycfg" || v==="abilityguide") && !admin) v="dash";
+  if(["data","rep","abilitycfg","abilityguide","team"].includes(v) && !admin){v="dash";history.replaceState(null,"","#dash");}
   const b = $$("#tabs button").find(x=>x.dataset.v===(v==='cal'?'dash':v)); if(!b) return;
   $$("#tabs button").forEach(x=>x.classList.toggle("on",x===b));
   $$("section.view").forEach(s=>s.classList.toggle("on", s.id==="v-"+v));
@@ -6083,12 +6090,12 @@ function goTab(v){
   if(activeView!==v)renderActiveView(v);
 }
 $("#tabs").onclick = e=>{ const b=e.target.closest("button"); if(!b) return;
-  if((b.dataset.v==="data" || b.dataset.v==="rep" || b.dataset.v==="abilitycfg" || b.dataset.v==="abilityguide") && !admin) return;
+  if((b.dataset.v==="data" || b.dataset.v==="rep" || b.dataset.v==="abilitycfg" || b.dataset.v==="abilityguide" || b.dataset.v==="team") && !admin) return;
   goTab(b.dataset.v); location.hash=b.dataset.v; window.scrollTo({top:0,behavior:"smooth"});
 };
 window.addEventListener("hashchange",()=>{
   const requested=location.hash.slice(1);
-  if((requested==="data" || requested==="rep" || requested==="abilitycfg" || requested==="abilityguide") && !admin){
+  if((requested==="data" || requested==="rep" || requested==="abilitycfg" || requested==="abilityguide" || requested==="team") && !admin){
     goTab("dash");
     history.replaceState(null,"","#dash");
     return;
@@ -6620,7 +6627,7 @@ function setAdmin(v){
   $$(".admin-ranking-note").forEach(el=>el.style.display=v?"block":"none");
 
   /* 관리자 전용 화면에서 로그아웃하면 일반 대시보드로 즉시 복귀한다. */
-  if(!v && (($("#v-data") && $("#v-data").classList.contains("on")) || ($("#v-rep") && $("#v-rep").classList.contains("on")) || ($("#v-abilitycfg") && $("#v-abilitycfg").classList.contains("on")))){
+  if(!v && (($("#v-team") && $("#v-team").classList.contains("on")) || ($("#v-data") && $("#v-data").classList.contains("on")) || ($("#v-rep") && $("#v-rep").classList.contains("on")) || ($("#v-abilitycfg") && $("#v-abilitycfg").classList.contains("on")))){
     goTab("dash");
     history.replaceState(null,"","#dash");
   }
