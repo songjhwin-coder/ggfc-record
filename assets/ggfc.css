@@ -3256,3 +3256,46 @@ body:not(.admin-mode) #v-team{display:none!important}
 @media(max-width:1200px){.tm-workspace{grid-template-columns:260px minmax(0,1fr)}.tm-tactical-grid{grid-template-columns:1fr}.tm-pitch{width:100%;max-width:480px;justify-self:center}.tm-slot-selectors{grid-template-columns:1fr 1fr}}
 @media(max-width:820px){.tm-workspace{grid-template-columns:1fr}.tm-main{padding:14px}.tm-roster-list{max-height:280px}.tm-intro{padding:20px}.tm-intro h3{font-size:21px}.tm-top-controls{padding:13px}.tm-selection-count{width:100%;padding:0}.tm-teams{grid-template-columns:1fr}.tm-balance-summary{gap:5px}.tm-balance-summary strong{font-size:20px}.tm-lineup-controls label{min-width:120px}.tm-pitch{aspect-ratio:.68;max-width:420px}.tm-slot-selectors{grid-template-columns:1fr}.tm-tabs button{font-size:12px}.tm-style-buttons button{min-width:85px;padding:9px 4px;font-size:11px}.tm-check{font-size:11px}.tm-balance-controls>.btn{min-width:100%}}
 @media(prefers-reduced-motion:reduce){#teamMakerContent *{scroll-behavior:auto!important}}
+
+/* V3.25.17 — Overview matchday controls and compact mobile rankings. */
+#v-dash .record-day>summary:before{content:none;display:none}
+#v-dash .record-day>summary::marker{content:''}
+#v-dash .record-day-switch{flex:0 0 auto}
+#v-dash .record-day[open]>summary .record-day-switch{background:var(--blue)}
+#v-dash .record-day[open]>summary .record-day-switch i{transform:translateX(19px)}
+#v-dash .record-day>summary:focus-visible{outline:3px solid #489edb;outline-offset:-3px}
+#mainContent #v-dash .record-day .fixture-score-row{grid-template-columns:minmax(0,1fr) 69.3px minmax(64px,.9fr) 69.3px minmax(0,1fr)}
+#mainContent #v-dash .record-day .fixture-logo-wrap{width:69.3px;height:69.3px}
+#mainContent #v-dash .record-day .fixture-team-logo{width:66px;height:66px;object-fit:contain}
+#mainContent #v-dash .record-day .fixture-logo-fallback{width:62.7px;height:62.7px}
+.ggfc-mobile #mainContent #v-dash .record-day .fixture-score-row{grid-template-columns:minmax(0,1fr) minmax(68px,.85fr) minmax(0,1fr)}
+.ggfc-mobile #mainContent #v-dash .record-day :is(.fixture-logo-wrap,.fixture-team-logo,.fixture-logo-fallback){width:46.2px;height:46.2px}
+.ggfc-mobile #v-dash .record-day>summary{flex-wrap:wrap;gap:8px;padding:12px}
+.ggfc-mobile #v-dash .record-day-date{white-space:nowrap}
+.ggfc-mobile #v-dash .record-day-meta{font-size:11px;line-height:1.5}
+.ggfc-mobile #v-dash :is(#dashScorers,#dashAttendanceRank,#dashTeamPointRank){width:100%;max-width:100%;min-width:0;overflow-x:visible}
+.ggfc-mobile #v-dash :is(#dashScorers,#dashAttendanceRank,#dashTeamPointRank) table{width:100%;min-width:0;max-width:100%;table-layout:fixed}
+.ggfc-mobile #v-dash :is(#dashScorers,#dashAttendanceRank,#dashTeamPointRank) :is(th,td){box-sizing:border-box;padding:8px 3px;font-size:11px;line-height:1.45;text-align:center;white-space:normal!important;overflow-wrap:anywhere;word-break:normal}
+.ggfc-mobile #v-dash :is(#dashScorers,#dashAttendanceRank,#dashTeamPointRank) th{font-size:10px}
+.ggfc-mobile #v-dash :is(#dashScorers,#dashAttendanceRank,#dashTeamPointRank) .team-chip{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:3px;min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.ggfc-mobile #v-dash :is(#dashScorers,#dashAttendanceRank,#dashTeamPointRank) .team-chip>span{max-width:100%;overflow-wrap:anywhere}
+.ggfc-mobile #v-dash :is(#dashScorers,#dashAttendanceRank,#dashTeamPointRank) .team-logo-sm{width:19px;height:19px;object-fit:contain;flex:none}
+.ggfc-mobile #v-dash :is(#dashScorers,#dashAttendanceRank,#dashTeamPointRank) .rank{width:19px;min-width:0;height:22px;padding:0;font-size:10px}
+.ggfc-mobile #v-dash #dashTeamPointRank .rep-point{font-size:12px;min-width:0;padding:2px;white-space:normal}
+.ggfc-mobile #v-dash #dashScorers :is(th,td):nth-child(1){width:8%}
+.ggfc-mobile #v-dash #dashScorers :is(th,td):nth-child(2){width:23%}
+.ggfc-mobile #v-dash #dashScorers :is(th,td):nth-child(3){width:29%}
+.ggfc-mobile #v-dash #dashScorers :is(th,td):nth-child(n+4){width:20%}
+.ggfc-mobile #v-dash #dashAttendanceRank :is(th,td):nth-child(1){width:8%}
+.ggfc-mobile #v-dash #dashAttendanceRank :is(th,td):nth-child(2){width:20%}
+.ggfc-mobile #v-dash #dashAttendanceRank :is(th,td):nth-child(3){width:26%}
+.ggfc-mobile #v-dash #dashAttendanceRank :is(th,td):nth-child(4),.ggfc-mobile #v-dash #dashAttendanceRank :is(th,td):nth-child(5){width:14%}
+.ggfc-mobile #v-dash #dashAttendanceRank :is(th,td):nth-child(6){width:18%}
+.ggfc-mobile #v-dash #dashTeamPointRank :is(th,td):nth-child(1){width:8%}
+.ggfc-mobile #v-dash #dashTeamPointRank :is(th,td):nth-child(2){width:25%}
+.ggfc-mobile #v-dash #dashTeamPointRank :is(th,td):nth-child(3),.ggfc-mobile #v-dash #dashTeamPointRank :is(th,td):nth-child(5){width:17%}
+.ggfc-mobile #v-dash #dashTeamPointRank :is(th,td):nth-child(4){width:20%}
+.ggfc-mobile #v-dash #dashTeamPointRank :is(th,td):nth-child(6){width:13%}
+@media(max-width:700px){#v-dash .record-day[open]>summary .record-day-switch i{transform:translateX(17px)}}
+/* V3.25.17 — Team Maker submenus, quick entry and touch transfers */
+.tm-nav-heading{padding:18px 18px 6px;color:#7d96ac;font-size:11px;font-weight:800;letter-spacing:.08em}#tabs .tm-subnav{padding-left:34px;font-size:13px}.tm-entry-column{min-width:0}.tm-entry{padding:16px;border:1px solid #dce4ed;border-radius:7px;background:#fff;margin-bottom:12px}.tm-entry h3{margin:0 0 16px;font-size:16px}.tm-entry label{display:block;font-size:12px;margin:10px 0 6px}.tm-entry input,.tm-entry select,.tm-entry textarea{width:100%;box-sizing:border-box;margin-top:5px}.tm-entry textarea{resize:vertical;min-height:80px;padding:10px;border:1px solid #cbd6e2;border-radius:5px;font:inherit;font-size:12px}.tm-entry>.btn{width:100%;margin:8px 0}.tm-entry details{border-top:1px solid #e0e7ef;padding-top:12px;margin-top:8px}.tm-entry summary{cursor:pointer;font-weight:700;font-size:13px}.tm-selected{display:flex;gap:5px;flex-wrap:wrap;margin-top:12px}.tm-selected button{font:inherit;font-size:11px;color:#164f50;background:#edf6f5;border:1px solid #cfdfdd;border-radius:14px;padding:5px 9px;cursor:pointer}.tm-team .tm-drag-handle{touch-action:none;cursor:grab;padding:5px 2px;min-width:26px;width:26px;min-height:36px;border:0;background:#edf3f7;color:#49667e;font-size:22px;border-radius:4px;flex-shrink:0}.tm-team li{gap:5px}.tm-team .tm-move{width:42px;min-width:42px;padding:4px 1px;font-size:11px;flex-shrink:0}.tm-guest-badge{display:block;color:#15746f;font-size:9px;font-weight:500}.tm-team.tm-drop-target{outline:3px solid #168b80;background:#effaf7}.tm-drag-ghost{position:fixed;z-index:99999;pointer-events:none;background:#12334d;color:#fff;border-radius:7px;padding:10px 18px;box-shadow:0 6px 18px #0003;font-weight:700}.tm-drag-handle:focus-visible{outline:2px solid #168b80}

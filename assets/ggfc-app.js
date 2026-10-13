@@ -4794,7 +4794,7 @@ function recordDayBlock(date,list,open){
   const A=list.filter(m=>matchGround(m)==="A"), B=list.filter(m=>matchGround(m)==="B"), unassigned=list.filter(m=>!matchGround(m));
   A.push(...unassigned);
   const goals=list.reduce((s,m)=>s+num(m.hs)+num(m.as),0), fouls=totalTeamFouls(list);
-  return '<details class="record-day"'+playerCardQueryAttrs({start:date,end:date})+(open?' open':'')+'><summary><span class="record-day-date">'+esc(date)+'</span><span class="record-day-meta">'+list.length+'경기 · '+goals+'골 · 파울 '+fouls+'회</span></summary><div class="record-day-body">'+
+  return '<details class="record-day"'+playerCardQueryAttrs({start:date,end:date})+(open?' open':'')+'><summary><span class="ts-switch-track record-day-switch" aria-hidden="true"><i></i></span><span class="record-day-date">'+esc(date)+'</span><span class="record-day-meta">'+list.length+'경기 · '+goals+'골 · 파울 '+fouls+'회</span></summary><div class="record-day-body">'+
     '<div class="ground-grid">'+groundPanel("A",A)+groundPanel("B",B)+'</div>'+recordAttendanceBlock(list)+'</div></details>';
 }
 function renderRecentMatches(){
@@ -4822,7 +4822,7 @@ function renderRecentMatches(){
   const standingHtml=teamStandingGroupedHtml(list);
   const byDate=dates.map(d=>({date:d,items:list.filter(m=>normDate(m.date)===d).sort((a,b)=>String(a.no||"").localeCompare(String(b.no||""),undefined,{numeric:true}))}));
   box.innerHTML='<div class="record-analysis-note" data-dashboard-admin data-export-ignore><b>'+esc(info.label)+'</b>의 경기 결과를 누적 집계합니다. 승점은 승 3점·무 1점·패 0점이며, 몰수패가 입력된 팀은 점수와 관계없이 패배·상대팀은 승리로 계산합니다. 경기일별 상세에는 A·B구장 결과, 팀별 득점자, 스코어 아래의 MOM 선수와 출석 명단이 표시됩니다. 참석수는 같은 날짜·같은 팀·같은 선수의 중복 출전을 1회로 계산합니다.</div>'+ 
-    '<div class="record-summary-grid">'+summaries.map(x=>'<div class="record-summary-item"><div class="l">'+esc(x.l)+'</div><div class="v">'+x.v+'</div><div class="s">'+esc(x.s||'—')+'</div></div>').join('')+'</div>'+ 
+    '<div class="record-summary-grid" data-dashboard-admin data-export-ignore>'+summaries.map(x=>'<div class="record-summary-item"><div class="l">'+esc(x.l)+'</div><div class="v">'+x.v+'</div><div class="s">'+esc(x.s||'—')+'</div></div>').join('')+'</div>'+ 
     '<div class="record-export-section" id="exportDayDetailsSection"><div class="record-period-head"><div class="sec-t">경기일별 상세 기록</div><div class="record-period-label" data-dashboard-admin data-export-ignore>최신 경기일부터 표시 · 날짜를 눌러 펼치기 · 대진을 눌러 상세기록 보기</div></div>'+ 
     '<div class="record-day-list">'+byDate.map((x,i)=>recordDayBlock(x.date,x.items,i===0)).join('')+'</div></div>'+ 
     '<div class="record-export-section" id="exportTeamStandingSection"><div class="record-period-head"><div class="record-period-heading"><div class="sec-t">팀 순위 및 누적 기록</div><span class="record-round-range">'+esc(recordRoundRangeLabel(list))+'</span></div><div class="record-period-label">'+esc(info.start||'')+(info.end&&info.end!==info.start?' ~ '+esc(info.end):'')+'</div></div>'+ 
@@ -6055,7 +6055,7 @@ function renderBest5(){
 
 function renderActiveView(v){
   if(['data','rep','abilitycfg','abilityguide','team'].includes(v)&&!admin)v='dash';
-  const renderers={maker:renderTeamMaker,best5:renderBest5,insights:renderInsights,dash:renderDash,cal:renderCal,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide};
+  const renderers={maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,cal:renderCal,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide};
   activeView=renderers[v]?v:'dash';renderers[activeView]();
 }
 function renderAll(){
@@ -6084,7 +6084,7 @@ function goTab(v){
   if(["data","rep","abilitycfg","abilityguide","team"].includes(v) && !admin){v="dash";history.replaceState(null,"","#dash");}
   const b = $$("#tabs button").find(x=>x.dataset.v===(v==='cal'?'dash':v)); if(!b) return;
   $$("#tabs button").forEach(x=>x.classList.toggle("on",x===b));
-  $$("section.view").forEach(s=>s.classList.toggle("on", s.id==="v-"+v));
+  $$("section.view").forEach(s=>s.classList.toggle("on", s.id==="v-"+(v==='tactics'?'maker':v)));
   syncMobileNav(v);
   if(typeof closeMemberSidebar==='function') closeMemberSidebar(true);
   if(activeView!==v)renderActiveView(v);

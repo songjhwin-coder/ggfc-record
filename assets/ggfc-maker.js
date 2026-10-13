@@ -8,7 +8,7 @@ const TM_FORMATIONS={
  '1-3':{name:'1-3',slots:[['AL',20,24,'전방 왼쪽'],['PV',50,24,'전방 중앙'],['AL',80,24,'전방 오른쪽'],['FS',50,65,'후방 중앙'],['GR',50,88,'골레이로']]},
  '3-1':{name:'3-1',slots:[['PV',50,16,'전방 중앙'],['FS',20,60,'후방 왼쪽'],['AL',50,60,'후방 중앙'],['FS',80,60,'후방 오른쪽'],['GR',50,88,'골레이로']]}
 };
-const tmState={date:'',competition:'정규리그',signature:'',pool:[],selected:new Set(),positions:new Map(),count:3,repeat:true,opponents:false,seed:1,teams:[],source:'',formation:'diamond',size:5,lineup:[],style:'balanced',search:'',teamFilter:'',tab:'balance',notice:'',busy:false};
+const tmState={date:'',competition:'정규리그',signature:'',pool:[],guests:[],guestSeq:0,selected:new Set(),positions:new Map(),count:3,repeat:true,opponents:false,seed:1,teams:[],source:'',formation:'diamond',size:5,lineup:[],style:'balanced',search:'',teamFilter:'',tab:'balance',notice:'',busy:false};
 const tmMean=a=>a.length?a.reduce((s,v)=>s+v,0)/a.length:null;
 const tmClamp=v=>Math.max(0,Math.min(99,v));
 const tmNumber=v=>Number.isFinite(v)?v.toFixed(1):'—';
@@ -32,7 +32,7 @@ function tmPool(date,competition){
  }).sort((a,b)=>compareNamesKo(a.name,b.name));
 }
 function tmSelected(){
- const rows=tmState.pool.filter(p=>tmState.selected.has(p.id)),average=tmMean(rows.map(p=>p.ovr).filter(Number.isFinite))??50;
+ const rows=[...tmState.pool,...tmState.guests].filter(p=>tmState.selected.has(p.id)),average=tmMean(rows.map(p=>p.ovr).filter(Number.isFinite))??50;
  return rows.map(p=>({...p,position:tmState.positions.get(p.id)??p.position,value:p.ovr??average,estimated:p.ovr===null}));
 }
 function tmHistory(date){
@@ -130,18 +130,18 @@ function tmSources(){
 function tmSource(){const sources=tmSources();return sources.find(s=>s.id===tmState.source)||sources[0]||{id:'',name:'팀 없음',players:[]};}
 function tmReset(message='선택 조건이 바뀌어 편성안을 초기화했습니다.') {tmState.teams=[];tmState.lineup=[];tmState.notice=message;}
 function tmRosterHtml(){
- const rows=tmState.pool.filter(p=>(!tmState.teamFilter||p.team===tmState.teamFilter)&&normalizePlayerMatchKey(p.name).includes(normalizePlayerMatchKey(tmState.search)));
+ const rows=[...tmState.pool,...tmState.guests].filter(p=>(!tmState.teamFilter||p.team===tmState.teamFilter)&&normalizePlayerMatchKey(p.name).includes(normalizePlayerMatchKey(tmState.search)));
  return rows.length?rows.map(p=>'<div class="tm-person"><label><input id="tm-check-'+esc(p.id)+'" type="checkbox" data-tm-player="'+esc(p.id)+'" '+(tmState.selected.has(p.id)?'checked':'')+'><span><b>'+esc(p.name)+'</b><small>'+esc(teamDisplayName(p.team))+(p.provisional?' · SB 미측정':'')+'</small></span><strong>'+tmNumber(p.ovr)+'</strong></label><select aria-label="'+esc(p.name)+' 편성용 포지션" data-tm-position="'+esc(p.id)+'"><option value="">미지정</option>'+TM_ROLES.map(r=>'<option '+((tmState.positions.get(p.id)??p.position)===r?'selected':'')+'>'+r+'</option>').join('')+'</select></div>').join(''):'<p class="empty">검색 결과가 없습니다.</p>';
 }
 function tmResultHtml(){
  const selected=tmSelected(),groups=tmState.teams.map(ids=>ids.map(id=>selected.find(p=>p.id===id)).filter(Boolean));
- if(!groups.length)return '<div class="tm-empty"><b>참석 예정 선수를 체크해 주세요.</b><p>18명 · 3팀이면 6명씩 편성합니다. 실제 출석은 저장하지 않습니다.</p></div>';
- const means=groups.map(g=>tmMean(g.map(p=>p.value))),gap=Math.max(...means)-Math.min(...means),keepers=groups.map(g=>g.filter(p=>p.position==='GR').length);
+ if(!groups.length)return '<div class="tm-empty"><b>이름을 입력해 참석 예정 선수를 등록해 주세요.</b><p>18명 · 3팀이면 6명씩 편성합니다. 실제 출석은 저장하지 않습니다.</p></div>';
+ const means=groups.map(g=>tmMean(g.map(p=>p.value))),gap=Math.max(...means.filter(Number.isFinite))-Math.min(...means.filter(Number.isFinite)),keepers=groups.map(g=>g.filter(p=>p.position==='GR').length);
  return '<div class="tm-balance-summary"><div><small>평균 OVR 최대 차이</small><strong>'+gap.toFixed(1)+'</strong></div><div><small>팀별 인원</small><strong>'+groups.map(g=>g.length).join(' / ')+'</strong></div><div><small>팀별 GR</small><strong>'+keepers.join(' / ')+'</strong></div></div>'+
  (selected.some(p=>p.estimated)?'<p class="tm-warning">미평가 선수는 선택 선수의 평균 OVR(평가자 없으면 50)로 임시 편성했습니다. 아래 평균은 가정치를 포함하며 공식 평가가 아닙니다.</p>':'')+
  (keepers.some(n=>!n)?'<p class="tm-warning">GR이 없는 팀이 있습니다. 지원자를 정해 편성용 포지션을 GR로 바꾸고 다시 편성하거나, 전술 화면에서 직접 골키퍼를 지정하세요.</p>':'')+
- (Math.max(...keepers)-Math.min(...keepers)>1?'<p class="tm-warning">수동 교환 후 GR 인원이 불균형합니다.</p>':'')+
- '<div class="tm-teams">'+groups.map((g,i)=>'<article class="tm-team"><header><span>TEAM '+String.fromCharCode(65+i)+'</span><b>'+tmNumber(means[i])+' <small>OVR</small></b></header>'+squadStars(means[i])+'<p class="tm-distribution">'+TM_ROLES.map(r=>r+' '+g.filter(p=>p.position===r).length).join(' · ')+' · 미지정 '+g.filter(p=>!p.position).length+'</p><ul>'+g.map(p=>'<li><span class="tm-role">'+(p.position||'—')+'</span><b>'+esc(p.name)+'</b><span>'+tmNumber(p.ovr)+(p.estimated?'*':'')+'</span></li>').join('')+'</ul><button class="btn" type="button" data-tm-use="'+i+'">이 팀 전술 구성 →</button></article>').join('')+'</div><div class="tm-swap"><label>선수 교환<select id="tmSwapA">'+selected.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('')+'</select></label><label>상대 선수<select id="tmSwapB">'+selected.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('')+'</select></label><button type="button" class="btn" data-tm-action="swap">두 선수 교환</button></div>';
+ (Math.max(...keepers)-Math.min(...keepers)>1?'<p class="tm-warning">수동 변경 후 GR 인원이 불균형합니다.</p>':'')+
+ '<p class="note">⠿ 손잡이를 끌어 다른 팀으로 이동하세요. 이동 메뉴로도 변경할 수 있습니다. 수동 이동은 인원 차이가 생길 수 있습니다.</p><div class="tm-teams">'+groups.map((g,i)=>'<article class="tm-team" data-tm-team-index="'+i+'"><header><span>TEAM '+String.fromCharCode(65+i)+'</span><b>'+tmNumber(means[i])+' <small>OVR</small></b></header>'+squadStars(means[i])+'<p class="tm-distribution">'+TM_ROLES.map(r=>r+' '+g.filter(p=>p.position===r).length).join(' · ')+' · 미지정 '+g.filter(p=>!p.position).length+'</p><ul>'+g.map(p=>tmPlayerRow(p,i)).join('')+'</ul><button class="btn" type="button" data-tm-use="'+i+'">이 팀 전술 구성 →</button></article>').join('')+'</div><div class="tm-swap"><label>선수 교환<select id="tmSwapA">'+selected.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('')+'</select></label><label>상대 선수<select id="tmSwapB">'+selected.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('')+'</select></label><button type="button" class="btn" data-tm-action="swap">두 선수 교환</button></div>';
 }
 function tmScores(players){
  const scores={};for(const axis of TEAM_SQUAD_AXES)scores[axis.id]=tmMean(players.map(p=>{const base=Object.entries(axis.weights).reduce((s,[k,w])=>s+(p.baseStats?.[k]??p.stats?.[k]??p.value)*w,0);return tmClamp(base+(p.baseStats?p.formModifier||0:0));}));
@@ -155,28 +155,31 @@ function tmTacticalHtml(){
  return '<div class="tm-lineup-controls"><label>팀 선택<select id="tmSource">'+tmSources().map(s=>'<option value="'+esc(s.id)+'" '+(source.id===s.id?'selected':'')+'>'+esc(s.name)+' · 선택 '+s.players.length+'명</option>').join('')+'</select></label><label>전술<select id="tmFormation">'+Object.entries(TM_FORMATIONS).map(([id,f])=>'<option value="'+id+'" '+(id===tmState.formation?'selected':'')+'>'+f.name+'</option>').join('')+'</select></label><label>경기 인원<select id="tmSize"><option value="5" '+(tmState.size===5?'selected':'')+'>5인 · GR + 필드 4</option><option value="6" '+(tmState.size===6?'selected':'')+'>6인 · GR + 필드 5</option></select></label></div><div class="tm-style-buttons">'+Object.entries(TM_STYLES).map(([id,label])=>'<button type="button" class="btn '+(tmState.style===id?'primary':'')+'" data-tm-style="'+id+'">'+label+' 자동 선발</button>').join('')+'</div><p class="note">체크한 참석 예정 선수 중 선택 팀의 '+players.length+'명만 사용합니다. '+(tmState.size===6?'6인 모드는 기본 전술에 추가 AL 자리를 둡니다.':'전술 숫자는 필드 선수 4명의 배치입니다.')+'</p><div class="tm-tactical-grid"><div class="tm-pitch" aria-label="'+esc(source.name)+' '+TM_FORMATIONS[tmState.formation].name+' 전술 배치"><div class="tm-pitch-lines" aria-hidden="true"><i></i><b></b></div><span class="tm-pitch-title">'+esc(source.name)+' · '+TM_FORMATIONS[tmState.formation].name+'</span>'+slots.map((s,i)=>'<button type="button" class="tm-slot '+(!lineup[i]?'vacant':'')+'" style="left:'+s.x+'%;top:'+s.y+'%" data-tm-focus="'+i+'" aria-label="'+esc(s.label+' '+(lineup[i]?.name||'미선택'))+'"><span class="tm-role">'+s.role+'</span>'+(lineup[i]?tmFace(lineup[i]):'<span class="tm-avatar">＋</span><b>선수 선택</b>')+'<small>'+ (lineup[i]?'OVR '+tmNumber(lineup[i].ovr):s.label)+'</small></button>').join('')+'</div><div class="tm-lineup-info"><div class="tm-lineup-score"><small>'+ (complete?'TEAM CURRENT':'부분 편성 · '+chosen.length+'/'+slots.length)+' · '+TM_STYLES[tmState.style]+'</small><strong>'+tmNumber(scores.total)+'</strong>'+squadStars(scores.total)+'<p>선발 평균 OVR '+tmNumber(scores.ovr)+'</p></div>'+TEAM_SQUAD_AXES.map(a=>'<div class="tm-axis '+a.id+'"><span>'+a.label+'</span><b>'+tmNumber(scores[a.id])+'</b><div><i style="width:'+(scores[a.id]??0)+'%"></i></div></div>').join('')+(chosen.some(p=>p.estimated)?'<p class="tm-warning">미평가 선수의 가정 능력치를 포함합니다.</p>':'')+(!lineup[slots.findIndex(s=>s.role==='GR')]?'<p class="tm-warning">골키퍼 미배치</p>':lineup[slots.findIndex(s=>s.role==='GR')].position!=='GR'?'<p class="tm-warning">수동 지정 골키퍼 · 등록 GR 포지션이 아닙니다.</p>':'')+'<div class="tm-slot-selectors">'+slots.map((s,i)=>'<label>'+s.role+' · '+s.label+'<select id="tm-slot-'+i+'" data-tm-slot="'+i+'">'+options(tmState.lineup[i])+'</select></label>').join('')+'</div><div class="tm-bench"><b>대기 / 교체 · '+bench.length+'명</b><p>'+ (bench.map(p=>esc(p.name)+' ('+(p.position||'—')+')').join(' · ')||'없음')+'</p></div></div></div>';
 }
 function tmFace(p){
- const roster=selectPlayerRoster(p.name,tmState.date.slice(0,4)),cutout=normalizePlayerPhotoUrl(roster?.photoCutout),original=normalizePlayerPhotoUrl(roster?.photo),photo=cutout||original;
+ const roster=p.guest?null:selectPlayerRoster(p.name,tmState.date.slice(0,4)),cutout=normalizePlayerPhotoUrl(roster?.photoCutout),original=normalizePlayerPhotoUrl(roster?.photo),photo=cutout||original;
  return '<span class="tm-avatar"><span>'+esc(p.name.slice(0,1))+'</span>'+(photo?'<img src="'+esc(photo)+'" data-player-photo-source="'+esc(photo)+'" '+(cutout&&original?'data-player-photo-fallback="'+esc(original)+'"':'')+' alt="" referrerpolicy="no-referrer" onerror="handlePlayerPhotoError(this)" loading="lazy">':'')+'</span><b>'+esc(p.name)+'</b>';
 }
 function tmMethod(){return '<details class="tm-method"><summary>편성 기준 · 점수와 별점 안내</summary><p>이 화면은 현재 브라우저 탭의 임시 편성안입니다. 엑셀 팀스쿼드·출석·경기기록·선수 능력치를 변경하거나 다른 회원에게 자동 공유하지 않습니다. 페이지를 새로고침하면 초기화됩니다.</p><p>팀 인원 차이는 최대 1명, 자동 편성의 GR 인원 차이도 최대 1명입니다. 평균 OVR 차이를 우선 줄이고 PV/AL/FS 분포를 조정하는 반복 탐색이며 수학적 최적해를 보장하지 않습니다. 같은 입력과 재편성 횟수에서는 같은 결과가 나옵니다.</p><p>관계 옵션은 예정일 이전 최근 12개 경기일의 실제 동행·상대 횟수를 사용합니다. 동일 팀 반복을 줄이고, 상대 옵션은 과거에 자주 대결한 선수를 같은 팀에 둘 유인을 주어 새로운 상대 조합을 만듭니다. 기록이 없는 조합은 0회이며 기록이 없을 때 효과가 없습니다. OVR 균형과 GR 배분을 우선하므로 모든 희망 조건을 동시에 만족하지 못할 수 있습니다.</p><p>기준일의 팀스쿼드와 선수명단 포지션을 사용하고, 능력치는 기준일 이전 최종 기록까지의 CURRENT OVR과 FORM을 반영합니다. FW/MF/DF/GK는 편성 화면에서 PV/AL/FS/GR로 해석합니다. 편성용 포지션 변경은 DB에 저장하지 않습니다. SB 미측정 선수도 기존 프로그램의 임시 능력치를 사용합니다.</p><p>전술 자동 선발은 역할 적합도 70% + 선택 성향 30%에 원포지션 일치 2점을 더해 중복 없이 배치합니다. GR은 DEF 60%·PAS 20%·PHY 20%를 쓰며 GR 포지션 선수에게만 자동 배정합니다. 실제 선방률 평가가 아닙니다. GR 지원자는 명단에서 편성용 포지션을 바꾸거나 자리에서 직접 지정하세요.</p><p>역할 적합도: PV=SHO40/DRI20/PAC20/PHY20%, AL=PAS30/DRI30/PAC20/PHY10/DEF10%, FS=DEF50/PHY30/PAS10/PAC10%. 성향은 밸런스=CURRENT OVR, 공격형=SHO45/PAC25/DRI20/PAS10%, 수비형=DEF55/PHY30/PAS15%입니다. 선발 가능한 조합에 따라 세 버튼의 결과가 같을 수도 있습니다.</p><p>TEAM CURRENT와 공격·중앙·수비는 기존 Team Squad와 같은 배점으로 선발 선수만 평균합니다. 공격=SHO45/PAC25/DRI20/PHY10%, 중앙=PAS45/DRI30/PHY15/DEF10%, 수비=DEF55/PHY30/PAC15%. TEAM CURRENT는 세 항목 평균, 별점은 round(점수÷10)÷2로 최대 5개·반개 단위입니다. 전술명 자체로 능력치나 별점을 올리지 않습니다. 미완성 라인업은 부분 편성으로 표시합니다.</p></details>';}
 function renderTeamMaker(){
  const root=document.getElementById('teamMakerContent');if(!root)return;
+ if(tmDragCleanup)tmDragCleanup();
+ document.querySelector('#v-maker .head h2').textContent='Team Maker · '+(tmState.tab==='balance'?'자동 팀 편성':'전술 라인업');
  tmState.date=tmState.date||squadToday();
  const competitions=[...new Set(['정규리그',...squadRows().map(r=>isLeagueFamilyComp(r.comp)?'정규리그':r.comp).filter(Boolean)])];
  const signature=JSON.stringify([tmState.date,tmState.competition,DB.roster,DB.matches,DB.attendance,DB.goals,DB.saves,DB.fouls,DB.moms,DB.soccerbee,DB.settings]);
  if(signature!==tmState.signature){
   const previous=!!tmState.signature;tmState.pool=tmPool(tmState.date,tmState.competition);tmState.signature=signature;
-  const ids=new Set(tmState.pool.map(p=>p.id));tmState.selected=new Set([...tmState.selected].filter(id=>ids.has(id)));
+  const ids=new Set([...tmState.pool,...tmState.guests].map(p=>p.id));tmState.selected=new Set([...tmState.selected].filter(id=>ids.has(id)));
   tmReset(previous?'날짜 또는 DB가 바뀌었습니다. 참석 예정 명단을 확인하고 다시 편성하세요.':'참석 예정 명단을 선택해 주세요.');
  }
- const focus=document.activeElement?.id,selected=tmSelected(),teams=[...new Set(tmState.pool.map(p=>p.team))].sort(compareNamesKo);
+ const focus=document.activeElement?.id,selected=tmSelected(),teams=[...new Set([...tmState.pool,...tmState.guests].map(p=>p.team))].sort(compareNamesKo);
  if(!teams.includes(tmState.teamFilter))tmState.teamFilter='';
- root.innerHTML='<div class="tm-intro"><span>PLAN YOUR NEXT MATCH</span><h3>함께 뛰는 조합을 새롭게.</h3><p>참석 예정 선수 → 균형 편성 → 전술 라인업</p></div><div class="tm-top-controls"><label>경기 예정일 / 조회일<input type="date" id="tmDate" value="'+tmState.date+'"></label><label>스쿼드 기준 대회<select id="tmCompetition">'+competitions.map(c=>'<option '+(c===tmState.competition?'selected':'')+' value="'+esc(c)+'">'+esc(c==='정규리그'?'리그 통합':c)+'</option>').join('')+'</select></label><div class="tm-selection-count"><b>'+selected.length+'</b><span>명 선택 / '+tmState.pool.length+'명</span></div></div><p class="tm-notice" id="tmNotice" role="status" aria-live="polite">'+esc(tmState.notice)+'</p><div class="tm-workspace"><details class="tm-roster-panel" open><summary>참석 예정 선수 <b>'+selected.length+'명</b></summary><div class="tm-roster-filters"><input id="tmSearch" type="search" placeholder="이름 검색" aria-label="선수 이름 검색" value="'+esc(tmState.search)+'"><select id="tmTeamFilter" aria-label="명단 팀 필터"><option value="">전체 팀</option>'+teams.map(t=>'<option value="'+esc(t)+'" '+(t===tmState.teamFilter?'selected':'')+'>'+esc(teamDisplayName(t))+'</option>').join('')+'</select></div><div class="tm-roster-actions"><button class="btn sm" type="button" data-tm-action="select">검색 명단 선택</button><button class="btn sm" type="button" data-tm-action="clear">선택 해제</button><button class="btn sm" type="button" data-tm-action="attendance">해당일 출전 불러오기</button></div><div class="tm-roster-list" id="tmRosterList">'+tmRosterHtml()+'</div><p class="note">체크는 참석 예정 표시입니다. 오른쪽 포지션은 이번 편성에서만 변경합니다.</p></details><div class="tm-main"><div class="tm-tabs" role="group" aria-label="편성 화면"><button type="button" data-tm-tab="balance" aria-pressed="'+(tmState.tab==='balance')+'">01 자동 팀 편성</button><button type="button" data-tm-tab="tactical" aria-pressed="'+(tmState.tab==='tactical')+'">02 전술 라인업</button></div>'+(tmState.tab==='balance'?'<div class="tm-balance-controls"><label>팀 수<select id="tmCount">'+[2,3,4,5,6].map(n=>'<option '+(n===tmState.count?'selected':'')+' value="'+n+'">'+n+'팀</option>').join('')+'</select></label><label class="tm-check"><input type="checkbox" id="tmRepeat" '+(tmState.repeat?'checked':'')+'>같은 팀 반복 줄이기</label><label class="tm-check"><input type="checkbox" id="tmOpponents" '+(tmState.opponents?'checked':'')+'>새로운 상대 조합 우선</label><button class="btn primary" type="button" data-tm-action="generate" '+(tmState.busy?'disabled':'')+'>'+(tmState.busy?'편성 중…':'자동 팀 편성')+'</button></div>'+tmResultHtml():tmTacticalHtml())+'</div></div>'+tmMethod();
+ root.innerHTML='<div class="tm-intro"><span>PLAN YOUR NEXT MATCH</span><h3>함께 뛰는 조합을 새롭게.</h3><p>참석 예정 선수 → 균형 편성 → 전술 라인업</p></div><div class="tm-top-controls"><label>경기 예정일 / 조회일<input type="date" id="tmDate" value="'+tmState.date+'"></label><label>스쿼드 기준 대회<select id="tmCompetition">'+competitions.map(c=>'<option '+(c===tmState.competition?'selected':'')+' value="'+esc(c)+'">'+esc(c==='정규리그'?'리그 통합':c)+'</option>').join('')+'</select></label><div class="tm-selection-count"><b>'+selected.length+'</b><span>명 선택 / '+(tmState.pool.length+tmState.guests.length)+'명</span></div></div><p class="tm-notice" id="tmNotice" role="status" aria-live="polite">'+esc(tmState.notice)+'</p><div class="tm-workspace"><div class="tm-entry-column">'+tmEntryHtml()+'<details class="tm-roster-panel"><summary>참석 예정 선수 <b>'+selected.length+'명</b></summary><div class="tm-roster-filters"><input id="tmSearch" type="search" placeholder="이름 검색" aria-label="선수 이름 검색" value="'+esc(tmState.search)+'"><select id="tmTeamFilter" aria-label="명단 팀 필터"><option value="">전체 팀</option>'+teams.map(t=>'<option value="'+esc(t)+'" '+(t===tmState.teamFilter?'selected':'')+'>'+esc(teamDisplayName(t))+'</option>').join('')+'</select></div><div class="tm-roster-actions"><button class="btn sm" type="button" data-tm-action="select">검색 명단 선택</button><button class="btn sm" type="button" data-tm-action="clear">선택 해제</button><button class="btn sm" type="button" data-tm-action="attendance">해당일 출전 불러오기</button></div><div class="tm-roster-list" id="tmRosterList">'+tmRosterHtml()+'</div><p class="note">체크는 참석 예정 표시입니다. 오른쪽 포지션은 이번 편성에서만 변경합니다.</p></details></div><div class="tm-main">'+(tmState.tab==='balance'?'<div class="tm-balance-controls"><label>팀 수<select id="tmCount">'+[2,3,4,5,6].map(n=>'<option '+(n===tmState.count?'selected':'')+' value="'+n+'">'+n+'팀</option>').join('')+'</select></label><label class="tm-check"><input type="checkbox" id="tmRepeat" '+(tmState.repeat?'checked':'')+'>같은 팀 반복 줄이기</label><label class="tm-check"><input type="checkbox" id="tmOpponents" '+(tmState.opponents?'checked':'')+'>새로운 상대 조합 우선</label><button class="btn primary" type="button" data-tm-action="generate" '+(tmState.busy?'disabled':'')+'>'+(tmState.busy?'편성 중…':'자동 팀 편성')+'</button></div>'+tmResultHtml():tmTacticalHtml())+'</div></div>'+tmMethod();
  root.oninput=e=>{if(e.target.id==='tmSearch'){tmState.search=e.target.value;document.getElementById('tmRosterList').innerHTML=tmRosterHtml();}};
- root.onchange=tmChange;root.onclick=tmClick;if(focus)document.getElementById(focus)?.focus({preventScroll:true});
+ root.onchange=tmChange;root.onclick=tmClick;root.onkeydown=e=>{if(e.target.id==='tmNames'&&e.key==='Enter'&&!e.isComposing&&e.keyCode!==229){e.preventDefault();tmAddNames();}};root.onpointerdown=tmDragStart;if(focus)document.getElementById(focus)?.focus({preventScroll:true});
 }
 function tmChange(e){
  const t=e.target;if(tmState.busy)return;
+ if(t.dataset.tmMove!==undefined){tmMove(t.dataset.tmMove,Number(t.value));return;}
  if(t.dataset.tmPlayer!==undefined){t.checked?tmState.selected.add(t.dataset.tmPlayer):tmState.selected.delete(t.dataset.tmPlayer);tmReset();}
  else if(t.dataset.tmPosition!==undefined){tmState.positions.set(t.dataset.tmPosition,t.value);tmReset('편성용 포지션을 변경했습니다. 다시 편성하세요.');}
  else if(t.dataset.tmSlot!==undefined){const i=Number(t.dataset.tmSlot);if(t.value&&tmState.lineup.some((id,j)=>j!==i&&id===t.value))return;tmState.lineup[i]=t.value;tmState.notice='포지션별 선수를 직접 배치했습니다.';}
@@ -192,12 +195,15 @@ function tmChange(e){
 }
 async function tmClick(e){
  const b=e.target.closest('button');if(!b||tmState.busy)return;
- if(b.dataset.tmTab){tmState.tab=b.dataset.tmTab;renderTeamMaker();return;}
- if(b.dataset.tmUse!==undefined){tmState.source='auto:'+b.dataset.tmUse;tmState.tab='tactical';tmState.lineup=[];renderTeamMaker();return;}
+ if(b.dataset.tmTab){goTab(b.dataset.tmTab==='balance'?'maker':'tactics');return;}
+ if(b.dataset.tmUse!==undefined){tmState.source='auto:'+b.dataset.tmUse;tmState.lineup=[];goTab('tactics');location.hash='tactics';return;}
  if(b.dataset.tmFocus!==undefined){const el=document.getElementById('tm-slot-'+b.dataset.tmFocus);el?.scrollIntoView({block:'center',behavior:'smooth'});el?.focus({preventScroll:true});return;}
  if(b.dataset.tmStyle){tmState.style=b.dataset.tmStyle;const source=tmSource();tmState.lineup=tmAutoLineup(source.players,tmSlots(),tmState.style);tmState.notice=source.players.length?TM_STYLES[tmState.style]+' 기준으로 '+tmState.lineup.filter(Boolean).length+'명을 배치했습니다.':'이 팀의 참석 예정 선수를 먼저 체크하세요.';renderTeamMaker();return;}
+ if(b.dataset.tmRemove){tmState.selected.delete(b.dataset.tmRemove);tmReset('참석 예정 명단에서 제외했습니다.');renderTeamMaker();return;}
  const action=b.dataset.tmAction;if(!action)return;
- if(action==='select'){tmState.pool.filter(p=>(!tmState.teamFilter||p.team===tmState.teamFilter)&&normalizePlayerMatchKey(p.name).includes(normalizePlayerMatchKey(tmState.search))).forEach(p=>tmState.selected.add(p.id));tmReset();}
+ if(action==='add-names'){tmAddNames();return;}
+ if(action==='add-guest'){tmAddGuest();return;}
+ if(action==='select'){[...tmState.pool,...tmState.guests].filter(p=>(!tmState.teamFilter||p.team===tmState.teamFilter)&&normalizePlayerMatchKey(p.name).includes(normalizePlayerMatchKey(tmState.search))).forEach(p=>tmState.selected.add(p.id));tmReset();}
  if(action==='clear'){tmState.selected.clear();tmReset('참석 예정 선택을 해제했습니다.');}
  if(action==='attendance'){
   const list=(DB.matches||[]).filter(m=>normDate(m.date)===tmState.date&&(tmState.competition==='정규리그'?isLeagueFamilyComp(m.comp):compCompact(m.comp)===compCompact(tmState.competition))),att=analysisAttendance(list),ids=new Set(tmState.pool.map(p=>p.id));
@@ -214,4 +220,42 @@ async function tmClick(e){
   catch(err){tmState.notice='편성하지 못했습니다: '+err.message;}finally{tmState.busy=false;}
  }
  renderTeamMaker();
+}
+
+/* V3.25.17: local participants and pointer-based transfers. */
+function renderTeamBalance(){tmState.tab='balance';renderTeamMaker();}
+function renderTeamTactics(){tmState.tab='tactical';renderTeamMaker();}
+function tmEntryHtml(){return '<div class="tm-entry"><h3>참석 예정 명단</h3><label for="tmNames">선수 이름 입력</label><textarea id="tmNames" rows="2" placeholder="이름 입력 후 Enter · 여러 이름은 쉼표, 공백 또는 줄바꿈으로 구분"></textarea><button type="button" class="btn" data-tm-action="add-names">선수 등록</button><details><summary>게스트 추가</summary><label>게스트 이름<input id="tmGuestName" maxlength="40" placeholder="게스트 이름"></label><label>포지션<select id="tmGuestRole"><option value="">미지정</option>'+TM_ROLES.map(r=>'<option>'+r+'</option>').join('')+'</select></label><label>편성용 OVR (선택)<input id="tmGuestOvr" type="number" min="0" max="99" step="1" placeholder="미입력 시 평균값"></label><button type="button" class="btn" data-tm-action="add-guest">게스트 등록</button><p class="note">게스트 OVR은 이번 편성용 가정값입니다. 공식 기록에 저장하지 않습니다.</p></details><div class="tm-selected">'+tmSelected().map(p=>'<button type="button" data-tm-remove="'+esc(p.id)+'" aria-label="'+esc(p.name)+' 참석 제외">'+esc(p.name)+(p.guest?' · 게스트':'')+' ×</button>').join('')+'</div></div>';}
+function tmAddNames(){
+ const input=document.getElementById('tmNames'),raw=input.value.trim();if(!raw)return;
+ const exact=tmState.pool.find(p=>normalizePlayerMatchKey(p.name)===normalizePlayerMatchKey(raw));
+ const names=exact?[raw]:raw.split(/[,，;\n\s]+/).filter(Boolean),unknown=[];let added=0,duplicate=0;
+ for(const name of names){const p=tmState.pool.find(p=>normalizePlayerMatchKey(p.name)===normalizePlayerMatchKey(name));if(!p){unknown.push(name);continue;}if(tmState.selected.has(p.id)){duplicate++;continue;}tmState.selected.add(p.id);added++;}
+ const message=added+'명 등록'+(duplicate?' · 이미 등록 '+duplicate+'명':'')+(unknown.length?' · 명단에 없는 이름: '+unknown.join(', ')+' (확인 후 게스트로 추가하세요)':'');
+ if(added)tmReset(message);else tmState.notice=message;renderTeamMaker();document.getElementById('tmNames').value=unknown.join(', ');document.getElementById('tmNames').focus({preventScroll:true});
+}
+function tmAddGuest(){
+ const name=document.getElementById('tmGuestName').value.trim(),raw=document.getElementById('tmGuestOvr').value,ovr=raw===''?null:Number(raw),position=document.getElementById('tmGuestRole').value;
+ let error='';if(!name||name.length>40)error='게스트 이름을 1~40자로 입력하세요.';
+ else if([...tmState.pool,...tmState.guests].some(p=>normalizePlayerMatchKey(p.name)===normalizePlayerMatchKey(name)))error='같은 이름이 이미 있습니다. 기존 선수를 선택하거나 게스트 이름에 구분을 붙여 주세요.';
+ else if(ovr!==null&&(!Number.isFinite(ovr)||ovr<0||ovr>99))error='OVR은 0~99 사이로 입력하세요.';
+ if(error){tmState.notice=error;document.getElementById('tmNotice').textContent=error;return;}
+ const p={id:'guest:'+ ++tmState.guestSeq,name,team:'게스트',position,ovr,guest:true,stats:null,baseStats:null};tmState.guests.push(p);tmState.selected.add(p.id);tmReset(name+' 게스트를 등록했습니다.');renderTeamMaker();
+}
+function tmPlayerRow(p,i){return '<li><button type="button" class="tm-drag-handle" data-tm-drag="'+esc(p.id)+'" aria-label="'+esc(p.name)+' 끌어서 팀 이동" title="끌어서 팀 이동">⠿</button><span class="tm-role">'+(p.position||'—')+'</span><b>'+esc(p.name)+(p.guest?'<small class="tm-guest-badge">게스트</small>':'')+'</b><span title="'+(p.guest?'편성용 가정 OVR':'OVR')+'">'+tmNumber(p.value)+(p.estimated?'*':'')+'</span><select class="tm-move" data-tm-move="'+esc(p.id)+'" aria-label="'+esc(p.name)+' 이동할 팀">'+tmState.teams.map((g,j)=>'<option value="'+j+'" '+(i===j?'selected':'')+'>'+String.fromCharCode(65+j)+'</option>').join('')+'</select></li>';}
+function tmMove(id,to){
+ const from=tmState.teams.findIndex(g=>g.includes(id));if(tmState.busy||from<0||!Number.isInteger(to)||to<0||to>=tmState.teams.length||from===to)return;
+ tmState.teams[from]=tmState.teams[from].filter(p=>p!==id);tmState.teams[to].push(id);tmState.lineup=[];tmState.notice='TEAM '+String.fromCharCode(65+to)+'로 이동했습니다. 인원·OVR·GR 배분을 확인하세요.';renderTeamMaker();
+}
+let tmDragCleanup=null;
+function tmDragStart(e){
+ const handle=e.target.closest('[data-tm-drag]');if(!handle||tmState.busy||e.button!==0||!e.isPrimary)return;
+ const id=handle.dataset.tmDrag,pointer=e.pointerId,startX=e.clientX,startY=e.clientY;let x=startX,y=startY,ghost=null,target=null,frame=0,dragging=false;
+ handle.setPointerCapture(pointer);
+ const highlight=()=>{document.querySelectorAll('.tm-drop-target').forEach(n=>n.classList.remove('tm-drop-target'));target=document.elementFromPoint(x,y)?.closest('[data-tm-team-index]');target?.classList.add('tm-drop-target');};
+ const tick=()=>{if(!dragging)return;const speed=y<100?-12:y>innerHeight-110?12:0;if(speed)window.scrollBy(0,speed);highlight();frame=requestAnimationFrame(tick);};
+ const move=ev=>{if(ev.pointerId!==pointer)return;x=ev.clientX;y=ev.clientY;if(!dragging&&Math.hypot(x-startX,y-startY)>5){dragging=true;ghost=document.createElement('div');ghost.className='tm-drag-ghost';ghost.textContent=tmSelected().find(p=>p.id===id)?.name||'';document.body.appendChild(ghost);frame=requestAnimationFrame(tick);}if(ghost){ghost.style.left=x+14+'px';ghost.style.top=y+12+'px';highlight();}ev.preventDefault();};
+ const clean=()=>{cancelAnimationFrame(frame);ghost?.remove();document.querySelectorAll('.tm-drop-target').forEach(n=>n.classList.remove('tm-drop-target'));handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',up);handle.removeEventListener('pointercancel',cancel);handle.removeEventListener('lostpointercapture',cancel);if(handle.hasPointerCapture(pointer))handle.releasePointerCapture(pointer);tmDragCleanup=null;};
+ const up=ev=>{if(ev.pointerId!==pointer)return;const to=dragging&&target?Number(target.dataset.tmTeamIndex):-1;clean();if(to>=0)tmMove(id,to);};
+ const cancel=()=>clean();tmDragCleanup=clean;handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',up);handle.addEventListener('pointercancel',cancel);handle.addEventListener('lostpointercapture',cancel);
 }
