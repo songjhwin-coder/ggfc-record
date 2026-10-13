@@ -316,13 +316,14 @@ const UNI = {
   ]
 };
 const TEMPLATE = [
+  { name:"역대기록", head:"No.,선수,입단,통합 경기수,통합 득점,리그 우승,FA컵 우승,챔스 우승,통합 우승 경력,사진(URL),사진(URL) 배경삭제",rows:[],desc:"현재 선수명단에 없는 선수도 표시합니다. 통합값을 그대로 사용하며 현재 경기기록과 합산하지 않습니다. 우승 빈칸은 0회로 처리합니다. 동명이인은 구분된 이름을 사용하세요. 사진 열은 선택이며 없으면 선수명단 사진을 연결합니다. 이 시트가 없는 업로드는 기존 역대기록을 유지하고, 빈 시트를 업로드하면 역대기록만 비웁니다." },
   { name:UNI.name, head:UNI.head, rows:UNI.rows, desc:UNI.desc },
   { name:"선수명단", head:SCHEMA.roster.head, sample:SCHEMA.roster.sample, desc:"시즌(출전 등 상태)과 연도는 구분합니다. 시작일자 이전은 능력치 성장·결석 및 커플 분석에서 제외합니다. 빈 시작일은 기존 방식입니다. 사진·포지션은 이 명단으로 연결합니다. 선수카드는 사진(URL) 배경삭제 열을 우선 사용하고, 일반 목록 사진은 사진(URL)을 사용합니다." },
   { name:"팀스쿼드", head:"날짜,대회,반기,그룹,팀,감독,코치,"+Array.from({length:15},(_,i)=>'선수'+(i+1)).join(','), rows:[['2026-03-01','정규리그','상반기','A','A특공대','박감독','','김철수','최민수','이준호','박도윤','장민석'],['2026-03-01','정규리그','상반기','A','풀파워','정감독','','이영호','한지훈','권태현','오세훈'],['2026-03-01','정규리그','상반기','B','어우씨','강감독','','정우성','배진우','신동혁','고상철'],['2026-03-01','정규리그','상반기','B','D져스','윤감독','','윤성민','임재훈','노경환','서지호','문태일']], desc:"날짜부터 다음 변경 전까지 적용할 팀별 전체 명단입니다. 반기·그룹은 필수이며 경기 분류의 기준입니다. 대회는 정규리그(공통 명단)를 그대로 사용해도 됩니다. 감독·코치도 포함하며, 선수1~15를 지원합니다. 실제 출석은 경기기록의 선수 칸으로 판단합니다." },
   { name:"팀별 기록지", head:"날짜,대회,반기,라운드,경기번호,팀명,이름,유효슛,키패스,수비성공,선방", rows:[],desc:"날짜·라운드·경기번호·팀명·이름으로 실제 경기 출전에 연결합니다. 팀명이 없는 구양식은 출전 팀이 유일할 때만 연결합니다. 횟수는 0 이상 정수, 미기록은 빈칸입니다. 선방은 경기기록과 중복 합산하지 않습니다. 연결 확인은 능력치 운영 안내에서 확인합니다." },
   { name:"스페셜기록", head:SCHEMA.specials.head, sample:SCHEMA.specials.sample, desc:SHEET_DESC.specials }
 ];
-const LABEL = Object.assign({ unified:"경기기록", roster:"선수명단", rosterDraft:"선수명단", squads:"팀스쿼드", teamRecords:"팀별 기록지" }, SHEET_OF);
+const LABEL = Object.assign({ unified:"경기기록", roster:"선수명단", rosterDraft:"선수명단", allTime:"역대기록", squads:"팀스쿼드", teamRecords:"팀별 기록지" }, SHEET_OF);
 
 function isOwnGoalPlayer(name){
   const key=String(name??'').normalize('NFKC').toUpperCase().replace(/[\s._-]/g,'');
@@ -539,6 +540,7 @@ function rowsToObjects(rows){
 }
 function detectKind(name, headers){
   const nm=String(name||""); const h=headers.join(",");
+  if(/역대\s*기록/.test(nm)||(/통합\s*경기수/.test(h)&&/통합\s*득점/.test(h)))return "allTime";
   if(/팀\s*별\s*기록지/.test(nm)||(/유효슛/.test(h)&&/키패스/.test(h)&&/수비성공/.test(h)))return "teamRecords";
   /* 선수명단는 기존 선수명단과 별도 시트여도 선수 기본정보를 안전하게 병합한다. */
   if(/팀\s*스쿼드|team\s*squad/i.test(nm)||(/코치/.test(h)&&/날짜/.test(h)&&/선수\s*1/.test(h)&&!/상대팀/.test(h))) return "squads";
@@ -878,6 +880,7 @@ function applyUnified(objs){
   return M.length;
 }
 function applyRows(kind, objs){
+  if(kind==="allTime")return applyAllTimeRows(objs);
   if(kind==="teamRecords")return applyTeamPlayerRecords(objs);
   if(kind==="squads") return applySquadRows(objs);
   if(kind==="unified") return applyUnified(objs);
@@ -973,9 +976,11 @@ async function importXlsx(buf){
     if(rf)[...xml(rf).getElementsByTagName('Relationship')].forEach(r=>{if(r.getAttribute('TargetMode')==='External')linkRels[r.getAttribute('Id')]=r.getAttribute('Target');});
     const doc=xml(f);
     [...doc.getElementsByTagName('hyperlink')].forEach(h=>{const id=h.getAttribute('r:id')||h.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id');if(linkRels[id])links[h.getAttribute('ref')]=linkRels[id];});
-    const objs=rowsToObjects(sheetRows(doc,shared,styles,links));
-    if(!objs.length)continue;
-    const kind=detectKind(sh.getAttribute('name'),Object.keys(objs[0]));
+    const rawRows=sheetRows(doc,shared,styles,links),objs=rowsToObjects(rawRows);
+    const headers=rawRows[Math.max(0,workbookHeaderRowIndex(rawRows))]||[];
+    const kind=detectKind(sh.getAttribute('name'),objs.length?Object.keys(objs[0]):headers);
+    if(!objs.length&&kind!=='allTime')continue;
+    if(kind==='allTime')validateAllTimeHeaders(headers);
     if(kind)sheets.push({kind,objs});
   }
   return applyWorkbookSheets(sheets);
@@ -5774,6 +5779,7 @@ function buildRecordXlsx(){
   const rs = rosterStats().filter(r=>draftPlayerVisible(r.player,registered));
   return [
     { name:UNI.name, head:UNI.head, rows:mrows },
+    exportAllTimeSheet(),
     { name:'팀별 기록지',head:TEAM_RECORD_HEAD,rows:exportTeamPlayerRecords() },
     { name:"선수명단", head:"연도,팀,등번호,선수,영문이름,포지션,비고,사진(URL),사진(URL) 배경삭제,시즌,시작일자,출석,팀경기수,출석률,득점누계,어시스트누계,개인파울누계,선방누계,MOM누계",
       rows: rs.map(r=>{
@@ -5985,6 +5991,7 @@ function renderData(){
     ["선수명단", DB.roster.length, '<span class="muted">'+esc([...new Set(DB.roster.map(r=>r.year).filter(Boolean))].join(", ")||"—")+'</span>'],
     ["팀별 기록지", (DB.settings?.teamPlayerRecords||[]).length, "연결 "+teamPlayerRecordLinks().matched.length+"행 · 확인 필요 "+teamPlayerRecordLinks().issues.length+"행"],
     ["팀스쿼드", squadRows().length, '<span class="muted">적용일별 감독·코치·선수 명단</span>'],
+    ["역대기록", allTimeRows().length, "역대기록 시트 통합값 · 시즌 기록과 별도 집계"],
     ["스페셜 기록", DB.specials.length, '<span class="muted">우승·MVP 등</span>']
   ]);
   $("#sheetSpec").innerHTML = tbl([{t:"시트명"},{t:"열 구성 (1행 헤더 고정)"},{t:"설명"}],
@@ -6055,7 +6062,7 @@ function renderBest5(){
 
 function renderActiveView(v){
   if(['data','rep','abilitycfg','abilityguide','team'].includes(v)&&!admin)v='dash';
-  const renderers={maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,cal:renderCal,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide};
+  const renderers={alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,cal:renderCal,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide};
   activeView=renderers[v]?v:'dash';renderers[activeView]();
 }
 function renderAll(){
