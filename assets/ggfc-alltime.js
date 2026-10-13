@@ -1,9 +1,11 @@
 /* Historical snapshots: independent of active roster, league filters and career ratings. */
 const AT_METRICS=[{key:'goals',label:'통합 득점',unit:'골'},{key:'games',label:'통합 경기수',unit:'경기'},{key:'titles',label:'통합 우승',unit:'회'},{key:'league',label:'리그 우승',unit:'회'},{key:'fa',label:'FA컵 우승',unit:'회'},{key:'champs',label:'챔스 우승',unit:'회'}];
-const atState={metric:'goals',search:''};
+const atState={metric:'goals',search:'',scope:'total'};
 function atHeader(v){return String(v||'').normalize('NFKC').replace(/\s/g,'');}
 function validateAllTimeHeaders(headers){
  const set=new Set(headers.map(atHeader));
+ const outside=[...set].filter(h=>/^((?:19|20)\d{2})(경기수|득점)$/.test(h)&&(+h.slice(0,4)<2019||+h.slice(0,4)>2025));
+ if(outside.length)throw Error('역대기록은 2019~2025년 보관 자료입니다. '+outside.join(', ')+' 열은 제외하고 2026년 이후 기록은 경기기록 시트에 입력하세요.');
  const missing=['통합경기수','통합득점','리그우승','FA컵우승','챔스우승'].filter(k=>!set.has(k));
  if(!['선수','선수명','이름'].some(k=>set.has(k)))missing.unshift('선수');
  if(missing.length)throw Error('역대기록 필수 열 확인: '+missing.join(', '));
@@ -37,7 +39,7 @@ function exportAllTimeSheet(){
 }
 function atRanked(){
  const key=atState.metric;let previous=null,rank=0;
- return allTimeRows().slice().sort((a,b)=>(b[key]??-1)-(a[key]??-1)||compareNamesKo(a.player,b.player)).map((r,i)=>{const value=r[key];if(value!==null&&value!==undefined){if(value!==previous)rank=i+1;previous=value;}return {...r,rank:value==null?null:rank};});
+ return atDisplayRows().slice().sort((a,b)=>(b[key]??-1)-(a[key]??-1)||compareNamesKo(a.player,b.player)).map((r,i)=>{const value=r[key];if(value!==null&&value!==undefined){if(value!==previous)rank=i+1;previous=value;}return {...r,rank:value==null?null:rank};});
 }
 function atPhoto(p){
  const candidates=(DB.roster||[]).filter(r=>normalizePlayerMatchKey(r.player)===normalizePlayerMatchKey(p.player)).sort((a,b)=>String(b.year||'').localeCompare(String(a.year||'')));
@@ -49,14 +51,68 @@ function atPhotoError(img){const fallback=img.dataset.atFallback;delete img.data
 function atValue(v){return v==null?'—':Number(v).toLocaleString('ko-KR');}
 function atResultsHtml(){
  const ranked=atRanked(),metric=AT_METRICS.find(m=>m.key===atState.metric),query=normalizePlayerMatchKey(atState.search),filtered=ranked.filter(p=>normalizePlayerMatchKey(p.player).includes(query)),top=ranked.filter(p=>p.rank!==null).slice(0,3);
- return '<div class="at-podium">'+top.map((p,i)=>'<article class="at-podium-card place-'+i+'"><span class="at-rank">'+p.rank+'위</span>'+atPhoto(p)+'<h3>'+esc(p.player)+'</h3><strong>'+atValue(p[metric.key])+' <small>'+metric.unit+'</small></strong><p>'+metric.label+'</p></article>').join('')+'</div><div class="at-table-caption"><h3>'+metric.label+' · 전체 랭킹</h3><span>검색 '+filtered.length+' / 전체 '+ranked.length+'명</span></div><div class="at-table-wrap" tabindex="0" role="region" aria-label="역대기록 랭킹 표, 좌우 스크롤 가능"><table class="at-table"><thead><tr><th scope="col">순위</th><th scope="col">선수</th><th scope="col">입단</th>'+AT_METRICS.map(m=>'<th scope="col" '+(m.key===metric.key?'class="at-active"':'')+'>'+m.label+'</th>').join('')+'</tr></thead><tbody>'+filtered.map(p=>'<tr><td><b>'+ (p.rank===null?'—':p.rank)+'</b></td><th scope="row"><span class="at-player">'+atPhoto(p)+'<span>'+esc(p.player)+'</span></span></th><td>'+esc(p.joined||'—')+'</td>'+AT_METRICS.map(m=>'<td '+(m.key===metric.key?'class="at-active"':'')+'>'+atValue(p[m.key])+'</td>').join('')+'</tr>').join('')+'</tbody></table>'+(filtered.length?'':'<p class="empty">검색 결과가 없습니다.</p>')+'</div>';
+ return '<div class="at-podium">'+top.map((p,i)=>'<article class="at-podium-card place-'+i+'"><span class="at-rank">'+p.rank+'위</span>'+atPhoto(p)+'<h3>'+esc(p.player)+'</h3><strong>'+atValue(p[metric.key])+' <small>'+metric.unit+'</small></strong><p>'+metric.label+'</p></article>').join('')+'</div><div class="at-table-caption"><h3>'+metric.label+' · 전체 랭킹</h3><span>검색 '+filtered.length+' / 전체 '+ranked.length+'명</span></div><div class="at-table-wrap" tabindex="0" role="region" aria-label="역대기록 랭킹 표, 좌우 스크롤 가능"><table class="at-table"><thead><tr><th scope="col">순위</th><th scope="col">선수</th><th scope="col">입단</th>'+AT_METRICS.map(m=>'<th scope="col" '+(m.key===metric.key?'class="at-active"':'')+'>'+m.label+'</th>').join('')+'</tr></thead><tbody>'+filtered.map(p=>'<tr><td><b>'+ (p.rank===null?'—':p.rank)+'</b></td><th scope="row"><span class="at-player">'+atPhoto(p)+'<span>'+esc(p.player)+'</span></span></th><td>'+esc(p.joined||'—')+'</td>'+AT_METRICS.map(m=>'<td '+(m.key===metric.key?'class="at-active"':'')+'>'+atMetricCell(p,m.key)+'</td>').join('')+'</tr>').join('')+'</tbody></table>'+(filtered.length?'':'<p class="empty">검색 결과가 없습니다.</p>')+'</div>';
 }
 function renderAllTimeRecords(){
  const root=document.getElementById('allTimeContent');if(!root)return;
- const data=DB.settings?.allTimeRecords,rows=allTimeRows(),years=data?.years||[];
- if(!rows.length){root.innerHTML='<div class="at-empty"><b>아직 등록된 역대기록이 없습니다.</b><p>관리자 모드 → 데이터 관리에서 역대기록 시트가 포함된 엑셀을 업로드하세요.</p></div>';return;}
- root.innerHTML='<div class="at-hero"><div><span>GGFC · ALL-TIME RECORDS</span><h3>함께 쌓아 온 기록</h3><p>현재 선수명단 등록 여부와 관계없이 역대기록의 모든 선수를 표시합니다.</p></div><strong>'+rows.length+'<small>역대 선수</small></strong></div><div class="at-scope"><b>집계 기준 · 역대기록 시트</b><p>엑셀 통합값 기준이며 현재 경기기록과 자동 합산하지 않습니다. 시즌·대회 조회 필터의 영향을 받지 않습니다.'+(years.length?' 연도별 열: '+esc(years[0])+'~'+esc(years[years.length-1])+'년.':'')+'</p></div><div class="at-filters" role="group" aria-label="역대기록 순위 기준">'+AT_METRICS.map(m=>'<button type="button" data-at-metric="'+m.key+'" aria-pressed="'+(m.key===atState.metric)+'">'+m.label+'</button>').join('')+'</div><label class="at-search">선수 이름 검색<input type="search" id="atSearch" placeholder="전체 역대 선수 검색" value="'+esc(atState.search)+'"></label><div id="atResults">'+atResultsHtml()+'</div><p class="at-footnote">동일 기록은 공동 순위(1·2·2·4), 동점 내 이름순으로 표시합니다. 상단은 정렬된 첫 3명입니다. 우승 합계는 리그 + FA컵 + 챔스이며 빈 우승 칸은 0회입니다. 경기수·득점 미입력은 연도별 값이 있으면 합산하고, 모두 없으면 —로 표시합니다. 사진이 없거나 불러오지 못하면 이름 첫 글자를 표시합니다.</p>';
- if(admin&&data.warnings?.length)root.insertAdjacentHTML('beforeend','<details class="at-audit"><summary>관리자 · 원본 수치 확인 '+data.warnings.length+'건</summary><ul>'+data.warnings.map(w=>'<li>'+esc(w)+'</li>').join('')+'</ul></details>');
- root.onclick=e=>{const b=e.target.closest('[data-at-metric]');if(!b)return;atState.metric=b.dataset.atMetric;renderAllTimeRecords();root.querySelector('[data-at-metric="'+atState.metric+'"]').focus({preventScroll:true});};
+ const data=DB.settings?.allTimeRecords,live=atModernRecords(),rows=atDisplayRows(live),archive=atState.scope==='archive';
+ const subnav='<div class="at-subnav" role="group" aria-label="역대기록 조회 범위"><button type="button" data-at-scope="total" aria-pressed="'+!archive+'"><b>전체 누적 기록</b><small>2019~2025 + 2026년 이후</small></button><button type="button" data-at-scope="archive" aria-pressed="'+archive+'"><b>2019~2025 역대기록</b><small>기존 자료 · 별도 보관</small></button></div>';
+ const scope=archive?'2019~2025 역대기록 시트의 원본 통합값입니다. 2026년 이후 경기기록은 이 화면에 더하지 않습니다.':'기존 2019~2025 통합값에 2026-01-01 이후 경기기록의 득점과 출전 경기수를 더합니다. 출석은 경기당 1회이며 같은 날 여러 경기는 각각 셉니다.';
+ root.innerHTML=subnav+(rows.length?'<div class="at-hero"><div><span>GGFC · '+(archive?'HISTORICAL ARCHIVE':'ALL-TIME RECORDS')+'</span><h3>'+(archive?'2019~2025 · 역대기록':'함께 쌓아 가는 누적 기록')+'</h3><p>현재 선수명단 등록 여부와 관계없이 기록이 있는 모든 선수를 표시합니다.</p></div><strong>'+rows.length+'<small>역대 선수</small></strong></div><div class="at-scope"><b>집계 기준 · '+(archive?'2019~2025 원본 보관':'과거 기록 + 경기기록 자동 가산')+'</b><p>'+scope+' 시즌·대회 조회 필터의 영향을 받지 않습니다.</p><p>'+(archive?'기존 우승 기록도 원본대로 유지합니다.':'2026년 이후 우승은 자동 가산하지 않습니다. 우승 순위는 2019~2025 자료 기준입니다. 경기기록 최종일: '+esc(live.lastDate||'기록 없음')+'.')+'</p>'+(!archive&&!allTimeRows().length?'<p>2019~2025 자료가 아직 없습니다. 현재는 2026년 이후 기록만 표시합니다.</p>':'')+'</div><div class="at-filters" role="group" aria-label="역대기록 순위 기준">'+AT_METRICS.map(m=>'<button type="button" data-at-metric="'+m.key+'" aria-pressed="'+(m.key===atState.metric)+'">'+m.label+'</button>').join('')+'</div><label class="at-search">선수 이름 검색<input type="search" id="atSearch" placeholder="전체 역대 선수 검색" value="'+esc(atState.search)+'"></label><div id="atResults">'+atResultsHtml()+'</div><p class="at-footnote">동일 기록은 공동 순위(1·2·2·4), 동점 내 이름순으로 표시합니다. 상단은 정렬된 첫 3명입니다. 우승 합계는 리그 + FA컵 + 챔스이며 빈 우승 칸은 0회입니다. 기존 경기수·득점이 미입력이면 전체 누적도 —로 표시하고 2026년 이후분은 별도 안내합니다. 사진이 없거나 불러오지 못하면 이름 첫 글자를 표시합니다.</p>':'<div class="at-empty"><b>'+(archive?'2019~2025 역대기록이 없습니다.':'아직 등록된 기록이 없습니다.')+'</b><p>관리자 모드 → 데이터 관리에서 역대기록 또는 경기기록 시트가 포함된 엑셀을 업로드하세요.</p></div>');
+ const warnings=[...(data?.warnings||[]),...(!archive?live.warnings:[])];
+ if(admin&&warnings.length)root.insertAdjacentHTML('beforeend','<details class="at-audit"><summary>관리자 · 원본 수치 확인 '+warnings.length+'건</summary><ul>'+warnings.map(w=>'<li>'+esc(w)+'</li>').join('')+'</ul></details>');
+ if(admin&&archive)root.insertAdjacentHTML('beforeend','<p class="at-admin-note">보관 자료 관리: 엑셀 역대기록 시트에 2019~2025 값만 입력해 재업로드하세요. 해당 시트가 없으면 기존 자료를 유지하고, 헤더만 있는 빈 시트는 보관 자료를 비웁니다. 내보내기도 보관 원본만 사용하므로 2026년 이후분이 중복 가산되지 않습니다.</p>');
+ root.onclick=e=>{const scopeButton=e.target.closest('[data-at-scope]');if(scopeButton){atState.scope=scopeButton.dataset.atScope;renderAllTimeRecords();root.querySelector('[data-at-scope="'+atState.scope+'"]').focus({preventScroll:true});return;}const b=e.target.closest('[data-at-metric]');if(!b)return;atState.metric=b.dataset.atMetric;renderAllTimeRecords();root.querySelector('[data-at-metric="'+atState.metric+'"]').focus({preventScroll:true});};
  root.oninput=e=>{if(e.target.id==='atSearch'){atState.search=e.target.value;document.getElementById('atResults').innerHTML=atResultsHtml();}};
+}
+
+/* Derive additions each time; never write combined totals into the archive. */
+function atModernRecords(){
+ const matchesById=new Map(),ambiguous=new Set(),warnings=[],players=new Map();let lastDate='';
+ for(const m of DB.matches||[]){
+  const date=normDate(m.date),id=detailMatchKey(m.id),home=String(m.home||'').trim(),away=String(m.away||'').trim();
+  if(!id||!/^\d{4}-\d{2}-\d{2}$/.test(date)||date<'2026-01-01'||!home||!away)continue;
+  const round=String(m.round||'').trim(),no=String(m.no||'').trim();
+  const key=JSON.stringify([date,compCompact(m.comp),round,no,[home,away].sort(),round||no?'':id]);
+  if(matchesById.has(id)&&matchesById.get(id).key!==key)ambiguous.add(id);
+  matchesById.set(id,{key,date,teams:new Set([home,away])});
+  if(date>lastDate)lastDate=date;
+ }
+ for(const id of ambiguous){matchesById.delete(id);warnings.push('경기ID '+id+'가 여러 경기에 연결되어 2026년 이후 집계에서 제외했습니다.');}
+ const ensure=name=>{const key=normalizePlayerMatchKey(name);if(!players.has(key))players.set(key,{player:String(name).normalize('NFKC').trim(),games:0,goals:0});return players.get(key);};
+ const resolve=r=>{const m=matchesById.get(detailMatchKey(r.id));return m&&m.teams.has(String(r.team||'').trim())?m:null;};
+ const attendanceSeen=new Set();
+ for(const r of DB.attendance||[]){
+  const m=resolve(r),name=normalizePlayerMatchKey(r.player);if(!m||!name||isOwnGoalPlayer(r.player))continue;
+  const key=JSON.stringify([m.key,name]);if(attendanceSeen.has(key))continue;attendanceSeen.add(key);ensure(r.player).games++;
+ }
+ // First sum goal entries per imported match ID; duplicate aliases for the same
+ // fixture are reconciled once, rather than counting the fixture twice.
+ const goalsByFixture=new Map();
+ for(const r of DB.goals||[]){
+  const m=resolve(r),name=normalizePlayerMatchKey(r.player),g=Number(r.g);if(!m||!name||isOwnGoalPlayer(r.player)||!Number.isSafeInteger(g)||g<=0)continue;
+  const key=JSON.stringify([m.key,String(r.team||'').trim(),name]);if(!goalsByFixture.has(key))goalsByFixture.set(key,{player:r.player,counts:new Map()});
+  const counts=goalsByFixture.get(key).counts,id=detailMatchKey(r.id);counts.set(id,(counts.get(id)||0)+g);
+ }
+ for(const item of goalsByFixture.values()){
+  const values=[...item.counts.values()];ensure(item.player).goals+=Math.max(...values);
+  if(new Set(values).size>1)warnings.push(item.player+' · 중복 경기의 득점값이 달라 큰 값 1건을 적용했습니다. 경기기록을 확인하세요.');
+ }
+ return {players,lastDate,warnings};
+}
+function atDisplayRows(live){
+ if(atState.scope==='archive')return allTimeRows();
+ live=live||atModernRecords();const combined=new Map();
+ for(const p of allTimeRows())combined.set(normalizePlayerMatchKey(p.player),{...p,baseGames:p.games,baseGoals:p.goals,addedGames:0,addedGoals:0});
+ for(const [key,p] of live.players){
+  if(!combined.has(key))combined.set(key,{player:p.player,joined:'',games:0,goals:0,baseGames:0,baseGoals:0,league:0,fa:0,champs:0,titles:0,career:'',photo:'',photoCutout:'',addedGames:0,addedGoals:0});
+  const row=combined.get(key);row.addedGames=p.games;row.addedGoals=p.goals;
+  row.games=row.baseGames==null?null:row.baseGames+p.games;row.goals=row.baseGoals==null?null:row.baseGoals+p.goals;
+ }
+ return [...combined.values()];
+}
+function atMetricCell(p,key){
+ if(atState.scope==='archive'||!['games','goals'].includes(key))return atValue(p[key]);
+ const base=key==='games'?p.baseGames:p.baseGoals,added=key==='games'?p.addedGames:p.addedGoals;
+ return '<b>'+atValue(p[key])+'</b><small class="at-breakdown">19~25 '+atValue(base)+'<br>26~ +'+atValue(added)+'</small>';
 }
