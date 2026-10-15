@@ -10,7 +10,7 @@ function detailResultLabel(result){return {W:'승',D:'무',L:'패'}[result]||'�
 function detailMatchPoints(m,team){const r=matchResult(m,team);return r==='W'?3:r==='D'?1:0;}
 function detailMatchRows(kind,m){
   const id=detailMatchKey(m.id);
-  return id?(kind==='saves'?playerSaveRows():(DB[kind]||[])).filter(r=>detailMatchKey(r.id)===id):[];
+  return id?(kind==='saves'?playerSaveRows():(verifiedRecords()[kind]||[])).filter(r=>detailMatchKey(r.id)===id):[];
 }
 function matchDetailData(m){
   const source=Object.fromEntries(DETAIL_RECORD_KINDS.map(([kind])=>[kind,detailMatchRows(kind,m)]));
@@ -57,7 +57,7 @@ function matchDetailData(m){
       if(r.ownGoal)sum.ownGoal+=r.g;
       return sum;
     },{att:0,g:0,a:0,f:0,sv:0,mom:0,ownGoal:0});
-    return {team,rows,totals,coaches:[...coaches].sort(compareNamesKo),assistants:[...assistants].sort(compareNamesKo),squadDate:squad?.date||'',result:matchResult(m,team),points:detailMatchPoints(m,team),score:num(index===0?m.hs:m.as),rawFouls:num(index===0?m.hf:m.af),fouls:index===0?applied.home:applied.away,group:matchTeamGroup(m,team)};
+    return {team,rows,totals,coaches:[...coaches].sort(compareNamesKo),assistants:[...assistants].sort(compareNamesKo),squadDate:squad?.date||'',result:matchResult(m,team),points:detailMatchPoints(m,team),score:num(index===0?m.hs:m.as),rawFouls:exportAdditionalFouls(m,team),fouls:index===0?applied.home:applied.away,group:matchTeamGroup(m,team)};
   });
   DETAIL_RECORD_KINDS.forEach(([kind,label])=>source[kind].forEach(r=>{
     if(!resolveTeam(r,kind)||!String(r.player||'').trim())unassigned.push({kind,label,row:r});
@@ -88,7 +88,7 @@ function matchDetailHtml(data){
     ).join('')+'</div>'+(forfeitText(m)?'<p class="detail-notice">'+esc(forfeitText(m))+' · 승패와 승점은 몰수패 판정을 적용합니다.</p>':'')+
     '<div class="detail-team-columns">'+data.teams.map(t=>'<section class="detail-section"><h3>'+teamChip(t.team)+'</h3><p class="detail-note">감독: '+esc(t.coaches.join(', ')||'미등록')+' · 코치: '+esc(t.assistants.join(', ')||'미등록')+(t.squadDate?' · '+esc(t.squadDate)+' 스쿼드 기준':' · 해당 경기일 이전 팀스쿼드 없음')+'</p>'+detailMetricGrid([
       ['팀 득점',t.score],['도움',t.totals.a],['적용 팀파울',t.fouls],['개인파울 합계',t.totals.f],['선방',t.totals.sv],['MOM',t.totals.mom]
-    ])+'<p class="detail-foul-note">팀파울: 개인파울 기록이 있으면 그 합계, 없으면 기존 팀파울 값 적용 · 기존 팀파울 입력값 '+t.rawFouls+'</p>'+detailPlayerTable(t)+(t.totals.ownGoal?'<p class="detail-note">자책골·베네핏 표기 '+t.totals.ownGoal+'골은 등록된 팀의 득점 기록에 포함됩니다.</p>':'')+
+    ])+'<p class="detail-foul-note">팀파울 = 개인파울 + 추가 파울 · 추가 파울 '+t.rawFouls+'</p>'+detailPlayerTable(t)+(t.totals.ownGoal?'<p class="detail-note">자책골·베네핏 표기 '+t.totals.ownGoal+'골은 등록된 팀의 득점 기록에 포함됩니다.</p>':'')+
     (t.totals.g!==t.score?'<p class="detail-notice">팀 점수 '+t.score+'골 / 등록 득점자 합계 '+t.totals.g+'골</p>':'')+'</section>').join('')+'</div>'+
     '<p class="detail-note">출석은 해당 경기의 출석 명단 기준입니다. 기록만 있고 출석이 미등록인 선수도 표시하며, 경기승점은 출석이 등록된 선수에게만 반영합니다.</p>'+detailUnassignedHtml(data.unassigned)+(m.memo||m.note?'<section class="detail-section"><h3>비고</h3><p class="detail-note detail-prewrap">'+esc([m.memo,m.note].filter(Boolean).join('\n'))+'</p></section>':'');
 }
@@ -130,7 +130,7 @@ function closeGGFCDetail(){
 }
 
 function openMatchDetail(id,trigger){
-  const key=detailMatchKey(id),m=(DB.matches||[]).find(x=>key&&detailMatchKey(x.id)===key);
+  const key=detailMatchKey(id),m=(verifiedRecords().matches||[]).find(x=>key&&detailMatchKey(x.id)===key);
   if(!m){toast('해당 경기 기록을 찾을 수 없습니다.');return false;}
   showGGFCDetail('match','경기 상세기록',matchDetailHtml(matchDetailData(m)),trigger);return true;
 }

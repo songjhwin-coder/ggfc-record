@@ -22,7 +22,7 @@ function tmPool(date,competition){
   if(!id||isOwnGoalPlayer(row.player)||(y&&y>year)||!playerEligibleOn(row.player,date))continue;
   const prev=known.get(id);if(!prev||String(prev.year||'')<y)known.set(id,row);
  }
- const recordDate=[...(DB.matches||[]).map(m=>normDate(m.date)),...(DB.soccerbee||[]).map(m=>normDate(m.date))].filter(d=>d&&d<=date).sort().pop()||date;
+ const recordDate=[...(verifiedRecords().matches||[]).map(m=>normDate(m.date)),...(DB.soccerbee||[]).map(m=>normDate(m.date))].filter(d=>d&&d<=date).sort().pop()||date;
  const enabled=abilitySystemEnabled();
  return [...known].map(([id,row])=>{
   const actual=members.get(id),team=actual?.size===1?[...actual][0]:actual?.size>1?'중복 소속':snap.length?'미배정':row.team||'미배정';
@@ -37,7 +37,7 @@ function tmSelected(){
 }
 function tmHistory(date){
  // Last 12 actual match dates, all competitions, strictly before the planned day.
- const list=uniqueRecordMatches(DB.matches||[]).filter(m=>normDate(m.date)<date&&normDate(m.date)&&[m.hs,m.as].every(v=>v!==null&&v!==undefined&&String(v).trim()!==''&&Number.isFinite(Number(v)))&&matchResult(m,m.home));
+ const list=uniqueRecordMatches(verifiedRecords().matches||[]).filter(m=>normDate(m.date)<date&&normDate(m.date)&&[m.hs,m.as].every(v=>v!==null&&v!==undefined&&String(v).trim()!==''&&Number.isFinite(Number(v)))&&matchResult(m,m.home));
  const days=[...new Set(list.map(m=>normDate(m.date)))].sort().slice(-12),wanted=new Set(days),pair=new Map();
  const attend=analysisAttendance(list.filter(m=>wanted.has(normDate(m.date)))),byId=new Map();
  for(const a of attend){const id=detailMatchKey(a.id);if(!byId.has(id))byId.set(id,new Map());const p=normalizePlayerMatchKey(a.player);if(!byId.get(id).has(p))byId.get(id).set(p,new Set());byId.get(id).get(p).add(a.team);}
@@ -165,7 +165,7 @@ function renderTeamMaker(){
  document.querySelector('#v-maker .head h2').textContent='Team Maker · '+(tmState.tab==='balance'?'자동 팀 편성':'전술 라인업');
  tmState.date=tmState.date||squadToday();
  const competitions=[...new Set(['정규리그',...squadRows().map(r=>isLeagueFamilyComp(r.comp)?'정규리그':r.comp).filter(Boolean)])];
- const signature=JSON.stringify([tmState.date,tmState.competition,DB.roster,DB.matches,DB.attendance,DB.goals,DB.saves,DB.fouls,DB.moms,DB.soccerbee,DB.settings]);
+ const signature=JSON.stringify([tmState.date,tmState.competition,DB.roster,verifiedRecords().matches,verifiedRecords().attendance,verifiedRecords().goals,verifiedRecords().saves,verifiedRecords().fouls,verifiedRecords().moms,DB.soccerbee,DB.settings]);
  if(signature!==tmState.signature){
   const previous=!!tmState.signature;tmState.pool=tmPool(tmState.date,tmState.competition);tmState.signature=signature;
   const ids=new Set([...tmState.pool,...tmState.guests].map(p=>p.id));tmState.selected=new Set([...tmState.selected].filter(id=>ids.has(id)));
@@ -206,7 +206,7 @@ async function tmClick(e){
  if(action==='select'){[...tmState.pool,...tmState.guests].filter(p=>(!tmState.teamFilter||p.team===tmState.teamFilter)&&normalizePlayerMatchKey(p.name).includes(normalizePlayerMatchKey(tmState.search))).forEach(p=>tmState.selected.add(p.id));tmReset();}
  if(action==='clear'){tmState.selected.clear();tmReset('참석 예정 선택을 해제했습니다.');}
  if(action==='attendance'){
-  const list=(DB.matches||[]).filter(m=>normDate(m.date)===tmState.date&&(tmState.competition==='정규리그'?isLeagueFamilyComp(m.comp):compCompact(m.comp)===compCompact(tmState.competition))),att=analysisAttendance(list),ids=new Set(tmState.pool.map(p=>p.id));
+  const list=(verifiedRecords().matches||[]).filter(m=>normDate(m.date)===tmState.date&&(tmState.competition==='정규리그'?isLeagueFamilyComp(m.comp):compCompact(m.comp)===compCompact(tmState.competition))),att=analysisAttendance(list),ids=new Set(tmState.pool.map(p=>p.id));
   tmState.selected=new Set(att.map(a=>normalizePlayerMatchKey(a.player)).filter(id=>ids.has(id)));tmReset(tmState.selected.size?'해당일 출전 기록의 '+tmState.selected.size+'명을 선택했습니다. 예정 명단과 다르면 직접 수정하세요.':'해당일·대회의 출전 기록이 없습니다. 참석 예정 선수를 직접 체크하세요.');
  }
  if(action==='swap'){

@@ -69,7 +69,7 @@ function renderAllTimeRecords(){
 /* Derive additions each time; never write combined totals into the archive. */
 function atModernRecords(){
  const matchesById=new Map(),ambiguous=new Set(),warnings=[],players=new Map();let lastDate='';
- for(const m of DB.matches||[]){
+ for(const m of verifiedRecords().matches||[]){
   const date=normDate(m.date),id=detailMatchKey(m.id),home=String(m.home||'').trim(),away=String(m.away||'').trim();
   if(!id||!/^\d{4}-\d{2}-\d{2}$/.test(date)||date<'2026-01-01'||!home||!away)continue;
   const round=String(m.round||'').trim(),no=String(m.no||'').trim();
@@ -82,14 +82,14 @@ function atModernRecords(){
  const ensure=name=>{const key=normalizePlayerMatchKey(name);if(!players.has(key))players.set(key,{player:String(name).normalize('NFKC').trim(),games:0,goals:0});return players.get(key);};
  const resolve=r=>{const m=matchesById.get(detailMatchKey(r.id));return m&&m.teams.has(String(r.team||'').trim())?m:null;};
  const attendanceSeen=new Set();
- for(const r of DB.attendance||[]){
+ for(const r of verifiedRecords().attendance||[]){
   const m=resolve(r),name=normalizePlayerMatchKey(r.player);if(!m||!name||isOwnGoalPlayer(r.player))continue;
   const key=JSON.stringify([m.key,name]);if(attendanceSeen.has(key))continue;attendanceSeen.add(key);ensure(r.player).games++;
  }
  // First sum goal entries per imported match ID; duplicate aliases for the same
  // fixture are reconciled once, rather than counting the fixture twice.
  const goalsByFixture=new Map();
- for(const r of DB.goals||[]){
+ for(const r of verifiedRecords().goals||[]){
   const m=resolve(r),name=normalizePlayerMatchKey(r.player),g=Number(r.g);if(!m||!name||isOwnGoalPlayer(r.player)||!Number.isSafeInteger(g)||g<=0)continue;
   const key=JSON.stringify([m.key,String(r.team||'').trim(),name]);if(!goalsByFixture.has(key))goalsByFixture.set(key,{player:r.player,counts:new Map()});
   const counts=goalsByFixture.get(key).counts,id=detailMatchKey(r.id);counts.set(id,(counts.get(id)||0)+g);

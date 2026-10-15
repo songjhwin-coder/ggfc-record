@@ -40,7 +40,7 @@ const DUO_TYPES=[
 ];
 let duoCache=null,duoReturnFocus=null;
 function duoBuildContext(){
-  const list=uniqueRecordMatches(chemMatches()),signature=JSON.stringify([chemYear,comp,DB.matches,DB.attendance,DB.goals,DB.fouls,DB.saves,DB.soccerbee,DB.roster,DB.settings]);
+  const list=uniqueRecordMatches(chemMatches()),signature=JSON.stringify([chemYear,comp,verifiedRecords().matches,verifiedRecords().attendance,verifiedRecords().goals,verifiedRecords().fouls,verifiedRecords().saves,DB.soccerbee,DB.roster,DB.settings]);
   if(duoCache?.signature===signature)return duoCache;
   const measuredRecords=explicitPerformanceRows();
   const names=[...new Set(analysisAttendance(list).map(r=>String(r.player||'').trim()).filter(n=>n&&!isOwnGoalPlayer(n)))].sort(compareNamesKo),profiles=new Map(names.map(name=>[name,{name,parts:[],seasonProof:[]}]));
@@ -53,10 +53,10 @@ function duoBuildContext(){
       const own=entries.filter(r=>r.name===name),ids=new Set(own.map(r=>r.id));if(!ids.size)return;
       const key=normalizePlayerMatchKey(name),teamById=new Map(own.map(r=>[r.id,[...r.teams][0]]));
       const validRow=r=>normalizePlayerMatchKey(r.player)===key&&ids.has(detailMatchKey(r.id))&&(!String(r.team||'').trim()||String(r.team).trim()===teamById.get(detailMatchKey(r.id)));
-      const goals=(DB.goals||[]).filter(validRow),fouls=(DB.fouls||[]).filter(validRow),recordedFouls=new Set(fouls.filter(r=>duoValid(r.fouls)).map(r=>detailMatchKey(r.id)));
+      const goals=(verifiedRecords().goals||[]).filter(validRow),fouls=(verifiedRecords().fouls||[]).filter(validRow),recordedFouls=new Set(fouls.filter(r=>duoValid(r.fouls)).map(r=>detailMatchKey(r.id)));
       const teams=new Set(teamById.values());
       const expected=ms.filter(m=>{const assigned=squadPlayerTeams(m,name);return assigned.length?assigned.includes(m.home)||assigned.includes(m.away):teams.has(m.home)||teams.has(m.away);}).filter(m=>playerEligibleOn(name,m.date)).length;
-      const g=goals.reduce((v,r)=>v+num(r.g),0),assistRecording=(DB.goals||[]).some(r=>byId.has(detailMatchKey(r.id))&&duoValid(r.a)),assists=assistRecording?goals.reduce((v,r)=>v+num(r.a),0):null;
+      const g=goals.reduce((v,r)=>v+num(r.g),0),assistRecording=(verifiedRecords().goals||[]).some(r=>byId.has(detailMatchKey(r.id))&&duoValid(r.a)),assists=assistRecording?goals.reduce((v,r)=>v+num(r.a),0):null;
       const ability=abilitySystemEnabled()?playerAbilityRecordAtDate(name,year,abilityHalfForDate(year,end),end,true):{};
       const sb=soccerBeePlayerRows(name,end).filter(r=>normDate(r.date).startsWith(year));
       const measured=k=>{const row=sb.slice().reverse().find(r=>duoValid(r[k])&&Number(r[k])>=0);return row?Number(row[k]):null;};
