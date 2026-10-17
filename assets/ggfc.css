@@ -3328,3 +3328,9 @@ body:not(.admin-mode) #v-team{display:none!important}
 @media(max-width:620px){.ability-top-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:0}.ability-top-player{padding:10px 3px}.ability-top-player header{gap:4px}.atr-rank{width:22px;height:22px;font-size:12px}.ability-top-player header strong{font-size:11px}.ability-top-player header small{font-size:9px}.atr-chart{margin-top:0}.ability-top-risers{padding:12px!important}}
 
 @media(min-width:621px){.ability-top-grid .ts-player-card-button,.ability-top-grid .ts-player-card-stage{width:180px}.ability-top-grid .ts-player-card-stage{height:278px}.ability-top-grid .ggfc-player-card{transform:scale(.45)!important}}
+
+/* V3.25.23: goalkeeper ranking and text-based comparison controls */
+.gr-controls{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:14px}.gr-controls label{display:flex;flex-direction:column;gap:7px;font-size:13px;font-weight:700;min-width:150px}.gr-controls select{min-height:42px}.gr-ranking-table table{min-width:1180px}.gr-ranking-table th,.gr-ranking-table td{text-align:center!important}.gr-ranking-table{max-height:70vh;overflow:auto}.gr-ranking-table thead th{position:sticky;top:0;z-index:2;background:var(--card,#fff)}.compare-controls input{width:100%;min-width:0;min-height:42px;padding:8px;border:1px solid var(--line,#d4e1ee);border-radius:8px;background:var(--card,#fff);color:var(--text,#14395a)}.ability-rule-row .tablewrap{max-width:100%}.ability-rule-list details{margin-top:16px}.ability-rule-list summary{cursor:pointer;font-weight:700}.ability-rule-list .tablewrap{overflow:auto}
+@media(max-width:620px){.gr-controls{display:grid;grid-template-columns:1fr 1fr;gap:10px}.gr-controls label{min-width:0}.gr-controls select{width:100%;min-width:0;font-size:12px}}
+
+.ability-rule-grid>.card,.ability-rule-row>span{min-width:0}@media(max-width:620px){.ability-rule-row{grid-template-columns:1fr;gap:6px}.ability-rule-grid .tablewrap{max-width:100%}}

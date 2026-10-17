@@ -30,7 +30,7 @@ let latestDbPeriodSignature = "";
 /* 대표승점 관리자 화면의 미저장 입력을 반기별로 보존한다. 저장 직후 재렌더링이나 조회기간 자동동기화가 실행되어도 입력한 하반기 날짜가 기본값으로 되돌아가지 않도록 한다. */
 let repAdminDrafts = {};
 
-/* V3.25.22: one derived record view for every calculation. Raw DB is never rewritten. */
+/* V3.25.23: one derived record view for every calculation. Raw DB is never rewritten. */
 let verifiedRecordCache=null;
 function invalidateVerifiedRecords(){verifiedRecordCache=null;teamPlayerRecordCache=null;abilityPriorYearPoolCache=null;v319CareerCache={key:'',map:null};}
 function verifiedFixtureKey(m){
@@ -818,12 +818,31 @@ function goalkeeperTableHtml(data,query){
   return '<div class="tablewrap gk-table" tabindex="0" aria-label="골키퍼 분석 · 좌우 스크롤">'+tbl(['선수','기록 경기','키퍼 시간(분)','키퍼 실점','선방','선방률(%)','실점/15분','선방/15분','비율 연결 경기','확인 사항'].map(t=>({t})),data.players.map(p=>[playerCardLink(p.player,'<b>'+esc(p.player)+'</b>',query),p.games,p.gkGames?goalkeeperNumber(p.minutes):'—',p.gkGames?p.ga:'—',p.saveGames?p.saves:'—','<b>'+goalkeeperNumber(p.saveRate)+'</b>',goalkeeperNumber(p.gaPer15,2),goalkeeperNumber(p.savesPer15,2),p.pairedGames+' / '+p.games,esc(goalkeeperStatus(p))]))+'</div>';
 }
 function goalkeeperMethodHtml(){return '<details class="gk-method"><summary>계산 기준 · 기록이 부족할 때</summary><p>선방률 = 선방 ÷ (선방 + 키퍼실점) × 100. 같은 경기·팀·선수의 선방과 키퍼실점이 모두 있는 경기만 합산합니다. 두 값이 모두 0이면 —입니다.</p><p>실점/15분 = 키퍼실점 합계 ÷ 기록된 키퍼 수행시간 × 15. 선방/15분은 선방과 시간이 함께 있는 경기만 합산합니다. 선방률은 시간으로 나누는 지표가 아닙니다. 빈칸은 미기록이며 실제 0회는 0을 입력하세요.</p><p>키퍼 시간은 분 단위입니다. 7.5 또는 7:30은 7분 30초입니다. 팀 실점과 키퍼실점 합계가 다르면 입력값 기준으로 계산하되 확인 표시를 붙입니다. 시간·연결 경기 수가 적은 표본은 단순 순위 비교를 피하세요. 지표는 개인 분석용이며 신규 실점 감점을 능력치에 자동 추가하지 않습니다.</p></details>';}
-function renderGoalkeeperAnalysis(info){
-  const box=document.getElementById('goalkeeperAnalysis');if(!box)return;
-  const data=goalkeeperStats(info.list||[]),search='';
-  if(search)data.players=data.players.filter(p=>normalizePlayerMatchKey(p.player).includes(search));
-  box.innerHTML='<div class="dashboard-block-title"><div class="sec-t">GOALKEEPER · 골키퍼 분석</div><div class="dashboard-block-note">'+esc(info.label)+'</div></div>'+goalkeeperTableHtml(data,info)+goalkeeperMethodHtml();
+let grYear='',grHalf='ALL',grMetric='gaPer15',grMinMinutes=60;
+function goalkeeperRankingRows(players,metric,minMinutes){
+ const validMetric=['gaPer15','savesPer15','saveRate'].includes(metric)?metric:'gaPer15';
+ const rows=players.map(p=>{const time=validMetric==='gaPer15'?p.minutes:p.pairedMinutes,value=p[validMetric];
+   const reason=p.rows.some(r=>r.warning)?'실점 배정 확인':value===null||!Number.isFinite(value)?'비교 기록 부족':time<minMinutes?'기준 시간 미달':'';
+   return {...p,rankingValue:value,rankingMinutes:time,rankingReason:reason,rank:null};});
+ const eligible=rows.filter(p=>!p.rankingReason).sort((a,b)=>(validMetric==='gaPer15'?a.rankingValue-b.rankingValue:b.rankingValue-a.rankingValue)||b.rankingMinutes-a.rankingMinutes||compareNamesKo(a.player,b.player));
+ eligible.forEach((p,i)=>p.rank=i&&Math.abs(p.rankingValue-eligible[i-1].rankingValue)<1e-9?eligible[i-1].rank:i+1);
+ return [...eligible,...rows.filter(p=>p.rankingReason).sort((a,b)=>b.minutes-a.minutes||compareNamesKo(a.player,b.player))];
 }
+function renderGoalkeeperRanking(){
+ const root=$('#goalkeeperRanking');if(!root)return;
+ const all=uniqueRecordMatches(verifiedRecords().matches).filter(m=>comp==='ALL'||matchCompetition(m)===comp),years=[...new Set(all.map(m=>normDate(m.date).slice(0,4)))].filter(Boolean).sort().reverse();
+ if(!grYear)grYear=years[0]||'ALL';if(grYear!=='ALL'&&!years.includes(grYear))grYear=years[0]||'ALL';
+ const list=all.filter(m=>(grYear==='ALL'||m.date.slice(0,4)===grYear)&&(grHalf==='ALL'||abilityHalfForDate(m.date.slice(0,4),m.date)===grHalf));
+ const dates=list.map(m=>normDate(m.date)).sort(),query={year:grYear,start:dates[0]||'',end:dates.at(-1)||'',asOf:dates.at(-1)||'',allCompetitions:comp==='ALL'},data=goalkeeperStats(list),rows=goalkeeperRankingRows(data.players,grMetric,grMinMinutes);
+ const metrics={gaPer15:'15분당 실점 · 낮은 순',savesPer15:'15분당 선방 · 높은 순',saveRate:'선방률 · 높은 순'};
+ root.innerHTML='<div class="gr-controls"><label>시즌<select id="grYear"><option value="ALL">전체 시즌</option>'+years.map(y=>'<option value="'+y+'">'+y+'</option>').join('')+'</select></label><label>조회 구간<select id="grHalf"><option value="ALL">연간 전체</option><option value="H1">상반기</option><option value="H2">하반기</option></select></label><label>순위 기준<select id="grMetric">'+Object.entries(metrics).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('')+'</select></label><label>최소 GR 수행시간<select id="grMinMinutes">'+[0,30,60,90,120].map(n=>'<option value="'+n+'">'+n+'분'+(!n?' · 제한 없음':'')+'</option>').join('')+'</select></label></div><p class="note">'+esc(query.start||'기록 없음')+' ~ '+esc(query.end)+' · '+list.length+'경기 · '+rows.filter(p=>p.rank!==null).length+'명 순위 산정 · '+esc(metrics[grMetric])+'</p>'+
+ (rows.length?'<div class="tablewrap gr-ranking-table" tabindex="0" aria-label="골레이로 랭킹 표 · 좌우 스크롤">'+tbl(['순위','선수','GR 경기','GR 시간(분)','실점','선방','실점/15분','선방/15분','선방률(%)','선방·시간 연결(분)','연결 실점 / 선방','확인 사항'].map(t=>({t})),rows.map(p=>[p.rank??'—',playerCardLink(p.player,playerFaceChip(p.player,false,grYear),query),p.gkGames,p.gkGames?goalkeeperNumber(p.minutes):'—',p.gkGames?p.ga:'—',p.saveGames?p.saves:'—',goalkeeperNumber(p.gaPer15,2),goalkeeperNumber(p.savesPer15,2),goalkeeperNumber(p.saveRate,2),goalkeeperNumber(p.pairedMinutes),p.pairedGa+' / '+p.pairedSaves,esc(p.rankingReason||goalkeeperStatus(p))]))+'</div>':'<p class="empty">선택 기간에 골레이로 기록이 없습니다.</p>')+
+ '<details class="gk-method"><summary>순위 계산 방식 · 기록 인정 기준</summary><p>기본 순위는 15분당 실점이 낮은 순입니다. 실점/15분 = 기록된 키퍼실점 합계 ÷ GR 수행시간 합계 × 15.</p><p>선방/15분 = 선방·실점·시간이 모두 연결된 경기의 선방 합계 ÷ 해당 경기 GR 시간 합계 × 15. 선방률 = 같은 연결 경기의 선방 ÷ (선방 + 실점) × 100. 선방과 실점이 모두 0이면 선방률은 미산정입니다.</p><p>선택한 최소시간 이상인 선수만 순위를 부여합니다. 실점 순위는 전체 GR 기록시간, 선방·선방률 순위는 선방이 입력된 연결 경기의 GR 시간을 사용합니다. 기본 60분은 GGFC 운영용 표본 기준이며 변경할 수 있습니다.</p><p>반올림 전 실제 비율로 정렬하며 같은 값은 공동순위(1·1·3)입니다. 동률 내 표시순서는 수행시간 내림차순·이름순입니다. 미기록·시간 미달·실점 배정 확인 대상은 아래에 순위 없이 표시합니다. 별도 종합 가중점수는 만들지 않습니다.</p><p>경기기록의 키퍼실점 ‘이름-실점(분)’과 팀별 기록지 선방을 같은 경기·팀·선수로 연결합니다. 빈칸은 0회가 아닙니다. 선방 총합에는 시간이 없는 기록이 있을 수 있으므로 비율 계산은 연결 기록만 사용합니다. 현재 포지션이 GR이 아니어도 실제 골키퍼 수행 기록이 있으면 포함합니다. 많은 선방은 상대 슈팅 기회에도 영향을 받습니다.</p><p>예: 60분·실점 4골·선방 12회가 모두 같은 경기 집합이면 실점/15분=1, 선방/15분=3, 선방률=75%입니다. 이 순위는 선수 능력치나 카드 등급을 변경하지 않습니다.</p></details>'+
+ '<details class="gk-method"><summary>경기별 원자료 · 연결 확인 '+data.issues.length+'건</summary>'+goalkeeperTableHtml(data,query)+'<div class="tablewrap">'+tbl(['날짜','선수','팀','경기','GR 분','실점','선방','확인'].map(t=>({t})),rows.flatMap(p=>p.rows.map(r=>[esc(r.date),esc(p.player),esc(r.team),esc(r.no+' / '+r.round),goalkeeperNumber(r.minutes),r.ga??'—',r.saves??'—',esc(r.warning)])))+'</div>'+data.issues.map(r=>'<p>'+esc(r.date+' '+r.team+' '+r.reason)+'</p>').join('')+'</details>';
+ for(const [id,value] of Object.entries({grYear,grHalf,grMetric,grMinMinutes}))$('#'+id).value=value;
+ root.onchange=e=>{const id=e.target.id;if(id==='grYear')grYear=e.target.value;else if(id==='grHalf')grHalf=e.target.value;else if(id==='grMetric')grMetric=e.target.value;else if(id==='grMinMinutes')grMinMinutes=Number(e.target.value);else return;renderGoalkeeperRanking();$('#'+id)?.focus();};
+}
+
 function renderPlayerGoalkeeper(player,query){
   const box=document.getElementById('playerCardGoalkeeper');if(!box)return;
   const data=goalkeeperStats(playerCardQueryMatches(query),player),p=data.players[0];box.hidden=!p;if(!p){box.innerHTML='';return;}
@@ -2482,35 +2501,32 @@ async function importSoccerBeeXlsx(buf){
 }
 
 function renderAbilityRules(){
-  const c=abilityConfig(), g=$("#abilityGrowthRules"), ss=$("#abilitySoccerbeeRules"), ap=c.absence||{};
-  const stepTxt=a=>(a||[]).map(x=>num(x.min)+"+ = "+(num(x.value)>=1?"×":"+")+num(x.value)).join(" · ");
-  const growthTxt=(c.growthRates||[]).slice().sort((a,b)=>num(a.min)-num(b.min)).map(x=>num(x.min)+'+ = '+Math.round(num(x.value)*100)+'%').join(' · ');
-  if(g)g.innerHTML='<div class="ability-rule-list">'+
-    '<div class="ability-rule-row"><b>장기 성장</b><span>시즌 구분 없이 DB에 새로 등록된 각 Round 이벤트를 정확히 1회만 누적합니다.</span></div>'+
-    '<div class="ability-rule-row"><b>표시 기준</b><span>BASE 내부값과 OVR은 소수점으로 누적하고, 메인 CURRENT OVR은 FORM 보정 후 정수 표시합니다.</span></div>'+
-    '<div class="ability-rule-row"><b>출석 1Round</b><span>'+["PAC","SHO","PAS","DRI","DEF","PHY"].map(k=>k+' '+(num(c.attendance[k.toLowerCase()])>=0?'+':'')+num(c.attendance[k.toLowerCase()])).join(' · ')+'</span></div>'+
-    '<div class="ability-rule-row"><b>결석 1Round</b><span>'+["PAC","SHO","PAS","DRI","DEF","PHY"].map(k=>k+' '+num(ap[k.toLowerCase()]||0).toFixed(2)).join(' · ')+' · 선수 시작일 이후 소속팀 경기일부터 적용 · 시작일 이전 제외</span></div>'+
-    '<div class="ability-rule-row"><b>득점 → SHO</b><span>골당 +'+num(c.goalPerGoal).toFixed(2)+' · 득점 수 상한 없음</span></div>'+
-    '<div class="ability-rule-row"><b>도움 → PAS</b><span>'+stepTxt(c.assistSteps)+'</span></div>'+
-    '<div class="ability-rule-row"><b>선방 → DEF</b><span>'+stepTxt(c.saveSteps)+'</span></div>'+
-    '<div class="ability-rule-row"><b>개인파울 → DEF</b><span>'+(c.foulPenaltySteps||[]).map(x=>num(x.min)+'+ = '+num(x.value)).join(' · ')+'</span></div>'+
-    '<div class="ability-rule-row"><b>MOM</b><span>1회당 '+['sho','pas','dri','def','phy'].map(k=>k.toUpperCase()+' +'+num((((c.mom||{}).firstSeasonBonus||{})[k])).toFixed(2)).join(' · ')+' · 해당 Round에서 한 번만 반영</span></div>'+
-    '<div class="ability-rule-row"><b>성장률</b><span>'+growthTxt+' · V3.24 Growth Curve V2</span></div>'+
-    '<div class="ability-rule-row"><b>FORM</b><span>최근 5R 출석·연속결석·골·도움·선방·MOM·파울·팀결과로 -5~+5 산정 · CURRENT OVR과 BASE 성장배율에만 반영</span></div>'+
-    '<div class="ability-rule-row"><b>OVR</b><span>BASE OVR은 원점수 가중평균, CURRENT OVR은 BASE+FORM 보정. 선수카드에는 BASE 진행률과 FORM을 함께 표시합니다.</span></div></div>';
-  if(ss)ss.innerHTML='<div class="ability-rule-list">'+
-    '<div class="ability-rule-row"><b>미측정</b><span>PAC/DRI/DEF/PHY 미측정 축은 68P · 유효 자료가 있는 축만 초기값 변경, 경기 성장분 유지</span></div>'+
-    '<div class="ability-rule-row"><b>능력치 시작연도</b><span>'+num((c.initialSkills||{}).careerStartYear)+'년 · 이전 연도는 SHO/PAS 초기 산정용 기준기록으로만 사용하고 Career 성장에는 중복 반영하지 않음</span></div>'+
-    '<div class="ability-rule-row"><b>SHO 시작</b><span>전년도 득점/출석R → '+num((c.initialSkills||{}).reliabilityRounds)+'R 신뢰도 보정 → 리그 백분위 → '+num((c.initialSkills||{}).scoreMin)+'~'+num((c.initialSkills||{}).scoreMax)+'점</span></div>'+
-    '<div class="ability-rule-row"><b>PAS 시작</b><span>전년도 도움/출석R을 동일 방식으로 산정 · 전년도 기록이 없으면 SHO '+num((c.initialSkills||{}).fallbackSho)+' / PAS '+num((c.initialSkills||{}).fallbackPas)+'</span></div>'+
-    '<div class="ability-rule-row"><b>평가 방식</b><span>고정 절대평가 기준표 → 지표별 0~100점 → 가중지수 → '+num(c.soccerbee.abilityMin)+'~'+num(c.soccerbee.abilityMax)+' 연속 능력치 · 미측정은 68P(Provisional)</span></div>'+
-    '<div class="ability-rule-row"><b>최초 측정</b><span>축별 첫 유효 측정으로 초기값만 변경하며 누적 경기 성장분을 유지합니다. 자료 없는 축은 기존 유효 초기값 또는 68P를 유지합니다.</span></div>'+
-    '<div class="ability-rule-row"><b>재측정</b><span>직전 평가값과 최신 평가값 차이 × '+Math.round(num(c.soccerbee.retestMultiplier)*100)+'%를 장기 능력치에 1회 반영합니다.</span></div>'+
-    '<div class="ability-rule-row"><b>PAC</b><span>'+abilityWeightText(c.soccerbee.weights.pac)+'</span></div>'+
-    '<div class="ability-rule-row"><b>DRI</b><span>'+abilityWeightText(c.soccerbee.weights.dri)+'</span></div>'+
-    '<div class="ability-rule-row"><b>DEF</b><span>'+abilityWeightText(c.soccerbee.weights.def)+'</span></div>'+
-    '<div class="ability-rule-row"><b>PHY</b><span>'+abilityWeightText(c.soccerbee.weights.phy)+'</span></div></div>';
+ const c=abilityConfig(),sb=c.soccerbee,f=c.form,keys=['pac','sho','pas','dri','def','phy'];
+ const row=(a,b)=>'<div class="ability-rule-row"><b>'+a+'</b><span>'+b+'</span></div>';
+ const steps=(list,unit='')=>(list||[]).slice().sort((a,b)=>a.min-b.min).map(x=>x.min+' 이상: '+x.value+unit).join(' · ');
+ const values=o=>keys.map(k=>k.toUpperCase()+' '+num(o?.[k])).join(' · ');
+ const table=(heads,rows)=>'<div class="tablewrap">'+tbl(heads.map(t=>({t})),rows)+'</div>';
+ $('#abilityGrowthRules').innerHTML='<div class="ability-rule-list">'+row('V3.25.23 · 적용 설정','아래 숫자는 현재 저장된 관리자 설정입니다. 계산 방식은 변경하지 않고 실제 코드 기준으로 설명합니다.')+
+ row('데이터 연결','검증·중복 제거된 경기만 사용합니다. 날짜·라운드·경기번호·팀·선수로 팀별 기록지를 연결하며 값 충돌은 확인 대상으로 제외합니다.')+
+ row('Round 기준','같은 경기일의 경기 이벤트를 합산합니다. 선수 시작일 이후 당시 소속팀이 실제 경기한 날짜가 대상입니다. 공식 출석 명단과 양수 활동 기록을 구분합니다.')+
+ row('출석 / 결석','명단 출석 1R 가산: '+values(c.attendance)+'<br>결석 1R 직접 감점: '+values(c.absence)+'<br>검증된 양수 활동 기록이 있으면 결석을 방지하지만, 명단 누락 시 공식 출석 가산·개인승점은 부여하지 않습니다.')+
+ row('기록 기본 가산','득점 → SHO: 골당 '+c.goalPerGoal+' (골 수 제한 없음)<br>도움 → PAS: '+steps(c.assistSteps)+'<br>선방 → DEF: '+steps(c.saveSteps)+'<br>구간표는 충족한 최고 구간 한 개만 적용합니다.')+
+ row('팀별 기록지',table(['항목','능력치','1회 가산','1R 기본 상한'],[['유효슛','SHO',c.teamRecords.sot.rate,c.teamRecords.sot.cap],['키패스','PAS',c.teamRecords.keyPass.rate,c.teamRecords.keyPass.cap],['수비성공','DEF',c.teamRecords.defSuccess.rate,c.teamRecords.defSuccess.cap]])+'기본 가산=min(횟수×1회 가산, 상한). 선방은 팀별 기록지를 우선하며 기존 선방과 이중 합산하지 않습니다. 빈칸은 미기록, 0은 기록된 0회입니다.')+
+ row('최종 성장','(명단 출석 가산 + 해당 능력 기록 가산) × Round 승점 배율 × 현재 능력 구간 성장률 × FORM 성장 배율.<br>승점 배율: '+steps(c.pointMultipliers,'배')+'<br>성장률: '+steps(c.growthRates,'배'))+
+ row('MOM / 파울','MOM: '+values(c.mom.firstSeasonBonus)+' × 실제 MOM 횟수 × FORM 성장 배율.<br>개인파울 → DEF 직접 감점: '+steps(c.foulPenaltySteps)+'<br>추가 파울은 팀파울에만 합산합니다. 키퍼실점과 K열 승점삭감은 능력치·FORM을 직접 감점하지 않습니다.')+
+ row('FORM / 표시','최근 '+f.window+'R 상태를 −5~+5로 산정합니다. BASE 성장 배율과 CURRENT OVR에 적용합니다. 개별 능력치·BASE OVR은 내림, CURRENT OVR은 포지션 가중 BASE 원점수 + FORM 보정 후 반올림. 점수 범위 '+c.scoreMin+'~'+c.scoreMax+'.')+
+ '<details><summary>FORM 단계별 OVR 보정·성장 배율</summary>'+table(['단계','OVR 보정','성장 배율'],Object.keys(f.ovrModifier).sort((a,b)=>a-b).map(k=>[k,f.ovrModifier[k],f.growthMultiplier[k]]))+'</details></div>';
+ $('#abilitySoccerbeeRules').innerHTML='<div class="ability-rule-list">'+row('업로드 / 적용일','관리자가 업로드한 엑셀 전체로 측정 DB를 교체합니다. 삭제된 행은 재업로드 시 제거합니다. 선수·날짜·경기순번으로 구분하며 선수 시작일과 조회 기준일을 적용합니다.')+
+ row('같은 날 여러 경기','최고속도는 최댓값, 횟수·거리는 합계, 그 외 지표는 출전시간 가중평균입니다. 모든 출전시간이 유효하지 않으면 평균 지표는 단순평균을 사용합니다. 일부 경기의 횟수·거리가 빠지면 해당 일자의 합계 항목은 미측정 처리합니다.')+
+ row('시간 / 거리','스프린트/10분 = 횟수 ÷ 출전시간 × 10.<br>스프린트거리/10분 = 거리(m) ÷ 출전시간 × 10.<br>SPM 미입력 시 횟수÷분, DPM 미입력 시 거리(km)×1000÷분으로 보완합니다. 시간만 길다고 감점하지 않으며 같은 거리·횟수라면 분당 강도는 낮아집니다.')+
+ row('능력치 환산','고정 기준표 선형보간으로 지표 0~100점 → 유효 지표 가중평균 → '+sb.abilityMin+'~'+sb.abilityMax+'점 환산: '+sb.abilityMin+' + ('+sb.abilityMax+' − '+sb.abilityMin+') × 가중지수 ÷ 100. 누락 지표는 0점이 아니며 유효 가중치 합으로 재정규화합니다. 참고 백분위는 능력치 산정에 사용하지 않습니다.')+
+ ['pac','dri','def','phy'].map(k=>row(k.toUpperCase(),abilityWeightText(sb.weights[k]))).join('')+
+ row('첫 측정 / 재측정','축별 첫 유효 측정은 초기값만 교체하고 기존 경기 성장분을 보존합니다. 이후 변화 = (새 평가 − 직전 유효 평가) × '+sb.retestMultiplier+' ('+Math.round(sb.retestMultiplier*100)+'%). 같은 날짜는 한 번 적용하며 음수 변화도 반영합니다.')+
+ row('자료 없는 축','기존 유효 측정값을 유지하며, 한 번도 측정하지 않은 축은 '+['pac','dri','def','phy'].map(k=>k.toUpperCase()+' '+c.unassessed[k]).join(' · ')+'를 사용합니다. 사커비 초기값 화면에는 미측정 축을 —로 표시합니다.')+
+ row('SHO / PAS','사커비로 계산하지 않습니다. '+c.initialSkills.careerStartYear+'년부터 Career를 누적하며 전년도 득점·도움/출석R, '+c.initialSkills.reliabilityRounds+'R 신뢰도, 리그 백분위로 초기 '+c.initialSkills.scoreMin+'~'+c.initialSkills.scoreMax+'점을 산정합니다. 기록이 없으면 SHO '+c.initialSkills.fallbackSho+' / PAS '+c.initialSkills.fallbackPas+'.')+
+ '<details><summary>현재 지표별 절대평가 기준표</summary>'+table(['지표',...sb.scorePoints.map(v=>v+'점')],Object.entries(sb.criteria).map(([k,v])=>[abilityMetricLabel(k),...v]))+'</details></div>';
 }
+
 function abilityMetricLabel(k){return ({spm:'SPM(회/분)',sprintPer10:'스프린트(회/10분)',sprintMetersPer10:'스프린트 거리(m/10분)',maxSpeed:'최고속도',hpm:'HPM',hsrRatio:'HSR비율',hapm:'HAPM',apm:'APM',accel:'가속',activityRange:'활동범위',avgSpeed:'평균속도',action:'가속감속액션',highAccel:'고강도가속',decel:'감속',highDecel:'고강도감속',dpm:'DPM',energy:'에너지점수'})[k]||k;}
 function abilityWeightText(obj){return Object.entries(obj||{}).map(([k,v])=>abilityMetricLabel(k)+' '+Number((num(v)*100).toFixed(2))+'%').join(' · ');}
 
@@ -2529,7 +2545,7 @@ function renderAbilityGuide(){
  const steps=(name,rows)=>table(['조건','적용값'],(rows||[]).map(r=>[name+' '+r.min+' 이상',r.value]));
  const keys=['pac','sho','pas','dri','def','phy'];
  root.innerHTML=section('적용 시스템 구성','<div class="ability-guide-flow"><div>선수명단<br>이름·시작일·포지션</div><div>SoccerBee<br>경기별 측정 → 일자 합산 → 초기 PAC·DRI·DEF·PHY</div><div>경기기록<br>득점·도움·출석·선방·파울·MOM</div><div>Career BASE<br>성장·결석·재측정 변화 누적</div><div>FORM<br>최근 '+f.window+'R 상태</div><div>CURRENT OVR<br>포지션 가중 BASE + FORM 보정</div></div><p>시작일 이전 기록과 조회 기준일 이후 기록은 제외합니다. 화면의 반기와 시즌은 조회 범위이며 Career는 설정된 시작 연도부터 누적합니다. 카드 장식 등급은 별도 Career Achievement 규칙입니다.</p>')+
- section('팀별 기록지 · 팀명 연결','<p>날짜·라운드·경기번호·팀명·이름을 경기기록의 실제 출전에 연결합니다. 팀명·팀·소속팀 열을 인식하고 입력 팀과 실제 출전 팀이 다르면 계산에서 제외합니다. 팀명이 없는 구양식은 실제 출전 팀이 유일할 때만 연결합니다. 같은 키의 중복 행은 한 번만 읽고 값이 다르면 업로드를 중단합니다. 연결되지 않은 행은 아래 확인 목록에 보존하며 능력치에 반영하지 않습니다.</p><p>빈칸은 미기록, 0은 기록한 결과 0회입니다. 신규 기록이 없던 과거 경기에 감점을 만들지 않습니다. 선방은 같은 경기·선수의 팀별 기록지 입력값을 우선하고 경기기록 선방과 합산하지 않습니다. 팀별 기록지 선방이 빈칸이면 기존 선방을 사용합니다.</p>'+table(['기록','능력','1회 기본 가산','하루 기본 상한'],[['유효슛','SHO',c.teamRecords.sot.rate,c.teamRecords.sot.cap],['키패스','PAS',c.teamRecords.keyPass.rate,c.teamRecords.keyPass.cap],['수비성공','DEF',c.teamRecords.defSuccess.rate,c.teamRecords.defSuccess.cap],['선방','DEF','기존 선방 구간표','기존 선방 구간표']])+'<p>신규 기록 기본 가산 = min(하루 횟수 × 1회 가산, 하루 상한). 기존 기록·출석 가산에 더한 뒤 승점 배율 × 현재 능력 구간 배율 × FORM 성장 배율을 적용합니다. 상한은 이 배율 적용 전 값입니다. 유효슛·키패스에는 골·도움을 별도로 빼지 않으며 기존 골·도움 보상과 함께 소폭 반영합니다. 신규 지표는 FORM에 직접 중복 가산하지 않습니다. 사커비 초기 평가 비중은 유지합니다. 모든 가산과 상한은 관리자 능력치 설정에서 변경할 수 있습니다.</p>'+teamRecordAuditHtml()+goalkeeperAuditHtml()+newRecordMethodHtml())+
+ section('팀별 기록지 · 팀명 연결','<p>날짜·라운드·경기번호·팀명·이름을 경기기록의 실제 출전에 연결합니다. 팀명·팀·소속팀 열을 인식하고 입력 팀과 실제 출전 팀이 다르면 계산에서 제외합니다. 팀명이 없는 구양식은 실제 출전 팀이 유일할 때만 연결합니다. 양수 활동 기록과 유일한 경기·팀 연결이 확인되면 출석 누락 상태로 활동을 인정하되 명단 출석 가산은 보류합니다. 같은 키의 중복 행은 한 번만 읽고 값이 다르면 업로드를 중단합니다. 연결되지 않은 행은 아래 확인 목록에 보존하며 능력치에 반영하지 않습니다.</p><p>빈칸은 미기록, 0은 기록한 결과 0회입니다. 신규 기록이 없던 과거 경기에 감점을 만들지 않습니다. 선방은 같은 경기·팀·선수의 팀별 기록지 입력값을 우선하고 경기기록 선방과 합산하지 않습니다. 팀별 기록지 선방이 빈칸이면 기존 선방을 사용합니다.</p>'+table(['기록','능력','1회 기본 가산','하루 기본 상한'],[['유효슛','SHO',c.teamRecords.sot.rate,c.teamRecords.sot.cap],['키패스','PAS',c.teamRecords.keyPass.rate,c.teamRecords.keyPass.cap],['수비성공','DEF',c.teamRecords.defSuccess.rate,c.teamRecords.defSuccess.cap],['선방','DEF','기존 선방 구간표','기존 선방 구간표']])+'<p>신규 기록 기본 가산 = min(하루 횟수 × 1회 가산, 하루 상한). 기존 기록·출석 가산에 더한 뒤 승점 배율 × 현재 능력 구간 배율 × FORM 성장 배율을 적용합니다. 상한은 이 배율 적용 전 값입니다. 유효슛·키패스에는 골·도움을 별도로 빼지 않으며 기존 골·도움 보상과 함께 소폭 반영합니다. 신규 지표는 FORM에 직접 중복 가산하지 않습니다. 사커비 초기 평가 비중은 유지합니다. 모든 가산과 상한은 관리자 능력치 설정에서 변경할 수 있습니다.</p>'+teamRecordAuditHtml()+goalkeeperAuditHtml()+newRecordMethodHtml())+
  section('리그·집계 기준','<p>경기일 이전 또는 당일의 최신 팀스쿼드 그룹을 적용합니다. 슈퍼×슈퍼=슈퍼리그, 챌린지×챌린지=챌린지리그, 서로 다른 그룹=인터리그입니다. 컵대회 등 다른 대회명은 유지합니다.</p><p>선수 경기수는 경기ID별 출전 1회, 참석일수는 날짜별 1회입니다. 팀 누적 참석수는 날짜·팀·선수 조합을 한 번 셉니다. 출석률 분모는 조회기간의 당시 소속팀 경기 및 실제 출전 경기이며 팀 이동과 참가 시작일을 반영합니다. 개인 득점에서 자책골·베네핏은 제외하며 팀 득점은 원본 점수를 유지합니다.</p>')+
  section('업로드와 경기순번','<p>Excel 재업로드 시 사커비 기록은 해당 파일 내용으로 교체합니다. 파일에서 삭제한 측정은 함께 제거됩니다. 날짜 + 선수 + 경기순번으로 식별하며, 같은 날짜에 번호가 있는 기록과 번호 없는 구형 기록이 함께 있으면 번호 없는 기록은 중복 합산하지 않습니다.</p><p>같은 날 여러 경기: 횟수·거리는 합계, 최고속도는 최댓값, 나머지 지표는 출전시간 가중평균입니다. 출전시간 누락 시 평균 지표는 단순평균을 사용하고 10분 환산 횟수·거리는 평가에서 제외합니다. 출전시간과 거리를 입력하면 각각 분과 km로 보존합니다. 빠진 값은 0으로 간주하지 않습니다.</p>')+
  section('사커비 평가 계산','<p>기준표의 두 점 사이를 선형보간합니다: 점수 = 아래 점수 + (측정값 − 아래 기준값) ÷ (위 기준값 − 아래 기준값) × 점수 차이. 범위 밖은 양 끝 점수로 제한합니다.</p><p>능력별 지수 = Σ(지표 점수 × 가중치) ÷ 사용 가능한 가중치 합계. 사커비 초기 능력치 = '+sb.abilityMin+' + ('+sb.abilityMax+' − '+sb.abilityMin+') × 지수 ÷ 100. 미측정 PAC·DRI·DEF·PHY는 각각 '+keys.filter(k=>k in c.unassessed).map(k=>k.toUpperCase()+' '+c.unassessed[k]).join(', ')+'입니다. 상대 백분위는 참고 표시입니다.</p><p>10분당 스프린트 = 횟수 ÷ 출전시간 × 10. 10분당 스프린트 거리 = 거리(m) ÷ 출전시간 × 10. SPM은 입력값을 사용하며 누락 시 횟수 ÷ 출전시간으로 계산합니다. 총 이동거리는 입력 DPM이 없을 때 거리(km) × 1000 ÷ 출전시간으로 보완합니다.</p>'+table(['능력','현재 지표별 비중'],Object.entries(sb.weights).map(([k,w])=>[k.toUpperCase(),abilityWeightText(w)]))+table(['지표',...(sb.scorePoints||[]).map(x=>x+'점')],Object.entries(sb.criteria).map(([k,v])=>[abilityMetricLabel(k),...v]))+'<p>스프린트 기준표는 운영용 초기 기준이며 관리자 설정에서 조정할 수 있습니다. SPM·횟수·거리는 서로 관련되므로 합산 비중을 제한했습니다. 누락 지표가 있으면 남은 비중이 정규화되어 실제 비중은 달라집니다.</p>')+
@@ -2840,8 +2856,8 @@ function renderAbility(){
     ? selectedDate+"까지 업로드된 측정 이력 중 선수별 최신 일자 합산값을 표시하며, 이후 측정값은 해당 기준일 능력치 계산에서 제외합니다."
     : "마지막 업로드 엑셀에 포함된 측정 이력만 보존하며, 선수별 최신 일자 합산값을 고정 절대평가 기준표에 대입해 PAC·DRI·DEF·PHY를 계산합니다. 상대평가는 참고 백분위로만 사용합니다.";
   if($("#soccerbeeStatusNote")) $("#soccerbeeStatusNote").innerHTML=selectedDate
-    ? '적용 원칙: <b>선수명단 DB 이름 매칭 → '+esc(selectedDate)+' 이하의 측정값 중 선수별 최신 일자 합산값 적용</b>. 선택 날짜 이후 측정값은 조회 능력치에 반영하지 않습니다.'
-    : '적용 원칙: <b>선수명단 DB 이름 매칭 → 선수별 최신 일자 합산값 → 절대평가</b>. 엑셀에 남아 있는 이전 기록만 History로 표시하며, 엑셀에서 삭제한 기록은 재업로드 시 제거됩니다.';
+    ? '적용 원칙: <b>선수명단 DB 이름 매칭 → '+esc(selectedDate)+' 이하의 측정값 중 축별 최신 유효 평가 적용</b>. 선택 날짜 이후 측정값은 조회 능력치에 반영하지 않습니다.'
+    : '적용 원칙: <b>선수명단 DB 이름 매칭 → 축별 최신 유효 일자 평가 → 누적 경기 성장과 재측정 변화 적용</b>. 엑셀에 남아 있는 이전 기록만 History로 표시하며, 엑셀에서 삭제한 기록은 재업로드 시 제거됩니다.';
   const sbRows=Object.values(latestSb).sort((a,b)=>String(a.player).localeCompare(String(b.player),"ko"));
   const sbEval=soccerBeeAbilityBaseMap(selectedDate||'');
   const onlyRoot=$('#soccerbeeOnlySummary');if(onlyRoot)onlyRoot.innerHTML=!admin?'':sbRows.length?sbRows.map(r=>soccerBeeOnlyHtml(r.player,selectedDate||'',sbEval[r.player])).join(''):'<p class="empty">선택 기준일까지 사커비 측정 기록이 없습니다.</p>';
@@ -5170,7 +5186,7 @@ function renderPlayer(){
   bindPlayerRecordSearch();
   renderLinkedRecordControls("player");
   const info=recordQueryInfo(), list=info.list||[];
-  renderGoalkeeperAnalysis(info);
+
   if($("#playerPeriodLabel")) $("#playerPeriodLabel").textContent=info.label+" · "+list.length+"경기";
   const draftNames=draftPlayerNameSet(info.year);
   const search='',matchesName=()=>true;
@@ -6194,7 +6210,7 @@ function renderBest5(){
 
 function renderActiveView(v){
   if(['data','rep','abilitycfg','abilityguide','team'].includes(v)&&!admin)v='dash';
-  const renderers={leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,cal:renderCal,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide};
+  const renderers={goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,cal:renderCal,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide};
   activeView=renderers[v]?v:'dash';renderers[activeView]();
 }
 function renderAll(){

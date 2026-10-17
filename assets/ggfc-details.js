@@ -181,7 +181,7 @@ function comparisonPairHtml(data){
 }
 function playerComparisonHtml(data){
   const [a,b]=data.players,sa=a.stat,sb=b.stat;
-  const metrics=[['경기수','att','경기'],['승','w','승'],['무','d','무'],['패','l','패'],['득점','g','골'],['도움','a','회'],['선방','sv','회'],['개인파울','f','회'],['MOM','mom','회'],['승점','pts','점']];
+  const metrics=[['경기수','att','경기'],['승','w','승'],['무','d','무'],['패','l','패'],['득점','g','골'],['도움','a','회'],['개인파울','f','회'],['MOM','mom','회'],['승점','pts','점']];
   const controls=analysisPlayerControls(data.players,'compare'),identity=analysisPlayerIdentity(data.players,data.year);
   const rate=(p,key,denominator)=>denominator?num(p[key]):null;
   const perGame=(p,key)=>p.att?num(p[key])/p.att:null;
@@ -195,7 +195,7 @@ function playerComparisonHtml(data){
   const abilities=COMPARE_ABILITIES.map(([key,label])=>comparisonRow(label,a.ability?Math.floor(num(a.ability[key])):null,b.ability?Math.floor(num(b.ability[key])):null,{max:100})).join('');
   return controls+'<p class="detail-scope"><b>'+esc(data.scope.label)+'</b><span>'+esc(data.scope.start)+' ~ '+esc(data.scope.end)+' · 조회 경기 '+data.scope.list.length+'경기</span></p>'+identity+
     '<section class="detail-section"><h3>누적 경기 기록 비교</h3><p class="detail-note">두 선수에게 동일한 조회 기간을 적용합니다. 가운데 차이는 기준 선수 값에서 상대 선수 값을 뺀 수치입니다.</p><div class="compare-stat-columns">'+stats+'</div><p class="detail-note">출석률: 주 소속팀 경기수 대비 출석 · '+esc(a.name)+' '+sa.att+'/'+sa.teamGames+'경기 / '+esc(b.name)+' '+sb.att+'/'+sb.teamGames+'경기. 경기수는 출석 명단 기준입니다.</p></section>'+
-    '<section class="detail-section"><h3>능력치 비교</h3><p class="detail-note">'+esc(data.cutoff||'기준일 없음')+' 기준 · 능력치는 기존 시스템의 누적값입니다. 경기기록의 조회 대회와 별도로 전체 기록을 반영합니다.</p><div class="compare-ability-layout"><div>'+comparisonRadar(data.players)+'<p class="compare-radar-legend"><span class="base">실선 · '+esc(a.name)+'</span><span class="other">점선 · '+esc(b.name)+'</span></p></div><div>'+abilities+'</div></div><p class="detail-note">'+data.players.map(p=>esc(p.name)+': '+esc(p.abilityNote)).join(' / ')+'</p></section>'+comparisonPairHtml(data);
+    '<section class="detail-section"><h3>능력치 비교</h3><p class="detail-note">'+esc(data.cutoff||'기준일 없음')+' 기준 · 능력치는 기존 시스템의 누적값입니다. 경기기록의 조회 대회와 별도로 전체 기록을 반영합니다.</p><div class="compare-ability-layout"><div>'+comparisonRadar(data.players)+'<p class="compare-radar-legend"><span class="base">실선 · '+esc(a.name)+'</span><span class="other">점선 · '+esc(b.name)+'</span></p></div><div>'+abilities+'</div></div><p class="detail-note">'+data.players.map(p=>esc(p.name)+': '+esc(p.abilityNote)).join(' / ')+'</p></section>'+analysisEventsHtml(data)+comparisonPairHtml(data);
 }
 function coupleScoreBreakdown(rate,attendance,gpg,bonus=0){
   const winPoints=num(rate)*.5,attendancePoints=num(attendance)*.3,goalPoints=Math.min(num(gpg)*33,100)*.2;
@@ -203,8 +203,24 @@ function coupleScoreBreakdown(rate,attendance,gpg,bonus=0){
   return {winPoints,attendancePoints,goalPoints,baseTotal,recordPoints,total,score:Math.round(total)};
 }
 function analysisPlayerControls(players,prefix){
-  const names=chemPlayers(),select=(id,value)=>'<select id="'+id+'">'+names.map(n=>'<option value="'+esc(n)+'"'+(n===value?' selected':'')+'>'+esc(n)+'</option>').join('')+'</select>';
-  return '<div class="compare-controls"><label>기준 선수'+select(prefix+'BasePlayer',players[0].name)+'</label><label>상대 선수'+select(prefix+'OtherPlayer',players[1].name)+'</label><button type="button" class="btn primary" id="'+prefix+'Refresh">'+(prefix==='couple'?'분석 적용':'비교 적용')+'</button><button type="button" class="btn" id="'+prefix+'Swap">선수 바꾸기 ⇄</button></div>';
+ const names=chemPlayers(),listId=prefix+'PlayerNames',input=(id,value)=>'<input type="text" id="'+id+'" value="'+esc(value)+'" list="'+listId+'" autocomplete="off" placeholder="선수 이름 입력" data-analysis-input="'+prefix+'">';
+ return '<div class="compare-controls"><label>기준 선수'+input(prefix+'BasePlayer',players[0].name)+'</label><label>상대 선수'+input(prefix+'OtherPlayer',players[1].name)+'</label><button type="button" class="btn primary" id="'+prefix+'Refresh">'+(prefix==='couple'?'분석 적용':'비교 적용')+'</button><button type="button" class="btn" id="'+prefix+'Swap">선수 바꾸기 ⇄</button><datalist id="'+listId+'">'+names.map(n=>'<option value="'+esc(n)+'"></option>').join('')+'</datalist></div><p class="detail-note">이름을 입력한 뒤 Enter 또는 적용 버튼을 누르세요. 이름 일부가 한 선수와만 일치하면 자동 선택합니다.</p>';
+}
+function analysisTypedName(value){
+ const key=normalizePlayerMatchKey(value),names=chemPlayers();if(!key)return '';
+ const exact=names.find(n=>normalizePlayerMatchKey(n)===key);if(exact)return exact;
+ const hits=names.filter(n=>normalizePlayerMatchKey(n).includes(key));return hits.length===1?hits[0]:'';
+}
+function analysisEventStats(list,names){
+ const allowed=new Set(analysisAttendance(list).map(r=>JSON.stringify([String(r.id),r.team,normalizePlayerMatchKey(r.player)]))),result={};
+ const rows=teamPlayerRecordLinks().matched,saves=playerSaveRows();
+ names.forEach(name=>{const out={};for(const key of ['sot','keyPass','defSuccess','saves']){
+ const entries=(key==='saves'?saves:rows).filter(r=>normalizePlayerMatchKey(r.player)===normalizePlayerMatchKey(name)&&allowed.has(JSON.stringify([String(r.id),r.team,normalizePlayerMatchKey(r.player)]))&&r[key]!==null&&r[key]!==undefined);
+ const count=new Set(entries.map(r=>String(r.id))).size,total=entries.reduce((v,r)=>v+num(r[key]),0);out[key]={total:count?total:null,games:count,perGame:count?total/count:null};}result[name]=out;});return result;
+}
+function analysisEventsHtml(data,paired=false){
+ const names=data.players.map(p=>p.name),list=paired?data.pair.tog.rows.map(r=>r.m):data.scope.list,stats=analysisEventStats(list,names);
+ return '<section class="detail-section"><h3>'+ (paired?'같은 팀 동행':'조회기간')+' · 신규 기록 비교</h3><p class="detail-note">유효슛·키패스·수비성공은 팀별 기록지, 선방은 연결된 선방 기록을 사용합니다. 빈칸은 미기록(—)이며 기록된 0회와 구분합니다. 평균 분모는 해당 항목을 기록한 경기 수입니다.'+(paired?' 두 선수가 같은 경기·같은 팀으로 함께 출석한 경기만 포함합니다.':'')+'</p><div class="compare-stat-columns">'+[['sot','유효슛'],['keyPass','키패스'],['defSuccess','수비성공'],['saves','선방']].map(([k,label])=>{const a=stats[names[0]][k],b=stats[names[1]][k];return comparisonRow(label+' 합계',a.total,b.total,{unit:'회'})+comparisonRow(label+' 기록 경기',a.games,b.games,{unit:'경기'})+comparisonRow(label+' / 기록 경기',a.perGame,b.perGame,{decimals:2});}).join('')+'</div></section>';
 }
 function analysisPlayerIdentity(players,year){
   return '<div class="compare-players">'+players.map((p,i)=>'<div class="compare-player '+(i?'other':'base')+'"><span class="compare-role">'+(i?'상대 선수':'기준 선수')+'</span>'+playerFaceChip(p.name,true,year)+'<p>'+esc(teamDisplayName(p.stat.mainTeam||p.roster.team||'소속 미등록'))+' · '+esc(p.roster.pos||'포지션 미등록')+'</p></div>').join('')+'</div>';
@@ -247,7 +263,7 @@ function coupleAnalysisHtml(data){
     '<p class="detail-note">베스트 커플과 같은 계산식입니다. 동행 비율과 본인 득점을 각 선수 기준으로 계산하므로 두 점수는 다를 수 있습니다.</p>'+
     '<div class="couple-score-grid">'+data.players.map(coupleScoreCard).join('')+'</div>'+
     '<section class="detail-section"><h3>커플점수 구성 비교</h3><p class="detail-note">전체 출석경기 득점은 위 조회기간의 전체 출석경기 기준입니다. 같은 팀 동행 득점은 경기일에 적용되는 팀스쿼드와 시작일을 확인하여 두 선수가 같은 경기·같은 팀으로 함께 출석한 경기만 합산하며, 상대팀으로 만난 경기와 단독 출석경기는 제외합니다. 승률·득점 기여는 동행 경기로 계산하고, 동행 비율의 분모는 맞대결을 포함한 전체 출석 경기입니다.</p><div class="compare-stat-columns">'+rows+'</div></section>'+
-    '<section class="detail-section couple-formula">'+newRecordMethodHtml()+'<h3>기본 점수 계산 기준</h3><ol><li><b>승률 기여, 최대 50점</b> = 동행 승률(%) × 0.5</li><li><b>동행 비율 기여, 최대 30점</b> = (동행 경기 ÷ 해당 선수의 전체 출석 경기 × 100) × 0.3</li><li><b>득점 기여, 최대 20점</b> = min(동행 경기당 본인 득점 × 33, 100) × 0.2</li></ol><p class="detail-note">기존 베스트 커플과 동일하게 승률·동행 비율은 소수 첫째 자리, 경기당 득점은 소수 둘째 자리 값을 사용합니다. 기본 기여 점수와 신규 보너스를 합하고 100점 상한 적용 후 정수로 반올림합니다.</p></section>'+comparisonPairHtml(data);
+    '<section class="detail-section couple-formula">'+newRecordMethodHtml()+'<h3>기본 점수 계산 기준</h3><ol><li><b>승률 기여, 최대 50점</b> = 동행 승률(%) × 0.5</li><li><b>동행 비율 기여, 최대 30점</b> = (동행 경기 ÷ 해당 선수의 전체 출석 경기 × 100) × 0.3</li><li><b>득점 기여, 최대 20점</b> = min(동행 경기당 본인 득점 × 33, 100) × 0.2</li></ol><p class="detail-note">기존 베스트 커플과 동일하게 승률·동행 비율은 소수 첫째 자리, 경기당 득점은 소수 둘째 자리 값을 사용합니다. 기본 기여 점수와 신규 보너스를 합하고 100점 상한 적용 후 정수로 반올림합니다.</p></section>'+analysisEventsHtml(data,true)+comparisonPairHtml(data);
 }
 function openCoupleAnalysis(a=chemSel,b=chemOther,trigger){
   const names=chemPlayers();
@@ -256,7 +272,7 @@ function openCoupleAnalysis(a=chemSel,b=chemOther,trigger){
 }
 function applyCoupleAnalysis(swap=false){
   const left=document.querySelector('#coupleBasePlayer'),right=document.querySelector('#coupleOtherPlayer');
-  const a=swap?right.value:left.value,b=swap?left.value:right.value;
+  const a=analysisTypedName(swap?right.value:left.value),b=analysisTypedName(swap?left.value:right.value);
   if(openCoupleAnalysis(a,b)){
     chemSel=a;chemOther=b;renderChem();
     document.querySelector(swap?'#coupleSwap':'#coupleRefresh').focus({preventScroll:true});
@@ -279,7 +295,7 @@ function openPlayerComparison(a=chemSel,b=chemOther,trigger){
 }
 function applyPlayerComparison(swap=false){
   const left=document.querySelector('#compareBasePlayer'),right=document.querySelector('#compareOtherPlayer');
-  const a=swap?right.value:left.value,b=swap?left.value:right.value;
+  const a=analysisTypedName(swap?right.value:left.value),b=analysisTypedName(swap?left.value:right.value);
   if(openPlayerComparison(a,b)){
     chemSel=a;chemOther=b;renderChem();
     document.querySelector(swap?'#compareSwap':'#compareRefresh').focus({preventScroll:true});
@@ -328,3 +344,5 @@ ggfcDetailDialog.addEventListener('close',()=>{
   // close 이벤트가 늦게 전달되어도 다시 연 창의 상태를 지우지 않는다.
   if(!ggfcDetailDialog.open)restoreGGFCDetailState();
 });
+
+document.addEventListener('keydown',e=>{if(e.key!=='Enter'||e.isComposing||!e.target.matches('[data-analysis-input]'))return;e.preventDefault();if(e.target.dataset.analysisInput==='couple')applyCoupleAnalysis();else applyPlayerComparison();});
