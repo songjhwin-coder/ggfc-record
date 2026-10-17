@@ -3315,3 +3315,16 @@ body:not(.admin-mode) #v-team{display:none!important}
 @media(max-width:700px){.at-podium .at-avatar{width:69.6px;height:69.6px}.at-podium-card{padding-top:46px}.at-rank{font-size:10px;gap:3px;left:7px}.at-rank .at-medal{width:20px;height:25px}.tm-page-tabs{gap:8px}.tm-page-tabs button{padding:14px 12px}.tm-page-tabs b{font-size:14px}.tm-page-tabs small{font-size:11px;line-height:1.6}.lh-hero{padding:24px 20px}.lh-hero h3{font-size:22px;line-height:1.5}.lh-hero-mark{display:none}.lh-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.lh-kpis>div{padding:16px}.lh-kpis strong{font-size:22px}.lh-term>header{padding:16px}.lh-members{padding:13px;gap:9px}.lh-person{flex-direction:column;text-align:center;padding:15px 8px;gap:10px}.lh-person .at-avatar{width:72px;height:72px}.lh-person h4{font-size:16px}}
 
 .best5-reasons{align-items:start}
+
+/* V3.25.22: recent rating gain leaders, using existing career card skins. */
+.ability-top-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin-top:18px;align-items:stretch;justify-items:stretch}
+.ability-top-player{min-width:0;border:1px solid var(--line,#d4e1ee);border-radius:14px;padding:14px 8px;background:var(--card,#fff);display:flex;flex-direction:column;align-items:center}
+.ability-top-player>header{display:flex;gap:9px;align-items:center;width:100%;margin-bottom:14px;color:var(--text,#14395a)}
+.atr-rank{display:grid;place-items:center;background:#107d73;color:white;border-radius:50%;width:30px;height:30px;flex:none;font-weight:800}
+.ability-top-player header strong{font-size:14px}.ability-top-player header small{display:block;font-size:11px;margin-top:4px}
+.atr-chart{width:100%;max-width:250px;text-align:center;margin-top:8px}.atr-chart svg{width:100%;height:auto;display:block}.atr-chart text{font-size:10px;fill:var(--text,#14395a);font-weight:700}
+.atr-grid{fill:none;stroke:var(--line,#d4e1ee);stroke-width:1}.atr-before{fill:#8193a312;stroke:#8193a3;stroke-width:1.5;stroke-dasharray:4 3}.atr-after{fill:#13a69630;stroke:#087e73;stroke-width:2}
+.atr-chart p{margin:0 0 6px;display:flex;justify-content:center;gap:18px;font-size:11px}.atr-chart small{font-size:10px;color:var(--muted,#617487)}.atr-key:before{content:'';display:inline-block;width:16px;margin-right:5px;border-top:2px solid #087e73;vertical-align:middle}.atr-key.before:before{border-top:2px dashed #8193a3}
+@media(max-width:620px){.ability-top-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:0}.ability-top-player{padding:10px 3px}.ability-top-player header{gap:4px}.atr-rank{width:22px;height:22px;font-size:12px}.ability-top-player header strong{font-size:11px}.ability-top-player header small{font-size:9px}.atr-chart{margin-top:0}.ability-top-risers{padding:12px!important}}
+
+@media(min-width:621px){.ability-top-grid .ts-player-card-button,.ability-top-grid .ts-player-card-stage{width:180px}.ability-top-grid .ts-player-card-stage{height:278px}.ability-top-grid .ggfc-player-card{transform:scale(.45)!important}}
