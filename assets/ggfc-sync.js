@@ -4,8 +4,8 @@ const GGFC = (() => {
   let loginBusy=false;
   const state={ready:false,serverSeen:false,connected:false,authorized:false,user:null,revision:0,dirty:false,saving:false,busy:0,conflict:false,serial:0,latest:null,hasLatest:false,error:'',status:'공유 기록을 확인하고 있습니다…',savedAt:null,authGeneration:0};
   let database=null,auth=null,dataRef=null,readTimer=null,saveTimer=null,editLease=false;
-  const hasSettingsDraft=()=>!!((typeof careerFrameSettingsDirty!=='undefined'&&careerFrameSettingsDirty)||(typeof analysisStartSettingsDirty!=='undefined'&&analysisStartSettingsDirty)||(typeof cardDesignSettingsDirty!=='undefined'&&cardDesignSettingsDirty));
-  function discardSettingsDraft(){if(typeof cardDesignSettingsDirty!=='undefined')cardDesignSettingsDirty=false;if(typeof careerFrameSettingsDirty!=='undefined')careerFrameSettingsDirty=false;if(typeof analysisStartSettingsDirty!=='undefined')analysisStartSettingsDirty=false;}
+  const hasSettingsDraft=()=>!!((typeof menuSettingsDirty!=='undefined'&&menuSettingsDirty)||(typeof careerFrameSettingsDirty!=='undefined'&&careerFrameSettingsDirty)||(typeof analysisStartSettingsDirty!=='undefined'&&analysisStartSettingsDirty)||(typeof cardDesignSettingsDirty!=='undefined'&&cardDesignSettingsDirty));
+  function discardSettingsDraft(){if(typeof menuSettingsDirty!=='undefined'){menuSettingsDirty=false;menuEditorDraft=null;}if(typeof cardDesignSettingsDirty!=='undefined')cardDesignSettingsDirty=false;if(typeof careerFrameSettingsDirty!=='undefined')careerFrameSettingsDirty=false;if(typeof analysisStartSettingsDirty!=='undefined')analysisStartSettingsDirty=false;}
   const fields=['matches','attendance','goals','saves','fouls','moms','specials','roster','soccerbee'];
   const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
   const copy=v=>JSON.parse(JSON.stringify(v));
@@ -100,6 +100,7 @@ const GGFC = (() => {
     const date=state.savedAt?new Date(state.savedAt):null;
     const stamp=date&&!isNaN(date.getTime())?date.toLocaleString('ko-KR'):'';
     status(raw?'공유 기록 최신 상태'+(stamp?' · '+stamp:''):'등록된 공유 기록이 없습니다. 관리자에게 기록 등록을 요청해 주세요.');
+    if(first&&typeof applyMenuStartup==='function')applyMenuStartup();
     renderAll();
     if(typeof playerCardHistoryState!=='undefined' && playerCardHistoryState && document.querySelector('#playerCardMask')?.classList.contains('on')){
       openPlayerCard(playerCardHistoryState.player,playerCardHistoryState.query);
@@ -267,7 +268,7 @@ const GGFC = (() => {
   }
 
   function installGuards(){
-    const selectors='#v-abilityguide,#v-data,#v-rep,#v-abilitycfg,#seasonPanel,#soccerbeeUpload,#soccerbeeClear,#abilitySystemEnabled,#logoFilepick,#filepick,#soccerbeeFilepick';
+    const selectors='#v-menus,#v-abilityguide,#v-data,#v-rep,#v-abilitycfg,#seasonPanel,#soccerbeeUpload,#soccerbeeClear,#abilitySystemEnabled,#logoFilepick,#filepick,#soccerbeeFilepick';
     for(const type of ['click','change','input'])document.addEventListener(type,e=>{
       if(e.target.closest?.(selectors) && !canEdit()){
         e.preventDefault();e.stopImmediatePropagation();toast('관리자 인증과 서버 연결을 확인해 주세요.');
@@ -315,6 +316,7 @@ const GGFC = (() => {
         const form=readCareerFrameSettingsForm();draft.settings.careerFrameThresholds=form.thresholds;draft.settings.careerFrameRequiredCounts=form.counts;draft.settings.careerFrameDesigns=form.designs;
       }
       if(typeof analysisStartSettingsDirty!=='undefined'&&analysisStartSettingsDirty)draft.settings.analysisStartPlayer=document.getElementById('analysisStartPlayer').value;
+      if(typeof menuSettingsDirty!=='undefined'&&menuSettingsDirty&&menuEditorDraft){draft.settings.menuNavigation=JSON.parse(JSON.stringify(menuEditorDraft.navigation));draft.settings.menuVisibility={...menuEditorDraft.visibility};}
       download('GGFC_미저장기록.json',JSON.stringify(draft,null,2),'application/json');
     };
     const config=window.GGFC_CONFIG||{};

@@ -4940,6 +4940,7 @@ function renderDashboardQueryRankings(info){
     [{t:"#"},{t:"팀"},{t:"대표승점",n:1},{t:"누적 참석수",n:1},{t:"누적 승점",n:1},{t:"득실차",n:1}],
     teams.map((t,i)=>['<span class="rank'+(teamPointRanks[i]<=3?' top':'')+'">'+teamPointRanks[i]+'</span>',teamChip(t.team),'<span class="rep-point'+(t.representative?'':' zero')+'">'+t.representative+'</span>','<b>'+t.attendance+'</b>','<b>'+t.pts+'</b>',(t.gf-t.ga>0?'+':'')+(t.gf-t.ga)])
   );
+  ['dashScorers','dashAttendanceRank','dashTeamPointRank'].forEach(id=>document.querySelectorAll('#'+id+' .team-chip').forEach(chip=>{const name=chip.textContent.trim();chip.setAttribute('aria-label',name);chip.title=name;}));
   renderRepresentativePointBreakdown(ranking.detail,scope);
 
   const playerPointsAll=players.filter(p=>p.att>0).sort((a,b)=>b.pts-a.pts || b.att-a.att || b.g-a.g || compareNamesKo(a.player,b.player));
@@ -6322,59 +6323,128 @@ const ADMIN_MENUS=[
  {id:'menus',label:'메뉴 공개 관리'}, {id:'abilityguide',label:'능력치 운영 안내'},
  {id:'abilitycfg',label:'선수 능력치 설정'}, {id:'rep',label:'대표승점 설정'}, {id:'data',label:'데이터 관리'}
 ];
+let menuEditorDraft=null,menuSettingsDirty=false;
+let menuStartupPending=true;
+const menuInitialRoute=location.hash.slice(1);
 function canonicalMenu(v){return v==='cal'?'dash':v==='tactics'?'maker':v;}
+function normalizedMenuOrder(raw,items){
+ const known=items.map(m=>m.id),seen=new Set();
+ return [...(Array.isArray(raw)?raw:[]),...known].filter(id=>known.includes(id)&&!seen.has(id)&&seen.add(id));
+}
+function navigationSettings(raw=DB.settings?.menuNavigation){
+ raw=raw&&typeof raw==='object'?raw:{};const labels={};
+ for(const m of [...MEMBER_MENUS,...ADMIN_MENUS]){const s=raw.labels?.[m.id];if(typeof s==='string'&&s.trim())labels[m.id]=s.trim().slice(0,32);}
+ return {order:normalizedMenuOrder(raw.order,MEMBER_MENUS),adminOrder:normalizedMenuOrder(raw.adminOrder,ADMIN_MENUS),labels,home:MEMBER_MENUS.some(m=>m.id===raw.home)?raw.home:'dash'};
+}
+function menuLabel(id,nav=navigationSettings()){id=canonicalMenu(id);return nav.labels[id]||[...MEMBER_MENUS,...ADMIN_MENUS].find(m=>m.id===id)?.label||'GGFC';}
+function orderedMenus(adminGroup=false,nav=navigationSettings()){const list=adminGroup?ADMIN_MENUS:MEMBER_MENUS;return (adminGroup?nav.adminOrder:nav.order).map(id=>list.find(m=>m.id===id));}
 function memberMenuOpen(id){
  const item=MEMBER_MENUS.find(m=>m.id===canonicalMenu(id));if(!item)return false;
- const setting=DB.settings?.menuVisibility?.[item.id];
- return typeof setting==='boolean'?setting:item.defaultOpen!==false;
+ const setting=DB.settings?.menuVisibility?.[item.id];return typeof setting==='boolean'?setting:item.defaultOpen!==false;
 }
-function menuViewAllowed(v){
- const id=canonicalMenu(v),known=MEMBER_MENUS.some(m=>m.id===id)||ADMIN_MENUS.some(m=>m.id===id);
- return known&&(admin||memberMenuOpen(id));
+function menuViewAllowed(v){const id=canonicalMenu(v);return [...MEMBER_MENUS,...ADMIN_MENUS].some(m=>m.id===id)&&(admin||memberMenuOpen(id));}
+function menuFallbackView(){
+ const nav=navigationSettings();if(memberMenuOpen(nav.home))return nav.home;
+ return orderedMenus(false,nav).find(m=>memberMenuOpen(m.id))?.id||(admin?'dash':'closed');
 }
-function menuFallbackView(){return admin||memberMenuOpen('dash')?'dash':MEMBER_MENUS.find(m=>memberMenuOpen(m.id))?.id||'closed';}
 function resolveMenuView(v){return menuViewAllowed(v)?(v==='cal'?'dash':v):menuFallbackView();}
+function applyMenuStartup(){
+ if(!menuStartupPending)return;menuStartupPending=false;
+ activeView=resolveMenuView(menuInitialRoute||menuFallbackView());history.replaceState(null,'','#'+activeView);
+}
 function syncMenuNavigation(){
- document.querySelectorAll('#tabs button[data-v], [data-mobile-tab]').forEach(el=>{
-  const id=el.dataset.v||el.dataset.mobileTab,allowed=menuViewAllowed(id);
-  el.hidden=!allowed;
-  // Legacy administrator buttons have an inline display:none in the HTML.
-  if(el.dataset.v)el.style.display=allowed?'':'none';
+ const nav=navigationSettings(),tabs=document.getElementById('tabs'),adminTitle=tabs.querySelector('.sidebar-admin-title'),mobile=document.querySelector('.member-nav'),more=document.getElementById('memberMore');
+ orderedMenus(false,nav).forEach(m=>{
+  const b=tabs.querySelector('[data-v="'+m.id+'"]');if(b)tabs.insertBefore(b,adminTitle);
+  const mb=mobile.querySelector('[data-mobile-tab="'+m.id+'"]');if(mb)mobile.insertBefore(mb,more);
  });
- document.querySelectorAll('section.view').forEach(el=>{const v=el.id.replace(/^v-/,'');el.hidden=v==='closed'?false:!menuViewAllowed(v);});
- const general=document.querySelector('.sidebar-group-title');if(general)general.hidden=!admin&&!MEMBER_MENUS.some(m=>m.id!=='team'&&memberMenuOpen(m.id));
- const temp=document.querySelector('.sidebar-temp-title');if(temp)temp.hidden=!menuViewAllowed('team');
- const adminTitle=document.querySelector('.sidebar-admin-title');if(adminTitle)adminTitle.hidden=!admin;
+ orderedMenus(true,nav).forEach(m=>{const b=tabs.querySelector('[data-v="'+m.id+'"]');if(b)tabs.append(b);});
+ document.querySelectorAll('#tabs button[data-v], [data-mobile-tab]').forEach(el=>{
+  const id=el.dataset.v||el.dataset.mobileTab,allowed=menuViewAllowed(id);el.hidden=!allowed;
+  if(el.dataset.v){el.style.display=allowed?'':'none';el.querySelector('span:last-child').textContent=menuLabel(id,nav);}
+  else{let label=el.querySelector('.nav-menu-label');if(!label){const icon=el.querySelector('span')?.cloneNode(true);label=document.createElement('span');label.className='nav-menu-label';el.replaceChildren(...(icon?[icon]:[]),label);}label.textContent=menuLabel(id,nav);}
+  el.title=menuLabel(id,nav);
+ });
+ document.querySelectorAll('section.view').forEach(el=>{
+  const v=el.id.replace(/^v-/,''),id=canonicalMenu(v);el.hidden=v==='closed'?false:!menuViewAllowed(v);
+  const heading=el.querySelector('.head h2');if(heading){if(!heading.dataset.originalHeading)heading.dataset.originalHeading=heading.textContent;heading.textContent=nav.labels[id]||heading.dataset.originalHeading;}
+ });
+ const general=tabs.querySelector('.sidebar-group-title');if(general)general.hidden=!admin&&!MEMBER_MENUS.some(m=>memberMenuOpen(m.id));
+ const temp=tabs.querySelector('.sidebar-temp-title');if(temp)temp.hidden=true;
+ adminTitle.hidden=!admin;
+ const top=document.getElementById('topMenuNav');if(top){
+  top.innerHTML=orderedMenus(false,nav).filter(m=>menuViewAllowed(m.id)).map(m=>'<button type="button" data-top-menu="'+m.id+'" title="'+esc(menuLabel(m.id,nav))+'">'+esc(menuLabel(m.id,nav))+'</button>').join('');
+ }
+ const brand=document.getElementById('topBrandName');if(brand)brand.textContent=displaySettings().brandTitle||'GGFC';
+ const logo=document.getElementById('topBrandLogo'),source=document.getElementById('headerBrandLogo');if(logo&&source)logo.innerHTML=source.innerHTML;
 }
 function selectMenuView(v){
  const id=canonicalMenu(v);
- document.querySelectorAll('#tabs button[data-v]').forEach(el=>{const active=el.dataset.v===id;el.classList.toggle('on',active);if(active)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');});
- document.querySelectorAll('section.view').forEach(el=>el.classList.toggle('on',el.id==='v-'+id));
- syncMobileNav(id);
+ document.querySelectorAll('#tabs button[data-v], [data-top-menu]').forEach(el=>{const active=(el.dataset.v||el.dataset.topMenu)===id;el.classList.toggle('on',active);if(active)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');});
+ document.querySelectorAll('section.view').forEach(el=>el.classList.toggle('on',el.id==='v-'+id));syncMobileNav(id);
+ const top=document.getElementById('topMenuNav'),button=top?.querySelector('.on');if(button&&(button.offsetLeft<top.scrollLeft||button.offsetLeft+button.offsetWidth>top.scrollLeft+top.clientWidth))top.scrollLeft=Math.max(0,button.offsetLeft-(top.clientWidth-button.offsetWidth)/2);
+}
+function menuDraft(){
+ if(!menuEditorDraft)menuEditorDraft={navigation:navigationSettings(),visibility:Object.fromEntries(MEMBER_MENUS.map(m=>[m.id,memberMenuOpen(m.id)]))};return menuEditorDraft;
+}
+function menuDraftChanged(){menuSettingsDirty=true;const status=document.getElementById('menuEditorStatus');if(status){status.textContent='저장 전 변경';status.classList.add('changed');}GGFC.refreshUI();}
+function menuDraftHomeOptions(){
+ const d=menuDraft(),options=orderedMenus(false,d.navigation).filter(m=>d.visibility[m.id]);
+ if(!options.some(m=>m.id===d.navigation.home))d.navigation.home=options[0]?.id||'';
+ const select=document.getElementById('menuHomeSelect');if(select){select.disabled=!options.length;select.innerHTML=options.length?options.map(m=>'<option value="'+m.id+'"'+(m.id===d.navigation.home?' selected':'')+'>'+esc(menuLabel(m.id,d.navigation))+'</option>').join(''):'<option value="">공개된 메뉴 없음</option>';}
 }
 function renderMenuManagement(){
  const root=document.getElementById('menuManagement');if(!root||!admin)return;
- root.innerHTML='<div class="menu-publish-summary"><strong>'+MEMBER_MENUS.filter(m=>memberMenuOpen(m.id)).length+' / '+MEMBER_MENUS.length+' 메뉴 공개</strong><span>토글을 변경하면 자동으로 공유 저장합니다. 상단의 공유 저장 완료 표시를 확인하세요.</span></div><div class="menu-publish-list">'+MEMBER_MENUS.map(m=>{
-  const open=memberMenuOpen(m.id);
-  return '<div class="menu-publish-row"><div><strong>'+esc(m.label)+'</strong><small>'+(m.id==='team'?'Temp 메뉴 · 기본 비공개':m.id==='maker'?'자동 팀 편성 · 전술 라인업 함께 적용':'PC · 모바일 공통 적용')+'</small></div><button type="button" class="menu-publish-toggle" role="switch" aria-checked="'+open+'" aria-label="'+esc(m.label)+' 열람모드 공개" data-menu-publish="'+m.id+'"><span class="menu-publish-track" aria-hidden="true"><i></i></span><span>'+(open?'공개':'비공개')+'</span></button></div>';
- }).join('')+'</div><details class="menu-publish-locked"><summary>항상 관리자 전용인 메뉴</summary><p>운영 및 설정 메뉴는 열람모드에 공개되지 않습니다.</p><ul>'+ADMIN_MENUS.map(m=>'<li>'+esc(m.label)+' <span>관리자 전용</span></li>').join('')+'</ul></details>';
- root.querySelectorAll('[data-menu-publish]').forEach(button=>button.onclick=()=>setMemberMenuOpen(button.dataset.menuPublish,!memberMenuOpen(button.dataset.menuPublish)));
+ if(!menuSettingsDirty)menuEditorDraft=null;const d=menuDraft();
+ const row=(m,i,isAdmin)=>'<div class="menu-editor-row" data-menu-row="'+m.id+'" data-menu-group="'+(isAdmin?'admin':'member')+'"><button class="menu-drag" type="button" aria-label="'+esc(menuLabel(m.id,d.navigation))+' 순서 이동" title="잡아서 위아래로 이동">⠿</button><div class="menu-editor-name"><label for="menuName-'+m.id+'">'+esc(m.label)+'</label><input id="menuName-'+m.id+'" data-menu-name="'+m.id+'" value="'+esc(menuLabel(m.id,d.navigation))+'" maxlength="32" aria-label="'+esc(m.label)+' 메뉴 이름"></div><div class="menu-move-buttons"><button type="button" data-menu-move="'+m.id+'" data-direction="-1" aria-label="'+esc(m.label)+' 위로">↑</button><button type="button" data-menu-move="'+m.id+'" data-direction="1" aria-label="'+esc(m.label)+' 아래로">↓</button></div>'+(isAdmin?'<span class="menu-locked-badge">관리자 전용</span>':'<button type="button" class="menu-publish-toggle" role="switch" aria-checked="'+d.visibility[m.id]+'" aria-label="'+esc(m.label)+' 열람모드 공개" data-menu-publish="'+m.id+'"><span class="menu-publish-track" aria-hidden="true"><i></i></span><span>'+(d.visibility[m.id]?'공개':'비공개')+'</span></button>')+'</div>';
+ root.innerHTML='<div class="menu-publish-summary"><strong id="menuOpenCount">'+MEMBER_MENUS.filter(m=>d.visibility[m.id]).length+' / '+MEMBER_MENUS.length+' 메뉴 공개</strong><span>손잡이를 드래그하거나 ↑↓로 순서를 이동하세요. 이름·첫 화면·공개 여부를 편집한 뒤 설정 저장을 누르세요.</span></div><label class="menu-home-label" for="menuHomeSelect">접속 시 첫 화면<select id="menuHomeSelect"></select><small>메뉴 주소 없이 접속할 때 적용됩니다. 지정한 메뉴가 비공개이면 공개된 메뉴 중 첫 번째 메뉴를 엽니다.</small></label><div class="menu-editor-list" data-menu-list="member">'+orderedMenus(false,d.navigation).map((m,i)=>row(m,i,false)).join('')+'</div><details class="menu-publish-locked"><summary>관리자 전용 메뉴 · 이름과 순서 변경</summary><p>이 메뉴는 공개되지 않습니다. 관리자 메뉴 안에서 순서를 변경할 수 있습니다.</p><div class="menu-editor-list" data-menu-list="admin">'+orderedMenus(true,d.navigation).map((m,i)=>row(m,i,true)).join('')+'</div></details><div class="menu-editor-actions"><span id="menuEditorStatus" role="status">'+(menuSettingsDirty?'저장 전 변경':'현재 저장된 설정')+'</span><div><button type="button" class="btn" id="menuEditorReload">저장값 다시 불러오기</button><button type="button" class="btn primary" id="menuEditorSave">설정 저장</button></div></div><p class="note" id="menuMoveAnnouncement" aria-live="polite"></p>';
+ menuDraftHomeOptions();bindMenuEditor();
 }
 function setMemberMenuOpen(id,open){
  if(!admin||!GGFC.canEdit()){toast('관리자 인증과 서버 연결을 확인해 주세요.');return false;}
  if(!MEMBER_MENUS.some(m=>m.id===id)||typeof open!=='boolean')return false;
- DB.settings=DB.settings||{};
- const old=DB.settings.menuVisibility;
- // Preserve only recognized boolean settings. Missing legacy values keep defaults.
- DB.settings.menuVisibility=Object.fromEntries(MEMBER_MENUS.map(m=>[m.id,m.id===id?open:memberMenuOpen(m.id)]));
- try{save();}catch(e){if(old===undefined)delete DB.settings.menuVisibility;else DB.settings.menuVisibility=old;toast('메뉴 설정을 저장하지 못했습니다. 연결 상태를 확인해 주세요.');return false;}
- syncMenuNavigation();renderMenuManagement();
- document.querySelector('[data-menu-publish="'+id+'"]')?.focus({preventScroll:true});
- toast('메뉴 '+(open?'공개':'비공개')+' 변경 · 공유 저장 중');return true;
+ const d=menuDraft();d.visibility[id]=open;menuDraftChanged();menuDraftHomeOptions();
+ const b=document.querySelector('[data-menu-publish="'+id+'"]');if(b){b.setAttribute('aria-checked',String(open));b.lastElementChild.textContent=open?'공개':'비공개';}
+ document.getElementById('menuOpenCount').textContent=MEMBER_MENUS.filter(m=>d.visibility[m.id]).length+' / '+MEMBER_MENUS.length+' 메뉴 공개';return true;
 }
-function renderMenusClosed(){
- const root=document.getElementById('closedMenuMessage');if(root)root.textContent='현재 공개된 메뉴가 없습니다. 메뉴가 공개되면 여기에서 확인하실 수 있습니다.';
+function moveMenuDraft(id,beforeId=null,direction=0){
+ if(!admin||!GGFC.canEdit())return false;const d=menuDraft(),key=ADMIN_MENUS.some(m=>m.id===id)?'adminOrder':'order',order=d.navigation[key],from=order.indexOf(id);if(from<0)return false;
+ let to=direction?Math.max(0,Math.min(order.length-1,from+direction)):beforeId===null?order.length:order.indexOf(beforeId);if(to<0||to===from)return false;
+ order.splice(from,1);if(!direction&&to>from)to--;order.splice(to,0,id);menuDraftChanged();
+ const list=document.querySelector('[data-menu-list="'+(key==='order'?'member':'admin')+'"]');order.forEach(x=>{const r=list?.querySelector('[data-menu-row="'+x+'"]');if(r)list.append(r);});
+ menuDraftHomeOptions();const note=document.getElementById('menuMoveAnnouncement');if(note)note.textContent=menuLabel(id,d.navigation)+' · '+(order.indexOf(id)+1)+'번째로 이동 · 저장 전';return true;
 }
+function saveMenuEditor(){
+ if(!admin||!GGFC.canEdit()){toast('관리자 인증과 서버 연결을 확인해 주세요.');return false;}
+ const d=menuDraft();for(const m of [...MEMBER_MENUS,...ADMIN_MENUS]){const label=d.navigation.labels[m.id];if(label!==undefined&&(!label.trim()||label.trim().length>32)){toast('메뉴 이름은 공백을 제외하고 1~32자로 입력하세요.');document.getElementById('menuName-'+m.id)?.focus();return false;}}
+ const nav=navigationSettings(d.navigation);if(!MEMBER_MENUS.some(m=>d.visibility[m.id]))nav.home='';
+ const previous={navigation:DB.settings.menuNavigation,visibility:DB.settings.menuVisibility};DB.settings.menuNavigation=nav;DB.settings.menuVisibility={...d.visibility};
+ try{save();}catch(e){if(previous.navigation===undefined)delete DB.settings.menuNavigation;else DB.settings.menuNavigation=previous.navigation;if(previous.visibility===undefined)delete DB.settings.menuVisibility;else DB.settings.menuVisibility=previous.visibility;toast('저장하지 못했습니다. 다시 시도하세요.');return false;}
+ menuSettingsDirty=false;menuEditorDraft=null;syncMenuNavigation();selectMenuView(activeView);renderMenuManagement();toast('메뉴 설정 적용 · 공유 저장 중');return true;
+}
+function bindMenuEditor(){
+ const root=document.getElementById('menuManagement');
+ root.querySelectorAll('[data-menu-name]').forEach(input=>input.oninput=()=>{if(!admin)return;menuDraft().navigation.labels[input.dataset.menuName]=input.value;menuDraftChanged();menuDraftHomeOptions();});
+ root.querySelectorAll('[data-menu-publish]').forEach(b=>b.onclick=()=>setMemberMenuOpen(b.dataset.menuPublish,!menuDraft().visibility[b.dataset.menuPublish]));
+ root.querySelectorAll('[data-menu-move]').forEach(b=>b.onclick=()=>{moveMenuDraft(b.dataset.menuMove,null,Number(b.dataset.direction));b.focus({preventScroll:true});});
+ document.getElementById('menuHomeSelect').onchange=e=>{menuDraft().navigation.home=e.target.value;menuDraftChanged();};
+ document.getElementById('menuEditorSave').onclick=saveMenuEditor;
+ document.getElementById('menuEditorReload').onclick=()=>{menuSettingsDirty=false;menuEditorDraft=null;renderMenuManagement();GGFC.refreshUI();};
+ root.querySelectorAll('.menu-drag').forEach(handle=>{
+  let drag=null;
+  handle.onpointerdown=e=>{if(e.button!==0||!admin||!GGFC.canEdit())return;e.preventDefault();handle.focus({preventScroll:true});const row=handle.closest('[data-menu-row]');drag={id:row.dataset.menuRow,group:row.dataset.menuGroup,y:e.clientY,moved:false};handle.setPointerCapture(e.pointerId);row.classList.add('menu-dragging');};
+  handle.onpointermove=e=>{if(!drag)return;if(Math.abs(e.clientY-drag.y)>5)drag.moved=true;if(!drag.moved)return;
+   const row=document.elementFromPoint(e.clientX,e.clientY)?.closest('[data-menu-row]');root.querySelectorAll('.menu-drop-target').forEach(r=>r.classList.remove('menu-drop-target'));if(row&&row.dataset.menuGroup===drag.group&&row.dataset.menuRow!==drag.id)row.classList.add('menu-drop-target');
+   if(e.clientY<150)window.scrollBy(0,-18);else if(e.clientY>innerHeight-100)window.scrollBy(0,18);
+  };
+  handle.onpointerup=e=>{if(!drag)return;const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('[data-menu-row]');if(drag.moved&&target&&target.dataset.menuGroup===drag.group&&target.dataset.menuRow!==drag.id){const siblings=[...target.parentElement.querySelectorAll('[data-menu-row]')],next=e.clientY>target.getBoundingClientRect().top+target.offsetHeight/2?siblings[siblings.indexOf(target)+1]?.dataset.menuRow||null:target.dataset.menuRow;moveMenuDraft(drag.id,next);}
+   root.querySelectorAll('.menu-dragging,.menu-drop-target').forEach(r=>r.classList.remove('menu-dragging','menu-drop-target'));drag=null;
+  };
+  handle.onpointercancel=()=>{drag=null;root.querySelectorAll('.menu-dragging,.menu-drop-target').forEach(r=>r.classList.remove('menu-dragging','menu-drop-target'));};
+  handle.onkeydown=e=>{if(e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();moveMenuDraft(handle.closest('[data-menu-row]').dataset.menuRow,null,e.key==='ArrowUp'?-1:1);handle.focus({preventScroll:true});}};
+ });
+}
+function renderMenusClosed(){const root=document.getElementById('closedMenuMessage');if(root)root.textContent='현재 공개된 메뉴가 없습니다. 메뉴가 공개되면 여기에서 확인하실 수 있습니다.';}
 
 function renderActiveView(v){
   const next=resolveMenuView(v);
@@ -6408,7 +6478,8 @@ document.addEventListener("click",e=>{
 });
 $("#playerCardClose").onclick=closePlayerCard;
 document.addEventListener("keydown",e=>{ if(e.key==="Escape" && $("#playerCardMask").classList.contains("on")) closePlayerCard(); });
-function goTab(v){
+function goTab(v,options={}){
+  if(!options.startup)menuStartupPending=false;
   const next=resolveMenuView(v);
   if(next!==v)history.replaceState(null,'','#'+next);
   syncMenuNavigation();selectMenuView(next);
@@ -7509,5 +7580,5 @@ function initRecordTableScrolling(){
 
 /* ---------- boot ---------- */
 load();setAdmin(false);renderAll();
-if(location.hash)goTab(location.hash.slice(1));
+if(location.hash)goTab(location.hash.slice(1),{startup:true});
 initMemberUI();initRecordTableScrolling();GGFC.start();

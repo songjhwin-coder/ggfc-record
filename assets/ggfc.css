@@ -3359,3 +3359,71 @@ body:not(.admin-mode) .view>.head>p,body:not(.admin-mode) .view>.insight-page-he
 .menu-closed{text-align:center;padding:60px 20px!important}.menu-closed p{line-height:1.8;color:#64748b}
 @media(max-width:820px){.menu-publish-list{grid-template-columns:1fr}.menu-publish-summary{align-items:flex-start;flex-direction:column;gap:8px}.menu-publish-row{padding:16px 0}.menu-publish-row strong{font-size:13px}}
 @media(prefers-reduced-motion:reduce){.menu-publish-track,.menu-publish-track i{transition:none}}
+
+/* V3.25.26 — top navigation, collapsible sidebar and menu editor. */
+:root{--ggfc-topbar-h:78px}
+.ggfc-topbar{position:fixed;inset:0 0 auto;z-index:20;height:var(--ggfc-topbar-h);display:flex;align-items:center;gap:24px;padding:0 24px 0 16px;box-sizing:border-box;background:#fff;border-bottom:1px solid #dce3ed;color:#061f44}
+.topbar-brand-row{display:flex;align-items:center;gap:20px;flex:none}
+.topbar-toggle{display:grid;place-items:center;flex:none;width:44px;height:44px;border:0;border-radius:50%;background:#f3f6fa;color:#092348;font-size:25px;cursor:pointer}
+.topbar-brand{display:flex;align-items:center;gap:10px;background:none;border:0;color:#092348;padding:0;cursor:pointer;font-family:inherit;font-size:25px;font-weight:900}
+#topBrandLogo{display:grid;place-items:center;width:43px;height:43px;overflow:hidden}
+#topBrandLogo :is(img,svg){display:block;max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain}
+.top-menu-nav{display:flex;align-items:stretch;gap:4px;flex:1;min-width:0;height:100%;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:#bac7d5 transparent}
+.top-menu-nav button{flex:none;display:flex;align-items:center;justify-content:center;max-width:240px;padding:8px 13px;border:0;border-bottom:3px solid transparent;background:none;color:#092348;line-height:1.3;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;overflow-wrap:anywhere}
+.top-menu-nav button.on{border-bottom-color:#e3264e;background:#f4f7fa}.top-menu-nav button:hover{background:#f4f7fa}
+.ggfc-topbar button:focus-visible{outline:3px solid #70a5ce;outline-offset:-3px}
+html:not(.ggfc-mobile) #ggfcSidebar{top:var(--ggfc-topbar-h);transition:transform .18s,visibility .18s}
+html:not(.ggfc-mobile) body>main{padding-top:calc(var(--ggfc-topbar-h) + 24px);padding-left:calc(var(--ggfc-sidebar-w) + 28px);transition:padding-left .18s}
+html:not(.ggfc-mobile) .sidebar-collapsed #ggfcSidebar{visibility:hidden;transform:translateX(-105%);pointer-events:none}
+html:not(.ggfc-mobile) .sidebar-collapsed>main{padding-left:28px}
+#sidebarClose{display:block;min-height:40px}
+.ggfc-mobile{--ggfc-topbar-h:100px}
+.ggfc-mobile .ggfc-topbar{height:100px;display:grid;grid-template-rows:54px 46px;gap:0;padding:0 12px}
+.ggfc-mobile .topbar-brand-row{gap:12px}.ggfc-mobile .topbar-brand{font-size:22px}.ggfc-mobile #topBrandLogo{width:32px;height:32px}
+.ggfc-mobile .top-menu-nav{width:100%;gap:2px}.ggfc-mobile .top-menu-nav button{font-size:13px;padding:6px 10px;max-width:190px;white-space:nowrap}
+.ggfc-mobile body>#mainContent{padding-top:calc(var(--ggfc-topbar-h) + 16px)!important}
+.ggfc-mobile .member-nav button .nav-menu-label{font-size:10px;line-height:1.25;overflow-wrap:anywhere;max-width:100%}
+.menu-home-label{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:18px 0;color:#092348;font-size:14px;font-weight:700}
+.menu-home-label select{min-width:230px;max-width:100%;padding:10px;border:1px solid #ccd8e5;border-radius:5px;background:#fff;color:#092348;font:inherit}
+.menu-home-label small{flex-basis:100%;font-size:12px;font-weight:400;color:#64748b;line-height:1.6}
+.menu-editor-list{display:grid;gap:8px}
+.menu-editor-row{display:grid;grid-template-columns:38px minmax(0,1fr) 72px 100px;align-items:center;gap:14px;padding:12px 14px;background:#f8fafc;border:1px solid #dce3ed;border-radius:7px;min-width:0}
+.menu-drag{cursor:grab;touch-action:none;background:#edf2f7;border:0;border-radius:5px;width:36px;height:42px;color:#486580;font-size:26px;padding:0}
+.menu-drag:active{cursor:grabbing}.menu-dragging{opacity:.65;border-color:#198b7e}.menu-drop-target{border-top:3px solid #198b7e;background:#ebf8f4}
+.menu-editor-name{min-width:0}.menu-editor-name label{display:block;font-size:11px;color:#687d92;margin-bottom:5px}
+.menu-editor-name input{width:100%;box-sizing:border-box;border:1px solid #c8d4e0;border-radius:5px;padding:9px 10px;color:#092348;background:#fff;font:inherit;font-size:14px;min-width:0}
+.menu-move-buttons{display:flex;gap:4px}.menu-move-buttons button{width:34px;min-height:36px;padding:0;border:1px solid #d3dfe9;border-radius:5px;color:#405e7b;background:#fff;font-size:17px;cursor:pointer}
+.menu-locked-badge{font-size:11px;color:#687d92;text-align:center}
+.menu-editor-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;padding:15px;background:#eff5f9;border-radius:6px;position:sticky;bottom:12px;z-index:5;box-shadow:0 2px 10px #0923480d}
+.menu-editor-actions>div{display:flex;flex-wrap:wrap;gap:8px}.menu-editor-actions>span{font-size:12px;color:#536c82}.menu-editor-actions>span.changed{font-weight:800;color:#a15713}
+.menu-publish-locked .menu-editor-row{background:#f5f7fa}
+@media(max-width:820px){.menu-editor-row{grid-template-columns:32px minmax(0,1fr) 88px;gap:9px;padding:10px 8px}.menu-drag{grid-column:1;grid-row:1/3;width:30px}.menu-editor-name{grid-column:2/4}.menu-move-buttons{grid-column:2}.menu-editor-row .menu-publish-toggle,.menu-locked-badge{grid-column:3}.menu-editor-name input{font-size:16px}.menu-editor-actions{flex-wrap:wrap;bottom:85px;padding:10px}.menu-editor-actions>div{width:100%}.menu-editor-actions .btn{flex:1;padding:8px;font-size:12px}.menu-home-label select{width:100%;min-width:0}.menu-editor-row .menu-publish-toggle{min-width:80px;gap:5px}}
+@media(prefers-reduced-motion:reduce){html:not(.ggfc-mobile) #ggfcSidebar,html:not(.ggfc-mobile) body>main{transition:none}}
+@media print{.ggfc-topbar{display:none!important}body>main{padding-top:0!important}}
+
+/* Mobile ranking values share the individual ranking's 13px scale. */
+.ggfc-mobile #v-dash :is(#dashScorers,#dashAttendanceRank,#dashTeamPointRank,#dashPlayerPointRank) td{font-size:13px;line-height:1.5}
+.ggfc-mobile #v-dash :is(#dashScorers,#dashAttendanceRank,#dashTeamPointRank) :is(th,td){padding:9px 2px;word-break:normal;overflow-wrap:anywhere}
+.ggfc-mobile #v-dash :is(#dashScorers,#dashAttendanceRank,#dashTeamPointRank,#dashPlayerPointRank) th{font-size:12px;line-height:1.45}
+.ggfc-mobile #v-dash :is(#dashScorers,#dashAttendanceRank,#dashTeamPointRank) .team-chip{flex-direction:row;gap:0}
+.ggfc-mobile #v-dash :is(#dashScorers,#dashAttendanceRank,#dashTeamPointRank) .team-chip>span:not(.dot){display:none}
+.ggfc-mobile #v-dash :is(#dashScorers,#dashAttendanceRank,#dashTeamPointRank) .team-logo-sm{width:25px;height:25px;object-fit:contain}
+.ggfc-mobile #v-dash :is(#dashScorers,#dashAttendanceRank,#dashTeamPointRank,#dashPlayerPointRank) .rank{font-size:13px;width:22px;height:26px;padding:0;min-width:0}
+.ggfc-mobile #v-dash #dashTeamPointRank .rep-point{font-size:13px;line-height:1.5;padding:2px;min-width:0}
+.ggfc-mobile #v-dash #dashScorers :is(th,td):nth-child(1){width:9%}
+.ggfc-mobile #v-dash #dashScorers :is(th,td):nth-child(2){width:33%}
+.ggfc-mobile #v-dash #dashScorers :is(th,td):nth-child(3){width:14%}
+.ggfc-mobile #v-dash #dashScorers :is(th,td):nth-child(4),.ggfc-mobile #v-dash #dashScorers :is(th,td):nth-child(5){width:22%}
+.ggfc-mobile #v-dash #dashAttendanceRank :is(th,td):nth-child(1){width:8%}
+.ggfc-mobile #v-dash #dashAttendanceRank :is(th,td):nth-child(2){width:28%}
+.ggfc-mobile #v-dash #dashAttendanceRank :is(th,td):nth-child(3){width:12%}
+.ggfc-mobile #v-dash #dashAttendanceRank :is(th,td):nth-child(4),.ggfc-mobile #v-dash #dashAttendanceRank :is(th,td):nth-child(5){width:15%}
+.ggfc-mobile #v-dash #dashAttendanceRank :is(th,td):nth-child(6){width:22%}
+.ggfc-mobile #v-dash #dashTeamPointRank :is(th,td):nth-child(1){width:8%}
+.ggfc-mobile #v-dash #dashTeamPointRank :is(th,td):nth-child(2){width:14%}
+.ggfc-mobile #v-dash #dashTeamPointRank :is(th,td):nth-child(3){width:20%}
+.ggfc-mobile #v-dash #dashTeamPointRank :is(th,td):nth-child(4){width:22%}
+.ggfc-mobile #v-dash #dashTeamPointRank :is(th,td):nth-child(5){width:20%}
+.ggfc-mobile #v-dash #dashTeamPointRank :is(th,td):nth-child(6){width:16%}
+/* Keep touch dragging on the handle; other row areas retain normal scrolling. */
+.ggfc-mobile .menu-drag{touch-action:none}
