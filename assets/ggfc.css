@@ -3334,3 +3334,6 @@ body:not(.admin-mode) #v-team{display:none!important}
 @media(max-width:620px){.gr-controls{display:grid;grid-template-columns:1fr 1fr;gap:10px}.gr-controls label{min-width:0}.gr-controls select{width:100%;min-width:0;font-size:12px}}
 
 .ability-rule-grid>.card,.ability-rule-row>span{min-width:0}@media(max-width:620px){.ability-rule-row{grid-template-columns:1fr;gap:6px}.ability-rule-grid .tablewrap{max-width:100%}}
+
+/* V3.25.24 long-term form audit */
+.lf-badge{display:block;font-size:11px;line-height:1.6;padding:5px 8px;margin-top:5px;background:#eaf6f3;color:#166458;border-radius:7px;white-space:normal;min-width:140px}.lf-badge.risk{color:#92551c;background:#fff4df}.lf-panel{margin-top:12px;padding:12px;border:1px solid #d9e7eb;border-radius:12px;text-align:left;color:#173a52;background:#f8fbfd;font-size:12px;max-width:100%;box-sizing:border-box}.lf-panel p{line-height:1.6}.lf-panel details{margin-top:10px}.lf-panel .tablewrap{max-height:260px;overflow:auto}.lf-panel table{min-width:600px}.lf-method summary,.lf-panel summary{cursor:pointer;font-weight:700}.lf-method{font-size:12px;line-height:1.7;margin-top:14px;text-align:left;white-space:normal}.lf-stories{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.lf-stories article{border:1px solid #d9e7eb;border-radius:12px;padding:14px}.lf-stories .lf-badge{min-width:0}

@@ -1825,6 +1825,7 @@ const ABILITY_DEFAULTS={
   },
   /* 결석 Career 감점은 기존의 20%만 유지. 주된 하락은 FORM에서 처리 */
   absence:{pac:0,sho:-.004,pas:-.006,dri:-.008,def:-.006,phy:-.010},
+  longForm:{enabled:true,window:10,interval:4,warningThreshold:-1.5,slumpThreshold:-2.5,severeThreshold:-3.5,extremeThreshold:-4.5,slumpDrop:.20,severeDrop:.35,extremeDrop:.50,seasonCap:1.5,absenceFactor:.25,axisCap:.75,recoveryLevel:-1},
   form:{
     enabled:true,
     window:5,
@@ -2232,6 +2233,84 @@ function abilityFormFromRounds(rounds){
   const raw=attendanceBase+streakPenalty+performance, level=Math.max(-5,Math.min(5,Math.round(raw))), status=abilityFormStatus(level);
   return {level,raw,modifier:abilityFormModifier(level),growthMultiplier:abilityFormGrowthMultiplier(level),status,attendanceBase,streakPenalty,performance,recent,played,consecutive};
 }
+/* LONG FORM is derived on replay; no extra DB events or stored OVR deductions. */
+function longFormTimeline(rounds,forms,cfg){
+ const lf=cfg.longForm,window=lf.window,interval=lf.interval;
+ return rounds.map((r,i)=>{const recent=rounds.slice(Math.max(0,i-window+1),i+1),ready=recent.length===window;
+  const score=recent.reduce((s,x)=>s+Math.max(-5,Math.min(5,forms.get(x.date).raw)),0)/recent.length;
+  const known=recent.every(x=>!!x.expectedTeam),checkpoint=ready&&(i+1-window)%interval===0;
+  const rate=score<=lf.extremeThreshold?lf.extremeDrop:score<=lf.severeThreshold?lf.severeDrop:score<=lf.slumpThreshold?lf.slumpDrop:0;
+  const recovered=forms.get(r.date).level>=lf.recoveryLevel;
+  return {date:r.date,round:i+1,score,ready,known,checkpoint,rate,recovered,recent,nextCheck:!ready?window:(i+1-window)%interval===0?i+1+interval:i+1+interval-(i+1-window)%interval};
+ });
+}
+function longFormWeights(weights){
+ const out={},sum=Object.values(weights||{}).reduce((s,v)=>s+Math.max(0,num(v)),0);
+ for(const k of ['pac','sho','pas','dri','def','phy'])out[k]=sum?Math.max(0,num(weights[k]))/sum:1/6;return out;
+}
+function longFormDistribute(career,weights,scores,target,losses,cfg){
+ const keys=['sho','pas','dri','def','phy'],w=longFormWeights(weights);let remaining=Math.max(0,target),applied=0;
+ for(let pass=0;pass<6&&remaining>1e-10;pass++){
+  const eligible=keys.filter(k=>scores[k]>0&&w[k]>0&&career[k]>cfg.scoreMin+1e-10&&losses[k]<cfg.longForm.axisCap-1e-10);
+  const denom=eligible.reduce((s,k)=>s+w[k]*scores[k],0);if(!denom)break;
+  const proposed=remaining;let used=0;
+  for(const k of eligible){const delta=Math.min(proposed*scores[k]/denom,career[k]-cfg.scoreMin,cfg.longForm.axisCap-losses[k]);career[k]-=delta;losses[k]+=delta;used+=delta*w[k];}
+  applied+=used;remaining=Math.max(0,remaining-used);if(used<1e-10)break;
+ }
+ return applied;
+}
+function applyLongFormCheckpoint(career,weights,state,entry,rounds,index,cfg,absenceLedger){
+ const lf=cfg.longForm,year=entry.date.slice(0,4),zero={pac:0,sho:0,pas:0,dri:0,def:0,phy:0};
+ if(!lf.enabled||cfg.form.enabled===false||!entry.checkpoint)return;
+ const event={date:entry.date,round:entry.round,score:entry.score,requested:entry.rate,actual:0,losses:{...zero},absenceCredit:0,performanceTarget:0,absenceTarget:0,reason:''};
+ const remaining=Math.max(0,lf.seasonCap-(state.byYear[year]||0));
+ if(!entry.known)event.reason='소속팀 확인 필요';
+ else if(entry.recovered)event.reason='단기 FORM 회복 · 감점 중단';
+ else if(!entry.rate)event.reason=entry.score<=lf.warningThreshold?'경고 · 감점 기준 미달':'정상 · 감점 없음';
+ else if(remaining<=1e-10)event.reason='시즌 LONG FORM 한도 도달';
+ else{
+  const recent=entry.recent,absent=recent.filter(r=>!abilityRoundPlayed(r)),bad=recent.filter(r=>abilityRoundPlayed(r)&&abilityFormFromRounds([r]).performance<0);
+  const scores={sho:0,pas:0,dri:0,def:0,phy:0};
+  // Only existing negative outcomes are evidence. Positive new records protect their axis.
+  bad.forEach(r=>{if(r.l>r.w&&r.g===0&&!(r.sot>0))scores.sho++;if(r.l>r.w&&r.a===0&&!(r.keyPass>0))scores.pas++;if(r.f>0&&!(r.defSuccess>0)&&!(r.sv>0))scores.def+=r.f;});
+  event.performanceTarget=entry.rate*bad.length/lf.window;
+  event.absenceTarget=entry.rate*absent.length/lf.window*lf.absenceFactor;
+  event.absenceCredit=rounds.slice(Math.max(0,index-lf.interval+1),index+1).reduce((s,r)=>s+(absenceLedger[r.date]||0),0);
+  const attendanceBudget=Math.max(0,event.absenceTarget-event.absenceCredit);
+  const perf=longFormDistribute(career,weights,scores,Math.min(remaining,event.performanceTarget),event.losses,cfg);
+  const abs=longFormDistribute(career,weights,{sho:.5,pas:.5,dri:.5,def:.5,phy:1},Math.min(Math.max(0,remaining-perf),attendanceBudget),event.losses,cfg);
+  event.actual=perf+abs;state.byYear[year]=(state.byYear[year]||0)+event.actual;
+  event.reason=event.actual>1e-10?(perf>0?'장기 부진 조정':'장기 결석 완화 조정'):'중복 감점 공제 또는 조정 근거 부족';
+  for(const k of Object.keys(zero))state.skills[k]+=event.losses[k];
+ }
+ state.events.push(event);
+}
+function longFormStatus(record){
+ const l=record.longForm;if(!l||!l.enabled)return 'LONG FORM 꺼짐';
+ if(!l.ready)return '분석중 '+l.count+'/'+l.window+'R';
+ if(!l.known)return '소속팀 확인 필요';
+ if(l.recovered)return l.score<=l.warningThreshold?'FORM 회복 · 추가 감소 중단':'안정';
+ if(l.yearLoss>=l.seasonCap-1e-9)return '시즌 하락 한도 도달';
+ if(l.score<=l.slumpThreshold)return 'BASE 하락 위험';
+ if(l.score<=l.warningThreshold)return '장기 부진 주의';return '안정';
+}
+function longFormBadge(record){
+ const l=record.longForm;if(!l)return '';return '<span class="lf-badge '+(l.ready&&l.score<=l.slumpThreshold&&!l.recovered?'risk':'')+'">LONG FORM <b>'+(l.enabled&&l.ready?l.score.toFixed(2):'—')+'</b> · '+esc(longFormStatus(record))+' · 시즌 조정 −'+l.yearLoss.toFixed(3)+'</span>';
+}
+function longFormMethodHtml(){
+ const c=abilityConfig().longForm;
+ return '<details class="lf-method"><summary>LONG FORM · BASE 하락 계산 기준</summary><p>최근 '+c.window+'R에서 매 R 계산된 5R FORM 원점수(−5~+5 제한)의 산술평균입니다. 한 R은 한 경기일이며 경기 수나 달력 주 수가 아닙니다. '+c.window+'R 이전은 분석중, 첫 판정은 '+c.window+'R, 이후 '+c.interval+'R마다 판정합니다. 출석·경기 결과를 포함한 기존 FORM을 평균하므로 출석의 영향이 큽니다. 출전만 계속한 선수는 기본 FORM 설정에서 장기 슬럼프에 드물게 해당합니다.</p><p>'+c.warningThreshold+' 이하는 경고. '+c.slumpThreshold+' 이하 기본 −'+c.slumpDrop+', '+c.severeThreshold+' 이하 −'+c.severeDrop+', '+c.extremeThreshold+' 이하 −'+c.extremeDrop+' OVR 상당량입니다. 실제 감점은 아래 근거 비중과 제한 때문에 더 작을 수 있습니다. 현재 FORM이 '+c.recoveryLevel+' 이상이면 추가 감소를 즉시 중단합니다.</p><p>경기력 몫=기본 감소량×최근 '+c.window+'R 내 음수 경기성과가 있는 출전 R 비율. 패가 승보다 많고 득점·유효슛이 없는 R은 SHO, 도움·키패스가 없는 R은 PAS, 개인파울이 있으면서 수비성공·선방이 없는 R은 DEF 조정 근거입니다. 양수 신규 기록은 해당 축을 보호합니다. 미측정 기록 자체를 실패로 간주하지 않으며 DRI·PHY는 경기력 조정 대상에서 제외합니다.</p><p>결석 몫=기본 감소량×최근 '+c.window+'R 결석 비율×'+Math.round(c.absenceFactor*100)+'%. 직전 '+c.interval+'R에 이미 적용된 결석 BASE 감점의 OVR 상당량을 이 몫에서 공제합니다. 남은 양은 PHY 우선(가중 1), SHO·PAS·DRI·DEF(각 0.5)로 분배합니다. 활동 기록이 확인된 R은 결석 몫에서 제외합니다.</p><p>PAC는 절대 조정하지 않습니다. 능력치 감소량 δ는 Σ(정규화 포지션 가중치×δ)=목표 OVR 감소량이 되도록 배분하되 축당 1회 최대 '+c.axisCap+'점과 능력치 최솟값을 지킵니다. 배분 불가능한 잔량은 차감하지 않습니다. 각 판정 연도의 포지션 가중치로 계산합니다.</p><p>연간 시즌(1~12월) LONG FORM 직접 감소 합계 최대 '+c.seasonCap+' OVR. 반기 변경으로 한도를 초기화하지 않습니다. 기존 결석·파울·SoccerBee 하락은 별도입니다. 회복 시 이미 감소한 BASE를 자동 복원하지 않으며 이후 정상 성장으로 회복합니다.</p><p>원본 DB에 감점을 덧쓰지 않고 날짜순 재계산하므로 조회·재업로드로 중복 차감되지 않습니다. 기본 ON이며 기존 기록에도 소급 계산합니다. 관리자 설정 OFF 또는 요율 변경 시 전체 이력이 해당 설정으로 재계산됩니다. 설정 변경 전 JSON 백업을 권장합니다.</p></details>';
+}
+function longFormCardHtml(record){
+ const l=record?.longForm;if(!l)return '';
+ return '<div class="lf-panel">'+longFormBadge(record)+'<p>BASE '+record.baseOvrRaw.toFixed(2)+' · CURRENT '+record.currentOvr+' · FORM '+record.form.level+' · 다음 판정 '+l.nextCheck+'R / 현재 '+l.count+'R</p><details><summary>BASE 조정 이력 · '+l.events.filter(e=>e.actual>0).length+'회</summary><div class="tablewrap">'+tbl(['날짜','R','LONG FORM','OVR 상당 감소','축별 감소','판정'].map(t=>({t})),l.events.slice().reverse().map(e=>[esc(e.date),e.round,e.score.toFixed(2),e.actual.toFixed(3),esc(Object.entries(e.losses).filter(([,v])=>v>0).map(([k,v])=>k.toUpperCase()+' −'+v.toFixed(3)).join(' · ')||'—'),esc(e.reason)]))+'</div></details>'+longFormMethodHtml()+'</div>';
+}
+function renderLongFormStories(date){
+ const root=$('#longFormStories');if(!root)return;const year=String(date||'').slice(0,4);if(!/^\d{4}$/.test(year)){root.innerHTML='';return;}
+ const half=abilityHalfForDate(year,date),info=abilityHalfInfo(year,half),rows=abilitySystemEnabled()?abilityPlayers(info).map(player=>{const r=playerAbilityRecordAtDate(player,year,half,date,true),event=r.longForm.events.find(e=>e.date===date&&e.actual>1e-10);return {player,r,event};}).filter(x=>x.event):[];
+ root.innerHTML='<div class="sec-t">SLUMP ALERT · '+esc(date)+'</div><p class="note">능력치는 전체 대회 기준입니다. 아래 감소량은 LONG FORM 직접 조정이며 당일 성장까지 포함한 순변화와 다릅니다.</p>'+(rows.length?'<div class="lf-stories">'+rows.sort((a,b)=>b.event.actual-a.event.actual).map(x=>'<article><strong>📉 '+playerCardLink(x.player,esc(x.player),{asOf:date,allCompetitions:true})+'</strong><p>'+esc(x.event.reason)+' · BASE −'+x.event.actual.toFixed(3)+' OVR 상당</p>'+longFormBadge(x.r)+'</article>').join('')+'</div>':'<p class="empty">이 경기일에 LONG FORM으로 추가 하락한 선수가 없습니다.</p>');
+}
+
 function playerAbilityRoundRows(player,info){
   const list=abilityMatches(info).filter(m=>normDate(m.date)<abilityCareerStartDate()||playerEligibleOn(player,m.date)), ids=new Set(list.map(m=>m.id)), M={}; list.forEach(m=>M[m.id]=m); const rounds={};
   const get=(d)=>rounds[d]||(rounds[d]={date:d,att:false,g:0,a:0,sv:0,sot:0,keyPass:0,defSuccess:0,f:0,mom:0,w:0,d:0,l:0,pts:0,games:new Set(),expectedTeam:''});
@@ -2311,6 +2390,9 @@ function playerAbilityRecordAtDate(player,year,half,cutoffDate,includeCarry=true
   const measurementBase={...start},matchGrowth=Object.fromEntries(keys.map(k=>[k,0])),retestGrowth={...matchGrowth},clampAdjustment={...matchGrowth};
   const career=Object.assign({},start), careerGrowth={pac:0,sho:0,pas:0,dri:0,def:0,phy:0};
   const allRounds=playerAbilityAllRoundRows(player,effectiveCutoff), sbRows=sbInitial.retests||[];
+  const roundForms=new Map(allRounds.map((r,i)=>[r.date,abilityFormFromRounds(allRounds.slice(0,i+1))]));
+  const longTimeline=longFormTimeline(allRounds,roundForms,cfg),longByDate=new Map(longTimeline.map(x=>[x.date,x])),longState={byYear:{},events:[],skills:Object.fromEntries(keys.map(k=>[k,0]))},absenceLedger={};
+
   const events=[];
   allRounds.forEach(R=>events.push({date:R.date,type:'round',R}));
   sbRows.forEach((r,i)=>events.push({date:normDate(r.date),type:'sb',row:r,index:i}));
@@ -2339,7 +2421,7 @@ function playerAbilityRecordAtDate(player,year,half,cutoffDate,includeCarry=true
       dri:R.att?num(att.dri):0,
       def:saveGrowth(R.sv)+teamRecordGrowth(R.defSuccess,'defSuccess')+(R.att?num(att.def):0),
       phy:R.att?num(att.phy):0
-    }, pm=pointMultiplier(R.pts), roundForm=abilityFormFromRounds(allRounds.filter(x=>x.date<=R.date)), fm=roundForm.growthMultiplier;
+    }, pm=pointMultiplier(R.pts), roundForm=roundForms.get(R.date), fm=roundForm.growthMultiplier;
     keys.forEach(k=>{const inc=add[k]*pm*abilityGrowthRate(career[k])*fm;career[k]+=inc;careerGrowth[k]+=inc;});
     /* MOM은 희소 이벤트 보상(+0.09)이며 FORM 성장배율도 함께 적용한다. */
     const mb=(cfg.mom&&cfg.mom.firstSeasonBonus)||{};
@@ -2348,11 +2430,15 @@ function playerAbilityRecordAtDate(player,year,half,cutoffDate,includeCarry=true
     const fp=foulPenalty(R.f); if(fp){career.def+=fp;careerGrowth.def+=fp;}
     /* V3.17 결석 감점: Career 시작일 이후 소속팀이 실제 경기한 Round에서 미출전한 경우 첫 Round부터 Career에 직접 1회 감점. */
     if(!abilityRoundPlayed(R)){
-      const ap=cfg.absence||{};
+      const ap=cfg.absence||{},aw=longFormWeights(playerOvrProfile(player,R.date.slice(0,4),cfg).weights||{});
+      absenceLedger[R.date]=keys.filter(k=>k!=='pac').reduce((sum,k)=>sum+Math.min(Math.max(0,career[k]-cfg.scoreMin),Math.max(0,-num(ap[k])))*aw[k],0);
       keys.forEach(k=>{const dec=Math.min(0,num(ap[k])); if(dec){career[k]+=dec;careerGrowth[k]+=dec;}});
     }
     keys.forEach(k=>career[k]=Math.max(num(cfg.scoreMin),Math.min(num(cfg.scoreMax),career[k])));
     keys.forEach(k=>matchGrowth[k]+=career[k]-beforeEvent[k]);
+    const beforeLong={...career},entry=longByDate.get(R.date);
+    applyLongFormCheckpoint(career,playerOvrProfile(player,R.date.slice(0,4),cfg).weights||{},longState,entry,allRounds,entry.round-1,cfg,absenceLedger);
+    keys.forEach(k=>careerGrowth[k]+=career[k]-beforeLong[k]);
   });
 
   /* V3.24: BASE는 Career 원점수, FORM은 최근 5R 상태, CURRENT는 BASE OVR에만 FORM 보정을 적용한다. */
@@ -2367,7 +2453,8 @@ function playerAbilityRecordAtDate(player,year,half,cutoffDate,includeCarry=true
   const careerAbsenceRounds=allRounds.filter(r=>!abilityRoundPlayed(r)).length, absenceCfg=cfg.absence||{}, absencePenalty={};
   keys.forEach(k=>absencePenalty[k]=careerAbsenceRounds*Math.min(0,num(absenceCfg[k])));
   const growth={}; keys.forEach(k=>growth[k]=num(careerGrowth[k]));
-  return {player,team,info,base:start,start,initialSkills,soccerBeeInitial:sbInitial,growth,careerGrowth,career,absence:{rounds:periodAbsenceRounds,careerRounds:careerAbsenceRounds,penalty:absencePenalty},rounds,careerRounds:allRounds,summary,measurementBase,matchGrowth,retestGrowth,clampAdjustment,measurementDates,partialMeasurement:Object.keys(lastMeasured).length<4,measured,provisional:Object.keys(lastMeasured).length<4,sbDate,cutoffDate:effectiveCutoff,mode:'BASE+FORM',benchmark:null,benchmarkEligible:false,benchmarkStats:null,benchmarkRecord:null,position:ovrProfile.position||ovrProfile.rawPosition||'',ovrWeightSource:ovrProfile.source,display:displayVals,pac:vals.pac,sho:vals.sho,pas:vals.pas,dri:vals.dri,def:vals.def,phy:vals.phy,ovr,ovrRaw:baseOvrRaw,baseOvr,baseOvrRaw,currentOvr,currentOvrRaw,form,ovrProgress,nextBaseOvr};
+  const lastLong=longTimeline.at(-1),longForm={enabled:cfg.longForm.enabled&&cfg.form.enabled!==false,score:lastLong?.score??0,ready:lastLong?.ready||false,known:lastLong?.known||false,recovered:lastLong?.recovered||false,count:allRounds.length,window:cfg.longForm.window,nextCheck:lastLong?.nextCheck||cfg.longForm.window,yearLoss:longState.byYear[effectiveCutoff.slice(0,4)]||0,seasonCap:cfg.longForm.seasonCap,slumpThreshold:cfg.longForm.slumpThreshold,warningThreshold:cfg.longForm.warningThreshold,events:longState.events,byYear:longState.byYear,skills:longState.skills};
+  return {longForm,player,team,info,base:start,start,initialSkills,soccerBeeInitial:sbInitial,growth,careerGrowth,career,absence:{rounds:periodAbsenceRounds,careerRounds:careerAbsenceRounds,penalty:absencePenalty},rounds,careerRounds:allRounds,summary,measurementBase,matchGrowth,retestGrowth,clampAdjustment,measurementDates,partialMeasurement:Object.keys(lastMeasured).length<4,measured,provisional:Object.keys(lastMeasured).length<4,sbDate,cutoffDate:effectiveCutoff,mode:'BASE+FORM',benchmark:null,benchmarkEligible:false,benchmarkStats:null,benchmarkRecord:null,position:ovrProfile.position||ovrProfile.rawPosition||'',ovrWeightSource:ovrProfile.source,display:displayVals,pac:vals.pac,sho:vals.sho,pas:vals.pas,dri:vals.dri,def:vals.def,phy:vals.phy,ovr,ovrRaw:baseOvrRaw,baseOvr,baseOvrRaw,currentOvr,currentOvrRaw,form,ovrProgress,nextBaseOvr};
 }
 function playerAbilityRecord(player,year,half,includeCarry=true){return playerAbilityRecordAtDate(player,year,half,'',includeCarry);}
 function abilityHalfGameDates(info){
@@ -2516,6 +2603,7 @@ function renderAbilityRules(){
  row('MOM / 파울','MOM: '+values(c.mom.firstSeasonBonus)+' × 실제 MOM 횟수 × FORM 성장 배율.<br>개인파울 → DEF 직접 감점: '+steps(c.foulPenaltySteps)+'<br>추가 파울은 팀파울에만 합산합니다. 키퍼실점과 K열 승점삭감은 능력치·FORM을 직접 감점하지 않습니다.')+
  row('FORM / 표시','최근 '+f.window+'R 상태를 −5~+5로 산정합니다. BASE 성장 배율과 CURRENT OVR에 적용합니다. 개별 능력치·BASE OVR은 내림, CURRENT OVR은 포지션 가중 BASE 원점수 + FORM 보정 후 반올림. 점수 범위 '+c.scoreMin+'~'+c.scoreMax+'.')+
  '<details><summary>FORM 단계별 OVR 보정·성장 배율</summary>'+table(['단계','OVR 보정','성장 배율'],Object.keys(f.ovrModifier).sort((a,b)=>a-b).map(k=>[k,f.ovrModifier[k],f.growthMultiplier[k]]))+'</details></div>';
+ $('#abilityGrowthRules').insertAdjacentHTML('beforeend',longFormMethodHtml());
  $('#abilitySoccerbeeRules').innerHTML='<div class="ability-rule-list">'+row('업로드 / 적용일','관리자가 업로드한 엑셀 전체로 측정 DB를 교체합니다. 삭제된 행은 재업로드 시 제거합니다. 선수·날짜·경기순번으로 구분하며 선수 시작일과 조회 기준일을 적용합니다.')+
  row('같은 날 여러 경기','최고속도는 최댓값, 횟수·거리는 합계, 그 외 지표는 출전시간 가중평균입니다. 모든 출전시간이 유효하지 않으면 평균 지표는 단순평균을 사용합니다. 일부 경기의 횟수·거리가 빠지면 해당 일자의 합계 항목은 미측정 처리합니다.')+
  row('시간 / 거리','스프린트/10분 = 횟수 ÷ 출전시간 × 10.<br>스프린트거리/10분 = 거리(m) ÷ 출전시간 × 10.<br>SPM 미입력 시 횟수÷분, DPM 미입력 시 거리(km)×1000÷분으로 보완합니다. 시간만 길다고 감점하지 않으며 같은 거리·횟수라면 분당 강도는 낮아집니다.')+
@@ -2544,7 +2632,7 @@ function renderAbilityGuide(){
  const entries=(o,label=k=>k)=>Object.entries(o||{}).map(([k,v])=>[esc(label(k)),esc(v)]);
  const steps=(name,rows)=>table(['조건','적용값'],(rows||[]).map(r=>[name+' '+r.min+' 이상',r.value]));
  const keys=['pac','sho','pas','dri','def','phy'];
- root.innerHTML=section('적용 시스템 구성','<div class="ability-guide-flow"><div>선수명단<br>이름·시작일·포지션</div><div>SoccerBee<br>경기별 측정 → 일자 합산 → 초기 PAC·DRI·DEF·PHY</div><div>경기기록<br>득점·도움·출석·선방·파울·MOM</div><div>Career BASE<br>성장·결석·재측정 변화 누적</div><div>FORM<br>최근 '+f.window+'R 상태</div><div>CURRENT OVR<br>포지션 가중 BASE + FORM 보정</div></div><p>시작일 이전 기록과 조회 기준일 이후 기록은 제외합니다. 화면의 반기와 시즌은 조회 범위이며 Career는 설정된 시작 연도부터 누적합니다. 카드 장식 등급은 별도 Career Achievement 규칙입니다.</p>')+
+ root.innerHTML=section('LONG FORM · BASE 하락',longFormMethodHtml())+section('적용 시스템 구성','<div class="ability-guide-flow"><div>선수명단<br>이름·시작일·포지션</div><div>SoccerBee<br>경기별 측정 → 일자 합산 → 초기 PAC·DRI·DEF·PHY</div><div>경기기록<br>득점·도움·출석·선방·파울·MOM</div><div>Career BASE<br>성장·결석·재측정 변화 누적</div><div>FORM<br>최근 '+f.window+'R 상태</div><div>CURRENT OVR<br>포지션 가중 BASE + FORM 보정</div></div><p>시작일 이전 기록과 조회 기준일 이후 기록은 제외합니다. 화면의 반기와 시즌은 조회 범위이며 Career는 설정된 시작 연도부터 누적합니다. 카드 장식 등급은 별도 Career Achievement 규칙입니다.</p>')+
  section('팀별 기록지 · 팀명 연결','<p>날짜·라운드·경기번호·팀명·이름을 경기기록의 실제 출전에 연결합니다. 팀명·팀·소속팀 열을 인식하고 입력 팀과 실제 출전 팀이 다르면 계산에서 제외합니다. 팀명이 없는 구양식은 실제 출전 팀이 유일할 때만 연결합니다. 양수 활동 기록과 유일한 경기·팀 연결이 확인되면 출석 누락 상태로 활동을 인정하되 명단 출석 가산은 보류합니다. 같은 키의 중복 행은 한 번만 읽고 값이 다르면 업로드를 중단합니다. 연결되지 않은 행은 아래 확인 목록에 보존하며 능력치에 반영하지 않습니다.</p><p>빈칸은 미기록, 0은 기록한 결과 0회입니다. 신규 기록이 없던 과거 경기에 감점을 만들지 않습니다. 선방은 같은 경기·팀·선수의 팀별 기록지 입력값을 우선하고 경기기록 선방과 합산하지 않습니다. 팀별 기록지 선방이 빈칸이면 기존 선방을 사용합니다.</p>'+table(['기록','능력','1회 기본 가산','하루 기본 상한'],[['유효슛','SHO',c.teamRecords.sot.rate,c.teamRecords.sot.cap],['키패스','PAS',c.teamRecords.keyPass.rate,c.teamRecords.keyPass.cap],['수비성공','DEF',c.teamRecords.defSuccess.rate,c.teamRecords.defSuccess.cap],['선방','DEF','기존 선방 구간표','기존 선방 구간표']])+'<p>신규 기록 기본 가산 = min(하루 횟수 × 1회 가산, 하루 상한). 기존 기록·출석 가산에 더한 뒤 승점 배율 × 현재 능력 구간 배율 × FORM 성장 배율을 적용합니다. 상한은 이 배율 적용 전 값입니다. 유효슛·키패스에는 골·도움을 별도로 빼지 않으며 기존 골·도움 보상과 함께 소폭 반영합니다. 신규 지표는 FORM에 직접 중복 가산하지 않습니다. 사커비 초기 평가 비중은 유지합니다. 모든 가산과 상한은 관리자 능력치 설정에서 변경할 수 있습니다.</p>'+teamRecordAuditHtml()+goalkeeperAuditHtml()+newRecordMethodHtml())+
  section('리그·집계 기준','<p>경기일 이전 또는 당일의 최신 팀스쿼드 그룹을 적용합니다. 슈퍼×슈퍼=슈퍼리그, 챌린지×챌린지=챌린지리그, 서로 다른 그룹=인터리그입니다. 컵대회 등 다른 대회명은 유지합니다.</p><p>선수 경기수는 경기ID별 출전 1회, 참석일수는 날짜별 1회입니다. 팀 누적 참석수는 날짜·팀·선수 조합을 한 번 셉니다. 출석률 분모는 조회기간의 당시 소속팀 경기 및 실제 출전 경기이며 팀 이동과 참가 시작일을 반영합니다. 개인 득점에서 자책골·베네핏은 제외하며 팀 득점은 원본 점수를 유지합니다.</p>')+
  section('업로드와 경기순번','<p>Excel 재업로드 시 사커비 기록은 해당 파일 내용으로 교체합니다. 파일에서 삭제한 측정은 함께 제거됩니다. 날짜 + 선수 + 경기순번으로 식별하며, 같은 날짜에 번호가 있는 기록과 번호 없는 구형 기록이 함께 있으면 번호 없는 기록은 중복 합산하지 않습니다.</p><p>같은 날 여러 경기: 횟수·거리는 합계, 최고속도는 최댓값, 나머지 지표는 출전시간 가중평균입니다. 출전시간 누락 시 평균 지표는 단순평균을 사용하고 10분 환산 횟수·거리는 평가에서 제외합니다. 출전시간과 거리를 입력하면 각각 분과 km로 보존합니다. 빠진 값은 0으로 간주하지 않습니다.</p>')+
@@ -2586,6 +2674,9 @@ function renderAbilityConfig(){
     '<div class="ability-config-card"><div class="ability-config-title"><div><h3>Round 승점 성장 배율</h3><p>1Round 최대 4경기 기준</p></div></div><div style="overflow-x:auto"><table class="ability-config-table"><thead><tr><th>승점</th>'+c.pointMultipliers.map(x=>'<th>'+num(x.min)+'+</th>').join('')+'</tr></thead><tbody><tr><td>배율</td>'+c.pointMultipliers.map((x,i)=>'<td>'+abilityCfgInput('pointMultipliers.'+i+'.value',num(x.value),'0.01','0')+'</td>').join('')+'</tr><tr><td>최소 승점</td>'+c.pointMultipliers.map((x,i)=>'<td>'+abilityCfgInput('pointMultipliers.'+i+'.min',num(x.min),'1','0','12')+'</td>').join('')+'</tr></tbody></table></div></div>'+ 
     '<div class="ability-config-card full"><div class="ability-config-title"><div><h3>현재 장기 능력치별 성장률</h3><p>60 미만 135% · 60~69 130% · 70~79 120% · 80~84 100% · 85~89 80% · 90~94 50% · 95+ 25%</p></div></div><div style="overflow-x:auto"><table class="ability-config-table"><thead><tr>'+c.growthRates.slice().sort((a,b)=>num(a.min)-num(b.min)).map(x=>'<th>≥ '+num(x.min)+'</th>').join('')+'</tr></thead><tbody><tr>'+c.growthRates.slice().sort((a,b)=>num(a.min)-num(b.min)).map(x=>{const i=c.growthRates.indexOf(x);return '<td>'+abilityCfgInput('growthRates.'+i+'.value',Math.round(num(x.value)*100),'1','0','300')+'<small>%</small></td>';}).join('')+'</tr><tr>'+c.growthRates.slice().sort((a,b)=>num(a.min)-num(b.min)).map(x=>{const i=c.growthRates.indexOf(x);return '<td>'+abilityCfgInput('growthRates.'+i+'.min',num(x.min),'1','0','999')+'</td>';}).join('')+'</tr></tbody></table></div></div>'+
     '<div class="ability-config-card full"><div class="ability-config-title"><div><h3>결석 1Round BASE 감점</h3><p>기존 Career 감점의 20%만 유지합니다. 결석의 주된 영향은 최근 5R FORM 하락으로 처리합니다.</p></div></div><div class="ability-config-fields">'+statKeys.map(k=>abilityCfgField(statLbl[k],'absence.'+k,num(ap[k]),'0.01','-2','0')).join('')+'</div></div>'+ 
+    '<div class="ability-config-card full"><h3>LONG FORM · BASE 하락</h3><p>기존 기록부터 날짜순 재계산합니다. 5R FORM과 독립된 장기 판정이며, PAC는 제외합니다. 시즌 한도는 LONG FORM 직접 감소만 제한합니다.</p><div class="ability-config-fields"><label>사용 여부<select data-ability-cfg="longForm.enabled"><option value="1"'+(c.longForm.enabled?' selected':'')+'>ON · 적용</option><option value="0"'+(!c.longForm.enabled?' selected':'')+'>OFF · 기존 BASE</option></select></label>'+[
+ ['LONG FORM 표본 R','window',10,30,1],['판정 간격 R','interval',1,20,1],['경고 기준','warningThreshold',-5,0,.1],['슬럼프 기준','slumpThreshold',-5,0,.1],['심한 슬럼프 기준','severeThreshold',-5,0,.1],['극심한 슬럼프 기준','extremeThreshold',-5,0,.1],['슬럼프 OVR 감소','slumpDrop',0,2,.01],['심한 슬럼프 OVR 감소','severeDrop',0,2,.01],['극심한 슬럼프 OVR 감소','extremeDrop',0,2,.01],['연간 OVR 하락 한도','seasonCap',0,5,.1],['결석 반영률(0~1)','absenceFactor',0,1,.05],['축당 1회 최대 감소','axisCap',0,2,.05],['감점 중단 FORM 단계','recoveryLevel',-2,0,1]
+ ].map(([label,key,min,max,step])=>abilityCfgField(label,'longForm.'+key,c.longForm[key],String(step),String(min),String(max))).join('')+'</div>'+longFormMethodHtml()+'</div>'+ 
     '<div class="ability-config-card full"><div class="ability-config-title"><div><h3>FORM · CURRENT OVR</h3><p>최근 5R · 출석/연속결석/골/도움/선방/MOM/파울/팀결과 · BASE에는 직접 합산하지 않음</p></div></div><div class="ability-config-fields"><label>FORM 범위 <b>-5 ~ +5</b></label><label>CURRENT 최대 보정 <b>+3.0 / -5.0</b></label><label>BASE 성장 배율 <b>×0.85 ~ ×1.10</b></label><label>최근 가중치 <b>35 / 25 / 20 / 12 / 8%</b></label></div></div>'+'<div class="ability-config-card full"><div class="ability-config-title"><div><h3>포지션별 OVR 가중치</h3><p>선수명단의 포지션을 해당 시즌 연도 기준으로 읽어 PV / AL / FS / GR 가중치를 자동 적용합니다. 포지션이 없거나 인식되지 않을 때만 아래 공통 fallback을 사용합니다.</p></div></div><div class="ability-config-fields">'+statKeys.map(k=>abilityCfgField('Fallback '+statLbl[k],'ovrWeights.'+k,num(c.ovrWeights[k]),'0.1','0')).join('')+'</div></div>'+ 
     ['PV','AL','FS','GR'].map(pos=>positionOvrCard(pos,(c.positionOvrWeights||{})[pos])).join('')+ 
     
@@ -2595,7 +2686,7 @@ function renderAbilityConfig(){
     '<div class="ability-config-card full"><div class="ability-config-title"><div><h3>SoccerBee 공통 지표 점수</h3><p>각 지표의 5개 원본 기준값에 대응하는 절대점수 · 기준 사이 값은 선형보간</p></div></div><div style="overflow-x:auto"><table class="ability-config-table"><thead><tr>'+(c.soccerbee.scorePoints||[]).map((x,i)=>'<th>단계 '+(i+1)+'</th>').join('')+'</tr></thead><tbody><tr>'+(c.soccerbee.scorePoints||[]).map((x,i)=>'<td>'+abilityCfgInput('soccerbee.scorePoints.'+i,num(x),'1','0','100')+'</td>').join('')+'</tr></tbody></table></div></div>'+
     Object.entries(c.soccerbee.criteria||{}).map(([k,v])=>criteriaCard(k,v)).join('')+
     weightCard('pac',c.soccerbee.weights.pac)+weightCard('dri',c.soccerbee.weights.dri)+weightCard('def',c.soccerbee.weights.def)+weightCard('phy',c.soccerbee.weights.phy)+
-    '</div><div class="ability-config-actions"><div class="left"><span class="ability-config-badge" id="abilityCfgStatus">현재 설정값</span><br>입력 후 <b>설정 저장</b>을 눌러야 적용됩니다. 변경값은 JSON 백업에도 저장됩니다.</div><div class="right"><button class="btn" type="button" id="abilityCfgReload">저장값 다시 불러오기</button><button class="btn" type="button" id="abilityCfgReset">V3.24 기본값 복원</button><button class="btn primary" type="button" id="abilityCfgSave">능력치 설정 저장</button></div></div>';
+    '</div><div class="ability-config-actions"><div class="left"><span class="ability-config-badge" id="abilityCfgStatus">현재 설정값</span><br>입력 후 <b>설정 저장</b>을 눌러야 적용됩니다. 변경값은 JSON 백업에도 저장됩니다.</div><div class="right"><button class="btn" type="button" id="abilityCfgReload">저장값 다시 불러오기</button><button class="btn" type="button" id="abilityCfgReset">V3.25.24 기본값 복원</button><button class="btn primary" type="button" id="abilityCfgSave">능력치 설정 저장</button></div></div>';
   bindAbilityConfigEvents();
 }
 function setByPath(obj,path,value){
@@ -2606,11 +2697,19 @@ function readAbilityConfigForm(){
   $$('[data-ability-cfg]').forEach(el=>{
     const path=el.dataset.abilityCfg; let v=num(el.value);
     if(/^growthRates\.\d+\.value$/.test(path) || /^soccerbee\.weights\./.test(path) || /^positionOvrWeights\./.test(path) || path==='soccerbee.retestMultiplier') v/=100;
+    if(path==='longForm.enabled')v=el.value==='1';
     setByPath(cfg,path,v);
   });
   return cfg;
 }
 function validateAbilityConfig(cfg){
+  const lf=cfg.longForm;
+  if(!lf||typeof lf.enabled!=='boolean')return 'LONG FORM 사용 여부를 확인하세요.';
+  for(const [key,min,max] of [['window',10,30],['interval',1,20],['warningThreshold',-5,0],['slumpThreshold',-5,0],['severeThreshold',-5,0],['extremeThreshold',-5,0],['slumpDrop',0,2],['severeDrop',0,2],['extremeDrop',0,2],['seasonCap',0,5],['absenceFactor',0,1],['axisCap',0,2],['recoveryLevel',-2,0]])if(!Number.isFinite(lf[key])||lf[key]<min||lf[key]>max)return 'LONG FORM '+key+' 허용 범위: '+min+'~'+max;
+  if(!Number.isInteger(lf.window)||!Number.isInteger(lf.interval)||!Number.isInteger(lf.recoveryLevel))return 'LONG FORM R과 회복 단계는 정수로 입력하세요.';
+  if(!(lf.extremeThreshold<lf.severeThreshold&&lf.severeThreshold<lf.slumpThreshold&&lf.slumpThreshold<lf.warningThreshold))return 'LONG FORM 기준은 극심 < 심함 < 슬럼프 < 경고 순서여야 합니다.';
+  if(!(lf.slumpDrop<=lf.severeDrop&&lf.severeDrop<=lf.extremeDrop))return '심한 슬럼프일수록 감소량이 작아질 수 없습니다.';
+
   if(cfg.scoreMax<=cfg.scoreMin) return '표시 최대점수는 최소점수보다 커야 합니다.';
   const init=cfg.initialSkills||{};
   if(num(init.scoreMin)>num(init.scoreMid) || num(init.scoreMid)>num(init.scoreMax)) return '초기 SHO/PAS 백분위 점수는 최저 ≤ 중앙 ≤ 최고 순서여야 합니다.';
@@ -2635,7 +2734,7 @@ function bindAbilityConfigEvents(){
   const saveBtn=$("#abilityCfgSave"), resetBtn=$("#abilityCfgReset"), reloadBtn=$("#abilityCfgReload");
   $$('[data-ability-cfg]').forEach(el=>el.oninput=()=>{const st=$("#abilityCfgStatus");if(st){st.textContent='저장 전 변경';st.classList.add('changed');}});
   if(saveBtn)saveBtn.onclick=()=>{if(!admin)return;const cfg=readAbilityConfigForm(),err=validateAbilityConfig(cfg);if(err){toast(err);return;}abilityConfigSet(cfg);save();renderAll();renderAbilityConfig();toast('능력치 설정을 저장하고 전체 능력치를 재계산했습니다.');};
-  if(resetBtn)resetBtn.onclick=()=>{if(!admin)return;if(confirm('능력치 계산 설정을 현재 V3.24 BASE+FORM + Growth Curve V2 + SoccerBee 68~87/68P 기본값으로 복원할까요?')){abilityConfigSet(deepClone(ABILITY_DEFAULTS));save();renderAll();renderAbilityConfig();toast('V3.24 BASE+FORM + Growth Curve V2 + SoccerBee 68~87/68P 기본값으로 복원했습니다.');}};
+  if(resetBtn)resetBtn.onclick=()=>{if(!admin)return;if(confirm('능력치 계산 설정을 현재 V3.25.24 BASE+FORM+LONG FORM 기본값으로 복원할까요?')){abilityConfigSet(deepClone(ABILITY_DEFAULTS));save();renderAll();renderAbilityConfig();toast('V3.25.24 LONG FORM 포함 기본값으로 복원했습니다.');}};
   if(reloadBtn)reloadBtn.onclick=()=>{renderAbilityConfig();toast('저장된 능력치 설정을 다시 불러왔습니다.');};
 }
 
@@ -2838,7 +2937,7 @@ function renderAbility(){
       : (cmp.latest?(cmp.previous?'최근 '+cmp.latest+' / 비교 '+cmp.previous:'최근 '+cmp.latest+' / 비교일 없음'):'기록 없음');
     const table=rows.length?'<div class="tablewrap ability-table-wrap"><table class="ability-table"><thead><tr>'+abilitySortHeader('player','선수')+'<th>팀</th>'+ABILITY_SORT_FIELDS.slice(1).map(([key,label])=>abilitySortHeader(key,label)).join('')+'<th title="명단 출석 또는 검증된 활동 기록이 있는 라운드. 공식 참석 수와 구분합니다.">참여R</th><th>누적 결석R</th><th>기준R</th><th>골</th><th>도움</th><th>개인파울</th><th>선방</th><th>MOM</th><th>승점</th><th>Career 누적 결석감점</th><th>평가</th><th>시스템</th></tr></thead><tbody>'+rows.map(r=>{
       const p=prevMap[r.player]||null, abs=r.absence||{rounds:0,penalty:{}}, ap=abs.penalty||{};
-      return '<tr><td>'+playerCardLink(r.player,playerFaceChip(r.player,false,r.info?.year||abilityYear),Object.assign({},r.info,{asOf:r.cutoffDate,allCompetitions:true}))+'</td><td>'+(r.team?teamChip(r.team):'<span class="muted">—</span>')+'</td><td><b>'+abilityScoreWithDelta(r.currentOvr,p&&p.currentOvr)+'</b><small class="ability-form-inline '+(r.form.level>0?'hot':r.form.level<0?'cold':'normal')+'">'+esc(r.form.status.icon)+' '+(r.form.level>0?'+':'')+r.form.level+'</small></td><td><span class="ability-base-number">'+fmtAbility(r.baseOvrRaw)+'</span><small class="ability-progress-inline">→ '+r.nextBaseOvr+' · '+Math.round(r.ovrProgress)+'%</small></td><td>'+abilityScoreWithDelta(r.pac,p&&p.pac)+'</td><td>'+abilityScoreWithDelta(r.sho,p&&p.sho)+'</td><td>'+abilityScoreWithDelta(r.pas,p&&p.pas)+'</td><td>'+abilityScoreWithDelta(r.dri,p&&p.dri)+'</td><td>'+abilityScoreWithDelta(r.def,p&&p.def)+'</td><td>'+abilityScoreWithDelta(r.phy,p&&p.phy)+'</td>'+ 
+      return '<tr><td>'+playerCardLink(r.player,playerFaceChip(r.player,false,r.info?.year||abilityYear),Object.assign({},r.info,{asOf:r.cutoffDate,allCompetitions:true}))+'</td><td>'+(r.team?teamChip(r.team):'<span class="muted">—</span>')+'</td><td><b>'+abilityScoreWithDelta(r.currentOvr,p&&p.currentOvr)+'</b><small class="ability-form-inline '+(r.form.level>0?'hot':r.form.level<0?'cold':'normal')+'">'+esc(r.form.status.icon)+' '+(r.form.level>0?'+':'')+r.form.level+'</small></td><td><span class="ability-base-number">'+fmtAbility(r.baseOvrRaw)+'</span><small class="ability-progress-inline">→ '+r.nextBaseOvr+' · '+Math.round(r.ovrProgress)+'%</small>'+longFormBadge(r)+'</td><td>'+abilityScoreWithDelta(r.pac,p&&p.pac)+'</td><td>'+abilityScoreWithDelta(r.sho,p&&p.sho)+'</td><td>'+abilityScoreWithDelta(r.pas,p&&p.pas)+'</td><td>'+abilityScoreWithDelta(r.dri,p&&p.dri)+'</td><td>'+abilityScoreWithDelta(r.def,p&&p.def)+'</td><td>'+abilityScoreWithDelta(r.phy,p&&p.phy)+'</td>'+ 
         '<td>'+r.summary.att+'</td><td>'+num(abs.rounds)+'</td><td><b>'+num(r.summary.att+num(abs.rounds))+' / '+num(r.summary.progress)+'R</b></td><td>'+r.summary.g+'</td><td>'+r.summary.a+'</td><td>'+r.summary.f+'</td><td>'+r.summary.sv+'</td><td>'+r.summary.mom+'</td><td>'+r.summary.pts+'</td><td><span class="ability-growth negative">SHO '+fmtGrowth(num(ap.sho))+' · PAS '+fmtGrowth(num(ap.pas))+' · DRI '+fmtGrowth(num(ap.dri))+' · DEF '+fmtGrowth(num(ap.def))+' · PHY '+fmtGrowth(num(ap.phy))+'</span></td><td><span class="ability-status '+(r.measured?'':'unassessed')+'">'+(r.measured?(r.partialMeasurement?'SB 일부 · ':'SB ')+esc(r.sbDate):'68P · PROVISIONAL')+'</span></td>'+ 
         '<td><span class="ability-mode compare">BASE+FORM</span></td></tr>';
     }).join('')+'</tbody></table></div>':'<div class="empty">'+label+' 선수 데이터가 없습니다.</div>';
@@ -3340,6 +3439,7 @@ function openPlayerCard(player,query){
     if(!abilityCalc) abilityMeta.innerHTML='';
     else{const f=abilityCalc.form||{level:0,status:abilityFormStatus(0)}, sign=f.level>0?'+':''; abilityMeta.innerHTML='<div class="pc-ability-meta-row"><span>BASE <b>'+fmtAbility(abilityCalc.baseOvrRaw)+'</b></span><span class="pc-form-badge '+(f.level>0?'hot':f.level<0?'cold':'normal')+'">'+esc(f.status.icon)+' FORM '+sign+f.level+' · '+esc(f.status.label)+'</span></div><div class="pc-progress"><span style="width:'+Math.round(abilityCalc.ovrProgress)+'%"></span></div><small>BASE '+abilityCalc.nextBaseOvr+'까지 '+Math.round(abilityCalc.ovrProgress)+'% · '+(abilityCalc.measured?(abilityCalc.partialMeasurement?'SOCCERBEE PARTIAL ':'SOCCERBEE MEASURED ')+esc(abilityCalc.sbDate):'SOCCERBEE 68P · PROVISIONAL')+'</small>'; }
   }
+  if(abilityMeta&&abilityCalc)abilityMeta.insertAdjacentHTML('beforeend',longFormCardHtml(abilityCalc));
   labels.forEach((k,i)=>{ const el=$("#playerCardStat"+k); if(el) el.textContent=abilities[i]===null?"—":String(abilities[i]); });
   renderPlayerCardPerformance(name,stat,playerCardCutoff,cardInfo);
   renderPlayerCardAchievements(name,playerCardCutoff);
@@ -4619,6 +4719,7 @@ function v319StoryItemHtml(x,date){
 }
 function v319InsightEmpty(text){return '<div class="v319-insight-empty">'+esc(text)+'</div>';}
 function renderV319Story(selectedDate=dashDate){
+  renderLongFormStories(normDate(selectedDate));
   const date=normDate(selectedDate),dateText=date?date.replace(/-/g,'.'):'—';
   const dateEls=['#matchdayStoryDate','#streakDate','#milestoneDate','#newRecordDate','#achievementUnlockDate'];dateEls.forEach(sel=>{const el=$(sel);if(el)el.textContent=dateText;});
   const story=$('#matchdayStory');if(story){const rows=v319MatchdayStory(date);story.innerHTML=rows.length?'<div class="v319-story-grid">'+rows.map(x=>v319StoryItemHtml(x,date)).join('')+'</div>':v319InsightEmpty('선택한 경기일에서 생성할 스토리가 없습니다.');}
