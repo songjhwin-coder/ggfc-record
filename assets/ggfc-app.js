@@ -6309,10 +6309,82 @@ function renderBest5(){
  root.querySelectorAll('[data-best5-group]').forEach(button=>button.onclick=()=>{best5Group=button.dataset.best5Group;renderBest5();root.querySelector('[data-best5-group="'+best5Group+'"]')?.focus({preventScroll:true});});
 }
 
+/* V3.25.25 — menu publication settings; data authorization remains in Firebase. */
+const MEMBER_MENUS=[
+ {id:'squad',label:'Team Squad'}, {id:'insights',label:'Record Stories'},
+ {id:'dash',label:'Overview'}, {id:'player',label:'Player Stats'},
+ {id:'goalkeeper',label:'골레이로 랭킹'}, {id:'ability',label:'Player Ratings'},
+ {id:'chem',label:'Player Analysis'}, {id:'best5',label:'Weekly Best 5'},
+ {id:'maker',label:'Team Maker'}, {id:'alltime',label:'All-Time Records'},
+ {id:'leadership',label:'역대 운영진'}, {id:'team',label:'Team Stats',defaultOpen:false}
+];
+const ADMIN_MENUS=[
+ {id:'menus',label:'메뉴 공개 관리'}, {id:'abilityguide',label:'능력치 운영 안내'},
+ {id:'abilitycfg',label:'선수 능력치 설정'}, {id:'rep',label:'대표승점 설정'}, {id:'data',label:'데이터 관리'}
+];
+function canonicalMenu(v){return v==='cal'?'dash':v==='tactics'?'maker':v;}
+function memberMenuOpen(id){
+ const item=MEMBER_MENUS.find(m=>m.id===canonicalMenu(id));if(!item)return false;
+ const setting=DB.settings?.menuVisibility?.[item.id];
+ return typeof setting==='boolean'?setting:item.defaultOpen!==false;
+}
+function menuViewAllowed(v){
+ const id=canonicalMenu(v),known=MEMBER_MENUS.some(m=>m.id===id)||ADMIN_MENUS.some(m=>m.id===id);
+ return known&&(admin||memberMenuOpen(id));
+}
+function menuFallbackView(){return admin||memberMenuOpen('dash')?'dash':MEMBER_MENUS.find(m=>memberMenuOpen(m.id))?.id||'closed';}
+function resolveMenuView(v){return menuViewAllowed(v)?(v==='cal'?'dash':v):menuFallbackView();}
+function syncMenuNavigation(){
+ document.querySelectorAll('#tabs button[data-v], [data-mobile-tab]').forEach(el=>{
+  const id=el.dataset.v||el.dataset.mobileTab,allowed=menuViewAllowed(id);
+  el.hidden=!allowed;
+  // Legacy administrator buttons have an inline display:none in the HTML.
+  if(el.dataset.v)el.style.display=allowed?'':'none';
+ });
+ document.querySelectorAll('section.view').forEach(el=>{const v=el.id.replace(/^v-/,'');el.hidden=v==='closed'?false:!menuViewAllowed(v);});
+ const general=document.querySelector('.sidebar-group-title');if(general)general.hidden=!admin&&!MEMBER_MENUS.some(m=>m.id!=='team'&&memberMenuOpen(m.id));
+ const temp=document.querySelector('.sidebar-temp-title');if(temp)temp.hidden=!menuViewAllowed('team');
+ const adminTitle=document.querySelector('.sidebar-admin-title');if(adminTitle)adminTitle.hidden=!admin;
+}
+function selectMenuView(v){
+ const id=canonicalMenu(v);
+ document.querySelectorAll('#tabs button[data-v]').forEach(el=>{const active=el.dataset.v===id;el.classList.toggle('on',active);if(active)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');});
+ document.querySelectorAll('section.view').forEach(el=>el.classList.toggle('on',el.id==='v-'+id));
+ syncMobileNav(id);
+}
+function renderMenuManagement(){
+ const root=document.getElementById('menuManagement');if(!root||!admin)return;
+ root.innerHTML='<div class="menu-publish-summary"><strong>'+MEMBER_MENUS.filter(m=>memberMenuOpen(m.id)).length+' / '+MEMBER_MENUS.length+' 메뉴 공개</strong><span>토글을 변경하면 자동으로 공유 저장합니다. 상단의 공유 저장 완료 표시를 확인하세요.</span></div><div class="menu-publish-list">'+MEMBER_MENUS.map(m=>{
+  const open=memberMenuOpen(m.id);
+  return '<div class="menu-publish-row"><div><strong>'+esc(m.label)+'</strong><small>'+(m.id==='team'?'Temp 메뉴 · 기본 비공개':m.id==='maker'?'자동 팀 편성 · 전술 라인업 함께 적용':'PC · 모바일 공통 적용')+'</small></div><button type="button" class="menu-publish-toggle" role="switch" aria-checked="'+open+'" aria-label="'+esc(m.label)+' 열람모드 공개" data-menu-publish="'+m.id+'"><span class="menu-publish-track" aria-hidden="true"><i></i></span><span>'+(open?'공개':'비공개')+'</span></button></div>';
+ }).join('')+'</div><details class="menu-publish-locked"><summary>항상 관리자 전용인 메뉴</summary><p>운영 및 설정 메뉴는 열람모드에 공개되지 않습니다.</p><ul>'+ADMIN_MENUS.map(m=>'<li>'+esc(m.label)+' <span>관리자 전용</span></li>').join('')+'</ul></details>';
+ root.querySelectorAll('[data-menu-publish]').forEach(button=>button.onclick=()=>setMemberMenuOpen(button.dataset.menuPublish,!memberMenuOpen(button.dataset.menuPublish)));
+}
+function setMemberMenuOpen(id,open){
+ if(!admin||!GGFC.canEdit()){toast('관리자 인증과 서버 연결을 확인해 주세요.');return false;}
+ if(!MEMBER_MENUS.some(m=>m.id===id)||typeof open!=='boolean')return false;
+ DB.settings=DB.settings||{};
+ const old=DB.settings.menuVisibility;
+ // Preserve only recognized boolean settings. Missing legacy values keep defaults.
+ DB.settings.menuVisibility=Object.fromEntries(MEMBER_MENUS.map(m=>[m.id,m.id===id?open:memberMenuOpen(m.id)]));
+ try{save();}catch(e){if(old===undefined)delete DB.settings.menuVisibility;else DB.settings.menuVisibility=old;toast('메뉴 설정을 저장하지 못했습니다. 연결 상태를 확인해 주세요.');return false;}
+ syncMenuNavigation();renderMenuManagement();
+ document.querySelector('[data-menu-publish="'+id+'"]')?.focus({preventScroll:true});
+ toast('메뉴 '+(open?'공개':'비공개')+' 변경 · 공유 저장 중');return true;
+}
+function renderMenusClosed(){
+ const root=document.getElementById('closedMenuMessage');if(root)root.textContent='현재 공개된 메뉴가 없습니다. 메뉴가 공개되면 여기에서 확인하실 수 있습니다.';
+}
+
 function renderActiveView(v){
-  if(['data','rep','abilitycfg','abilityguide','team'].includes(v)&&!admin)v='dash';
-  const renderers={goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,cal:renderCal,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide};
-  activeView=renderers[v]?v:'dash';renderers[activeView]();
+  const next=resolveMenuView(v);
+  if(next!==v){
+    history.replaceState(null,'','#'+next);
+    if(document.getElementById('playerCardMask')?.classList.contains('on'))closePlayerCard();
+  }
+  activeView=next;syncMenuNavigation();selectMenuView(next);
+  const renderers={menus:renderMenuManagement,closed:renderMenusClosed,goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide};
+  renderers[next]();
 }
 function renderAll(){
   invalidateVerifiedRecords();recordCalculationNotice();
@@ -6337,28 +6409,15 @@ document.addEventListener("click",e=>{
 $("#playerCardClose").onclick=closePlayerCard;
 document.addEventListener("keydown",e=>{ if(e.key==="Escape" && $("#playerCardMask").classList.contains("on")) closePlayerCard(); });
 function goTab(v){
-  /* 데이터 관리와 대표승점 설정은 관리자 로그인 상태에서만 접근할 수 있다. */
-  if(["data","rep","abilitycfg","abilityguide","team"].includes(v) && !admin){v="dash";history.replaceState(null,"","#dash");}
-  const b = $$("#tabs button").find(x=>x.dataset.v===(v==='cal'?'dash':v==='tactics'?'maker':v)); if(!b) return;
-  $$("#tabs button").forEach(x=>x.classList.toggle("on",x===b));
-  $$("section.view").forEach(s=>s.classList.toggle("on", s.id==="v-"+(v==='tactics'?'maker':v)));
-  syncMobileNav(v==='tactics'?'maker':v);
-  if(typeof closeMemberSidebar==='function') closeMemberSidebar(true);
-  if(activeView!==v)renderActiveView(v);
+  const next=resolveMenuView(v);
+  if(next!==v)history.replaceState(null,'','#'+next);
+  syncMenuNavigation();selectMenuView(next);
+  if(typeof closeMemberSidebar==='function')closeMemberSidebar(true);
+  if(activeView!==next)renderActiveView(next);
+  return next;
 }
-$("#tabs").onclick = e=>{ const b=e.target.closest("button"); if(!b) return;
-  if((b.dataset.v==="data" || b.dataset.v==="rep" || b.dataset.v==="abilitycfg" || b.dataset.v==="abilityguide" || b.dataset.v==="team") && !admin) return;
-  goTab(b.dataset.v); location.hash=b.dataset.v; window.scrollTo({top:0,behavior:"smooth"});
-};
-window.addEventListener("hashchange",()=>{
-  const requested=location.hash.slice(1);
-  if((requested==="data" || requested==="rep" || requested==="abilitycfg" || requested==="abilityguide" || requested==="team") && !admin){
-    goTab("dash");
-    history.replaceState(null,"","#dash");
-    return;
-  }
-  goTab(requested);
-});
+$("#tabs").onclick=e=>{const b=e.target.closest('button[data-v]');if(!b)return;location.hash=goTab(b.dataset.v);window.scrollTo({top:0,behavior:'smooth'});};
+window.addEventListener('hashchange',()=>goTab(location.hash.slice(1)));
 $("#compFilter").onchange = e=>{ comp=e.target.value; dashDate=""; renderAll(); };
 $("#prevM").onclick=()=>{ calRef=new Date(calRef.getFullYear(),calRef.getMonth()-1,1); renderCal(); };
 $("#nextM").onclick=()=>{ calRef=new Date(calRef.getFullYear(),calRef.getMonth()+1,1); renderCal(); };
@@ -6878,16 +6937,9 @@ function setAdmin(v){
   if(abilityCfgTab) abilityCfgTab.style.display=v?"":"none";
   $("#abilityGuideTab").style.display=v?"":"none";$("#v-abilityguide").hidden=!v;
   [$("#soccerbeeUpload"),$("#soccerbeeClear")].forEach(e=>{if(e)e.hidden=!v;});
-  if(!v&&$("#v-abilityguide").classList.contains("on"))goTab("dash");
 
   /* 랭킹 설명 문구는 관리자 모드에서만 표시한다. */
   $$(".admin-ranking-note").forEach(el=>el.style.display=v?"block":"none");
-
-  /* 관리자 전용 화면에서 로그아웃하면 일반 대시보드로 즉시 복귀한다. */
-  if(!v && (($("#v-team") && $("#v-team").classList.contains("on")) || ($("#v-data") && $("#v-data").classList.contains("on")) || ($("#v-rep") && $("#v-rep").classList.contains("on")) || ($("#v-abilitycfg") && $("#v-abilitycfg").classList.contains("on")))){
-    goTab("dash");
-    history.replaceState(null,"","#dash");
-  }
 
   renderAll();
 }

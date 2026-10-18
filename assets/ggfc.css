@@ -3237,11 +3237,10 @@ body:not(.admin-mode) .view>.head>p,body:not(.admin-mode) .view>.insight-page-he
 .photo-audit td{white-space:normal;overflow-wrap:anywhere}
 
 /* V3.25.15 — temporary administrator-only Team Stats navigation. */
-.temp-team-menu,.sidebar-temp-title{display:none!important}
-body.admin-mode .temp-team-menu{display:flex!important}
-body.admin-mode .sidebar-temp-title{display:block!important}
+.temp-team-menu{display:flex}
+.sidebar-temp-title{display:block}
 .sidebar-temp-title{margin-top:16px;padding:15px 11px 8px;border-top:1px solid rgba(255,255,255,.15);color:#a5b5cc;font-size:9.5px;font-weight:950;letter-spacing:.16em}
-body:not(.admin-mode) #v-team{display:none!important}
+
 
 /* V3.25.16 — Balanced Team Maker. */
 #teamMakerContent{--tm-ink:#092348;--tm-accent:#b42c47;color:var(--tm-ink)}
@@ -3337,3 +3336,26 @@ body:not(.admin-mode) #v-team{display:none!important}
 
 /* V3.25.24 long-term form audit */
 .lf-badge{display:block;font-size:11px;line-height:1.6;padding:5px 8px;margin-top:5px;background:#eaf6f3;color:#166458;border-radius:7px;white-space:normal;min-width:140px}.lf-badge.risk{color:#92551c;background:#fff4df}.lf-panel{margin-top:12px;padding:12px;border:1px solid #d9e7eb;border-radius:12px;text-align:left;color:#173a52;background:#f8fbfd;font-size:12px;max-width:100%;box-sizing:border-box}.lf-panel p{line-height:1.6}.lf-panel details{margin-top:10px}.lf-panel .tablewrap{max-height:260px;overflow:auto}.lf-panel table{min-width:600px}.lf-method summary,.lf-panel summary{cursor:pointer;font-weight:700}.lf-method{font-size:12px;line-height:1.7;margin-top:14px;text-align:left;white-space:normal}.lf-stories{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.lf-stories article{border:1px solid #d9e7eb;border-radius:12px;padding:14px}.lf-stories .lf-badge{min-width:0}
+
+/* V3.25.25 — number-free navigation and publication controls. */
+#tabs button[hidden],.member-nav button[hidden],section.view[hidden],.sidebar-group-title[hidden],.sidebar-admin-title[hidden],.sidebar-temp-title[hidden]{display:none!important}
+.ggfc-sidebar nav.tabs button{gap:0;min-height:46px;padding:11px 14px}
+.menu-publish-summary{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:6px 0 20px;border-bottom:1px solid var(--border,#dce3ed);color:var(--kl-navy,#092348)}
+.menu-publish-summary>span{font-size:12px;line-height:1.6;color:var(--muted,#64748b)}
+.menu-publish-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 28px}
+.menu-publish-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:19px 0;border-bottom:1px solid var(--border,#dce3ed);min-width:0}
+.menu-publish-row strong{font-size:14px;color:var(--kl-navy,#092348)}
+.menu-publish-row small{display:block;font-size:11px;color:#6d7d94;margin-top:6px;line-height:1.5}
+.menu-publish-toggle{display:flex;align-items:center;gap:8px;flex-shrink:0;border:0;background:transparent;padding:8px 3px;min-height:44px;min-width:92px;font-family:inherit;font-size:12px;font-weight:700;color:#64748b;cursor:pointer}
+.menu-publish-track{display:block;width:42px;height:24px;border-radius:20px;background:#94a3b8;position:relative;transition:background .15s}
+.menu-publish-track i{position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:white;box-shadow:0 1px 3px #0002;transition:transform .15s}
+.menu-publish-toggle[aria-checked="true"]{color:#087d71}
+.menu-publish-toggle[aria-checked="true"] .menu-publish-track{background:#148e80}
+.menu-publish-toggle[aria-checked="true"] .menu-publish-track i{transform:translateX(18px)}
+.menu-publish-toggle:focus-visible{outline:3px solid #78b2d9;outline-offset:2px;border-radius:6px}
+.menu-publish-locked{margin-top:24px;font-size:13px;line-height:1.8;color:#64748b}
+.menu-publish-locked summary{font-weight:700;cursor:pointer;color:var(--kl-navy,#092348)}
+.menu-publish-locked li span{font-size:11px;margin-left:8px}
+.menu-closed{text-align:center;padding:60px 20px!important}.menu-closed p{line-height:1.8;color:#64748b}
+@media(max-width:820px){.menu-publish-list{grid-template-columns:1fr}.menu-publish-summary{align-items:flex-start;flex-direction:column;gap:8px}.menu-publish-row{padding:16px 0}.menu-publish-row strong{font-size:13px}}
+@media(prefers-reduced-motion:reduce){.menu-publish-track,.menu-publish-track i{transition:none}}

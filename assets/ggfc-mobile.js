@@ -46,7 +46,7 @@ function initMemberUI(){
   more.onclick=()=>document.body.classList.contains('sidebar-open')?closeMemberSidebar(true):openMemberSidebar();
   document.querySelector('#sidebarClose').onclick=()=>closeMemberSidebar(true);
   document.querySelector('#sidebarBackdrop').onclick=()=>closeMemberSidebar(true);
-  document.querySelectorAll('[data-mobile-tab]').forEach(el=>el.onclick=()=>{goTab(el.dataset.mobileTab);location.hash=el.dataset.mobileTab;window.scrollTo({top:0,behavior:'smooth'});});
+  document.querySelectorAll('[data-mobile-tab]').forEach(el=>el.onclick=()=>{location.hash=goTab(el.dataset.mobileTab);window.scrollTo({top:0,behavior:'smooth'});});
   document.addEventListener('keydown',e=>{
     if(!document.body.classList.contains('sidebar-open')) return;
     if(e.key==='Escape'){e.preventDefault();closeMemberSidebar(true);return;}
