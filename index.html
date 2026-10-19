@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>GGFC 기록센터 · 3.25.26</title>
-<link rel="stylesheet" href="assets/ggfc.css?v=3.25.26">
+<title>GGFC 기록센터 · 3.25.27</title>
+<link rel="stylesheet" href="assets/ggfc.css?v=3.25.27">
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <meta name="theme-color" content="#061f44"><script>if(new URLSearchParams(location.search).get("view")!=="desktop" && (window.GGFC_MOBILE_ENTRY || matchMedia("(max-width: 820px)").matches))document.documentElement.classList.add("ggfc-mobile");</script></head>
 <body>
@@ -55,12 +55,12 @@
     <div class="sidebar-temp-title">Temp</div>
     <button data-v="team" class="temp-team-menu"><span>Team Stats</span></button>
   </nav>
-  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.25.26 · 기록센터</span></footer>
+  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.25.27 · 기록센터</span></footer>
 </aside>
 <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" tabindex="-1" aria-label="메뉴 닫기" hidden></button>
 
 <main id="mainContent">
-  <div class="release-version" aria-label="현재 프로그램 버전">GGFC · V3.25.26</div>
+  <div class="release-version" aria-label="현재 프로그램 버전">GGFC · V3.25.27</div>
   <section class="cloud-status" id="cloudStatus" role="status" aria-live="polite"><span id="cloudStatusText">공유 기록을 확인하고 있습니다…</span>
     <div class="cloud-actions"><button id="cloudRetry" class="btn sm" hidden>공유 저장 재시도</button><button id="cloudDownload" class="btn sm" hidden>미저장 내용 내려받기</button><button id="cloudReload" class="btn sm" hidden>서버 기록 다시 받기</button></div>
   </section>
@@ -432,7 +432,7 @@
   <section class="view" id="v-goalkeeper"><div class="head"><h2>골레이로 랭킹</h2><p>실제 GR 수행시간을 기준으로 실점·선방을 비교합니다. 조회기간과 최소 수행시간을 선택하세요.</p></div><div class="card" id="goalkeeperRanking"></div></section>
 
   <section class="view" id="v-ability">
-    <div class="head"><h2>Player Ratings</h2><p>LONG FORM 장기 슬럼프 조정을 포함합니다. V3.25.26 · 경기기록과 팀별 기록지의 성장·감점, SoccerBee 축별 초기값·재측정, 최근 FORM을 반영합니다. BASE는 장기 누적 능력치이며 CURRENT OVR은 BASE+FORM입니다. 상세 계산식과 현재 저장된 요율은 아래 설명자료에서 확인하세요.</p></div>
+    <div class="head"><h2>Player Ratings</h2><p>개인 경기력 비교 기반 SLUMP 조정을 포함합니다. V3.25.27 · 경기기록과 팀별 기록지의 성장·감점, SoccerBee 축별 초기값·재측정, 최근 FORM을 반영합니다. BASE는 장기 누적 능력치이며 CURRENT OVR은 BASE+FORM입니다. 상세 계산식과 현재 저장된 요율은 아래 설명자료에서 확인하세요.</p></div>
 
     <div class="ability-kpi-grid" id="abilityKpis"></div>
 
@@ -479,11 +479,11 @@
 
     <div class="grid g2 ability-rule-grid" style="margin-bottom:16px">
       <div class="card">
-        <div class="sec-t">경기기록 → 성장·감점·FORM · V3.25.26</div>
+        <div class="sec-t">경기기록 → 성장·감점·FORM · V3.25.27</div>
         <div id="abilityGrowthRules"></div>
       </div>
       <div class="card">
-        <div class="sec-t">SoccerBee → 축별 초기값·재측정 · V3.25.26</div>
+        <div class="sec-t">SoccerBee → 축별 초기값·재측정 · V3.25.27</div>
         <div id="abilitySoccerbeeRules"></div>
       </div>
     </div>
@@ -984,13 +984,14 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<script src="assets/ggfc-sync.js?v=3.25.26"></script>
-<script src="assets/ggfc-mobile.js?v=3.25.26"></script>
-<script src="assets/ggfc-details.js?v=3.25.26"></script>
-<script src="assets/ggfc-squad.js?v=3.25.26"></script>
-<script src="assets/ggfc-card-design.js?v=3.25.26"></script>
-<script src="assets/ggfc-alltime.js?v=3.25.26"></script>
-<script src="assets/ggfc-maker.js?v=3.25.26"></script>
-<script src="assets/ggfc-app.js?v=3.25.26"></script>
-<script src="assets/ggfc-duo.js?v=3.25.26"></script>
+<script src="assets/ggfc-sync.js?v=3.25.27"></script>
+<script src="assets/ggfc-mobile.js?v=3.25.27"></script>
+<script src="assets/ggfc-details.js?v=3.25.27"></script>
+<script src="assets/ggfc-squad.js?v=3.25.27"></script>
+<script src="assets/ggfc-card-design.js?v=3.25.27"></script>
+<script src="assets/ggfc-alltime.js?v=3.25.27"></script>
+<script src="assets/ggfc-maker.js?v=3.25.27"></script>
+<script src="assets/ggfc-slump.js?v=3.25.27"></script>
+<script src="assets/ggfc-app.js?v=3.25.27"></script>
+<script src="assets/ggfc-duo.js?v=3.25.27"></script>
 </body></html>

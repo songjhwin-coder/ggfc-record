@@ -3360,7 +3360,7 @@ body:not(.admin-mode) .view>.head>p,body:not(.admin-mode) .view>.insight-page-he
 @media(max-width:820px){.menu-publish-list{grid-template-columns:1fr}.menu-publish-summary{align-items:flex-start;flex-direction:column;gap:8px}.menu-publish-row{padding:16px 0}.menu-publish-row strong{font-size:13px}}
 @media(prefers-reduced-motion:reduce){.menu-publish-track,.menu-publish-track i{transition:none}}
 
-/* V3.25.26 — top navigation, collapsible sidebar and menu editor. */
+/* V3.25.27 — top navigation, collapsible sidebar and menu editor. */
 :root{--ggfc-topbar-h:78px}
 .ggfc-topbar{position:fixed;inset:0 0 auto;z-index:20;height:var(--ggfc-topbar-h);display:flex;align-items:center;gap:24px;padding:0 24px 0 16px;box-sizing:border-box;background:#fff;border-bottom:1px solid #dce3ed;color:#061f44}
 .topbar-brand-row{display:flex;align-items:center;gap:20px;flex:none}
@@ -3427,3 +3427,19 @@ html:not(.ggfc-mobile) .sidebar-collapsed>main{padding-left:28px}
 .ggfc-mobile #v-dash #dashTeamPointRank :is(th,td):nth-child(6){width:16%}
 /* Keep touch dragging on the handle; other row areas retain normal scrolling. */
 .ggfc-mobile .menu-drag{touch-action:none}
+
+/* V3.25.27 SLUMP — compact card summary and admin-only audit */
+.slump-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
+.slump-summary>span{display:flex;flex-direction:column;gap:4px;font-size:10px;background:#edf4f8;border-radius:6px;padding:10px;color:#526b80}
+.slump-summary b{font-size:19px;color:#092348}
+.slump-admin-details{margin-top:12px;padding:12px;border:1px solid #d1dde7;border-radius:6px}
+.slump-admin-details p{overflow-wrap:anywhere;line-height:1.7}.slump-admin-details table{min-width:600px}.slump-admin-details .tablewrap{max-width:100%;overflow-x:auto}
+.slump-panel{min-width:0;max-width:100%;box-sizing:border-box}.slump-panel .lf-method{overflow-wrap:anywhere}
+@media(max-width:600px){.slump-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.slump-admin-details{padding:8px}.slump-panel .lf-badge{white-space:normal;line-height:1.7}}
+
+/* Keep the ability settings Save action clear of the mobile navigation. */
+.ggfc-mobile .ability-config-actions{bottom:calc(78px + env(safe-area-inset-bottom));padding:10px;gap:8px}
+.ggfc-mobile .ability-config-actions .left{font-size:11px}
+.ggfc-mobile .ability-config-actions .right{display:grid;width:100%;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.ggfc-mobile .ability-config-actions .right .btn{min-width:0;padding:9px 4px;font-size:12px}
+.ggfc-mobile #abilityCfgSave{grid-column:1 / -1}
