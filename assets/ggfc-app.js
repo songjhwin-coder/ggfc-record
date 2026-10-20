@@ -7221,7 +7221,7 @@ function cleanDashboardSnapshot(root){
 }
 async function containDashboardLogoImages(root){
   // html2canvas does not reliably paint object-fit. Bake transparent contain padding
-  // into each export-only image at 4x its layout size so the raster stays proportional.
+  // into each export-only image at 6x its layout size so the raster stays proportional.
   const cache=new Map();
   for(const img of root.querySelectorAll('img')){
     if(!img.naturalWidth||!img.naturalHeight)continue;
@@ -7229,7 +7229,7 @@ async function containDashboardLogoImages(root){
     const key=img.src+'|'+width+'x'+height;
     if(!cache.has(key)){
       const canvas=root.ownerDocument.createElement('canvas');
-      canvas.width=Math.ceil(width*4);canvas.height=Math.ceil(height*4);
+      canvas.width=Math.ceil(width*6);canvas.height=Math.ceil(height*6);
       const ctx=canvas.getContext('2d');if(!ctx)continue;
       const scale=Math.min(canvas.width/img.naturalWidth,canvas.height/img.naturalHeight),w=img.naturalWidth*scale,h=img.naturalHeight*scale;
       ctx.drawImage(img,(canvas.width-w)/2,(canvas.height-h)/2,w,h);
@@ -7258,8 +7258,9 @@ function posterLeagueIcon(code){
 function posterMatchHtml(m){
   // Reuse the program's escaped, one-scorer-per-line presentation.
   const home=teamScorers(m,m.home,true),away=teamScorers(m,m.away,true);
-  const forfeit=forfeitText(m);
-  return '<article class="poster-match" data-match-id="'+esc(m.id)+'"><div class="poster-match-line">'+
+  const forfeit=forfeitText(m),competition=matchCompetition(m);
+  const kind=competition==='슈퍼리그'?'super':competition==='챌린지리그'?'challenge':competition==='인터리그'?'inter':'other';
+  return '<article class="poster-match" data-match-id="'+esc(m.id)+'"><div class="poster-match-meta"><span class="poster-competition competition-'+kind+'">'+esc(competition)+'</span></div><div class="poster-match-line">'+
     '<div class="poster-match-copy home"><b class="poster-match-team">'+esc(teamDisplayName(m.home))+'</b><div class="poster-scorers">'+home+'</div></div>'+posterTeamIcon(m.home)+
     '<div class="poster-match-center"><b class="poster-score">'+num(m.hs)+' <span>-</span> '+num(m.as)+'</b>'+fixtureMomHtml(m)+'</div>'+posterTeamIcon(m.away)+
     '<div class="poster-match-copy away"><b class="poster-match-team">'+esc(teamDisplayName(m.away))+'</b><div class="poster-scorers">'+away+'</div></div></div>'+
@@ -7392,7 +7393,7 @@ async function createDashboardExportSnapshot(source){
   try{
     const doc=frame.contentDocument;doc.documentElement.lang='ko';
     const base=doc.createElement('base');base.href=document.baseURI;doc.head.appendChild(base);
-    const style=doc.createElement('link');style.rel='stylesheet';style.href=new URL('assets/ggfc-export.css?v=3.25.9',document.baseURI).href;
+    const style=doc.createElement('link');style.rel='stylesheet';style.href=new URL('assets/ggfc-export.css?v=3.25.28',document.baseURI).href;
     const ready=settleExportResource(style,12000,()=>!!style.sheet);doc.head.appendChild(style);await ready;
     if(!style.sheet)throw new Error('출력 스타일을 불러오지 못했습니다.');
     const root=buildReferencePoster(doc,source);doc.body.appendChild(root);
@@ -7413,27 +7414,26 @@ async function createDashboardExportSnapshot(source){
   }catch(err){frame.remove();throw err;}
 }
 async function renderDashboardPng(renderer,snapshot){
-  let canvas,output;
-  try{
-    // Render text and layout at 4× first; never enlarge a low-resolution bitmap.
-    canvas=await renderer(snapshot.root,{scale:4,backgroundColor:'#f3f5f8',useCORS:true,allowTaint:false,logging:false,imageTimeout:8000,removeContainer:true,scrollX:0,scrollY:0,windowWidth:428,windowHeight:2047,width:428,height:2047,onclone:async doc=>{
-      await Promise.all([doc.fonts.load('700 28px GGFCTitle'),...[400,700,800,900].map(weight=>doc.fonts.load(weight+' 10px GGFCBody'))]);
-      await doc.fonts.ready;
-      fitDashboardPoster(doc.getElementById('ggfc-reference-poster'));
-    }});
-    if(!canvas||canvas.width!==1712||canvas.height!==8188)throw new Error('고해상도 출력 크기를 확인할 수 없습니다.');
-    output=document.createElement('canvas');output.width=1600;output.height=7653;
-    const ctx=output.getContext('2d',{alpha:false});
-    if(!ctx)throw new Error('이미지 변환 화면을 만들지 못했습니다.');
-    ctx.fillStyle='#f3f5f8';ctx.fillRect(0,0,output.width,output.height);
-    ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-    ctx.drawImage(canvas,0,0,output.width,output.height);
-    const blob=await new Promise((resolve,reject)=>output.toBlob(b=>b?.size?resolve(b):reject(new Error('PNG 변환에 실패했습니다.')),'image/png'));
-    return {blob,width:1600,height:7653};
-  }finally{
-    if(canvas){canvas.width=0;canvas.height=0;}
-    if(output){output.width=0;output.height=0;}
+  let lastError;
+  // Render directly at the target resolution; retry at a lower native scale on constrained devices.
+  for(const scale of [6,4]){
+    let canvas;
+    try{
+      const width=snapshot.width*scale,height=snapshot.height*scale;
+      canvas=await renderer(snapshot.root,{scale,backgroundColor:'#f3f5f8',useCORS:true,allowTaint:false,logging:false,imageTimeout:8000,removeContainer:true,scrollX:0,scrollY:0,windowWidth:snapshot.viewportWidth,windowHeight:snapshot.viewportHeight,width:snapshot.width,height:snapshot.height,onclone:async doc=>{
+        await Promise.all([doc.fonts.load('700 28px GGFCTitle'),...[400,700,800,900].map(weight=>doc.fonts.load(weight+' 10px GGFCBody'))]);
+        await doc.fonts.ready;
+        fitDashboardPoster(doc.getElementById('ggfc-reference-poster'));
+      }});
+      if(!canvas||canvas.width!==width||canvas.height!==height)throw new Error('고해상도 출력 크기를 확인할 수 없습니다.');
+      const ctx=canvas.getContext('2d');
+      if(!ctx||!ctx.getImageData(width-1,height-1,1,1).data[3])throw new Error('출력 이미지가 비어 있습니다.');
+      const blob=await new Promise((resolve,reject)=>canvas.toBlob(b=>b?.size?resolve(b):reject(new Error('PNG 변환에 실패했습니다.')),'image/png'));
+      return {blob,width,height,compatibility:scale!==6};
+    }catch(err){lastError=err;}
+    finally{if(canvas){canvas.width=0;canvas.height=0;}}
   }
+  throw lastError;
 }
 let dashboardExportBusy=false;
 async function exportDashboardAsPng(button){
@@ -7454,7 +7454,7 @@ async function exportDashboardAsPng(button){
     button.textContent='이미지 만드는 중…';
     const result=await renderDashboardPng(renderer,snapshot);
     downloadBlob(brand+'_종합기록_'+stamp+'.png',result.blob);
-    toast('종합기록 PNG 한 장을 저장했습니다. (1600 × 7653px)'+(snapshot.unavailableImages?' · 불러오지 못한 이미지는 대체 표시했습니다.':''));
+    toast('종합기록 PNG 한 장을 저장했습니다. ('+result.width+' × '+result.height+'px)'+(result.compatibility?' · 기기 호환 해상도로 저장':'')+(snapshot.unavailableImages?' · 불러오지 못한 이미지는 대체 표시했습니다.':''));
   }catch(err){console.error(err);toast('이미지 저장 실패: '+err.message);}
   finally{
     if(snapshot) snapshot.cleanup();
