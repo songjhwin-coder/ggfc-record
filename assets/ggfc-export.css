@@ -1,4 +1,4 @@
-/* Export-only styles. Layout units are rendered directly at 6× (2568 × 12282); 4× compatibility fallback. */
+/* Export-only styles. Native 6× rendering: 2568 × 12282, with 4× device compatibility fallback. */
 @font-face{font-family:GGFCTitle;src:url('fonts/GmarketSansTTFBold.woff') format('woff');font-weight:700;font-display:block}
 @font-face{font-family:GGFCBody;src:url('fonts/GGFCBody.woff') format('woff');font-weight:100 900;font-display:block}
 :root{--navy:#061f44;--blue:#245e9f;--ink:#28374b;--muted:#68788d;--line:#dce3ec;--pale:#edf1f6;--body-size:9px}
@@ -102,7 +102,7 @@ tbody tr:nth-child(even){background:#f8fafc}
 .poster-standing-league .league-standing-emblem{position:relative;z-index:1}
 .poster-rank-attendance td:nth-child(4),.poster-rank-scorers td:nth-child(4),.poster-rank-team td:nth-child(3){font-weight:900;color:var(--navy)}
 
-/* V3.25.28: export-only contrast and fixture competition labels. */
+/* V3.25.28: native 6x export, competition labels and stronger headers. */
 .ggfc-reference-poster thead th{background:#092b52;color:#fff;font-weight:900;border-bottom:2px solid #47739e}
 .poster-match-meta{display:flex;align-items:center;justify-content:center;margin:0 0 3px;min-height:12px}
 .poster-competition{display:inline-block;padding:1px 7px;border-radius:3px;font-size:7px;line-height:1.45;font-weight:800;color:#123d68;background:#e6eef8;max-width:100%;overflow-wrap:anywhere}
@@ -110,3 +110,30 @@ tbody tr:nth-child(even){background:#f8fafc}
 .poster-competition.competition-inter{color:#514275;background:#ece8f5}
 .poster-competition.competition-other{color:#344b65;background:#e8edf3}
 .poster-match{padding:5px 0 6px}
+/* V3.25.29: attendance / goals / assists, then team / player / fouls. */
+.poster-ranking-guide{background:#e7edf5;border-left:3px solid #245e9f;padding:6px 7px;margin:9px 0;color:#354c68;font-size:7px;line-height:1.55}
+.poster-ranking-guide>b{font-size:8px;color:#092b52}
+.poster-ranking-guide p{margin:3px 0 5px}
+.poster-ranking-guide .poster-ranking-period{margin:0;color:#092b52;font-weight:800;font-size:8px}
+.poster-ranking-summary{display:grid;grid-template-columns:minmax(0,1.45fr) repeat(2,minmax(0,1fr));gap:7px;margin-top:12px;align-items:start}
+.poster-rank-panel h3{font-size:10px;letter-spacing:-.35px}
+.poster-rank-panel h3 span{font-size:8px}
+.poster-rank-panel th{font-size:8px;white-space:normal;word-break:keep-all}
+.poster-rank-panel td{height:18px;padding:2px 0;font-size:9px}
+.poster-rank-panel td:nth-child(2){white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
+.poster-rankings .poster-rank-panel th:first-child{width:18px}
+.poster-rankings .poster-rank-panel th:nth-child(2){width:42px}
+.poster-rank-attendance th:first-child{width:15px!important}
+.poster-rank-attendance th:nth-child(2){width:39px!important}
+.poster-rank-attendance th:last-child{width:28px}
+.poster-rank-attendance td:last-child,.poster-rank-scorers td:last-child,.poster-rank-assists td:last-child{font-weight:900;color:var(--navy)}
+.poster-rank-attendance td:nth-child(4){font-weight:400}
+.poster-rank-team th:first-child{width:22px}.poster-rank-team th:nth-child(2){width:34px}
+.poster-ranking-summary .poster-rank-player th:first-child,.poster-ranking-summary .poster-rank-fouls th:first-child{width:17px}
+.poster-ranking-summary .poster-rank-player th:nth-child(2),.poster-ranking-summary .poster-rank-fouls th:nth-child(2){width:35px}
+.poster-team-standing{background:#fff;border:1px solid #c6d4e6;border-top:4px solid #092b52;padding:7px;border-radius:5px}
+.poster-team-standing h3{font-size:13px}
+.poster-rank-team{background:#fff;border:1px solid #c6d4e6;border-top:3px solid #092b52;border-radius:4px;padding:5px}
+.poster-leader td:not(.poster-standing-league){background:#fff2cf!important;color:#172e50;font-weight:900;border-bottom-color:#dfc16f}
+.poster-crown,.poster-standing-table td img.poster-crown{width:11px;height:10px;display:inline-block;object-fit:contain;vertical-align:middle;margin-right:1px}
+.poster-more{display:inline-block;white-space:nowrap;font-size:7px;color:#68788d}

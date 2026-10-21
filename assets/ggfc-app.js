@@ -1228,6 +1228,11 @@ function latestDbPeriodContext(date){
     segmentStart:seg?normDate(seg.s):"",segmentEnd:seg?normDate(seg.e):"",
     halfStart:half==="H2"?c.h2s:c.h1s,halfEnd:half==="H2"?c.h2e:c.h1e};
 }
+function resetDashboardRankingDefaults(year){
+  const y=String(year||latestMatchDate().slice(0,4)||new Date().getFullYear()),c=seasonCfg(y);
+  rankingRangeYear=y;rankingRangeMode='H2';rankingRangeSegment='ALL';rankingRangeStart=c.h2s;rankingRangeEnd=c.h2e;
+  h2hRangeYear=y;h2hRangeMode='H2';h2hRangeSegment='ALL';h2hRangeStart=c.h2s;h2hRangeEnd=c.h2e;
+}
 function applyLatestDbPeriodDefaults(force=false){
   const ctx=latestDbPeriodContext(); if(!ctx) return null;
   const sig=[ctx.date,ctx.year,ctx.half,ctx.segment].join("|");
@@ -1236,9 +1241,7 @@ function applyLatestDbPeriodDefaults(force=false){
   /* 경기기록 / 팀기록 / 선수기록은 공통 record 상태를 사용한다. */
   recordYear=ctx.year; recordMode=ctx.half; recordSegment=ctx.segment; recordDate=ctx.date;
   recordStart=ctx.segmentStart||ctx.halfStart; recordEnd=ctx.date;
-  /* 대시보드 팀순위·랭킹과 상대전적도 같은 반기/구간을 기본 조회한다. */
-  rankingRangeYear=ctx.year; rankingRangeMode=ctx.half; rankingRangeSegment=ctx.segment; rankingRangeStart=ctx.segmentStart||ctx.halfStart; rankingRangeEnd=ctx.date;
-  h2hRangeYear=ctx.year; h2hRangeMode=ctx.half; h2hRangeSegment=ctx.segment; h2hRangeStart=ctx.segmentStart||ctx.halfStart; h2hRangeEnd=ctx.date;
+  resetDashboardRankingDefaults(ctx.year);
   /* 선수 능력치는 최종 경기일 현재, 해당 반기로 맞춘다. */
   abilityYear=ctx.year; abilityHalf=ctx.half; abilityAsOfDate=ctx.date;
   dashDate=ctx.date; selDay=ctx.date;
@@ -4886,6 +4889,18 @@ function sharedRanks(list,valueFn){
     return rank;
   });
 }
+function dashboardTop20(players,kind){
+  const list=players.filter(p=>kind==='attendance'?p.teamGames>0:num(p[kind])>0).slice();
+  list.sort(kind==='attendance'?(a,b)=>b.attendanceRate-a.attendanceRate||compareNamesKo(a.player,b.player):(a,b)=>num(b[kind])-num(a[kind])||a.att-b.att||compareNamesKo(a.player,b.player));
+  return {rows:list.slice(0,20),remaining:Math.max(0,list.length-20),total:list.length};
+}
+function dashboardRankingPlayer(p,i,ranking,info){
+  return playerCardLink(p.player,'<b>'+esc(p.player)+'</b>',info)+(i===19&&ranking.remaining>0?' <span class="ranking-more" title="TOP 20 외 랭킹 대상 선수 '+ranking.remaining+'명">외 '+ranking.remaining+'명</span>':'');
+}
+function dashboardRankingScopeText(info){
+  const wholeHalf=(info.mode==='H1'||info.mode==='H2')&&(!info.segment||info.segment==='ALL');
+  return (wholeHalf?info.year+'년 '+(info.mode==='H2'?'하반기':'상반기')+' 전체 라운드 누적 기록':info.label+' · 선택 범위 누적 기록')+' · '+recordRoundRangeLabel(info.list)+' · '+info.list.length+'경기'+(comp!=='ALL'?' · '+comp:'')+' · 등록된 경기 기준';
+}
 function renderDashboardQueryRankings(info){
   // 관리자는 선택 범위, 회원은 선택 경기일의 반기 전체를 동일하게 적용한다.
   info=dashboardRankingInfo(info);
@@ -4897,18 +4912,23 @@ function renderDashboardQueryRankings(info){
   if($("#dashTeamFoulQueryNote")) $("#dashTeamFoulQueryNote").textContent=period+" · 누적 파울 ↑ · 경기수 ↓ · 동률이면 팀 이름순. 팀파울 = 개인파울 합계 + 추가 파울 (구양식은 기존 규칙 유지)";
 
   const players=queryPlayerStats(list);
-  const scorers=players.filter(p=>p.g>0).sort((a,b)=>b.g-a.g || a.att-b.att || compareNamesKo(a.player,b.player)).slice(0,20);
+  const scorerRanking=dashboardTop20(players,'g'),scorers=scorerRanking.rows;
   $("#dashScorers").innerHTML=tbl(
-    [{t:"#"},{t:"선수"},{t:"팀"},{t:"경기",n:1},{t:"득점",n:1}],
-    scorers.map((p,i)=>['<span class="rank'+(i<3?' top':'')+'">'+(i+1)+'</span>',playerCardLink(p.player,'<b>'+esc(p.player)+'</b>',info),'<span class="muted">'+teamChip(playerSquadDisplayTeam(p.player,info))+'</span>',p.att,'<b>'+p.g+'</b>'])
+    [{t:"#"},{t:"선수"},{t:"경기",n:1},{t:"득점",n:1}],
+    scorers.map((p,i)=>['<span class="rank'+(i<3?' top':'')+'">'+(i+1)+'</span>',dashboardRankingPlayer(p,i,scorerRanking,info),p.att,'<b>'+p.g+'</b>'])
   );
 
-  const attendance=players.filter(p=>p.teamGames>0).sort((a,b)=>b.attendanceRate-a.attendanceRate || compareNamesKo(a.player,b.player)).slice(0,20);
+  const attendanceRanking=dashboardTop20(players,'attendance'),attendance=attendanceRanking.rows;
   const attendanceRanks=sharedRanks(attendance,p=>p.attendanceRate);
   $("#dashAttendanceRank").innerHTML=tbl(
-    [{t:"#"},{t:"선수"},{t:"팀"},{t:"출석",n:1},{t:"팀 경기",n:1},{t:"출석률",n:1}],
-    attendance.map((p,i)=>['<span class="rank'+(attendanceRanks[i]<=3?' top':'')+'">'+attendanceRanks[i]+'</span>',playerCardLink(p.player,'<b>'+esc(p.player)+'</b>',info),'<span class="muted">'+teamChip(playerSquadDisplayTeam(p.player,info))+'</span>',p.att,p.teamGames,'<b>'+p.attendanceRate+'%</b>'])
+    [{t:"#"},{t:"선수"},{t:"출석",n:1},{t:"팀 경기",n:1},{t:"출석률",n:1}],
+    attendance.map((p,i)=>['<span class="rank'+(attendanceRanks[i]<=3?' top':'')+'">'+attendanceRanks[i]+'</span>',dashboardRankingPlayer(p,i,attendanceRanking,info),p.att,p.teamGames,'<b>'+p.attendanceRate+'%</b>'])
   );
+
+  const assistRanking=dashboardTop20(players,'a');
+  $('#dashAssists').innerHTML=tbl([{t:'#'},{t:'선수'},{t:'경기',n:1},{t:'도움',n:1}],assistRanking.rows.map((p,i)=>['<span class="rank'+(i<3?' top':'')+'">'+(i+1)+'</span>',dashboardRankingPlayer(p,i,assistRanking,info),p.att,'<b>'+p.a+'</b>']));
+  $('#dashAssistQueryNote').textContent=period+' · 도움 ↓ · 경기수 ↑ · 동률이면 이름순';
+  $('#dashRankingScope').textContent=dashboardRankingScopeText(info);
 
   const ranking=halfTeamRanking(info), {teams,ranks:teamPointRanks,scope}=ranking;
   const basis=scope.label+' · '+recordRoundRangeLabel(scope.list)+' · '+scope.list.length+'경기';
@@ -6970,6 +6990,8 @@ bindLinkedRecordEvents("player");
 
 function setAdmin(v){
   v=!!v && GGFC.authorized;
+  const enteringAdmin=v&&!admin;
+  if(enteringAdmin){applyLatestDbPeriodDefaults();resetDashboardRankingDefaults();}
   admin=v;if(!v){photoAuditStop(false);const photoAuditBox=document.getElementById("playerPhotoAudit");if(photoAuditBox)photoAuditBox.hidden=true;}syncAbilityAdminControls();
   document.body.classList.toggle("admin-mode", !!v);
   if(!v) $("#seasonPanel").style.display="none";
@@ -7239,11 +7261,25 @@ async function containDashboardLogoImages(root){
   }
   await waitDashboardImages(root);
 }
+function posterCrownHtml(){
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 20"><path d="M2 5l5 4 5-7 5 7 5-4-3 12H5Z" fill="#d9a93d" stroke="#9b6d13" stroke-width="1.3"/><path d="M5 19h14" stroke="#9b6d13" stroke-width="2"/></svg>';
+  return '<img class="poster-crown" src="data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg)+'" alt="1위 왕관">';
+}
+function highlightPosterLeaders(root){
+  root.querySelectorAll('.poster-standing-table tbody tr,.poster-rank-team tbody tr').forEach(row=>{
+    const cells=[...row.cells],rank=cells.find(cell=>!cell.classList.contains('poster-standing-league'));
+    if(rank&&rank.textContent.trim()==='1'){row.classList.add('poster-leader');rank.innerHTML=posterCrownHtml()+'<span>1</span>';}
+  });
+}
 function posterTable(source,selector,indices,labels){
   const table=source.querySelector(selector+' table');
   if(!table)return '<div class="poster-empty">기록 없음</div>';
   const head='<thead><tr>'+labels.map(t=>'<th>'+esc(t)+'</th>').join('')+'</tr></thead>';
-  const body=[...table.querySelectorAll('tbody tr')].map(row=>'<tr>'+indices.map(i=>'<td>'+esc(row.cells[i]?.textContent.trim()||'—')+'</td>').join('')+'</tr>').join('');
+  const cellHtml=cell=>{
+    const more=cell?.querySelector('.ranking-more');
+    return more?esc(cell.querySelector('.player-card-link')?.textContent.trim()||'')+' <span class="poster-more">'+esc(more.textContent.trim())+'</span>':esc(cell?.textContent.trim()||'—');
+  };
+  const body=[...table.querySelectorAll('tbody tr')].map(row=>'<tr>'+indices.map(i=>'<td>'+cellHtml(row.cells[i])+'</td>').join('')+'</tr>').join('');
   return '<table>'+head+'<tbody>'+body+'</tbody></table>';
 }
 function posterTeamIcon(team,extra=''){
@@ -7310,22 +7346,24 @@ function buildReferencePoster(doc,source){
   }).join('');
   const period=source.querySelector('#exportTeamStandingSection .record-period-label')?.textContent.trim()||'';
   const range=source.querySelector('#exportTeamStandingSection .record-round-range')?.textContent.trim()||'';
-  const rankingPeriod=(source.querySelector('#dashScorerQueryNote')?.textContent||'').match(/^.*?경기 기준/)?.[0]||'';
+  const rankingPeriod=source.querySelector('#dashRankingScope')?.textContent||'';
+  const rankingNote=source.querySelector('#dashTeamPointQueryNote')?.textContent||'';
   const h2h=source.querySelector('#dashHeadToHead table')?.outerHTML||'<div class="poster-empty">상대전적 기록 없음</div>';
   const panel=(cls,title,html)=>'<section class="poster-rank-panel '+cls+'"><h3>'+title+'</h3>'+html+'</section>';
   const root=doc.createElement('article');root.id='ggfc-reference-poster';root.className='ggfc-reference-poster';
   root.innerHTML='<header class="poster-hero poster-dark">'+brandLogo+'<div class="poster-hero-title">'+esc(year)+' '+esc(title)+'</div><div class="poster-hero-subtitle"><span>'+esc(half)+'</span> 경기결과</div><div class="poster-round">'+esc(round)+'</div><div class="poster-date">'+esc(dateText)+(DB.settings?.posterVenue?'<br>'+esc(DB.settings.posterVenue):'')+'</div></header>'+
     '<div class="poster-results">'+lanes+'</div>'+
     '<section class="poster-statistics poster-dark"><section class="poster-team-standing"><h3>#팀순위 <span>(구간'+(range?' · '+esc(range):'')+')</span></h3><div class="poster-period">'+esc(period)+'</div>'+posterStandingHtml(source)+'</section>'+
-    '<div class="poster-ranking-period">'+esc(rankingPeriod)+'</div><div class="poster-rankings">'+
-      panel('poster-rank-attendance','#개인순위 <span>(참석률)</span>',posterTable(source,'#dashAttendanceRank',[0,1,3,5],['순위','이름','경기수','참석률']))+
-      panel('poster-rank-scorers','#개인순위 <span>(득점)</span>',posterTable(source,'#dashScorers',[0,1,3,4],['순위','이름','경기수','득점']))+
-      '<div class="poster-rank-stack">'+
-        panel('poster-rank-team','#팀순위 <span>(누적 승점)</span>',posterTable(source,'#dashTeamPointRank',[0,1,2,3,4,5],['순위','팀명','대표','참석','승점','득실']))+
-        panel('poster-rank-player','#개인순위 <span>(누적 승점)</span>',posterTable(source,'#dashPlayerPointRank',[0,1,2,3],['순위','이름','경기수','승점']))+
-        panel('poster-rank-fouls','#팀순위 <span>(팀파울)</span>',posterTable(source,'#dashTeamFoulRank',[0,1,2,3],['순위','이름','경기수','팀파울']))+'</div></div></section>'+
+    '<div class="poster-ranking-guide"><b>순위 집계 기준</b><p>'+esc(rankingNote)+'</p><div class="poster-ranking-period">'+esc(rankingPeriod)+'</div></div><div class="poster-rankings">'+
+      panel('poster-rank-attendance','#출석랭킹 <span>TOP 20</span>',posterTable(source,'#dashAttendanceRank',[0,1,2,3,4],['순위','이름','출석','팀경기','출석률']))+
+      panel('poster-rank-scorers','#득점랭킹 <span>TOP 20</span>',posterTable(source,'#dashScorers',[0,1,2,3],['순위','이름','경기','득점']))+
+      panel('poster-rank-assists','#도움랭킹 <span>TOP 20</span>',posterTable(source,'#dashAssists',[0,1,2,3],['순위','이름','경기','도움']))+'</div><div class="poster-ranking-summary">'+
+      panel('poster-rank-team','#팀순위 <span>(누적)</span>',posterTable(source,'#dashTeamPointRank',[0,1,2,3,4,5],['순위','팀명','대표','참석','승점','득실']))+
+      panel('poster-rank-player','#개인순위 <span>(승점)</span>',posterTable(source,'#dashPlayerPointRank',[0,1,2,3],['순위','이름','경기','승점']))+
+      panel('poster-rank-fouls','#파울순위',posterTable(source,'#dashTeamFoulRank',[0,1,2,3],['순위','팀명','경기','파울']))+'</div></section>'+
     '<section class="poster-attendance"><h3>#참석자</h3><div class="poster-attendance-note">'+esc(dateText)+' · 진한 이름: 참석 / 연한 이름: 미참석</div>'+posterAttendanceHtml(dayMatches)+'</section>'+
     '<section class="poster-headtohead poster-dark"><h3>#상대전적</h3><div class="poster-period">'+esc(source.querySelector('#dashHeadToHeadPeriod')?.textContent||'')+'</div>'+h2h+'</section>';
+  highlightPosterLeaders(root);
   cleanDashboardSnapshot(root);
   // Normalise UI-only classes without altering any live node or database value.
   root.querySelectorAll('[style]').forEach(node=>node.removeAttribute('style'));
@@ -7360,6 +7398,8 @@ function fitDashboardPoster(root){
     equalHeight(lanes.map(n=>n.querySelector('.poster-team-cards')));
     const games=lanes.map(n=>[...n.querySelectorAll('.poster-match')]);
     for(let i=0;i<Math.max(0,...games.map(rows=>rows.length));i++)equalHeight(games.map(rows=>rows[i]));
+    const rankingRows=[...root.querySelectorAll('.poster-rankings > .poster-rank-panel')].map(n=>[...n.querySelectorAll('tbody tr')]);
+    for(let i=0;i<Math.max(0,...rankingRows.map(rows=>rows.length));i++)equalHeight(rankingRows.map(rows=>rows[i]));
     return sections.every(section=>{
       const inner=section.firstElementChild;
       return inner.scrollHeight*scale<=section.clientHeight-20&&inner.scrollWidth*scale<=section.clientWidth-19;
@@ -7372,13 +7412,14 @@ function fitDashboardPoster(root){
     for(let i=0;i<12;i++){const mid=(low+high)/2;if(layout(mid))low=mid;else high=mid;}
     scale=low;layout(scale);
   }
-  // Use remaining ranking space evenly, with matching row spacing in all three columns.
+  // Reserve space for both ranking rows; never stretch TOP 20 over the summary tables.
   const statistics=root.querySelector('.poster-statistics'),rankings=root.querySelector('.poster-rankings');
   if(statistics&&rankings){
-    const available=(statistics.clientHeight-20)/scale-(rankings.getBoundingClientRect().top-statistics.firstElementChild.getBoundingClientRect().top);
-    const columns=[...rankings.children].map(column=>({column,rows:[...column.querySelectorAll('tbody tr')]})).filter(x=>x.rows.length);
-    const extra=Math.max(0,Math.min(12,...columns.map(x=>(available-x.column.getBoundingClientRect().height-2)/x.rows.length)));
-    columns.forEach(x=>x.rows.forEach(row=>row.style.height=(row.getBoundingClientRect().height+extra)+'px'));
+    const columns=[...rankings.children].map(column=>[...column.querySelectorAll('tbody tr')]);
+    const count=Math.max(0,...columns.map(rows=>rows.length));
+    const spare=(statistics.clientHeight-20)/scale-statistics.firstElementChild.scrollHeight;
+    const extra=count?Math.max(0,Math.min(4,(spare-4)/count)):0;
+    columns.forEach(rows=>rows.forEach(row=>row.style.height=(row.getBoundingClientRect().height+extra)+'px'));
   }
   sections.forEach(section=>{
     section.firstElementChild.style.transform='scale('+scale+')';
@@ -7393,7 +7434,7 @@ async function createDashboardExportSnapshot(source){
   try{
     const doc=frame.contentDocument;doc.documentElement.lang='ko';
     const base=doc.createElement('base');base.href=document.baseURI;doc.head.appendChild(base);
-    const style=doc.createElement('link');style.rel='stylesheet';style.href=new URL('assets/ggfc-export.css?v=3.25.28',document.baseURI).href;
+    const style=doc.createElement('link');style.rel='stylesheet';style.href=new URL('assets/ggfc-export.css?v=3.25.29',document.baseURI).href;
     const ready=settleExportResource(style,12000,()=>!!style.sheet);doc.head.appendChild(style);await ready;
     if(!style.sheet)throw new Error('출력 스타일을 불러오지 못했습니다.');
     const root=buildReferencePoster(doc,source);doc.body.appendChild(root);
@@ -7415,15 +7456,13 @@ async function createDashboardExportSnapshot(source){
 }
 async function renderDashboardPng(renderer,snapshot){
   let lastError;
-  // Render directly at the target resolution; retry at a lower native scale on constrained devices.
   for(const scale of [6,4]){
     let canvas;
     try{
       const width=snapshot.width*scale,height=snapshot.height*scale;
       canvas=await renderer(snapshot.root,{scale,backgroundColor:'#f3f5f8',useCORS:true,allowTaint:false,logging:false,imageTimeout:8000,removeContainer:true,scrollX:0,scrollY:0,windowWidth:snapshot.viewportWidth,windowHeight:snapshot.viewportHeight,width:snapshot.width,height:snapshot.height,onclone:async doc=>{
         await Promise.all([doc.fonts.load('700 28px GGFCTitle'),...[400,700,800,900].map(weight=>doc.fonts.load(weight+' 10px GGFCBody'))]);
-        await doc.fonts.ready;
-        fitDashboardPoster(doc.getElementById('ggfc-reference-poster'));
+        await doc.fonts.ready;fitDashboardPoster(doc.getElementById('ggfc-reference-poster'));
       }});
       if(!canvas||canvas.width!==width||canvas.height!==height)throw new Error('고해상도 출력 크기를 확인할 수 없습니다.');
       const ctx=canvas.getContext('2d');
