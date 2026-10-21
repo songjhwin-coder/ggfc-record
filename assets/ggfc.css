@@ -3484,3 +3484,27 @@ html:not(.ggfc-mobile) .sidebar-collapsed>main{padding-left:28px}
 }
 @media(max-width:820px){body.admin-mode #v-dash .dashboard-ranking-grid>.ranking-card{display:block}}
 .ggfc-mobile body.admin-mode #v-dash .dashboard-ranking-grid>.ranking-card{display:block}
+
+/* V3.25.30: admin-only squad dates; staff cutouts and team crests at 130%. */
+body:not(.admin-mode) #v-squad .ts-basis-note{display:none!important}
+.ts-team-brand{grid-template-columns:133px minmax(150px,1fr) 270px}
+.ts-team-brand>.ts-team-logo{width:132.6px;height:161.2px;max-width:none}
+.ts-team-brand>.ts-logo-fallback{width:110.5px;height:110.5px}
+.ts-staff-manager .ts-staff-photo{width:150.8px;height:195px}
+.ts-staff-coach .ts-staff-photo{width:127.4px;height:169px}
+.ts-staff-stack{min-height:197.6px}
+.ts-staff-photo[data-photo-kind="cutout"] img{object-fit:contain;object-position:center bottom}
+@media(max-width:1300px){.ts-team-header{grid-template-columns:1fr;gap:20px}}
+@media(max-width:1060px){
+ .ts-team-brand{grid-template-columns:119.6px minmax(140px,1fr) 273px}
+ .ts-team-brand>.ts-team-logo{width:114.4px;height:143px}
+}
+@media(max-width:760px){
+ .ts-team-brand{grid-template-columns:98.8px minmax(0,1fr)}
+ .ts-team-brand>.ts-team-logo{width:93.6px;height:114.4px}
+ .ts-team-brand>.ts-logo-fallback{width:91px;height:91px}
+ .ts-staff-manager .ts-staff-photo{width:114.4px;height:145.6px}
+ .ts-staff-coach .ts-staff-photo{width:98.8px;height:130px}
+ .ts-staff-stack{min-height:145.6px}
+ .ts-staff-showcase{min-height:163.6px}
+}

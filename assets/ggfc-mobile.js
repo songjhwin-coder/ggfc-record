@@ -27,7 +27,7 @@ function closeMemberSidebar(restoreFocus=false){
  more.setAttribute('aria-expanded','false');panel.removeAttribute('aria-modal');panel.removeAttribute('role');
  if(restoreFocus&&wasOpen&&mobile)(sidebarReturnFocus?.isConnected?sidebarReturnFocus:toggle).focus();
  if(mobile){panel.inert=true;panel.setAttribute('aria-hidden','true');toggle.setAttribute('aria-expanded','false');toggle.setAttribute('aria-label','메뉴 열기');}
- else setDesktopSidebar(desktopSidebarOpen(),false);
+ else setDesktopSidebar(false,false);
 }
 function openMemberSidebar(){
  if(!document.documentElement.classList.contains('ggfc-mobile')){setDesktopSidebar(true);return;}
@@ -39,7 +39,7 @@ function openMemberSidebar(){
 }
 function initMemberUI(){
   const panel=document.querySelector('#ggfcSidebar'),more=document.querySelector('#memberMore');
-  try{setDesktopSidebar(localStorage.getItem('ggfc-sidebar-open')!=='0',false);}catch(e){}
+  setDesktopSidebar(false,false);
   document.getElementById('sidebarToggle').onclick=()=>document.documentElement.classList.contains('ggfc-mobile')?openMemberSidebar():setDesktopSidebar(!desktopSidebarOpen());
   document.getElementById('topBrandHome').onclick=()=>{location.hash=goTab(menuFallbackView());window.scrollTo({top:0,behavior:'smooth'});};
   document.getElementById('topMenuNav').onclick=e=>{const b=e.target.closest('[data-top-menu]');if(b){location.hash=goTab(b.dataset.topMenu);window.scrollTo({top:0,behavior:'smooth'});}};
@@ -48,6 +48,7 @@ function initMemberUI(){
   document.querySelector('#sidebarBackdrop').onclick=()=>closeMemberSidebar(true);
   document.querySelectorAll('[data-mobile-tab]').forEach(el=>el.onclick=()=>{location.hash=goTab(el.dataset.mobileTab);window.scrollTo({top:0,behavior:'smooth'});});
   document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'&&!document.documentElement.classList.contains('ggfc-mobile')&&desktopSidebarOpen()){e.preventDefault();setDesktopSidebar(false);document.getElementById('sidebarToggle').focus();return;}
     if(!document.body.classList.contains('sidebar-open')) return;
     if(e.key==='Escape'){e.preventDefault();closeMemberSidebar(true);return;}
     if(e.key!=='Tab')return;

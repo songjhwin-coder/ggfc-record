@@ -7265,21 +7265,26 @@ function posterCrownHtml(){
   const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 20"><path d="M2 5l5 4 5-7 5 7 5-4-3 12H5Z" fill="#d9a93d" stroke="#9b6d13" stroke-width="1.3"/><path d="M5 19h14" stroke="#9b6d13" stroke-width="2"/></svg>';
   return '<img class="poster-crown" src="data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg)+'" alt="1위 왕관">';
 }
+function posterGoldMedalHtml(){
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 28"><path d="M4 1h6l5 12-6 3Z" fill="#386ca6"/><path d="M14 1h6l-5 15-6-3Z" fill="#d74858"/><circle cx="12" cy="18" r="9" fill="#e4b23f" stroke="#a77716" stroke-width="1.4"/><circle cx="12" cy="18" r="6.4" fill="#f8d575" stroke="#d5a332"/><path d="m9.5 16 2.5-2v8m-2.5 0h5" fill="none" stroke="#8f6112" stroke-width="1.7" stroke-linejoin="round"/></svg>';
+  return '<img class="poster-medal" src="data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg)+'" alt="1위 금메달">';
+}
 function highlightPosterLeaders(root){
   root.querySelectorAll('.poster-standing-table tbody tr,.poster-rank-team tbody tr').forEach(row=>{
     const cells=[...row.cells],rank=cells.find(cell=>!cell.classList.contains('poster-standing-league'));
-    if(rank&&rank.textContent.trim()==='1'){row.classList.add('poster-leader');rank.innerHTML=posterCrownHtml()+'<span>1</span>';}
+    if(rank&&rank.textContent.trim()==='1'){row.classList.add('poster-leader');rank.innerHTML=(row.closest('.poster-standing-table')?posterGoldMedalHtml():posterCrownHtml())+'<span>1</span>';}
   });
 }
 function posterTable(source,selector,indices,labels){
   const table=source.querySelector(selector+' table');
   if(!table)return '<div class="poster-empty">기록 없음</div>';
   const head='<thead><tr>'+labels.map(t=>'<th>'+esc(t)+'</th>').join('')+'</tr></thead>';
-  const cellHtml=cell=>{
+  const cellHtml=(cell,i)=>{
+    if(selector==='#dashAttendanceRank'&&i===4){const value=Number((cell?.textContent||'').trim().replace('%',''));return Number.isFinite(value)?String(Math.round(value))+'%':'—';}
     const more=cell?.querySelector('.ranking-more');
     return more?esc(cell.querySelector('.player-card-link')?.textContent.trim()||'')+' <span class="poster-more">'+esc(more.textContent.trim())+'</span>':esc(cell?.textContent.trim()||'—');
   };
-  const body=[...table.querySelectorAll('tbody tr')].map(row=>'<tr>'+indices.map(i=>'<td>'+cellHtml(row.cells[i])+'</td>').join('')+'</tr>').join('');
+  const body=[...table.querySelectorAll('tbody tr')].map(row=>'<tr>'+indices.map(i=>'<td>'+cellHtml(row.cells[i],i)+'</td>').join('')+'</tr>').join('');
   return '<table>'+head+'<tbody>'+body+'</tbody></table>';
 }
 function posterTeamIcon(team,extra=''){
@@ -7347,14 +7352,13 @@ function buildReferencePoster(doc,source){
   const period=source.querySelector('#exportTeamStandingSection .record-period-label')?.textContent.trim()||'';
   const range=source.querySelector('#exportTeamStandingSection .record-round-range')?.textContent.trim()||'';
   const rankingPeriod=source.querySelector('#dashRankingScope')?.textContent||'';
-  const rankingNote=source.querySelector('#dashTeamPointQueryNote')?.textContent||'';
   const h2h=source.querySelector('#dashHeadToHead table')?.outerHTML||'<div class="poster-empty">상대전적 기록 없음</div>';
   const panel=(cls,title,html)=>'<section class="poster-rank-panel '+cls+'"><h3>'+title+'</h3>'+html+'</section>';
   const root=doc.createElement('article');root.id='ggfc-reference-poster';root.className='ggfc-reference-poster';
   root.innerHTML='<header class="poster-hero poster-dark">'+brandLogo+'<div class="poster-hero-title">'+esc(year)+' '+esc(title)+'</div><div class="poster-hero-subtitle"><span>'+esc(half)+'</span> 경기결과</div><div class="poster-round">'+esc(round)+'</div><div class="poster-date">'+esc(dateText)+(DB.settings?.posterVenue?'<br>'+esc(DB.settings.posterVenue):'')+'</div></header>'+
     '<div class="poster-results">'+lanes+'</div>'+
     '<section class="poster-statistics poster-dark"><section class="poster-team-standing"><h3>#팀순위 <span>(구간'+(range?' · '+esc(range):'')+')</span></h3><div class="poster-period">'+esc(period)+'</div>'+posterStandingHtml(source)+'</section>'+
-    '<div class="poster-ranking-guide"><b>순위 집계 기준</b><p>'+esc(rankingNote)+'</p><div class="poster-ranking-period">'+esc(rankingPeriod)+'</div></div><div class="poster-rankings">'+
+    '<div class="poster-ranking-guide"><div class="poster-ranking-period">'+esc(rankingPeriod)+'</div></div><div class="poster-rankings">'+
       panel('poster-rank-attendance','#출석랭킹 <span>TOP 20</span>',posterTable(source,'#dashAttendanceRank',[0,1,2,3,4],['순위','이름','출석','팀경기','출석률']))+
       panel('poster-rank-scorers','#득점랭킹 <span>TOP 20</span>',posterTable(source,'#dashScorers',[0,1,2,3],['순위','이름','경기','득점']))+
       panel('poster-rank-assists','#도움랭킹 <span>TOP 20</span>',posterTable(source,'#dashAssists',[0,1,2,3],['순위','이름','경기','도움']))+'</div><div class="poster-ranking-summary">'+
@@ -7434,7 +7438,7 @@ async function createDashboardExportSnapshot(source){
   try{
     const doc=frame.contentDocument;doc.documentElement.lang='ko';
     const base=doc.createElement('base');base.href=document.baseURI;doc.head.appendChild(base);
-    const style=doc.createElement('link');style.rel='stylesheet';style.href=new URL('assets/ggfc-export.css?v=3.25.29',document.baseURI).href;
+    const style=doc.createElement('link');style.rel='stylesheet';style.href=new URL('assets/ggfc-export.css?v=3.25.30',document.baseURI).href;
     const ready=settleExportResource(style,12000,()=>!!style.sheet);doc.head.appendChild(style);await ready;
     if(!style.sheet)throw new Error('출력 스타일을 불러오지 못했습니다.');
     const root=buildReferencePoster(doc,source);doc.body.appendChild(root);

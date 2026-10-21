@@ -137,3 +137,15 @@ tbody tr:nth-child(even){background:#f8fafc}
 .poster-leader td:not(.poster-standing-league){background:#fff2cf!important;color:#172e50;font-weight:900;border-bottom-color:#dfc16f}
 .poster-crown,.poster-standing-table td img.poster-crown{width:11px;height:10px;display:inline-block;object-fit:contain;vertical-align:middle;margin-right:1px}
 .poster-more{display:inline-block;white-space:nowrap;font-size:7px;color:#68788d}
+
+/* V3.25.30: 50% more separation between TOP 20 tables, balanced internal widths. */
+.poster-rankings{gap:12px}
+.poster-rankings .poster-rank-panel :is(th,td){padding-left:1px;padding-right:1px}
+.poster-rankings .poster-rank-panel th:first-child{width:13%!important}
+.poster-rankings .poster-rank-panel th:nth-child(2){width:43%!important}
+.poster-rankings .poster-rank-panel th:nth-child(n+3){width:22%}
+.poster-rankings .poster-rank-attendance th:first-child{width:12%!important}
+.poster-rankings .poster-rank-attendance th:nth-child(2){width:34%!important}
+.poster-rankings .poster-rank-attendance th:nth-child(3),.poster-rankings .poster-rank-attendance th:nth-child(4){width:16%}
+.poster-rankings .poster-rank-attendance th:nth-child(5){width:22%}
+.poster-standing-table td img.poster-medal{width:12px;height:15px;display:inline-block;vertical-align:middle;object-fit:contain;margin-right:1px}
