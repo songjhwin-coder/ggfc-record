@@ -2,7 +2,7 @@
 const GGFC = (() => {
   const ADMIN_LOGIN_ID='ggfc-admin@example.com';
   let loginBusy=false;
-  const state={ready:false,serverSeen:false,connected:false,authorized:false,user:null,revision:0,dirty:false,saving:false,busy:0,conflict:false,serial:0,latest:null,hasLatest:false,error:'',status:'공유 기록을 확인하고 있습니다…',savedAt:null,authGeneration:0};
+  const state={checking:true,ready:false,serverSeen:false,connected:false,authorized:false,user:null,revision:0,dirty:false,saving:false,busy:0,conflict:false,serial:0,latest:null,hasLatest:false,error:'',status:'공유 기록을 확인하고 있습니다…',savedAt:null,authGeneration:0};
   let database=null,auth=null,dataRef=null,readTimer=null,saveTimer=null,editLease=false;
   const hasSettingsDraft=()=>!!((typeof menuSettingsDirty!=='undefined'&&menuSettingsDirty)||(typeof careerFrameSettingsDirty!=='undefined'&&careerFrameSettingsDirty)||(typeof analysisStartSettingsDirty!=='undefined'&&analysisStartSettingsDirty)||(typeof cardDesignSettingsDirty!=='undefined'&&cardDesignSettingsDirty));
   function discardSettingsDraft(){if(typeof menuSettingsDirty!=='undefined'){menuSettingsDirty=false;menuEditorDraft=null;}if(typeof cardDesignSettingsDirty!=='undefined')cardDesignSettingsDirty=false;if(typeof careerFrameSettingsDirty!=='undefined')careerFrameSettingsDirty=false;if(typeof analysisStartSettingsDirty!=='undefined')analysisStartSettingsDirty=false;}
@@ -75,8 +75,9 @@ const GGFC = (() => {
     else if(state.conflict)message='다른 관리자의 수정이 있습니다. 미저장 내용을 내려받은 뒤 서버 기록을 다시 받아 주세요.';
     else if(state.saving)message='회원에게 공유 저장 중… 완료 표시 후 닫아 주세요.';
     else if(state.dirty)message='아직 공유되지 않은 변경이 있습니다. 서버 연결 후 저장을 다시 시도해 주세요.';
+    else if(state.ready&&!state.serverSeen&&state.checking)message='최근 기록 표시 중 · 최신 데이터 확인 중…';
     else if(state.ready&&!state.connected)message='연결 끊김 · 마지막으로 받은 기록입니다. 다시 연결되면 자동 갱신합니다.';
-    box.dataset.state=(state.error||state.conflict)?'error':(state.dirty||!state.connected)?'pending':'ready';
+    box.dataset.state=(state.error||state.conflict)?'error':(state.dirty||!state.connected||!state.serverSeen)?'pending':'ready';
     line.textContent=message;
     const show=(id,v)=>{const el=document.querySelector(id);if(el)el.hidden=!v;};
     show('#cloudRetry',state.dirty && !state.saving && !state.conflict && state.authorized);
@@ -85,7 +86,7 @@ const GGFC = (() => {
     document.querySelectorAll('.member-admin').forEach(el=>el.hidden=!state.authorized);
   }
   function status(text){state.status=text;refreshUI();}
-  function applySnapshot(raw,first=false){
+  function applySnapshot(raw,first=false,fromCache=false){
     const next=merge(raw);
     DB=Object.assign(blankDB(),next);abilityPriorYearPoolCache=null;if(typeof v319CareerCache!=='undefined')v319CareerCache={key:'',map:null};
     state.revision=Number(raw?.meta?.revision)||0;state.savedAt=raw?.meta?.savedAt||null;
@@ -96,10 +97,10 @@ const GGFC = (() => {
     // receive() defers live updates while a settings form is being edited.
     // Otherwise, stale editor caches must not hide freshly received settings.
     repAdminDrafts={};
-    try{localStorage.setItem(cacheKey(),JSON.stringify(raw));}catch(e){/* Cache quota must never stop live rendering. */}
+    if(!fromCache)cacheSnapshot(raw);
     const date=state.savedAt?new Date(state.savedAt):null;
     const stamp=date&&!isNaN(date.getTime())?date.toLocaleString('ko-KR'):'';
-    status(raw?'공유 기록 최신 상태'+(stamp?' · '+stamp:''):'등록된 공유 기록이 없습니다. 관리자에게 기록 등록을 요청해 주세요.');
+    status(fromCache?'최근 기록 표시 중 · 최신 데이터 확인 중…':raw?'공유 기록 최신 상태'+(stamp?' · '+stamp:''):'등록된 공유 기록이 없습니다. 관리자에게 기록 등록을 요청해 주세요.');
     if(first&&typeof applyMenuStartup==='function')applyMenuStartup();
     renderAll();
     if(typeof playerCardHistoryState!=='undefined' && playerCardHistoryState && document.querySelector('#playerCardMask')?.classList.contains('on')){
@@ -107,7 +108,7 @@ const GGFC = (() => {
     }
   }
   function receive(raw){
-    clearTimeout(readTimer);state.latest=raw;state.hasLatest=true;state.serverSeen=true;
+    clearTimeout(readTimer);state.checking=false;state.latest=raw;state.hasLatest=true;state.serverSeen=true;
     const rev=Number(raw?.meta?.revision)||0;
     if(state.dirty||state.saving||state.busy||editLease||hasSettingsDraft()){
       if(!state.saving && rev!==state.revision)state.conflict=true;
@@ -144,7 +145,7 @@ const GGFC = (() => {
       },undefined,false);
       if(!result.committed){state.conflict=true;return false;}
       const raw=result.snapshot.val();
-      state.revision=Number(raw.meta.revision);state.savedAt=raw.meta.savedAt;
+      state.revision=Number(raw.meta.revision);state.savedAt=raw.meta.savedAt;cacheSnapshot(raw);
       if(!state.hasLatest || Number(state.latest?.meta?.revision||0)<=state.revision){state.latest=raw;state.hasLatest=true;}
       if(serial===state.serial){
         state.dirty=false;state.error='';
@@ -296,7 +297,43 @@ const GGFC = (() => {
     }
     window.addEventListener('beforeunload',e=>{if(state.dirty||state.saving||editLease||hasSettingsDraft()){e.preventDefault();e.returnValue='';}});
   }
-  function start(){
+  function cacheSnapshot(raw){
+    try{localStorage.setItem(cacheKey(),JSON.stringify(raw));}catch(e){/* A full/disabled cache must not block live records or saving. */}
+  }
+  function showCachedSnapshot(){
+    try{
+      const saved=localStorage.getItem(cacheKey());
+      if(!saved)return;
+      const raw=JSON.parse(saved);
+      // Only accept the existing Firebase envelope, never an editor draft or another project's cache.
+      if(raw!==null&&(!safeObject(raw)||!['records','players','settings','meta'].some(k=>own(raw,k))||(raw.records!=null&&!safeObject(raw.records))||(raw.players!=null&&!safeObject(raw.players))))return;
+      // applySnapshot validates the complete record before replacing the displayed DB.
+      applySnapshot(raw,true,true);
+    }catch(e){/* Invalid or unavailable cache: continue with the normal server read. */}
+  }
+  async function loadFirebaseModules(){
+    for(const [part,available] of [
+      ['app',()=>typeof window.firebase!=='undefined'&&!!window.firebase.initializeApp],
+      ['auth',()=>!!window.firebase?.auth],
+      ['database',()=>!!window.firebase?.database]
+    ]){
+      if(available())continue;
+      await new Promise((resolve,reject)=>{
+        const script=document.createElement('script');
+        let done=false;
+        const finish=err=>{
+          if(done)return;done=true;clearTimeout(timer);script.onload=script.onerror=null;
+          if(err){script.remove();reject(err);}else resolve();
+        };
+        const failed=()=>finish(new Error('연결 모듈을 불러오지 못했습니다. 인터넷 연결을 확인하고 새로고침해 주세요.'));
+        const timer=setTimeout(failed,12000);
+        script.src='https://www.gstatic.com/firebasejs/10.12.2/firebase-'+part+'-compat.js';
+        script.onload=()=>available()?finish():failed();script.onerror=failed;
+        document.head.appendChild(script);
+      });
+    }
+  }
+  async function start(){
     installGuards();
     document.querySelector('#cloudRetry').onclick=()=>{state.error='';refreshUI();flush();};
     document.querySelector('#cloudReload').onclick=reload;
@@ -325,21 +362,27 @@ const GGFC = (() => {
       document.querySelector('#authInfo').textContent='firebase-config.js에 Realtime Database의 databaseURL을 입력해 주세요. 자세한 순서는 배포 안내를 확인해 주세요.';
       refreshUI();return;
     }
-    if(typeof firebase==='undefined'||!firebase.auth){state.error='연결 모듈을 불러오지 못했습니다. 인터넷 연결을 확인하고 새로고침해 주세요.';refreshUI();return;}
+    // All feature scripts must be ready before rendering the configured startup menu.
+    if(document.readyState==='loading')await new Promise(resolve=>document.addEventListener('DOMContentLoaded',resolve,{once:true}));
+    showCachedSnapshot();
+    refreshUI();
+    readTimer=setTimeout(()=>{
+      if(state.serverSeen)return;
+      state.checking=false;
+      if(state.ready)state.status='서버 응답 지연 · 마지막으로 받은 기록입니다.';
+      else state.error='공유 기록을 받지 못했습니다. 인터넷 연결과 Firebase 설정을 확인하고 다시 받아 주세요.';
+      refreshUI();
+    },12000);
+    // Yield so cached records can paint before SDK loading and connection setup.
+    await new Promise(resolve=>setTimeout(resolve,0));
     try{
+      await loadFirebaseModules();
       const app=firebase.apps.length?firebase.app():firebase.initializeApp(config);
       database=app.database();auth=app.auth();dataRef=database.ref('ggfc/v3');
       database.ref('.info/connected').on('value',snap=>{state.connected=snap.val()===true;refreshUI();});
       auth.onIdTokenChanged(onUser);
       dataRef.on('value',snap=>receive(snap.val()),e=>{state.error='공유 기록 접근 실패 ('+String(e.code||'오류')+'). 관리자는 Realtime Database 규칙과 주소를 확인해 주세요.';refreshUI();});
-      readTimer=setTimeout(()=>{
-        if(state.ready)return;
-        try{const cached=localStorage.getItem(cacheKey());if(cached){applySnapshot(JSON.parse(cached),true);state.connected=false;state.status='서버 응답 지연 · 마지막으로 받은 기록입니다.';}}
-        catch(e){}
-        if(!state.ready)state.error='공유 기록을 받지 못했습니다. 인터넷 연결과 Firebase 설정을 확인하고 다시 받아 주세요.';
-        refreshUI();
-      },12000);
-    }catch(e){state.error='Firebase 연결 실패: '+e.message;refreshUI();}
+    }catch(e){clearTimeout(readTimer);state.checking=false;state.error='Firebase 연결 실패: '+e.message;refreshUI();}
   }
   return {get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving;},canEdit,normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,signIn,loginOrLogout,closeLogin,togglePassword};
 })();
