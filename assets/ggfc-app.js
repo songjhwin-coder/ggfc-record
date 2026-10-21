@@ -7380,6 +7380,10 @@ function buildReferencePoster(doc,source){
 }
 
 function fitDashboardPoster(root){
+  // Keep the previous fit scale; result enlargement must not shrink the whole page.
+  root.classList.remove('poster-enlarged-results');root.style.height='';
+  const results=root.querySelector('.poster-results');if(results)results.style.height='';
+  root.querySelectorAll('.poster-lane').forEach(lane=>lane.style.height='');
   const sections=[...root.querySelectorAll('.poster-lane,.poster-statistics,.poster-attendance,.poster-headtohead')];
   sections.forEach(section=>{
     let inner=section.querySelector(':scope > .poster-fit-content');
@@ -7430,6 +7434,18 @@ function fitDashboardPoster(root){
     section.firstElementChild.style.transformOrigin='top left';
     section.dataset.contentScale=scale.toFixed(4);
   });
+  root.classList.add('poster-enlarged-results');
+  lanes.forEach(lane=>lane.firstElementChild.style.transform='none');
+  root.querySelectorAll('.poster-league-team,.poster-league-team b,.poster-team-cards,.poster-match').forEach(n=>n.style.height='auto');
+  equalHeight([...root.querySelectorAll('.poster-league-team b')]);
+  equalHeight([...root.querySelectorAll('.poster-league-team')]);
+  equalHeight(lanes.map(lane=>lane.querySelector('.poster-team-cards')));
+  const enlargedGames=lanes.map(lane=>[...lane.querySelectorAll('.poster-match')]);
+  for(let i=0;i<Math.max(0,...enlargedGames.map(rows=>rows.length));i++)equalHeight(enlargedGames.map(rows=>rows[i]));
+  const laneHeight=Math.max(565,Math.ceil(Math.max(0,...lanes.map(lane=>lane.firstElementChild.scrollHeight))*scale)+20);
+  lanes.forEach(lane=>{lane.style.height=laneHeight+'px';lane.firstElementChild.style.transform='scale('+scale+')';});
+  if(results)results.style.height=(laneHeight+3)+'px';
+  root.style.height=(2047+laneHeight-565)+'px';
 }
 async function createDashboardExportSnapshot(source){
   if(!source.getBoundingClientRect().width)throw new Error('종합기록 화면을 연 뒤 다시 저장해 주세요.');
@@ -7438,7 +7454,7 @@ async function createDashboardExportSnapshot(source){
   try{
     const doc=frame.contentDocument;doc.documentElement.lang='ko';
     const base=doc.createElement('base');base.href=document.baseURI;doc.head.appendChild(base);
-    const style=doc.createElement('link');style.rel='stylesheet';style.href=new URL('assets/ggfc-export.css?v=3.25.30',document.baseURI).href;
+    const style=doc.createElement('link');style.rel='stylesheet';style.href=new URL('assets/ggfc-export.css?v=3.25.31',document.baseURI).href;
     const ready=settleExportResource(style,12000,()=>!!style.sheet);doc.head.appendChild(style);await ready;
     if(!style.sheet)throw new Error('출력 스타일을 불러오지 못했습니다.');
     const root=buildReferencePoster(doc,source);doc.body.appendChild(root);
@@ -7455,7 +7471,8 @@ async function createDashboardExportSnapshot(source){
     // Fit each section independently; every row remains in the single fixed-size poster.
     fitDashboardPoster(root);
     await containDashboardLogoImages(root);
-    return {root,frame,width:428,height:2047,viewportWidth:428,viewportHeight:2047,unavailableImages,cleanup:()=>frame.remove()};
+    const height=root.offsetHeight;frame.style.height=height+'px';
+    return {root,frame,width:428,height,viewportWidth:428,viewportHeight:height,unavailableImages,cleanup:()=>frame.remove()};
   }catch(err){frame.remove();throw err;}
 }
 async function renderDashboardPng(renderer,snapshot){

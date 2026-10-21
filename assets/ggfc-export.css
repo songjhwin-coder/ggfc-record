@@ -149,3 +149,13 @@ tbody tr:nth-child(even){background:#f8fafc}
 .poster-rankings .poster-rank-attendance th:nth-child(3),.poster-rankings .poster-rank-attendance th:nth-child(4){width:16%}
 .poster-rankings .poster-rank-attendance th:nth-child(5){width:22%}
 .poster-standing-table td img.poster-medal{width:12px;height:15px;display:inline-block;vertical-align:middle;object-fit:contain;margin-right:1px}
+
+/* V3.25.31: enlarge result items, with extra height instead of global downscaling. */
+.poster-enlarged-results .poster-team-cards{grid-template-columns:repeat(auto-fit,minmax(70px,1fr))}
+.poster-enlarged-results .poster-league-team{padding-left:0;padding-right:0}
+.poster-enlarged-results .card-icon{width:68px;height:68px;font-size:28px}
+.poster-enlarged-results .poster-match-line{grid-template-columns:minmax(0,1fr) 34.5px 40px 34.5px minmax(0,1fr)}
+.poster-enlarged-results .poster-match-line>.poster-team-icon{width:34.5px;height:43.5px}
+.poster-enlarged-results .poster-match-line>.poster-initial{font-size:10.5px}
+.poster-enlarged-results .poster-match-team{font-size:13.5px}
+.poster-enlarged-results .poster-scorers{font-size:10.5px}
