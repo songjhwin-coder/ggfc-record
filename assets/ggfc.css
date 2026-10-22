@@ -3567,3 +3567,10 @@ body:not(.admin-mode) #v-squad .ts-method{display:none!important}
  #v-squad .ts-staff-person:first-child{margin-left:0}
  #v-squad .ts-team-bars{grid-template-columns:minmax(0,1fr);gap:12px}
 }
+
+/* V3.25.34: white team boxes with a decorative, right-aligned team logo. */
+#v-squad .ts-team,#v-squad .ts-team-header{background:#fff}
+#v-squad .ts-team-header{isolation:isolate}
+#v-squad .ts-team-watermark{position:absolute;z-index:0;right:-2%;top:50%;transform:translateY(-50%);width:52%;height:100%;max-width:none;object-fit:contain;object-position:right center;opacity:.11;pointer-events:none;user-select:none}
+#v-squad .ts-team-watermark[hidden]{display:none}
+#v-squad .ts-team-brand,#v-squad .ts-team-bars{position:relative;z-index:1}
