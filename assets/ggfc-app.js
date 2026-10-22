@@ -6351,10 +6351,9 @@ function applyMenuStartup(){
  activeView=resolveMenuView(menuInitialRoute||menuFallbackView());history.replaceState(null,'','#'+activeView);
 }
 function syncMenuNavigation(){
- const nav=navigationSettings(),tabs=document.getElementById('tabs'),adminTitle=tabs.querySelector('.sidebar-admin-title'),mobile=document.querySelector('.member-nav'),more=document.getElementById('memberMore');
+ const nav=navigationSettings(),tabs=document.getElementById('tabs'),adminTitle=tabs.querySelector('.sidebar-admin-title');
  orderedMenus(false,nav).forEach(m=>{
   const b=tabs.querySelector('[data-v="'+m.id+'"]');if(b)tabs.insertBefore(b,adminTitle);
-  const mb=mobile.querySelector('[data-mobile-tab="'+m.id+'"]');if(mb)mobile.insertBefore(mb,more);
  });
  orderedMenus(true,nav).forEach(m=>{const b=tabs.querySelector('[data-v="'+m.id+'"]');if(b)tabs.append(b);});
  document.querySelectorAll('#tabs button[data-v], [data-mobile-tab]').forEach(el=>{

@@ -3508,3 +3508,62 @@ body:not(.admin-mode) #v-squad .ts-basis-note{display:none!important}
  .ts-staff-stack{min-height:145.6px}
  .ts-staff-showcase{min-height:163.6px}
 }
+
+/* V3.25.33: bottom status, light squad headers and unobstructed mobile navigation. */
+.page-status-footer{max-width:1120px;margin:28px auto 0;padding-top:16px;border-top:1px solid var(--border,#dce3ed)}
+.page-status-footer .release-version{margin:0 0 8px}
+.page-status-footer .cloud-status{margin-bottom:0}
+body:not(.admin-mode) #v-squad .ts-method{display:none!important}
+#v-squad .ts-toolbar{display:grid;grid-template-columns:minmax(0,230px) minmax(0,330px);align-items:start;gap:10px 16px}
+#v-squad .ts-toolbar label{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:6px;min-width:0;width:auto;white-space:nowrap;font-size:13px}
+#v-squad .ts-toolbar select{flex:none;box-sizing:border-box;width:100%;max-width:100%;min-width:0;margin:0;min-height:42px;background:#fff;font:inherit}
+#v-squad .ts-toolbar .ts-change-label{min-width:0}
+#v-squad #teamSquadScope{grid-column:1 / -1;width:auto;line-height:1.5}
+#v-squad .ts-team-header{background:#f3f5f7;color:#24364b;border-bottom:1px solid #dce2e9;grid-template-columns:minmax(0,1fr);gap:24px}
+#v-squad .ts-team-brand{display:flex;flex-wrap:wrap;gap:18px;padding:0}
+#v-squad .ts-team-copy{flex:1 1 150px;min-width:0}
+#v-squad .ts-team-brand>:is(.ts-team-logo,.ts-logo-fallback){flex:none}
+#v-squad .ts-team h3{color:#1b314c}
+#v-squad :is(.ts-team-kicker,.ts-staff-kicker,.ts-team-brand p,.ts-unrated){color:#617082}
+#v-squad .ts-team-bars{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;width:100%}
+#v-squad .ts-axis{min-width:0;margin:0}
+#v-squad .ts-bar{background:#dde3ea}
+#v-squad .ts-star>svg{fill:#c5cdd6}
+#v-squad .ts-star>span svg{fill:#bd8b26}
+#v-squad .ts-staff-showcase{flex:0 1 410px;width:410px;max-width:100%;margin-left:auto;min-height:0;background:none}
+#v-squad .ts-staff-stack{min-height:0;background:none;flex-wrap:wrap;row-gap:12px}
+#v-squad .ts-staff-person{filter:none;background:none;color:#24364b;flex:0 0 auto}
+#v-squad .ts-staff-photo{background:none!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+#v-squad .ts-staff-manager .ts-staff-photo{width:226.2px;height:292.5px}
+#v-squad .ts-staff-coach .ts-staff-photo{width:191.1px;height:253.5px}
+#v-squad .ts-staff-photo img{width:100%;height:100%;object-fit:contain;object-position:center bottom}
+#v-squad .ts-staff-photo:has(img) .ts-staff-fallback{visibility:hidden}
+#v-squad .ts-staff-fallback{color:#718095}
+#v-squad .ts-staff-caption{background:none;border:0;box-shadow:none;margin:4px auto 0;padding:3px 6px 0;max-width:100%;width:max-content}
+#v-squad .ts-staff-caption span{color:#64748b}
+#v-squad .ts-staff-caption b{color:#24364b;font-size:12px;overflow:visible;text-overflow:clip}
+.ggfc-mobile body{padding-bottom:env(safe-area-inset-bottom)}
+.ggfc-mobile .toast{bottom:calc(18px + env(safe-area-inset-bottom))}
+.ggfc-mobile .ability-config-actions{bottom:calc(10px + env(safe-area-inset-bottom))}
+@media(max-width:960px){
+ #v-squad .ts-team-brand{grid-template-columns:133px minmax(0,1fr)}
+ #v-squad .ts-staff-showcase{flex-basis:100%;width:100%}
+ #v-squad .ts-staff-stack{justify-content:center}
+}
+@media(max-width:760px){
+ #v-squad .ts-toolbar{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:10px}
+ #v-squad .ts-toolbar label{font-size:12px}
+ #v-squad .ts-team-brand{grid-template-columns:98.8px minmax(0,1fr);gap:13px}
+ #v-squad .ts-staff-manager .ts-staff-photo{width:171.6px;height:218.4px}
+ #v-squad .ts-staff-coach .ts-staff-photo{width:148.2px;height:195px}
+ #v-squad .ts-staff-person{margin-left:-40px}
+ #v-squad .ts-staff-person:first-child{margin-left:0}
+ #v-squad .ts-staff-stack{padding:0}
+ #v-squad .ts-team-bars{gap:12px}
+ #v-squad .ts-axis-heading strong{font-size:17px}
+}
+@media(max-width:350px){
+ #v-squad .ts-staff-person{margin-left:-64px}
+ #v-squad .ts-staff-person:first-child{margin-left:0}
+ #v-squad .ts-team-bars{grid-template-columns:minmax(0,1fr);gap:12px}
+}
