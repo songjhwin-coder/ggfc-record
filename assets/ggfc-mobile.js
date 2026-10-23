@@ -10,13 +10,20 @@ function mobileAbilityCards(rows,prevMap){
 }
 // Compatibility hook used by the shared view renderer; navigation now lives in the topbar/sidebar.
 function syncMobileNav(v){}
+function mobileSwipeSettings(raw=DB.settings?.mobileSwipe){
+  return {enabled:raw?.enabled!==false,sensitivity:['low','normal','high'].includes(raw?.sensitivity)?raw.sensitivity:'normal'};
+}
+function mobileSwipeDistance(width=innerWidth){
+  const factor={low:1.4,normal:1,high:.7}[mobileSwipeSettings().sensitivity];
+  return Math.max(60,Math.min(100,width*.18))*factor;
+}
 function initMobilePageSwipe(){
   const main=document.getElementById('mainContent');
   if(!main||main.dataset.pageSwipeBound)return;
   main.dataset.pageSwipeBound='1';
   let gesture=null;
   const reset=()=>{gesture=null;};
-  const blocked=()=>!document.documentElement.classList.contains('ggfc-mobile')||
+  const blocked=()=>!mobileSwipeSettings().enabled||squadAppearanceDirty||squadExportBusy||!document.documentElement.classList.contains('ggfc-mobile')||
     document.body.classList.contains('sidebar-open')||
     !!document.querySelector('dialog[open],.mask.on,#playerCardMask.on')||
     GGFC.pending||menuSettingsDirty||careerFrameSettingsDirty||analysisStartSettingsDirty||cardDesignSettingsDirty;
@@ -48,7 +55,7 @@ function initMobilePageSwipe(){
     if(!start||event.touches.length||blocked()||activeView!==start.view)return;
     const t=Array.from(event.changedTouches).find(t=>t.identifier===start.id);if(!t)return;
     const dx=t.clientX-start.x,dy=t.clientY-start.y;
-    if(performance.now()-start.time>1200||Math.abs(dx)<Math.max(60,Math.min(100,innerWidth*.18))||Math.abs(dy)>Math.abs(dx)*.45||Math.abs(window.scrollY-start.scrollY)>12)return;
+    if(performance.now()-start.time>1200||Math.abs(dx)<mobileSwipeDistance()||Math.abs(dy)>Math.abs(dx)*.45||Math.abs(window.scrollY-start.scrollY)>12)return;
     const menus=Array.from(document.querySelectorAll('#tabs button[data-v]')).filter(b=>!b.hidden&&b.style.display!=='none'&&menuViewAllowed(b.dataset.v)).map(b=>b.dataset.v);
     const index=menus.indexOf(start.view),next=index+(dx<0?1:-1);
     // Stop at the first/last menu instead of unexpectedly wrapping around.
