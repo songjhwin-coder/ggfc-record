@@ -1428,13 +1428,19 @@ function playerParticipationStart(player){
   return participationStartCache.dates.get(normalizePlayerMatchKey(player))||'';
 }
 function playerEligibleOn(player,date){const start=playerParticipationStart(player);return !start||normDate(date)>=start;}
+// Reuse deterministic work only within one synchronous render; never across DB updates.
+let renderCalculationCache=null;
 function analysisAttendance(list){
+  const key=renderCalculationCache?JSON.stringify(list):null;
+  if(key!==null&&renderCalculationCache.attendance.has(key))return renderCalculationCache.attendance.get(key).slice();
   const map=new Map(list.map(m=>[detailMatchKey(m.id),m]));
-  return verifiedRecords().attendance.filter(r=>{
+  const result=verifiedRecords().attendance.filter(r=>{
     const m=map.get(detailMatchKey(r.id));if(!m||!playerEligibleOn(r.player,m.date))return false;
     const squad=squadAtMatch(m,String(r.team||'').trim());
     return !squad||squad.members.some(x=>normalizePlayerMatchKey(x.player)===normalizePlayerMatchKey(r.player));
   });
+  if(key!==null)renderCalculationCache.attendance.set(key,result);
+  return result.slice();
 }
 function squadRecordIssues(list=verifiedRecords().matches,players=null){
   const map=new Map(list.map(m=>[detailMatchKey(m.id),m])),issues=new Map();
@@ -1883,12 +1889,15 @@ function deepMergeAbility(base,custom){
   return custom===undefined?base:custom;
 }
 function abilityConfig(){
-  const a=ensureAbilityData();
-  return deepMergeAbility(ABILITY_DEFAULTS,a.config||{});
+  if(renderCalculationCache?.config)return renderCalculationCache.config;
+  const a=ensureAbilityData(),config=deepMergeAbility(ABILITY_DEFAULTS,a.config||{});
+  if(renderCalculationCache)renderCalculationCache.config=config;
+  return config;
 }
-function abilityConfigSet(cfg){ensureAbilityData().config=deepMergeAbility(ABILITY_DEFAULTS,cfg||{});abilityPriorYearPoolCache=null;}
+function abilityConfigSet(cfg){if(renderCalculationCache){renderCalculationCache.config=null;renderCalculationCache.ability=null;}ensureAbilityData().config=deepMergeAbility(ABILITY_DEFAULTS,cfg||{});abilityPriorYearPoolCache=null;}
 
 function ensureAbilityData(){
+  if(renderCalculationCache?.ability)return renderCalculationCache.ability;
   DB.saves=Array.isArray(DB.saves)?DB.saves:[];
   DB.fouls=Array.isArray(DB.fouls)?DB.fouls:[];
   DB.moms=Array.isArray(DB.moms)?DB.moms:[];
@@ -1941,6 +1950,7 @@ function ensureAbilityData(){
     });
     sc.criteria={...sc.criteria,spm:sc.criteria.spm||[0,.1,.2,.4,.6],sprintPer10:sc.criteria.sprintPer10||[0,1,2,4,6],sprintMetersPer10:sc.criteria.sprintMetersPer10||[0,10,25,50,90]};sc.sprintVersion=1;
   }
+  if(renderCalculationCache)renderCalculationCache.ability=DB.settings.ability;
   return DB.settings.ability;
 }
 function abilitySystemEnabled(){ return ensureAbilityData().enabled!==false; }
@@ -2291,6 +2301,8 @@ function applyLongFormCheckpoint(career,weights,state,entry,rounds,index,cfg,abs
  state.events.push(event);
 }
 function playerAbilityRoundRows(player,info){
+  const cacheKey=renderCalculationCache?JSON.stringify([player,info]):null;
+  if(cacheKey!==null&&renderCalculationCache.rounds.has(cacheKey))return renderCalculationCache.rounds.get(cacheKey).slice();
   const list=abilityMatches(info).filter(m=>normDate(m.date)<abilityCareerStartDate()||playerEligibleOn(player,m.date)), ids=new Set(list.map(m=>m.id)), M={}; list.forEach(m=>M[m.id]=m); const rounds={};
   const get=(d)=>rounds[d]||(rounds[d]={date:d,att:false,g:0,a:0,sv:0,sot:0,keyPass:0,defSuccess:0,f:0,mom:0,w:0,d:0,l:0,pts:0,games:new Set(),expectedTeam:''});
   const pName=String(player||'').trim();
@@ -2334,7 +2346,9 @@ function playerAbilityRoundRows(player,info){
   (verifiedRecords().fouls||[]).forEach(r=>{if(String(r.player||'').trim()!==pName||!ids.has(r.id))return;const m=M[r.id];if(!m)return;get(normDate(m.date)).f+=num(r.fouls);});
   (verifiedRecords().moms||[]).forEach(r=>{if(String(r.player||'').trim()!==pName||!ids.has(r.id))return;const m=M[r.id];if(!m)return;get(normDate(m.date)).mom+=num(r.mom);});
   teamPlayerRecordLinks().matched.forEach(r=>{if(r.player!==pName||!ids.has(r.id))return;const R=get(normDate(M[r.id].date));['sot','keyPass','defSuccess'].forEach(k=>R[k]+=num(r[k]));});
-  return Object.values(rounds).sort((a,b)=>a.date.localeCompare(b.date));
+  const result=Object.values(rounds).sort((a,b)=>a.date.localeCompare(b.date));
+  if(cacheKey!==null)renderCalculationCache.rounds.set(cacheKey,result);
+  return result.slice();
 }
 function playerAbilityAllRoundRows(player,cutoff){
   const end=normDate(cutoff)||'9999-12-31';
@@ -6462,7 +6476,15 @@ function renderActiveView(v,options={}){
 }
 function renderMenuContent(next){
   const renderers={menus:renderMenuManagement,closed:renderMenusClosed,goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide};
-  renderers[next]();
+  const previous=renderCalculationCache,oldDate=normDate,oldName=normalizePlayerMatchKey;
+  const memoize=fn=>{const cache=new Map();return value=>{
+    if(value!==null&&typeof value==='object')return fn(value);
+    if(!cache.has(value))cache.set(value,fn(value));return cache.get(value);
+  };};
+  renderCalculationCache={attendance:new Map(),rounds:new Map(),config:null,ability:null};
+  normDate=memoize(oldDate);normalizePlayerMatchKey=memoize(oldName);
+  try{renderers[next]();}
+  finally{renderCalculationCache=previous;normDate=oldDate;normalizePlayerMatchKey=oldName;}
 }
 function renderAll(){
   mobilePageSwipe?.invalidate();

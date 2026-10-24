@@ -23,6 +23,8 @@ function initMobilePageSwipe(){
  main.dataset.pageSwipeBound='1';
  let gesture=null,paintFrame=0,settleTimer=0,warmTimer=0,idleTask=0,generation=0,suppressClickUntil=0;
  const prepared=new Set();
+ // Idle callbacks run on the UI thread too. Only lightweight views may warm automatically.
+ const warmViews=new Set(['goalkeeper','leadership','alltime','closed']);
  const menus=()=>Array.from(document.querySelectorAll('#tabs button[data-v]')).filter(b=>!b.hidden&&b.style.display!=='none'&&menuViewAllowed(b.dataset.v)).map(b=>b.dataset.v);
  const blocked=()=>!mobileSwipeSettings().enabled||squadAppearanceDirty||squadExportBusy||!document.documentElement.classList.contains('ggfc-mobile')||document.body.classList.contains('sidebar-open')||!!document.querySelector('dialog[open],.mask.on,#playerCardMask.on')||GGFC.pending||GGFC.editing||menuSettingsDirty||careerFrameSettingsDirty||analysisStartSettingsDirty||cardDesignSettingsDirty;
  const interactive=target=>{
@@ -32,7 +34,7 @@ function initMobilePageSwipe(){
  };
  const remember=node=>({node,style:node.getAttribute('style'),hidden:node.hidden,inert:node.inert,aria:node.getAttribute('aria-hidden')});
  const restore=state=>{
-  if(!state)return;const {node}=state;
+  if(!state)return;const {node}=state;if(state.temporary){node.remove();return;}
   if(state.style===null)node.removeAttribute('style');else node.setAttribute('style',state.style);
   node.hidden=state.hidden;node.inert=state.inert;
   if(state.aria===null)node.removeAttribute('aria-hidden');else node.setAttribute('aria-hidden',state.aria);
@@ -55,7 +57,7 @@ function initMobilePageSwipe(){
  function schedule(){
   stopWarm();if(blocked())return;const token=generation,view=activeView;
   warmTimer=setTimeout(()=>{
-   const list=menus(),i=list.indexOf(view),queue=[list[i+1],list[i-1]].filter(Boolean);
+   const list=menus(),i=list.indexOf(view),queue=[list[i+1],list[i-1]].filter(id=>warmViews.has(id));
    const work=()=>{
     idleTask=0;if(token!==generation||view!==activeView||gesture||blocked())return;
     const id=queue.shift();if(id)prepare(id);if(queue.length)enqueue();
@@ -85,8 +87,20 @@ function initMobilePageSwipe(){
   const direction=dx<0?1:-1,list=menus(),i=list.indexOf(g.view),target=list[i+direction]||null;
   if(g.direction===direction)return;
   restore(g.incoming);g.incoming=null;g.target=null;g.direction=direction;
-  if(!target||!prepare(target))return;
-  const panel=document.getElementById('v-'+target);g.incoming=remember(panel);g.target=target;
+  if(!target)return;
+  let panel;
+  if(prepared.has(target)){
+   panel=document.getElementById('v-'+target);if(!panel)return;g.incoming=remember(panel);
+  }else{
+   // Never calculate a view in touchmove/touchend. Slide a lightweight first-visit preview.
+   panel=document.createElement('section');panel.className='view swipe-loading';
+   const title=document.createElement('h2'),note=document.createElement('p'),lines=document.createElement('div');
+   title.textContent=document.querySelector('#tabs button[data-v="'+target+'"]')?.textContent.trim()||'GGFC';
+   note.textContent='화면을 준비하고 있습니다…';lines.className='swipe-loading-lines';
+   for(let i=0;i<5;i++)lines.append(document.createElement('span'));
+   panel.append(title,note,lines);main.append(panel);g.incoming={node:panel,temporary:true};
+  }
+  g.target=target;
   panel.hidden=false;panel.inert=true;panel.setAttribute('aria-hidden','true');panel.classList.add('swipe-page');
   Object.assign(panel.style,{position:'fixed',left:g.left+'px',top:originTop()+'px',width:g.width+'px',minHeight:Math.max(0,innerHeight-originTop())+'px',margin:'0',zIndex:'12',display:'block'});
  }
@@ -107,16 +121,25 @@ function initMobilePageSwipe(){
   const finish=()=>{
    if(gesture!==g)return;
    const target=g.target,valid=commit&&target&&!blocked()&&activeView===g.view&&menuViewAllowed(target);
-   cancel();
-   if(valid){const next=goTab(target,{swipePrepared:true});location.hash=next;window.scrollTo({top:0,behavior:'instant'});}else schedule();
+   if(!valid){cancel();schedule();return;}
+   const navigate=()=>{
+    if(gesture!==g)return;
+    if(blocked()||activeView!==g.view||!menuViewAllowed(target)){cancel();schedule();return;}
+    try{const next=goTab(target,{swipePrepared:true});location.hash=next;window.scrollTo({top:0,behavior:'instant'});}
+    catch(error){console.error('메뉴 화면 준비 실패',error);cancel();goTab(g.view);}
+   };
+   if(g.incoming?.temporary){
+    // Let the completed slide/placeholder paint before doing the first calculation.
+    paintFrame=requestAnimationFrame(()=>{paintFrame=requestAnimationFrame(()=>{paintFrame=0;navigate();});});
+   }else navigate();
   };
   const transition='transform '+duration+'ms cubic-bezier(.22,.72,.22,1)';g.outgoing.node.style.transition=transition;if(g.incoming)g.incoming.node.style.transition=transition;
   // Keep the finger position for one paint before animating to the final location.
   paintFrame=requestAnimationFrame(()=>{paintFrame=0;if(gesture!==g)return;position(g.outgoing.node,end);if(g.incoming)position(g.incoming.node,end+g.direction*g.viewport);settleTimer=setTimeout(finish,duration+30);});
  }
  main.addEventListener('touchstart',event=>{
-  if(gesture?.settling)return;cancel();
-  if(event.touches.length!==1||blocked()||interactive(event.target))return;
+  if(gesture?.settling)return;cancel();stopWarm();
+  if(event.touches.length!==1||blocked()||interactive(event.target)){schedule();return;}
   const t=event.touches[0];if(t.clientX<24||t.clientX>innerWidth-24)return;
   const source=event.target.closest('section.view.on');if(!source||source.id!=='v-'+activeView)return;
   gesture={id:t.identifier,x:t.clientX,y:t.clientY,view:activeView,scrollY:scrollY,viewport:innerWidth,dx:0,locked:false,samples:[{x:t.clientX,time:performance.now()}],lastMove:performance.now()};
