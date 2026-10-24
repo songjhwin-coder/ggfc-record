@@ -3623,3 +3623,8 @@ section.view.swipe-loading{padding:22px 18px;border-radius:12px;background:#f3f5
 .swipe-loading p{font-size:14px;color:#63778b;margin:0 0 24px}
 .swipe-loading-lines{display:grid;gap:14px}
 .swipe-loading-lines span{height:64px;border-radius:10px;background:linear-gradient(110deg,#e2e9ef,#edf2f6);border:1px solid #dce5ed}
+
+/* V3.25.38: keep animation layers bounded to the visible viewport on every menu. */
+.swipe-viewport{position:fixed;overflow:hidden;contain:layout paint;box-sizing:border-box;background:#f3f5f7;will-change:transform;backface-visibility:hidden;user-select:none;-webkit-user-select:none;overflow-anchor:none;pointer-events:none}
+section.view.swipe-content{animation:none!important;box-sizing:border-box;overflow-anchor:none}
+@media(prefers-reduced-motion:reduce){.swipe-viewport{transition:none!important}}

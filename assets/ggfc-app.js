@@ -6365,8 +6365,12 @@ function applyMenuStartup(){
  if(!menuStartupPending)return;menuStartupPending=false;
  activeView=resolveMenuView(menuInitialRoute||menuFallbackView());history.replaceState(null,'','#'+activeView);
 }
+let menuNavigationSignature="";
 function syncMenuNavigation(){
  const nav=navigationSettings(),tabs=document.getElementById('tabs'),adminTitle=tabs.querySelector('.sidebar-admin-title');
+ const signature=JSON.stringify([nav,admin,MEMBER_MENUS.map(m=>memberMenuOpen(m.id)),displaySettings().brandTitle,document.getElementById('headerBrandLogo')?.innerHTML]);
+ if(signature===menuNavigationSignature)return;
+ menuNavigationSignature=signature;
  orderedMenus(false,nav).forEach(m=>{
   const b=tabs.querySelector('[data-v="'+m.id+'"]');if(b)tabs.insertBefore(b,adminTitle);
  });
@@ -6477,14 +6481,25 @@ function renderActiveView(v,options={}){
 function renderMenuContent(next){
   const renderers={menus:renderMenuManagement,closed:renderMenusClosed,goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide};
   const previous=renderCalculationCache,oldDate=normDate,oldName=normalizePlayerMatchKey;
+  const oldRoster=selectPlayerRoster,oldHalf=abilityHalfInfo,oldMatches=abilityMatches,oldAbility=playerAbilityRecordAtDate;
   const memoize=fn=>{const cache=new Map();return value=>{
     if(value!==null&&typeof value==='object')return fn(value);
     if(!cache.has(value))cache.set(value,fn(value));return cache.get(value);
   };};
   renderCalculationCache={attendance:new Map(),rounds:new Map(),config:null,ability:null};
+  const memoArgs=(fn,copy=value=>value)=>{const cache=new Map();return (...args)=>{
+    const key=JSON.stringify(args);if(!cache.has(key))cache.set(key,fn(...args));return copy(cache.get(key));
+  };};
   normDate=memoize(oldDate);normalizePlayerMatchKey=memoize(oldName);
+  selectPlayerRoster=memoArgs(oldRoster,value=>value?{...value}:value);
+  abilityHalfInfo=memoArgs(oldHalf,value=>({...value}));
+  abilityMatches=memoArgs(oldMatches,value=>value.slice());
+  playerAbilityRecordAtDate=memoArgs(oldAbility);
   try{renderers[next]();}
-  finally{renderCalculationCache=previous;normDate=oldDate;normalizePlayerMatchKey=oldName;}
+  finally{
+   renderCalculationCache=previous;normDate=oldDate;normalizePlayerMatchKey=oldName;
+   selectPlayerRoster=oldRoster;abilityHalfInfo=oldHalf;abilityMatches=oldMatches;playerAbilityRecordAtDate=oldAbility;
+  }
 }
 function renderAll(){
   mobilePageSwipe?.invalidate();
@@ -6514,9 +6529,9 @@ function goTab(v,options={}){
   if(!options.startup)menuStartupPending=false;
   const next=resolveMenuView(v);
   if(next!==v)history.replaceState(null,'','#'+next);
-  syncMenuNavigation();selectMenuView(next);
   if(typeof closeMemberSidebar==='function')closeMemberSidebar(true);
   if(activeView!==next)renderActiveView(next,options);
+  else{syncMenuNavigation();selectMenuView(next);}
   return next;
 }
 $("#tabs").onclick=e=>{const b=e.target.closest('button[data-v]');if(!b)return;location.hash=goTab(b.dataset.v);window.scrollTo({top:0,behavior:'smooth'});};

@@ -21,10 +21,9 @@ let mobilePageSwipe=null;
 function initMobilePageSwipe(){
  const main=document.getElementById('mainContent');if(!main||main.dataset.pageSwipeBound)return;
  main.dataset.pageSwipeBound='1';
- let gesture=null,paintFrame=0,settleTimer=0,warmTimer=0,idleTask=0,generation=0,suppressClickUntil=0;
+ let gesture=null,paintFrame=0,settleTimer=0,suppressClickUntil=0,viewportWidth=innerWidth;
  const prepared=new Set();
- // Idle callbacks run on the UI thread too. Only lightweight views may warm automatically.
- const warmViews=new Set(['goalkeeper','leadership','alltime','closed']);
+
  const menus=()=>Array.from(document.querySelectorAll('#tabs button[data-v]')).filter(b=>!b.hidden&&b.style.display!=='none'&&menuViewAllowed(b.dataset.v)).map(b=>b.dataset.v);
  const blocked=()=>!mobileSwipeSettings().enabled||squadAppearanceDirty||squadExportBusy||!document.documentElement.classList.contains('ggfc-mobile')||document.body.classList.contains('sidebar-open')||!!document.querySelector('dialog[open],.mask.on,#playerCardMask.on')||GGFC.pending||GGFC.editing||menuSettingsDirty||careerFrameSettingsDirty||analysisStartSettingsDirty||cardDesignSettingsDirty;
  const interactive=target=>{
@@ -34,63 +33,55 @@ function initMobilePageSwipe(){
  };
  const remember=node=>({node,style:node.getAttribute('style'),hidden:node.hidden,inert:node.inert,aria:node.getAttribute('aria-hidden')});
  const restore=state=>{
-  if(!state)return;const {node}=state;if(state.temporary){node.remove();return;}
+  if(!state)return;const {node}=state;
+  if(state.content){
+   state.anchor.replaceWith(state.content.node);restore(state.content);node.remove();return;
+  }
+  if(state.temporary){node.remove();return;}
   if(state.style===null)node.removeAttribute('style');else node.setAttribute('style',state.style);
   node.hidden=state.hidden;node.inert=state.inert;
   if(state.aria===null)node.removeAttribute('aria-hidden');else node.setAttribute('aria-hidden',state.aria);
-  node.classList.remove('swipe-page','swipe-preparing');
+  node.classList.remove('swipe-page','swipe-preparing','swipe-content');
  };
  const originTop=()=>Math.max(document.getElementById('ggfcTopbar').getBoundingClientRect().bottom,parseFloat(getComputedStyle(main).paddingTop)||0);
- function prepare(id){
-  if(prepared.has(id))return true;
-  if(blocked()||id===activeView||!menuViewAllowed(id))return false;
-  const panel=document.getElementById('v-'+id),source=document.getElementById('v-'+activeView);if(!panel||!source)return false;
-  const old=remember(panel),width=source.getBoundingClientRect().width;
-  try{
-   panel.hidden=false;panel.inert=true;panel.setAttribute('aria-hidden','true');panel.classList.add('swipe-preparing');
-   panel.style.width=width+'px';panel.style.top=originTop()+'px';
-   renderMenuContent(id);prepared.add(id);return true;
-  }catch(e){console.warn('메뉴 미리보기 준비 실패',id,e);return false;}
-  finally{restore(old);}
- }
- function stopWarm(){clearTimeout(warmTimer);if(idleTask&&window.cancelIdleCallback)cancelIdleCallback(idleTask);idleTask=0;}
- function schedule(){
-  stopWarm();if(blocked())return;const token=generation,view=activeView;
-  warmTimer=setTimeout(()=>{
-   const list=menus(),i=list.indexOf(view),queue=[list[i+1],list[i-1]].filter(id=>warmViews.has(id));
-   const work=()=>{
-    idleTask=0;if(token!==generation||view!==activeView||gesture||blocked())return;
-    const id=queue.shift();if(id)prepare(id);if(queue.length)enqueue();
-   };
-   const enqueue=()=>{if(window.requestIdleCallback)idleTask=requestIdleCallback(work,{timeout:1500});else warmTimer=setTimeout(work,80);};enqueue();
-  },180);
- }
  function cancel(){
   clearTimeout(settleTimer);cancelAnimationFrame(paintFrame);paintFrame=0;
   const g=gesture;gesture=null;if(!g)return;
   restore(g.incoming);restore(g.outgoing);g.backdrop?.remove();g.placeholder?.remove();if(g.locked)window.scrollTo({top:g.scrollY,behavior:'instant'});document.body.classList.remove('swipe-active');
  }
- function invalidate(){cancel();stopWarm();generation++;prepared.clear();}
- function rendered(id){prepared.add(id);schedule();}
+ function invalidate(){cancel();prepared.clear();}
+ function rendered(id){prepared.add(id);}
  function position(node,x){node.style.transform='translate3d('+x+'px,0,0)';}
+ // Move a viewport-sized clipping frame, not the entire long table/card page.
+ function mountPanel(panel,g,top,z,temporary=false,childTop=null){
+  const state=temporary?null:remember(panel),anchor=document.createComment('swipe-origin');
+  if(!temporary)panel.before(anchor);
+  const frame=document.createElement('div');frame.className='swipe-viewport swipe-page';
+  const origin=originTop();
+  Object.assign(frame.style,{left:g.left+'px',top:origin+'px',width:g.width+'px',height:Math.max(0,innerHeight-origin)+'px',zIndex:String(z)});
+  main.append(frame);frame.append(panel);
+  panel.hidden=false;panel.inert=true;panel.setAttribute('aria-hidden','true');panel.classList.add('swipe-content');
+  Object.assign(panel.style,{position:'relative',left:'0',top:(top-origin)+'px',width:'100%',margin:'0',display:'block'});
+  if(childTop!==null&&panel.firstElementChild)panel.style.top=(top-origin+childTop-panel.firstElementChild.getBoundingClientRect().top)+'px';
+  return {node:frame,content:state,anchor,temporary};
+ }
  function stage(g){
-  const panel=document.getElementById('v-'+g.view),rect=panel.getBoundingClientRect(),flowHeight=main.getBoundingClientRect().height,first=panel.firstElementChild,childTop=first?.getBoundingClientRect().top;g.outgoing=remember(panel);g.left=rect.left;g.width=rect.width;document.body.classList.add('swipe-active');
+  const panel=document.getElementById('v-'+g.view),rect=panel.getBoundingClientRect(),flowHeight=main.getBoundingClientRect().height,childTop=panel.firstElementChild?.getBoundingClientRect().top;
+  g.left=rect.left;g.width=rect.width;document.body.classList.add('swipe-active');
   g.placeholder=document.createElement('div');g.placeholder.className='swipe-placeholder';g.placeholder.style.height=rect.height+'px';panel.before(g.placeholder);
   g.backdrop=document.createElement('div');g.backdrop.className='swipe-backdrop';g.backdrop.style.top=document.getElementById('ggfcTopbar').getBoundingClientRect().bottom+'px';g.backdrop.setAttribute('aria-hidden','true');main.append(g.backdrop);
-  panel.classList.add('swipe-page');Object.assign(panel.style,{position:'fixed',left:rect.left+'px',top:rect.top+'px',width:rect.width+'px',minHeight:Math.max(rect.height,innerHeight-rect.top)+'px',margin:'0',zIndex:'11',display:'block'});
-  // Fixed positioning stops margin collapse; compensate to keep the page under the finger.
-  if(first)panel.style.top=(rect.top+childTop-first.getBoundingClientRect().top)+'px';
-  g.placeholder.style.height=Math.max(0,rect.height+flowHeight-main.getBoundingClientRect().height)+'px';
-  document.body.classList.add('swipe-active');g.locked=true;
+  g.outgoing=mountPanel(panel,g,rect.top,11,false,childTop??null);
+  g.placeholder.style.height=Math.max(0,rect.height+flowHeight-main.getBoundingClientRect().height)+'px';g.locked=true;
  }
  function adjacent(g,dx){
-  const direction=dx<0?1:-1,list=menus(),i=list.indexOf(g.view),target=list[i+direction]||null;
+  const direction=dx<0?1:-1;
   if(g.direction===direction)return;
+  const list=g.menus,i=list.indexOf(g.view),target=list[i+direction]||null;
   restore(g.incoming);g.incoming=null;g.target=null;g.direction=direction;
   if(!target)return;
-  let panel;
+  let panel,temporary=false;
   if(prepared.has(target)){
-   panel=document.getElementById('v-'+target);if(!panel)return;g.incoming=remember(panel);
+   panel=document.getElementById('v-'+target);if(!panel)return;
   }else{
    // Never calculate a view in touchmove/touchend. Slide a lightweight first-visit preview.
    panel=document.createElement('section');panel.className='view swipe-loading';
@@ -98,11 +89,10 @@ function initMobilePageSwipe(){
    title.textContent=document.querySelector('#tabs button[data-v="'+target+'"]')?.textContent.trim()||'GGFC';
    note.textContent='화면을 준비하고 있습니다…';lines.className='swipe-loading-lines';
    for(let i=0;i<5;i++)lines.append(document.createElement('span'));
-   panel.append(title,note,lines);main.append(panel);g.incoming={node:panel,temporary:true};
+   panel.append(title,note,lines);temporary=true;
   }
   g.target=target;
-  panel.hidden=false;panel.inert=true;panel.setAttribute('aria-hidden','true');panel.classList.add('swipe-page');
-  Object.assign(panel.style,{position:'fixed',left:g.left+'px',top:originTop()+'px',width:g.width+'px',minHeight:Math.max(0,innerHeight-originTop())+'px',margin:'0',zIndex:'12',display:'block'});
+  g.incoming=mountPanel(panel,g,originTop(),12,temporary);
  }
  function paint(g){
   if(gesture!==g)return;
@@ -121,10 +111,10 @@ function initMobilePageSwipe(){
   const finish=()=>{
    if(gesture!==g)return;
    const target=g.target,valid=commit&&target&&!blocked()&&activeView===g.view&&menuViewAllowed(target);
-   if(!valid){cancel();schedule();return;}
+   if(!valid){cancel();return;}
    const navigate=()=>{
     if(gesture!==g)return;
-    if(blocked()||activeView!==g.view||!menuViewAllowed(target)){cancel();schedule();return;}
+    if(blocked()||activeView!==g.view||!menuViewAllowed(target)){cancel();return;}
     try{const next=goTab(target,{swipePrepared:true});location.hash=next;window.scrollTo({top:0,behavior:'instant'});}
     catch(error){console.error('메뉴 화면 준비 실패',error);cancel();goTab(g.view);}
    };
@@ -138,11 +128,11 @@ function initMobilePageSwipe(){
   paintFrame=requestAnimationFrame(()=>{paintFrame=0;if(gesture!==g)return;position(g.outgoing.node,end);if(g.incoming)position(g.incoming.node,end+g.direction*g.viewport);settleTimer=setTimeout(finish,duration+30);});
  }
  main.addEventListener('touchstart',event=>{
-  if(gesture?.settling)return;cancel();stopWarm();
-  if(event.touches.length!==1||blocked()||interactive(event.target)){schedule();return;}
+  if(gesture?.settling)return;cancel();
+  if(event.touches.length!==1||blocked()||interactive(event.target)){return;}
   const t=event.touches[0];if(t.clientX<24||t.clientX>innerWidth-24)return;
   const source=event.target.closest('section.view.on');if(!source||source.id!=='v-'+activeView)return;
-  gesture={id:t.identifier,x:t.clientX,y:t.clientY,view:activeView,scrollY:scrollY,viewport:innerWidth,dx:0,locked:false,samples:[{x:t.clientX,time:performance.now()}],lastMove:performance.now()};
+  gesture={id:t.identifier,x:t.clientX,y:t.clientY,view:activeView,scrollY:scrollY,viewport:innerWidth,menus:menus(),dx:0,locked:false,samples:[{x:t.clientX,time:performance.now()}],lastMove:performance.now()};
  },{passive:true});
  main.addEventListener('touchmove',event=>{
   const g=gesture;if(!g||g.settling)return;
@@ -157,11 +147,11 @@ function initMobilePageSwipe(){
   g.dx=dx;sample(g,t.clientX);adjacent(g,dx);suppressClickUntil=performance.now()+400;
   if(!paintFrame)paintFrame=requestAnimationFrame(()=>{paintFrame=0;paint(g);});
  },{passive:false});
- main.addEventListener('touchcancel',()=>{cancel();schedule();},{passive:true});
+ main.addEventListener('touchcancel',()=>{cancel();},{passive:true});
  main.addEventListener('touchend',event=>{
   const g=gesture;if(!g||g.settling)return;
   if(event.touches.length||blocked()||activeView!==g.view){cancel();return;}
-  const t=Array.from(event.changedTouches).find(t=>t.identifier===g.id);if(!t||!g.locked){cancel();schedule();return;}
+  const t=Array.from(event.changedTouches).find(t=>t.identifier===g.id);if(!t||!g.locked){cancel();return;}
   g.dx=t.clientX-g.x;adjacent(g,g.dx);
   const samples=g.samples,first=samples[0],last=samples[samples.length-1],dt=last.time-first.time;
   const velocity=performance.now()-g.lastMove<160&&dt>0?(last.x-first.x)/dt:0;
@@ -171,12 +161,14 @@ function initMobilePageSwipe(){
   suppressClickUntil=performance.now()+400;settle(g,commit);
  },{passive:true});
  main.addEventListener('click',event=>{if(performance.now()<suppressClickUntil){event.preventDefault();event.stopImmediatePropagation();}},{capture:true});
- window.addEventListener('resize',()=>{invalidate();schedule();},{passive:true});
+ window.addEventListener('resize',()=>{
+  // Mobile browser chrome/keyboard changes height, not the layout width.
+  if(innerWidth!==viewportWidth){viewportWidth=innerWidth;invalidate();}else cancel();
+ },{passive:true});
  window.addEventListener('orientationchange',invalidate,{passive:true});
  window.addEventListener('scroll',()=>{if(gesture&&Math.abs(scrollY-gesture.scrollY)>12)cancel();},{passive:true});
- document.addEventListener('visibilitychange',()=>{if(document.hidden){cancel();stopWarm();}else schedule();});
- mobilePageSwipe={cancel,invalidate,rendered,isPrepared:id=>prepared.has(id),schedule};
- schedule();
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)cancel();});
+ mobilePageSwipe={cancel,invalidate,rendered,isPrepared:id=>prepared.has(id)};
 }
 
 let sidebarReturnFocus=null;
