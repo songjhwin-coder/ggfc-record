@@ -385,6 +385,6 @@ const GGFC = (() => {
       dataRef.on('value',snap=>receive(snap.val()),e=>{state.error='공유 기록 접근 실패 ('+String(e.code||'오류')+'). 관리자는 Realtime Database 규칙과 주소를 확인해 주세요.';refreshUI();});
     }catch(e){clearTimeout(readTimer);state.checking=false;state.error='Firebase 연결 실패: '+e.message;refreshUI();}
   }
-  return {get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving;},canEdit,normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,signIn,loginOrLogout,closeLogin,togglePassword};
+  return {get editing(){return editLease||hasSettingsDraft();},get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving;},canEdit,normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,signIn,loginOrLogout,closeLogin,togglePassword};
 })();
 window.GGFC_VERSION='3.18.4';

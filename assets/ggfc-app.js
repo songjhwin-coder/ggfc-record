@@ -289,6 +289,7 @@ function representativeSettingsPersistedForYear(y){
   }catch(e){ return false; }
 }
 function save(){
+  mobilePageSwipe?.invalidate();
   invalidateVerifiedRecords();
   v319CareerCache={key:'',map:null};
   if(!GGFC.canEdit()){ toast('관리자 인증과 서버 연결을 확인해 주세요.'); return {databaseSaved:false,representativeSaved:false,error:new Error('권한 또는 연결 없음')}; }
@@ -6448,17 +6449,23 @@ function bindMenuEditor(){
 }
 function renderMenusClosed(){const root=document.getElementById('closedMenuMessage');if(root)root.textContent='현재 공개된 메뉴가 없습니다. 메뉴가 공개되면 여기에서 확인하실 수 있습니다.';}
 
-function renderActiveView(v){
+function renderActiveView(v,options={}){
+  mobilePageSwipe?.cancel();
   const next=resolveMenuView(v);
   if(next!==v){
     history.replaceState(null,'','#'+next);
     if(document.getElementById('playerCardMask')?.classList.contains('on'))closePlayerCard();
   }
   activeView=next;syncMenuNavigation();selectMenuView(next);
+  if(!options.swipePrepared||!mobilePageSwipe?.isPrepared(next))renderMenuContent(next);
+  mobilePageSwipe?.rendered(next);
+}
+function renderMenuContent(next){
   const renderers={menus:renderMenuManagement,closed:renderMenusClosed,goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide};
   renderers[next]();
 }
 function renderAll(){
+  mobilePageSwipe?.invalidate();
   invalidateVerifiedRecords();recordCalculationNotice();
   const cs=compList();if(comp!=='ALL'&&!cs.includes(comp))comp='ALL';
   $('#compFilter').innerHTML='<option value="ALL">전체 대회</option>'+cs.map(c=>'<option'+(c===comp?' selected':'')+'>'+esc(c)+'</option>').join('');
@@ -6481,12 +6488,13 @@ document.addEventListener("click",e=>{
 $("#playerCardClose").onclick=closePlayerCard;
 document.addEventListener("keydown",e=>{ if(e.key==="Escape" && $("#playerCardMask").classList.contains("on")) closePlayerCard(); });
 function goTab(v,options={}){
+  mobilePageSwipe?.cancel();
   if(!options.startup)menuStartupPending=false;
   const next=resolveMenuView(v);
   if(next!==v)history.replaceState(null,'','#'+next);
   syncMenuNavigation();selectMenuView(next);
   if(typeof closeMemberSidebar==='function')closeMemberSidebar(true);
-  if(activeView!==next)renderActiveView(next);
+  if(activeView!==next)renderActiveView(next,options);
   return next;
 }
 $("#tabs").onclick=e=>{const b=e.target.closest('button[data-v]');if(!b)return;location.hash=goTab(b.dataset.v);window.scrollTo({top:0,behavior:'smooth'});};
