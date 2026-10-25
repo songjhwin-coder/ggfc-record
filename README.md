@@ -1,3 +1,47 @@
+# GGFC V3.25.40 · UI First + Data Revalidate / PWA
+
+V3.25.39의 경기·능력치·FORM·LONG FORM·SoccerBee·카드·DUO·순위 계산과 모바일 스와이프를 유지하고, 설치/캐시/배포 구조를 개선했습니다.
+
+- 저장된 정상 기록 먼저 표시 → Firebase 최신 확인 → 달라진 경우에만 화면 재계산
+- 설치 가능한 manifest, 일반/maskable 아이콘, 오프라인 앱 실행
+- 새 버전 알림과 사용자 선택 업데이트, 미저장 작업·다른 열린 창 보호
+- 자산 SHA-256 검증, 변경 없는 파일 캐시 재사용, 미완성 배포 거부
+- GitHub Actions 자동 빌드/검증/Pages 배포 workflow
+
+상세 분석·측정값·테스트 범위·GitHub 업로드·Android 설치 방법은 [PWA_UPDATE_GUIDE.md](PWA_UPDATE_GUIDE.md)를 참고하세요.
+
+## 적용
+
+1. V3.25.39 사용자는 replacement ZIP 내부 파일을 동일 경로에 덮어씁니다.
+2. FULL 사용 시 운영 중인 `firebase-config.js`, `database.rules.json` 설정을 보존합니다.
+3. 엑셀 재업로드는 필요하지 않습니다.
+4. 최초 PWA 전환은 온라인에서 새 버전을 받은 뒤 모든 GGFC 탭/앱 창을 닫고 다시 엽니다.
+5. 하단 V3.25.40을 확인합니다. 이후에는 앱 업데이트 버튼으로 적용할 수 있습니다.
+
+## 앞으로의 배포
+
+권장: `.github/workflows/pages.yml` 업로드 후 GitHub Settings → Pages → Source를 GitHub Actions로 설정합니다. main 커밋 시 자동 검증·배포됩니다. 다른 workflow가 있으면 같은 대상으로 중복 배포하지 않도록 하나만 사용합니다.
+
+직접 빌드할 때:
+
+```bash
+python3 tools/build-static-cache.py --version 3.25.41
+python3 tools/check-release.py
+```
+
+프로그램 버전 기준은 `app-version.json`입니다. JS/CSS 변경 후 worker를 다시 생성해야 합니다. 고정된 코드 파일명은 계속 사용하며 자산 URL의 콘텐츠 해시는 자동 갱신됩니다.
+
+## 검증 범위
+
+동일 DB에서 17개 메뉴 출력과 70명 능력치 결과 일치, 17개 메뉴 스와이프, 이미지 생성, 실제 Chromium Service Worker의 JS/CSS 교체·오프라인·캐시 복구 검증을 통과했습니다. Firebase 저장은 시험 연결로 검증했습니다. Android 실기기 설치·운영 서버 배포·실서버 성능은 실행하지 않았습니다.
+
+## 이전 운영·설정 안내 보존
+
+아래는 V3.25.39까지의 기존 안내 원문입니다. 로딩·PWA·배포 방식은 위 최신 설명서를 우선 적용하세요.
+
+<details>
+<summary>기존 기능 및 Firebase 초기 설정 안내 펼치기</summary>
+
 # GGFC V3.25.39 · 카드 기준일 통일 / 추가 헤더 로고 / 출력 글자 크기 조정
 
 V3.25.38 기준으로 요청한 다섯 항목을 반영했습니다.
@@ -993,3 +1037,5 @@ SAVE%는 최근/과거 비율, GA/15는 **과거/최근 비율**로 평가합니
 - 전체 JS `node --check` 및 Full/교체 ZIP 무결성 검사를 통과했습니다.
 
 현재 데이터의 부분 기록과 기본 FORM Gate 제약을 감안하면, 먼저 관리자 상세의 기록 충실도를 확인한 뒤 FORM 기준 변경 여부를 결정하는 운영이 적합합니다.
+
+</details>

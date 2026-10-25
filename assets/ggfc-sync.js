@@ -1,9 +1,11 @@
-/* GGFC 3.18.4: One password field; server-side Firebase password verification. */
+/* GGFC sync: retain v3.18.4 wire schema; application version is declared below. */
 const GGFC = (() => {
   const ADMIN_LOGIN_ID='ggfc-admin@example.com';
   let loginBusy=false;
   const state={checking:true,ready:false,serverSeen:false,connected:false,authorized:false,user:null,revision:0,dirty:false,saving:false,busy:0,conflict:false,serial:0,latest:null,hasLatest:false,error:'',status:'공유 기록을 확인하고 있습니다…',savedAt:null,authGeneration:0};
   let database=null,auth=null,dataRef=null,readTimer=null,saveTimer=null,editLease=false;
+  let started=false,connectionPromise=null,lastSnapshotText=null,cacheSavedAt=null,cacheWarning='';
+  const CACHE_VERSION=2,CACHE_MAX_AGE=180*86400000;
   const hasSettingsDraft=()=>!!((typeof squadAppearanceDirty!=='undefined'&&squadAppearanceDirty)||(typeof menuSettingsDirty!=='undefined'&&menuSettingsDirty)||(typeof careerFrameSettingsDirty!=='undefined'&&careerFrameSettingsDirty)||(typeof analysisStartSettingsDirty!=='undefined'&&analysisStartSettingsDirty)||(typeof cardDesignSettingsDirty!=='undefined'&&cardDesignSettingsDirty));
   function discardSettingsDraft(){if(typeof squadAppearanceDirty!=='undefined'){squadAppearanceDirty=false;squadAppearanceDraft=null;}if(typeof menuSettingsDirty!=='undefined'){menuSettingsDirty=false;menuEditorDraft=null;}if(typeof cardDesignSettingsDirty!=='undefined')cardDesignSettingsDirty=false;if(typeof careerFrameSettingsDirty!=='undefined')careerFrameSettingsDirty=false;if(typeof analysisStartSettingsDirty!=='undefined')analysisStartSettingsDirty=false;}
   const fields=['matches','attendance','goals','saves','fouls','moms','specials','roster','soccerbee'];
@@ -66,7 +68,7 @@ const GGFC = (() => {
     return encoded;
   }
   function cacheKey(){return 'ggfc-v318-public:'+String((window.GGFC_CONFIG||{}).databaseURL||'');}
-  function canEdit(){return state.authorized && state.ready && state.serverSeen && state.connected && !state.conflict && !state.error;}
+  function canEdit(){return state.authorized && state.ready && state.serverSeen && state.connected && navigator.onLine!==false && !state.conflict && !state.error;}
   function refreshUI(){
     const box=document.querySelector('#cloudStatus'),line=document.querySelector('#cloudStatusText');
     if(!box||!line)return;
@@ -75,10 +77,14 @@ const GGFC = (() => {
     else if(state.conflict)message='다른 관리자의 수정이 있습니다. 미저장 내용을 내려받은 뒤 서버 기록을 다시 받아 주세요.';
     else if(state.saving)message='회원에게 공유 저장 중… 완료 표시 후 닫아 주세요.';
     else if(state.dirty)message='아직 공유되지 않은 변경이 있습니다. 서버 연결 후 저장을 다시 시도해 주세요.';
-    else if(state.ready&&!state.serverSeen&&state.checking)message='최근 기록 표시 중 · 최신 데이터 확인 중…';
+    else if(navigator.onLine===false)message=state.ready?'오프라인 · 마지막 저장 기록':'오프라인 · 저장된 기록이 없습니다.';
+    else if(state.ready&&!state.serverSeen&&state.checking)message='저장된 기록 표시 중 · 최신 기록 확인 중…';
     else if(state.ready&&!state.connected)message='연결 끊김 · 마지막으로 받은 기록입니다. 다시 연결되면 자동 갱신합니다.';
     box.dataset.state=(state.error||state.conflict)?'error':(state.dirty||!state.connected||!state.serverSeen)?'pending':'ready';
+    if(state.error&&state.ready)message=(navigator.onLine===false?'오프라인 · 마지막 저장 기록':'저장된 기록 표시 중 · ')+state.error;
+    if(cacheWarning&&!state.serverSeen)message+=' · '+cacheWarning;
     line.textContent=message;
+    line.title=cacheSavedAt?'이 기기에 저장된 시각: '+new Date(cacheSavedAt).toLocaleString('ko-KR'):'';
     const show=(id,v)=>{const el=document.querySelector(id);if(el)el.hidden=!v;};
     show('#cloudRetry',state.dirty && !state.saving && !state.conflict && state.authorized);
     show('#cloudDownload',state.dirty||editLease||hasSettingsDraft());show('#cloudReload',state.conflict||!!state.error);
@@ -97,12 +103,15 @@ const GGFC = (() => {
     // receive() defers live updates while a settings form is being edited.
     // Otherwise, stale editor caches must not hide freshly received settings.
     repAdminDrafts={};
+    lastSnapshotText=JSON.stringify(raw);
     if(!fromCache)cacheSnapshot(raw);
+    try{performance.mark(fromCache?'ggfc-cache-render-start':'ggfc-live-render-start');}catch(e){}
     const date=state.savedAt?new Date(state.savedAt):null;
     const stamp=date&&!isNaN(date.getTime())?date.toLocaleString('ko-KR'):'';
     status(fromCache?'최근 기록 표시 중 · 최신 데이터 확인 중…':raw?'공유 기록 최신 상태'+(stamp?' · '+stamp:''):'등록된 공유 기록이 없습니다. 관리자에게 기록 등록을 요청해 주세요.');
     if(first&&typeof applyMenuStartup==='function')applyMenuStartup();
     renderAll();
+    try{performance.mark(fromCache?'ggfc-cache-ready':'ggfc-data-ready');}catch(e){}
     if(typeof playerCardHistoryState!=='undefined' && playerCardHistoryState && document.querySelector('#playerCardMask')?.classList.contains('on')){
       openPlayerCard(playerCardHistoryState.player,playerCardHistoryState.query);
     }
@@ -114,7 +123,14 @@ const GGFC = (() => {
       if(!state.saving && rev!==state.revision)state.conflict=true;
       refreshUI();return;
     }
-    try{applySnapshot(raw,!state.ready);}catch(e){state.error='공유 기록을 읽지 못했습니다: '+e.message;refreshUI();}
+    try{
+      if(state.ready&&JSON.stringify(raw)===lastSnapshotText){
+        state.error='';cacheSnapshot(raw);status('최신 기록 · 변경 없음');
+        try{performance.mark('ggfc-data-ready');}catch(e){}
+        return;
+      }
+      applySnapshot(raw,!state.ready);
+    }catch(e){state.error='공유 기록을 읽지 못했습니다: '+e.message;refreshUI();}
   }
   function markChanged(){
     if(!canEdit())return false;
@@ -298,42 +314,71 @@ const GGFC = (() => {
     window.addEventListener('beforeunload',e=>{if(state.dirty||state.saving||editLease||hasSettingsDraft()){e.preventDefault();e.returnValue='';}});
   }
   function cacheSnapshot(raw){
-    try{localStorage.setItem(cacheKey(),JSON.stringify(raw));}catch(e){/* A full/disabled cache must not block live records or saving. */}
+    const savedAt=Date.now();
+    try{
+      localStorage.setItem(cacheKey(),JSON.stringify({cacheVersion:CACHE_VERSION,savedAt,appVersion:window.GGFC_VERSION||'3.25.40',snapshot:raw}));
+      cacheSavedAt=savedAt;cacheWarning='';
+    }catch(e){cacheWarning='기기 저장공간 부족 또는 저장 제한 · 현재 기록은 정상 표시';}
+  }
+  function validEnvelope(raw){
+    return raw===null||(safeObject(raw)&&['records','players','settings','meta'].some(k=>own(raw,k))&&
+      (raw.records==null||safeObject(raw.records))&&(raw.players==null||safeObject(raw.players))&&
+      (raw.meta==null||safeObject(raw.meta)));
   }
   function showCachedSnapshot(){
     try{
-      const saved=localStorage.getItem(cacheKey());
-      if(!saved)return;
-      const raw=JSON.parse(saved);
-      // Only accept the existing Firebase envelope, never an editor draft or another project's cache.
-      if(raw!==null&&(!safeObject(raw)||!['records','players','settings','meta'].some(k=>own(raw,k))||(raw.records!=null&&!safeObject(raw.records))||(raw.players!=null&&!safeObject(raw.players))))return;
-      // applySnapshot validates the complete record before replacing the displayed DB.
+      const saved=localStorage.getItem(cacheKey());if(!saved)return;
+      const item=JSON.parse(saved);let raw=item;
+      if(safeObject(item)&&own(item,'cacheVersion')){
+        if(item.cacheVersion!==CACHE_VERSION||!Number.isFinite(item.savedAt)||item.savedAt<=0||item.savedAt>Date.now()+86400000||Date.now()-item.savedAt>CACHE_MAX_AGE||!own(item,'snapshot'))throw Error('캐시 형식 또는 보관기간');
+        raw=item.snapshot;cacheSavedAt=item.savedAt;
+      }
+      if(!validEnvelope(raw))throw Error('캐시 구조');
+      // Full schema validation precedes DB replacement. Legacy raw snapshots migrate on server refresh.
+      merge(raw);
       applySnapshot(raw,true,true);
-    }catch(e){/* Invalid or unavailable cache: continue with the normal server read. */}
-  }
-  async function loadFirebaseModules(){
-    for(const [part,available] of [
-      ['app',()=>typeof window.firebase!=='undefined'&&!!window.firebase.initializeApp],
-      ['auth',()=>!!window.firebase?.auth],
-      ['database',()=>!!window.firebase?.database]
-    ]){
-      if(available())continue;
-      await new Promise((resolve,reject)=>{
-        const script=document.createElement('script');
-        let done=false;
-        const finish=err=>{
-          if(done)return;done=true;clearTimeout(timer);script.onload=script.onerror=null;
-          if(err){script.remove();reject(err);}else resolve();
-        };
-        const failed=()=>finish(new Error('연결 모듈을 불러오지 못했습니다. 인터넷 연결을 확인하고 새로고침해 주세요.'));
-        const timer=setTimeout(failed,12000);
-        script.src='https://www.gstatic.com/firebasejs/10.12.2/firebase-'+part+'-compat.js';
-        script.onload=()=>available()?finish():failed();script.onerror=failed;
-        document.head.appendChild(script);
-      });
+    }catch(e){
+      try{localStorage.removeItem(cacheKey());}catch(ignore){}
+      cacheWarning='저장된 기록을 확인할 수 없어 서버에서 다시 받습니다.';
     }
   }
+  async function loadFirebaseModules(){
+    async function part(name,available){
+      if(available())return;
+      await new Promise((resolve,reject)=>{
+        const script=document.createElement('script');let done=false;
+        const finish=err=>{if(done)return;done=true;clearTimeout(timer);script.onload=script.onerror=null;if(err){script.remove();reject(err);}else resolve();};
+        const failed=()=>finish(new Error('연결 모듈을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.'));
+        const timer=setTimeout(failed,12000);
+        script.src='https://www.gstatic.com/firebasejs/10.12.2/firebase-'+name+'-compat.js';
+        script.onload=()=>available()?finish():failed();script.onerror=failed;document.head.appendChild(script);
+      });
+    }
+    await part('app',()=>!!window.firebase?.initializeApp);
+    // Wait for both attempts before allowing a retry, even if one fails first.
+    const results=await Promise.allSettled([part('auth',()=>!!window.firebase?.auth),part('database',()=>!!window.firebase?.database)]);
+    const failed=results.find(x=>x.status==='rejected');if(failed)throw failed.reason;
+  }
+  async function connect(){
+    if(dataRef||connectionPromise||navigator.onLine===false)return connectionPromise;
+    const config=window.GGFC_CONFIG||{};
+    if(!/^https:\/\/[a-z0-9.-]+\.(?:firebaseio\.com|firebasedatabase\.app)\/?$/i.test(config.databaseURL||''))return;
+    state.checking=true;state.error='';refreshUI();
+    connectionPromise=(async()=>{
+      try{
+        await loadFirebaseModules();
+        const app=firebase.apps.length?firebase.app():firebase.initializeApp(config);
+        database=app.database();auth=app.auth();dataRef=database.ref('ggfc/v3');
+        database.ref('.info/connected').on('value',snap=>{state.connected=snap.val()===true;refreshUI();});
+        auth.onIdTokenChanged(onUser);
+        dataRef.on('value',snap=>receive(snap.val()),e=>{state.checking=false;state.error='공유 기록 접근 실패 ('+String(e.code||'오류')+'). 관리자는 Realtime Database 규칙과 주소를 확인해 주세요.';refreshUI();});
+      }catch(e){clearTimeout(readTimer);state.checking=false;state.error='Firebase 연결 실패: '+e.message;refreshUI();}
+      finally{connectionPromise=null;}
+    })();
+    return connectionPromise;
+  }
   async function start(){
+    if(started)return;started=true;
     installGuards();
     document.querySelector('#cloudRetry').onclick=()=>{state.error='';refreshUI();flush();};
     document.querySelector('#cloudReload').onclick=reload;
@@ -364,7 +409,7 @@ const GGFC = (() => {
       refreshUI();return;
     }
     // All feature scripts must be ready before rendering the configured startup menu.
-    if(document.readyState==='loading')await new Promise(resolve=>document.addEventListener('DOMContentLoaded',resolve,{once:true}));
+    if(document.readyState!=='complete')await new Promise(resolve=>document.addEventListener('DOMContentLoaded',resolve,{once:true}));
     showCachedSnapshot();
     refreshUI();
     readTimer=setTimeout(()=>{
@@ -376,15 +421,11 @@ const GGFC = (() => {
     },12000);
     // Yield so cached records can paint before SDK loading and connection setup.
     await new Promise(resolve=>setTimeout(resolve,0));
-    try{
-      await loadFirebaseModules();
-      const app=firebase.apps.length?firebase.app():firebase.initializeApp(config);
-      database=app.database();auth=app.auth();dataRef=database.ref('ggfc/v3');
-      database.ref('.info/connected').on('value',snap=>{state.connected=snap.val()===true;refreshUI();});
-      auth.onIdTokenChanged(onUser);
-      dataRef.on('value',snap=>receive(snap.val()),e=>{state.error='공유 기록 접근 실패 ('+String(e.code||'오류')+'). 관리자는 Realtime Database 규칙과 주소를 확인해 주세요.';refreshUI();});
-    }catch(e){clearTimeout(readTimer);state.checking=false;state.error='Firebase 연결 실패: '+e.message;refreshUI();}
+    window.addEventListener('offline',()=>{state.connected=false;refreshUI();});
+    window.addEventListener('online',()=>{refreshUI();connect();});
+    await connect();
+
   }
-  return {get editing(){return editLease||hasSettingsDraft();},get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving;},canEdit,normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,signIn,loginOrLogout,closeLogin,togglePassword};
+  return {get editing(){return editLease||hasSettingsDraft();},get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving||state.busy>0;},canEdit,normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,signIn,loginOrLogout,closeLogin,togglePassword};
 })();
-window.GGFC_VERSION='3.18.4';
+window.GGFC_VERSION='3.25.40';

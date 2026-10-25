@@ -3,8 +3,15 @@
 <head><script>window.GGFC_MOBILE_ENTRY=true;</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>GGFC 모바일 기록센터 · 3.25.39</title>
+<title>GGFC 모바일 기록센터 · 3.25.40</title>
 <link rel="stylesheet" href="assets/ggfc.css?v=3.25.39">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="stylesheet" href="assets/pwa.css?v=3215eb1acf9763ee">
 <meta name="theme-color" content="#061f44"><script>if(new URLSearchParams(location.search).get("view")!=="desktop" && (window.GGFC_MOBILE_ENTRY || matchMedia("(max-width: 820px)").matches))document.documentElement.classList.add("ggfc-mobile");</script></head>
 <body class="sidebar-collapsed">
 <a class="skip-link" href="#mainContent">본문으로 이동</a>
@@ -55,7 +62,8 @@
     <div class="sidebar-temp-title">Temp</div>
     <button data-v="team" class="temp-team-menu"><span>Team Stats</span></button>
   </nav>
-  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.25.39 · 기록센터</span></footer>
+  <div class="pwa-menu-actions"><button class="btn sm" id="pwaInstall" hidden>GGFC를 앱으로 설치</button><button class="btn sm" id="pwaCheck">앱 업데이트 확인</button><p id="pwaStatus" role="status" aria-live="polite"></p></div>
+  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.25.40 · 기록센터</span></footer>
 </aside>
 <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" tabindex="-1" aria-label="메뉴 닫기" hidden></button>
 
@@ -794,7 +802,7 @@
     </div>
   </section>
   <footer class="page-status-footer" aria-label="프로그램 버전 및 공유 기록 상태">
-  <div class="release-version" aria-label="현재 프로그램 버전">GGFC · V3.25.39</div>
+  <div class="release-version" aria-label="현재 프로그램 버전">GGFC · V3.25.40</div>
   <section class="cloud-status" id="cloudStatus" role="status" aria-live="polite"><span id="cloudStatusText">공유 기록을 확인하고 있습니다…</span>
     <div class="cloud-actions"><button id="cloudRetry" class="btn sm" hidden>공유 저장 재시도</button><button id="cloudDownload" class="btn sm" hidden>미저장 내용 내려받기</button><button id="cloudReload" class="btn sm" hidden>서버 기록 다시 받기</button></div>
   </section>
@@ -991,16 +999,21 @@
 <input type="file" id="logoFilepick" accept="image/*" hidden>
 <input type="file" id="soccerbeeFilepick" accept=".xlsx" hidden>
 
-<script src="firebase-config.js"></script>
-<script src="assets/ggfc-sync.js?v=3.25.36"></script>
-<script src="assets/ggfc-mobile.js?v=3.25.39"></script>
-<script src="assets/ggfc-details.js?v=3.25.31"></script>
-<script src="assets/ggfc-squad.js?v=3.25.39"></script>
-<script src="assets/ggfc-card-design.js?v=3.25.31"></script>
-<script src="assets/ggfc-alltime.js?v=3.25.31"></script>
-<script src="assets/ggfc-maker.js?v=3.25.31"></script>
-<script src="assets/ggfc-slump.js?v=3.25.31"></script>
-<script src="assets/ggfc-app.js?v=3.25.39"></script>
-<script src="assets/ggfc-duo.js?v=3.25.31"></script>
-<script src="assets/ggfc-cache.js?v=3.25.32"></script>
+<script defer src="firebase-config.js"></script>
+<script defer src="assets/ggfc-sync.js?v=d74b3732434070da"></script>
+<script defer src="assets/ggfc-mobile.js?v=3.25.39"></script>
+<script defer src="assets/ggfc-details.js?v=3.25.31"></script>
+<script defer src="assets/ggfc-squad.js?v=3.25.39"></script>
+<script defer src="assets/ggfc-card-design.js?v=3.25.31"></script>
+<script defer src="assets/ggfc-alltime.js?v=3.25.31"></script>
+<script defer src="assets/ggfc-maker.js?v=3.25.31"></script>
+<script defer src="assets/ggfc-slump.js?v=3.25.31"></script>
+<script defer src="assets/ggfc-app.js?v=3.25.39"></script>
+<script defer src="assets/ggfc-duo.js?v=3.25.31"></script>
+<script defer src="assets/pwa-update.js?v=22cfff45cda7a34f"></script>
+<aside class="pwa-update" id="pwaUpdate" hidden aria-label="앱 업데이트">
+  <span id="pwaUpdateText" role="status" aria-live="polite">GGFC 새 버전이 있습니다.</span>
+  <button type="button" class="btn primary sm" id="pwaApply">업데이트</button>
+  <button type="button" class="btn sm" id="pwaLater">나중에</button>
+</aside>
 </body></html>
