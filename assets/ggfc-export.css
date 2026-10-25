@@ -159,3 +159,9 @@ tbody tr:nth-child(even){background:#f8fafc}
 .poster-enlarged-results .poster-match-line>.poster-initial{font-size:10.5px}
 .poster-enlarged-results .poster-match-team{font-size:13.5px}
 .poster-enlarged-results .poster-scorers{font-size:10.5px}
+
+/* V3.25.39: export only — reduce scorer labels by 30%; use one team-name size. */
+.poster-enlarged-results{--poster-team-name-size:13.5px}
+.poster-enlarged-results .poster-scorers{font-size:7.35px}
+.poster-enlarged-results .poster-league-team b,
+.poster-enlarged-results .poster-match-team{font-size:var(--poster-team-name-size)}

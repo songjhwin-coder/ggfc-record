@@ -62,11 +62,12 @@ function initMobilePageSwipe(){
   main.append(frame);frame.append(panel);
   panel.hidden=false;panel.inert=true;panel.setAttribute('aria-hidden','true');panel.classList.add('swipe-content');
   Object.assign(panel.style,{position:'relative',left:'0',top:(top-origin)+'px',width:'100%',margin:'0',display:'block'});
-  if(childTop!==null&&panel.firstElementChild)panel.style.top=(top-origin+childTop-panel.firstElementChild.getBoundingClientRect().top)+'px';
+  const firstVisible=[...panel.children].find(el=>el.getClientRects().length);
+  if(childTop!==null&&firstVisible)panel.style.top=(top-origin+childTop-firstVisible.getBoundingClientRect().top)+'px';
   return {node:frame,content:state,anchor,temporary};
  }
  function stage(g){
-  const panel=document.getElementById('v-'+g.view),rect=panel.getBoundingClientRect(),flowHeight=main.getBoundingClientRect().height,childTop=panel.firstElementChild?.getBoundingClientRect().top;
+  const panel=document.getElementById('v-'+g.view),rect=panel.getBoundingClientRect(),flowHeight=main.getBoundingClientRect().height,childTop=[...panel.children].find(el=>el.getClientRects().length)?.getBoundingClientRect().top;
   g.left=rect.left;g.width=rect.width;document.body.classList.add('swipe-active');
   g.placeholder=document.createElement('div');g.placeholder.className='swipe-placeholder';g.placeholder.style.height=rect.height+'px';panel.before(g.placeholder);
   g.backdrop=document.createElement('div');g.backdrop.className='swipe-backdrop';g.backdrop.style.top=document.getElementById('ggfcTopbar').getBoundingClientRect().bottom+'px';g.backdrop.setAttribute('aria-hidden','true');main.append(g.backdrop);

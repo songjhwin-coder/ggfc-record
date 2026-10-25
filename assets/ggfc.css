@@ -3628,3 +3628,13 @@ section.view.swipe-loading{padding:22px 18px;border-radius:12px;background:#f3f5
 .swipe-viewport{position:fixed;overflow:hidden;contain:layout paint;box-sizing:border-box;background:#f3f5f7;will-change:transform;backface-visibility:hidden;user-select:none;-webkit-user-select:none;overflow-anchor:none;pointer-events:none}
 section.view.swipe-content{animation:none!important;box-sizing:border-box;overflow-anchor:none}
 @media(prefers-reduced-motion:reduce){.swipe-viewport{transition:none!important}}
+
+/* V3.25.39: page banner copy is administrator-only; navigation labels remain visible. */
+body:not(.admin-mode) section.view>.head{display:none!important}
+.header-secondary-logo{display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.header-secondary-logo[hidden]{display:none!important}
+#topSecondaryLogo{margin-left:auto;max-width:96px;height:44px}
+#topSecondaryLogo img{display:block;width:auto;max-width:96px;max-height:44px;object-fit:contain}
+#headerSecondaryLogo{width:44px;height:44px}
+#headerSecondaryLogo img{max-width:100%;max-height:100%;object-fit:contain}
+@media(max-width:820px){#topSecondaryLogo{max-width:66px;height:36px}#topSecondaryLogo img{max-width:66px;max-height:36px}.topbar-brand{min-width:0}#topBrandName{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}

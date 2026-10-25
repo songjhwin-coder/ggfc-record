@@ -1572,6 +1572,7 @@ function ensureLogoSettings(){
   DB.settings.teamLogos=DB.settings.teamLogos||{};
   DB.settings.teamNames=DB.settings.teamNames||{};
   DB.settings.headerLogo=DB.settings.headerLogo||"";
+  DB.settings.headerLogoSecondary=DB.settings.headerLogoSecondary||"";
   DB.settings.leagueLogos=DB.settings.leagueLogos||{A:"",B:""};
   if(!("A" in DB.settings.leagueLogos)) DB.settings.leagueLogos.A="";
   if(!("B" in DB.settings.leagueLogos)) DB.settings.leagueLogos.B="";
@@ -1589,7 +1590,7 @@ function teamDisplayName(name){
   const key=String(name||"").trim();
   return String(DB.settings.teamNames[key]||key).trim() || key;
 }
-function headerLogo(){ ensureLogoSettings(); return safeLogoSrc(DB.settings.headerLogo); }
+function headerLogo(key="brand"){ ensureLogoSettings(); return safeLogoSrc(key==="secondary"?DB.settings.headerLogoSecondary:DB.settings.headerLogo); }
 function defaultHeaderLogoHtml(){
   return '<svg class="logo header-logo-fallback" viewBox="0 0 48 48" aria-hidden="true">'+
     '<path d="M7 8h24L18 21H5z" fill="#37003c"/>'+
@@ -1601,6 +1602,11 @@ function renderHeaderLogo(){
   const box=$("#headerBrandLogo"); if(!box) return;
   const src=headerLogo();
   box.innerHTML=src?'<img src="'+src+'" alt="헤더 로고">':defaultHeaderLogoHtml();
+  const second=headerLogo('secondary');
+  for(const id of ['headerSecondaryLogo','topSecondaryLogo']){
+    const el=document.getElementById(id);if(!el)continue;
+    el.hidden=!second;el.innerHTML=second?'<img src="'+second+'" alt="추가 헤더 로고">':'';
+  }
 }
 function renderDisplaySettings(){
   renderCareerFrameSettings();
@@ -1639,11 +1645,11 @@ function resolvePlayerCardQuery(query){
     info=Object.assign({},abilityHalfInfo(year,half),{asOf:date,allCompetitions:true});
   }
   info=info||recordQueryInfo();
-  const start=normDate(info.start), end=normDate(info.end), asOf=normDate(info.asOf)||end;
+  const start=normDate(info.start), end=normDate(info.end), explicitAsOf=normDate(info.asOf), asOf=explicitAsOf||end;
   const list=uniqueRecordMatches((info.list||(info.allCompetitions?verifiedRecords().matches:recordBaseMatches())).filter(m=>{
     const d=normDate(m.date);return d&&(!start||d>=start)&&(!end||d<=end)&&(!asOf||d<=asOf);
   }));
-  const cutoff=asOf||list.map(m=>normDate(m.date)).sort().pop()||start;
+  const cutoff=explicitAsOf||list.map(m=>normDate(m.date)).sort().pop()||asOf||start;
   const year=String((cutoff||start).slice(0,4)||info.year||recordYear||new Date().getFullYear());
   const half=info.half||(/^(H1|H2)$/.test(info.mode)?info.mode:abilityHalfForDate(year,cutoff));
   return Object.assign({},info,{start,end,list,asOf:cutoff,year,half});
@@ -5305,13 +5311,13 @@ function renderPlayer(){
   if($("#playerPeriodLabel")) $("#playerPeriodLabel").textContent=info.label+" · "+list.length+"경기";
   const draftNames=draftPlayerNameSet(info.year);
   const search='',matchesName=()=>true;
-  const careerCutoff=normDate(info.end)||normDate(info.asOf)||recordDates()[0]||"";
+  const cardInfo=resolvePlayerCardQuery(info),careerCutoff=cardInfo.asOf;
   const careerMap=v319CareerStatsMap(careerCutoff);
-  const allPlayers=queryPlayerStats(list).filter(p=>draftPlayerVisible(p.player,draftNames)).map(p=>{const achievements=v319AchievementList(careerMap[p.player]||{});const roster=playerCardRoster(p.player,info)||{};const abilityYearForCard=(careerCutoff||String(info.year||'')).slice(0,4)||abilityYearList()[0], ability=abilitySystemEnabled()&&/^20\d{2}$/.test(abilityYearForCard)?playerAbilityRecordAtDate(p.player,abilityYearForCard,abilityHalfForDate(abilityYearForCard,careerCutoff),careerCutoff,true):null;return Object.assign(p,{displayTeam:playerSquadDisplayTeam(p.player,info,p.mainTeam),frameState:careerFrameState(careerMap[p.player]),achievements,achievementCount:achievements.length,shirtNumber:roster.no??"",position:roster.pos||"",careerCutoff,ability});}).sort((a,b)=>String(a.player||"").localeCompare(String(b.player||""),"ko-KR"));
+  const allPlayers=queryPlayerStats(list).filter(p=>draftPlayerVisible(p.player,draftNames)).map(p=>{const achievements=v319AchievementList(careerMap[p.player]||{});const roster=playerCardRoster(p.player,info)||{};const abilityYearForCard=(careerCutoff||String(info.year||'')).slice(0,4)||abilityYearList()[0], ability=abilitySystemEnabled()&&/^20\d{2}$/.test(abilityYearForCard)?playerAbilityRecordAtDate(p.player,abilityYearForCard,abilityHalfForDate(abilityYearForCard,careerCutoff),careerCutoff,true):null;return Object.assign(p,{displayTeam:playerSquadDisplayTeam(p.player,cardInfo,p.mainTeam),frameState:careerFrameState(careerMap[p.player]),achievements,achievementCount:achievements.length,shirtNumber:roster.no??"",position:roster.pos||"",careerCutoff,ability});}).sort((a,b)=>String(a.player||"").localeCompare(String(b.player||""),"ko-KR"));
   const ps=allPlayers.filter(p=>matchesName(p.player)),emptySearch='<div class="empty">검색한 이름과 일치하는 선수가 없습니다.</div>';
-  if($('#playerRecordSearchStatus'))$('#playerRecordSearchStatus').textContent=(search?'검색 결과 ':'전체 ')+ps.length+'명 / '+allPlayers.length+'명 · 카드 등급은 조회 종료일 기준 통산 기록';
+  if($('#playerRecordSearchStatus'))$('#playerRecordSearchStatus').textContent=(search?'검색 결과 ':'전체 ')+ps.length+'명 / '+allPlayers.length+'명 · 카드 등급은 카드 기준일까지의 통산 기록';
   if($('#playerRecordSearchClear'))$('#playerRecordSearchClear').disabled=!String($('#memberPlayerSearch')?.value||'');
-  if($("#playerPeriodLabel")) $("#playerPeriodLabel").textContent+=' · 선수명단 등록 선수 '+allPlayers.length+'명 · 카드 등급은 조회 종료일 기준 통산 기록';
+  if($("#playerPeriodLabel")) $("#playerPeriodLabel").textContent+=' · 선수명단 등록 선수 '+allPlayers.length+'명 · 카드 등급은 카드 기준일까지의 통산 기록';
   $("#playerTable").innerHTML=tbl(
     [{t:"선수"},{t:"카드 등급 · 승급 진행률"},{t:"주 소속"},{t:"등번호",n:1},{t:"포지션"},{t:"CURRENT",n:1},{t:"BASE",n:1},{t:"FORM"},{t:"SB"},{t:"팀경기",n:1},{t:"출석",n:1},{t:"출석률",n:1},{t:"승",n:1},{t:"무",n:1},{t:"패",n:1},{t:"승률",n:1},{t:"득점",n:1},{t:"어시스트",n:1},{t:"개인파울",n:1},{t:"유효슛",n:1},{t:"키패스",n:1},{t:"수비성공",n:1},{t:"선방",n:1},{t:"MOM",n:1},{t:"승점",n:1},{t:"ACHIEVEMENT"}],
     ps.map(p=>[playerCardLink(p.player,playerFaceChip(p.player,false,info.year),info),careerFrameListHtml(p.frameState),'<span class="muted">'+teamChip(p.displayTeam)+'</span>',esc(String(p.shirtNumber??'')||'—'),esc(p.position||'—'),p.ability?'<b>'+p.ability.currentOvr+'</b>':'—',p.ability?fmtAbility(p.ability.baseOvrRaw):'—',p.ability?'<span class="ability-form-inline '+(p.ability.form.level>0?'hot':p.ability.form.level<0?'cold':'normal')+'">'+esc(p.ability.form.status.icon)+' '+(p.ability.form.level>0?'+':'')+p.ability.form.level+'</span>':'—',p.ability?(p.ability.measured?(p.ability.partialMeasurement?'PARTIAL':'MEASURED'):'68P'):'—',p.teamGames,p.att,'<b>'+p.attendanceRate+'%</b>',p.w,p.d,p.l,p.winRate+'%',p.g,p.a||0,p.f||0,p.sot??'—',p.keyPass??'—',p.defSuccess??'—',p.sv||0,p.mom||0,'<b>'+p.pts+'</b>',playerListAchievements(p.player,careerCutoff)])
@@ -6051,7 +6057,7 @@ function buildRecordXlsx(){
 }
 function logoSettingRow(type,key,label){
   ensureLogoSettings();
-  const src=type==="team"?teamLogo(key):type==="league"?leagueLogo(key):headerLogo();
+  const src=type==="team"?teamLogo(key):type==="league"?leagueLogo(key):headerLogo(key);
   const editable=type!=="header";
   const shownLabel=type==="team"?teamDisplayName(key):type==="league"?leagueGroupLabel(key):label;
   return '<div class="logo-row logo-row-editable" data-logo-row="'+type+'|'+esc(key)+'">'+
@@ -6085,7 +6091,7 @@ function renderLogoManager(){
   ensureLogoSettings();
   const teams=teamList();
   box.innerHTML='<div class="logo-manager-group"><div class="logo-manager-title">헤더 로고</div><div class="logo-manager-grid">'+
-    logoSettingRow("header","brand","GGFC 헤더 왼쪽 로고")+'</div></div>'+ 
+    logoSettingRow("header","brand","기본 헤더 로고")+logoSettingRow("header","secondary","추가 헤더 로고 · 상단 오른쪽")+'</div></div>'+ 
     '<div class="logo-manager-group"><div class="logo-manager-title">리그 로고 · 리그명</div><div class="logo-manager-grid">'+
     logoSettingRow("league","A",leagueGroupLabel("A"))+logoSettingRow("league","B",leagueGroupLabel("B"))+'</div></div>'+ 
     '<div class="logo-manager-group"><div class="logo-manager-title">팀 로고 · 팀명</div><div class="logo-manager-grid">'+
@@ -6111,7 +6117,7 @@ function removeLogo(type,key){
   ensureLogoSettings();
   if(type==="team") delete DB.settings.teamLogos[key];
   else if(type==="league") DB.settings.leagueLogos[key]="";
-  else if(type==="header") DB.settings.headerLogo="";
+  else if(type==="header") DB.settings[key==="secondary"?"headerLogoSecondary":"headerLogo"]="";
   save(); renderAll(); toast("로고를 삭제했습니다.");
 }
 function resizedLogoData(file){
@@ -6368,7 +6374,7 @@ function applyMenuStartup(){
 let menuNavigationSignature="";
 function syncMenuNavigation(){
  const nav=navigationSettings(),tabs=document.getElementById('tabs'),adminTitle=tabs.querySelector('.sidebar-admin-title');
- const signature=JSON.stringify([nav,admin,MEMBER_MENUS.map(m=>memberMenuOpen(m.id)),displaySettings().brandTitle,document.getElementById('headerBrandLogo')?.innerHTML]);
+ const signature=JSON.stringify([nav,admin,MEMBER_MENUS.map(m=>memberMenuOpen(m.id)),displaySettings().brandTitle,document.getElementById('headerBrandLogo')?.innerHTML,headerLogo('secondary')]);
  if(signature===menuNavigationSignature)return;
  menuNavigationSignature=signature;
  orderedMenus(false,nav).forEach(m=>{
@@ -7107,18 +7113,19 @@ if($("#soccerbeeClear")) $("#soccerbeeClear").onclick=()=>{if(!admin)return;if(c
 
 $("#logoFilepick").onchange=async e=>{
   if(!GGFC.canEdit()){e.target.value="";return;}
-  const f=e.target.files[0]; e.target.value="";
-  if(!f || !logoTarget) return;
-  if(!admin){ logoTarget=null; return; }
+  const f=e.target.files[0],target=logoTarget; e.target.value="";
+  logoTarget=null;
+  if(!f || !target) return;
+  if(!admin)return;
   try{
     const data=await resizedLogoData(f);
     ensureLogoSettings();
-    if(logoTarget.type==="team") DB.settings.teamLogos[logoTarget.key]=data;
-    else if(logoTarget.type==="league") DB.settings.leagueLogos[logoTarget.key]=data;
-    else if(logoTarget.type==="header") DB.settings.headerLogo=data;
-    const label=logoTarget.type==="team"?teamDisplayName(logoTarget.key):logoTarget.type==="league"?leagueGroupLabel(logoTarget.key):"헤더";
-    logoTarget=null; save(); renderAll(); toast(label+" 로고를 등록했습니다.");
-  }catch(err){ logoTarget=null; toast("로고 등록 실패: "+err.message); }
+    if(target.type==="team") DB.settings.teamLogos[target.key]=data;
+    else if(target.type==="league") DB.settings.leagueLogos[target.key]=data;
+    else if(target.type==="header") DB.settings[target.key==="secondary"?"headerLogoSecondary":"headerLogo"]=data;
+    const label=target.type==="team"?teamDisplayName(target.key):target.type==="league"?leagueGroupLabel(target.key):target.key==="secondary"?"추가 헤더":"헤더";
+    save(); renderAll(); toast(label+" 로고를 등록했습니다.");
+  }catch(err){ toast("로고 등록 실패: "+err.message); }
 };
 
 let pendKind=null;
@@ -7503,7 +7510,7 @@ async function createDashboardExportSnapshot(source){
   try{
     const doc=frame.contentDocument;doc.documentElement.lang='ko';
     const base=doc.createElement('base');base.href=document.baseURI;doc.head.appendChild(base);
-    const style=doc.createElement('link');style.rel='stylesheet';style.href=new URL('assets/ggfc-export.css?v=3.25.31',document.baseURI).href;
+    const style=doc.createElement('link');style.rel='stylesheet';style.href=new URL('assets/ggfc-export.css?v=3.25.39',document.baseURI).href;
     const ready=settleExportResource(style,12000,()=>!!style.sheet);doc.head.appendChild(style);await ready;
     if(!style.sheet)throw new Error('출력 스타일을 불러오지 못했습니다.');
     const root=buildReferencePoster(doc,source);doc.body.appendChild(root);
