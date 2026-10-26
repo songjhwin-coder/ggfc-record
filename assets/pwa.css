@@ -4,3 +4,10 @@
 .pwa-update{position:fixed;z-index:700;bottom:calc(16px + env(safe-area-inset-bottom));right:16px;max-width:min(540px,calc(100vw - 32px));display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:#fff;color:#061f44;border:1px solid #bbc8d8;border-radius:12px;padding:14px;box-shadow:0 4px 24px #061f4430}
 .pwa-update span{flex:1 1 220px;font-size:14px;line-height:1.5}
 .pwa-update[hidden],.pwa-menu-actions [hidden]{display:none!important}
+
+/* Shared sidebar action alignment and external-browser fallback. */
+.pwa-menu-actions>.btn{display:flex;align-items:center;justify-content:center;width:100%;box-sizing:border-box;text-align:center;text-decoration:none;line-height:1.5}
+.pwa-menu-actions>.pwa-guide-link:hover,.pwa-menu-actions>.pwa-guide-link:focus{text-decoration:none}
+.ggfc-browser-notice{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:740;width:min(540px,calc(100vw - 24px));padding:18px;border:1px solid #b6cbbb;border-radius:14px;background:#f1faf6;color:#17324a;box-shadow:0 5px 28px #071f3b30;font-family:inherit;font-size:14px;line-height:1.65;overflow-wrap:anywhere}
+.ggfc-browser-notice[hidden],.ggfc-browser-notice [hidden]{display:none!important}
+.ggfc-browser-notice>strong{display:block;padding-right:24px;font-size:15px}.ggfc-browser-notice p{margin:8px 0 12px}.browser-dismiss{position:absolute;right:8px;top:8px;border:0;background:transparent;color:#17324a;font-size:24px;min-width:32px;min-height:32px;cursor:pointer}.browser-actions{display:flex;flex-wrap:wrap;gap:7px}.browser-actions button{border:1px solid #87ad9e;background:#fff;color:#125c48;border-radius:9px;padding:9px 12px;min-height:42px;font:inherit;cursor:pointer}.browser-actions button:first-child{background:#071f3b;border-color:#071f3b;color:#fff}.ggfc-browser-notice button:focus-visible{outline:3px solid #147d70;outline-offset:3px}

@@ -49,6 +49,11 @@
   matchMedia('(display-mode: standalone)').addEventListener('change',refresh);
   function explainInstallation(){
     if(embedded){
+      if(window.GGFCBrowserHandoff?.available){
+        window.GGFCBrowserHandoff.openPreferred();
+        status('외부 브라우저 열기를 요청했습니다. 전환되지 않으면 아래 버튼이나 주소 복사를 이용해 주세요.');
+        return;
+      }
       status('이 화면에서는 직접 설치할 수 없습니다. Chrome 또는 Safari에서 다시 열어주세요.');
       el('embeddedHelp').hidden=false;
       el('embeddedHelp').scrollIntoView({block:'center',behavior:'auto'});
