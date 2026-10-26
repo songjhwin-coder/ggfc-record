@@ -21,19 +21,19 @@ def update_ref(m):
  return filename+'?v='+revision
 p=root/'assets/ggfc-sync.js';s=p.read_text();p.write_text(re.sub(r"window.GGFC_VERSION='[^']+'",f"window.GGFC_VERSION='{version}'",s))
 p=root/'assets/ggfc-app.js';s=p.read_text();p.write_text(re.sub(r'(assets/ggfc-export\.css)\?v=([\w.-]+)',update_ref,s))
-for name in ['index.html','mobile.html']:
+for name in ['index.html','mobile.html','install.html']:
  p=root/name;s=p.read_text()
  s=re.sub(r'(assets/[\w.-]+\.(?:js|css))\?v=([\w.-]+)',update_ref,s)
  parts=re.split(r'(<[^>]*>)',s)
  s=''.join(re.sub(r'(?<![\d.])3\.\d+\.\d+(?![\d.])',version,part) if i%2==0 else part for i,part in enumerate(parts))
  p.write_text(s)
 urls={}
-for name in ['index.html','mobile.html','assets/ggfc-app.js']:
+for name in ['index.html','mobile.html','install.html','assets/ggfc-app.js']:
  for m in re.finditer(r'(assets/[\w./-]+\.(?:js|css))\?v=([\w.-]+)',(root/name).read_text()):urls[m[1]]=m[0]
 for folder in ['assets','icons']:
  for p in sorted((root/folder).rglob('*')):
   if p.suffix in ['.js','.css','.svg','.woff','.png']:urls.setdefault(p.relative_to(root).as_posix(),p.relative_to(root).as_posix())
-for name in ['index.html','mobile.html','offline.html','manifest.webmanifest','app-version.json']:urls[name]=name
+for name in ['index.html','mobile.html','install.html','offline.html','manifest.webmanifest','app-version.json']:urls[name]=name
 assets=[{'url':url,'sha256':digest(root/name)} for name,url in sorted(urls.items())]
 body=(root/'tools/service-worker.template.js').read_text()
 fingerprint=hashlib.sha256((json.dumps(assets)+body).encode()).hexdigest()[:16]

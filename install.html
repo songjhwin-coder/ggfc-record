@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#071f3b">
+<meta name="description" content="GGFC 앱 설치 · 아이폰과 안드로이드에 맞는 설치 방법을 확인하세요.">
+<title>GGFC 앱 설치 · 3.25.42</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/ggfc-crest-192.png">
+<link rel="apple-touch-icon" href="icons/ggfc-crest-192.png">
+<link rel="stylesheet" href="assets/ggfc-install.css?v=8d630605e0517a20">
+<script defer src="assets/ggfc-install.js?v=f795323ea864c0e1"></script>
+</head>
+<body>
+<main class="install-shell">
+<header class="install-hero">
+<img class="crest" src="icons/ggfc-crest-192.png" width="112" height="112" alt="GGFC 구단 로고">
+<p class="eyebrow">GGFC RECORD CENTER</p>
+<h1>우리의 기록을<br>홈 화면에서 바로.</h1>
+<p class="lead">경기결과 · 선수기록 · 랭킹<br>GGFC 앱으로 편하게 확인하세요.</p>
+</header>
+<section class="install-card" aria-labelledby="guideTitle">
+<span id="deviceBadge" class="badge">기기에 맞는 설치 안내</span>
+<h2 id="guideTitle">GGFC 앱 설치하기</h2>
+<p id="guideIntro">아래에서 휴대폰에 맞는 설치 방법을 선택하세요.</p>
+<button id="installNow" class="primary" hidden>GGFC 설치하기</button>
+<p id="installStatus" class="status" role="status" aria-live="polite"></p>
+<a class="secondary" id="openApp" href="./index.html">설치 없이 GGFC 이용하기</a>
+<div id="embeddedHelp" class="notice" hidden><strong>카카오톡 등의 앱 안에서 열렸습니다.</strong><p>설치하려면 화면 메뉴에서 ‘다른 브라우저로 열기’를 선택하세요. 안드로이드는 Chrome, 아이폰은 Safari를 권장합니다.</p><button id="copyURL" class="small-button">설치 주소 복사</button><p id="copyStatus" role="status" aria-live="polite"></p></div>
+<div id="manualGuide">
+<div class="device-tabs" role="group" aria-label="설치 기기 선택">
+<button type="button" data-device="android" aria-pressed="false">안드로이드</button>
+<button type="button" data-device="ios" aria-pressed="false">아이폰 · 아이패드</button>
+<button type="button" data-device="desktop" aria-pressed="false">PC · 기타</button>
+</div>
+<h3 id="stepsTitle">기기를 선택하세요</h3>
+<ol id="installSteps"></ol>
+<p id="guideNote" class="note"></p>
+</div>
+<noscript><div class="notice">안드로이드: Chrome 메뉴 → 홈 화면에 추가 → 설치.<br>아이폰: Safari 공유 → 홈 화면에 추가 → 추가.</div></noscript>
+</section>
+<section class="share-card" aria-labelledby="shareTitle"><h2 id="shareTitle">회원에게 공유하기</h2><p>다른 기기의 카메라로 스캔하면<br>이 설치 안내 화면으로 연결됩니다.</p><img src="assets/ggfc-install-qr.png" width="246" height="246" alt="GGFC 설치 안내 페이지 QR코드"><a href="assets/ggfc-install-qr.png" download="GGFC_install_QR.png">QR코드 이미지 저장</a><p class="url">songjhwin-coder.github.io/ggfc-record/install.html</p></section>
+<footer>GGFC · V3.25.42<div>설치는 사용자 확인 후 진행됩니다.</div></footer>
+</main>
+</body>
+</html>

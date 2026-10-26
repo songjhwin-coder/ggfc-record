@@ -1,3 +1,7 @@
+## V3.25.42 추가: 회원 설치 화면
+
+`install.html`과 `assets/ggfc-install.js`, `ggfc-install.css`, `ggfc-install-qr.png`를 함께 배포합니다. 아이폰/안드로이드를 자동 안내하며 사용자 확인 없이 설치하지 않습니다. 기존 manifest 앱 식별자는 유지합니다. GitHub Actions 배포는 수정된 workflow도 반영하세요.
+
 # GGFC V3.25.40 · PWA / 로딩 / 배포 운영 안내
 
 작성일: 2026-10-25 (한국 기준) · 기준 원본: V3.25.39

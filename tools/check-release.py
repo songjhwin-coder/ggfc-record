@@ -12,7 +12,7 @@ class Page(HTMLParser):
   if a.get('id'):self.ids.append(a['id'])
   for k in ['src','href']:
    if a.get(k):self.refs.append(a[k])
-for name in ['index.html','mobile.html','offline.html']:
+for name in ['index.html','mobile.html','install.html','offline.html']:
  p=Page();p.feed((r/name).read_text());assert len(p.ids)==len(set(p.ids)),f'Duplicate ID: {name}'
  for ref in p.refs:
   u=urlsplit(ref)
@@ -32,3 +32,6 @@ for n in ['index.html','mobile.html']:
  assert f'GGFC · V{v}</div>' in (r/n).read_text(),f'Stale footer version: {n}'
 for n in ['index.html','mobile.html','assets/ggfc-sync.js','service-worker.js']:assert v in (r/n).read_text(),n
 print(f'PASS {v}: JS syntax, duplicate IDs, relative paths, manifest, {len(assets)} hashes')
+
+assert v in (r/"install.html").read_text()
+assert "cp index.html mobile.html install.html" in (r/".github/workflows/pages.yml").read_text()

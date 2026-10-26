@@ -86,6 +86,7 @@ self.addEventListener('fetch',event=>{
  if(request.mode==='navigate'){
   if(url.pathname===BASE.pathname||url.pathname===new URL('index.html',BASE).pathname)key=absolute('index.html');
   else if(url.pathname===new URL('mobile.html',BASE).pathname)key=absolute('mobile.html');
+  else if(url.pathname===new URL('install.html',BASE).pathname)key=absolute('install.html');
   else if(url.pathname===new URL('offline.html',BASE).pathname)key=absolute('offline.html');
   else return; // Do not turn missing assets or foreign routes into HTML.
  }
