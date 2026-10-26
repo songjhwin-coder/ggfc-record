@@ -28,5 +28,7 @@ s=(r/'service-worker.js').read_text();assets=json.loads(re.search(r'const ASSETS
 for a in assets:
  p=r/a['url'].split('?')[0];assert p.is_file(),a['url'];assert hashlib.sha256(p.read_bytes()).hexdigest()==a['sha256'],'Stale service worker: '+a['url']
 v=json.loads((r/'app-version.json').read_text())['version']
+for n in ['index.html','mobile.html']:
+ assert f'GGFC · V{v}</div>' in (r/n).read_text(),f'Stale footer version: {n}'
 for n in ['index.html','mobile.html','assets/ggfc-sync.js','service-worker.js']:assert v in (r/n).read_text(),n
 print(f'PASS {v}: JS syntax, duplicate IDs, relative paths, manifest, {len(assets)} hashes')

@@ -5285,7 +5285,6 @@ function filterPlayerRecordRows(){
  const match=name=>!query||normalizePlayerMatchKey(name).includes(query);
  rows.forEach(row=>{row.hidden=!match(row.dataset.playerName||'');if(!row.hidden)count++;});
  document.querySelectorAll('#memberPlayerCards [data-member-name]').forEach(el=>el.hidden=!match(el.dataset.memberName));
- document.querySelectorAll('#specialTable tbody tr').forEach(row=>row.hidden=!match(row.cells[1]?.textContent||''));
  document.querySelectorAll('#goalkeeperAnalysis tbody tr').forEach(row=>row.hidden=!match(row.cells[0]?.textContent||''));
  $('#playerRecordSearchStatus').textContent=(query?'검색 결과 ':'전체 ')+count+'명 / '+rows.length+'명 · 조회 종료일 기준';
  $('#playerRecordSearchClear').disabled=!query;
@@ -5326,8 +5325,7 @@ function renderPlayer(){
   if(search&&!ps.length)$('#playerTable').innerHTML=emptySearch;
   if($("#memberPlayerCards")) $("#memberPlayerCards").innerHTML=search&&!ps.length?emptySearch:mobilePlayerCards(ps,info);
 
-  const specials=DB.specials.filter(x=>{const d=normDate(x.date);return draftPlayerVisible(x.player,draftNames)&&matchesName(x.player)&&d&&(!info.start||d>=info.start)&&(!info.end||d<=info.end);}).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
-  $("#specialTable").innerHTML=search&&!specials.length?'<div class="empty">검색한 선수의 특이사항 기록이 없습니다.</div>':tbl([{t:"날짜"},{t:"선수"},{t:"구분"},{t:"내용"}],specials.map(x=>[esc(x.date),playerCardLink(x.player,'<b>'+esc(x.player)+'</b>',info),'<span class="pill">'+esc(x.type)+'</span>',esc(x.memo)]));  filterPlayerRecordRows();
+  filterPlayerRecordRows();
 }
 
 function pairStats(a,b,list){
@@ -6332,7 +6330,7 @@ function renderBest5(){
 /* V3.25.25 — menu publication settings; data authorization remains in Firebase. */
 const MEMBER_MENUS=[
  {id:'squad',label:'Team Squad'}, {id:'insights',label:'Record Stories'},
- {id:'dash',label:'Overview'}, {id:'player',label:'Player Stats'},
+ {id:'dash',label:'Overview'}, {id:'interleague',label:'Interleague Stats'}, {id:'player',label:'Player Stats'},
  {id:'goalkeeper',label:'골레이로 랭킹'}, {id:'ability',label:'Player Ratings'},
  {id:'chem',label:'Player Analysis'}, {id:'best5',label:'Weekly Best 5'},
  {id:'maker',label:'Team Maker'}, {id:'alltime',label:'All-Time Records'},
@@ -6485,7 +6483,7 @@ function renderActiveView(v,options={}){
   mobilePageSwipe?.rendered(next);
 }
 function renderMenuContent(next){
-  const renderers={menus:renderMenuManagement,closed:renderMenusClosed,goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide};
+  const renderers={interleague:renderInterleagueStats,menus:renderMenuManagement,closed:renderMenusClosed,goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide};
   const previous=renderCalculationCache,oldDate=normDate,oldName=normalizePlayerMatchKey;
   const oldRoster=selectPlayerRoster,oldHalf=abilityHalfInfo,oldMatches=abilityMatches,oldAbility=playerAbilityRecordAtDate;
   const memoize=fn=>{const cache=new Map();return value=>{

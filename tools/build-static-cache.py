@@ -25,7 +25,7 @@ for name in ['index.html','mobile.html']:
  p=root/name;s=p.read_text()
  s=re.sub(r'(assets/[\w.-]+\.(?:js|css))\?v=([\w.-]+)',update_ref,s)
  parts=re.split(r'(<[^>]*>)',s)
- s=''.join(re.sub(r'\b3\.\d+\.\d+\b',version,part) if i%2==0 else part for i,part in enumerate(parts))
+ s=''.join(re.sub(r'(?<![\d.])3\.\d+\.\d+(?![\d.])',version,part) if i%2==0 else part for i,part in enumerate(parts))
  p.write_text(s)
 urls={}
 for name in ['index.html','mobile.html','assets/ggfc-app.js']:

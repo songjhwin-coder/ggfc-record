@@ -304,6 +304,7 @@ async function prepareSquadExportImages(root){
  await waitDashboardImages(root);return unavailable;
 }
 async function exportTeamSquadImage(button){
+ if(!admin||!GGFC.authorized){toast('관리자 모드에서 이미지 저장을 이용해 주세요.');return;}
  if(squadExportBusy)return;
  const source=document.getElementById('teamSquadContent');if(!source?.querySelector('.ts-team')){toast('저장할 팀 스쿼드가 없습니다.');return;}
  if(squadAppearanceDirty){toast('미리보기 중입니다. 디자인 설정을 저장하거나 변경을 취소한 뒤 이미지를 저장해 주세요.');return;}

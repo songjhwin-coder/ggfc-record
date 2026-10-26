@@ -56,7 +56,7 @@
 - `offline.html` — 저장된 앱이 없는 경우의 안내
 - `assets/pwa-update.js` — 설치/업데이트 UI와 worker 등록
 - `assets/pwa.css` — 작은 설치/업데이트 UI 스타일
-- `icons/icon-192.png`, `icons/icon-512.png`, `icons/icon-maskable-512.png`
+- `icons/ggfc-crest-192.png`, `icons/ggfc-crest-512.png`, `icons/ggfc-crest-maskable-512.png`
 - `icons/icon-source.svg` — 아이콘 원본
 - `tools/service-worker.template.js` — 캐시 worker 생성 원본
 - `tools/check-release.py` — 배포 전 자동 검사
