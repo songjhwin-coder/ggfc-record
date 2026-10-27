@@ -70,7 +70,6 @@ const GGFC = (() => {
   function cacheKey(){return 'ggfc-v318-public:'+String((window.GGFC_CONFIG||{}).databaseURL||'');}
   function canEdit(){return state.authorized && state.ready && state.serverSeen && state.connected && navigator.onLine!==false && !state.conflict && !state.error;}
   function refreshUI(){
-    if(state.error&&!state.ready)window.GGFCStartup?.fail();
     const box=document.querySelector('#cloudStatus'),line=document.querySelector('#cloudStatusText');
     if(!box||!line)return;
     let message=state.status;
@@ -113,7 +112,6 @@ const GGFC = (() => {
     status(fromCache?'최근 기록 표시 중 · 최신 데이터 확인 중…':raw?'공유 기록 최신 상태'+(stamp?' · '+stamp:''):'등록된 공유 기록이 없습니다. 관리자에게 기록 등록을 요청해 주세요.');
     if(first&&typeof applyMenuStartup==='function')applyMenuStartup();
     renderAll();
-    window.GGFCStartup?.finish();
     try{performance.mark(fromCache?'ggfc-cache-ready':'ggfc-data-ready');}catch(e){}
     if(typeof playerCardHistoryState!=='undefined' && playerCardHistoryState && document.querySelector('#playerCardMask')?.classList.contains('on')){
       openPlayerCard(playerCardHistoryState.player,playerCardHistoryState.query);
@@ -432,4 +430,4 @@ const GGFC = (() => {
   }
   return {get editing(){return editLease||hasSettingsDraft();},get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving||state.busy>0;},canEdit,normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,signIn,loginOrLogout,closeLogin,togglePassword};
 })();
-window.GGFC_VERSION='3.25.48';
+window.GGFC_VERSION='3.25.49';

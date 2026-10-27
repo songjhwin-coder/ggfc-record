@@ -1,9 +1,9 @@
-/* V3.25.48: paint a startup cover without waiting for its image or changing data calculations. */
+/* V3.25.49: one timed launch intro, independent of record loading and refresh. */
 window.GGFCStartup=(()=>{
  'use strict';
  const root=document.getElementById('ggfcStartup'),picture=document.getElementById('ggfcStartupImage'),close=document.getElementById('ggfcStartupClose');
  const base=new URL('../',document.currentScript.src).href,defaultImage='assets/ggfc-startup-default.png',key='ggfc-startup-v1:'+base;
- let ready=false,manual=false,previewing=false,dirty=false,draft=null,config={enabled:true,image:''},watchdog=0,fade=0,ticket=0,uploading=false,previousFocus=null;
+ let previewing=false,dirty=false,draft=null,config={enabled:true,image:'',durationSeconds:3},timer=0,fade=0,ticket=0,uploading=false,previousFocus=null,showId=0,deadline=0;
  const inertState=new Map();
  function safeImage(value){
   if(typeof value!=='string'||value.length>750000)return '';
@@ -11,7 +11,8 @@ window.GGFCStartup=(()=>{
   if(/^data:image\/(?:png|jpeg|webp);base64,[a-z0-9+/=]+$/i.test(s))return s;
   try{const u=new URL(s);return ['https:','http:'].includes(u.protocol)&&!u.username&&!u.password?u.href:'';}catch{return '';}
  }
- function normalize(value){return {enabled:value?.enabled!==false,image:safeImage(value?.image)};}
+ function validDuration(value){const n=Number(value);return value!==null&&value!==''&&Number.isFinite(n)&&n>=.5&&n<=15&&Number.isInteger(n*2);}
+ function normalize(value){return {enabled:value?.enabled!==false,image:safeImage(value?.image),durationSeconds:validDuration(value?.durationSeconds)?Number(value.durationSeconds):3};}
  function source(value){return value.image||new URL(defaultImage,base).href;}
  function cache(value){try{const s=JSON.stringify(value);if(localStorage.getItem(key)!==s)localStorage.setItem(key,s);}catch{}}
  function isolate(on){
@@ -23,25 +24,26 @@ window.GGFCStartup=(()=>{
  }
  picture.onerror=()=>{picture.hidden=true;picture.parentElement.classList.add('is-missing');};
  function show(value,preview=false){
-  if(preview)previousFocus=document.activeElement;
-  clearTimeout(fade);clearTimeout(watchdog);root.classList.remove('is-leaving');root.hidden=false;setPicture(value);previewing=preview;isolate(true);
-  document.getElementById('ggfcStartupMessage').textContent=preview?'앱 시작 화면 미리보기':'기록을 불러오고 있습니다…';
-  close.textContent=preview?'미리보기 닫기':'바로 열기';
-  if(preview){close.focus();}else watchdog=setTimeout(()=>dismiss('timeout'),12000);
+  const current=++showId,settings=normalize(value);if(preview)previousFocus=document.activeElement;
+  clearTimeout(fade);clearTimeout(timer);deadline=0;root.classList.remove('is-leaving');root.hidden=false;setPicture(settings);previewing=preview;isolate(true);
+  document.getElementById('ggfcStartupMessage').textContent=preview?'앱 시작 화면 · '+settings.durationSeconds+'초 미리보기':'WELCOME TO GGFC';
+  close.textContent=preview?'미리보기 닫기':'건너뛰기';
+  if(preview)close.focus();
+  // Start from the first display frame, never from a DB loading/completion event.
+  requestAnimationFrame(()=>{if(current!==showId||root.hidden)return;deadline=performance.now()+settings.durationSeconds*1000;timer=setTimeout(()=>dismiss('duration'),settings.durationSeconds*1000);});
  }
- function dismiss(reason='ready'){
-  clearTimeout(watchdog);if(root.hidden)return;
-  if(reason==='manual')manual=true;
+ function dismiss(reason='duration'){
+  ++showId;clearTimeout(timer);deadline=0;if(root.hidden)return;
   const wasPreview=previewing;previewing=false;root.classList.add('is-leaving');isolate(false);
   const done=()=>{root.hidden=true;root.classList.remove('is-leaving');if(wasPreview&&previousFocus?.isConnected)previousFocus.focus();};
   if(matchMedia('(prefers-reduced-motion: reduce)').matches)done();else fade=setTimeout(done,180);
  }
- function configure(value){config=normalize(value);cache(config);if(!ready&&!manual&&!previewing){if(config.enabled){if(!root.hidden)setPicture(config);}else dismiss('disabled');}}
- function finish(){ready=true;if(!previewing)requestAnimationFrame(()=>requestAnimationFrame(()=>{if(!previewing)dismiss();}));}
- function fail(){ready=true;if(!previewing)dismiss('error');}
+ // Shared changes become the next launch's settings; never replace/restart a running intro.
+ function configure(value){config=normalize(value);cache(config);}
  close.onclick=()=>dismiss('manual');
  root.addEventListener('keydown',e=>{if(e.key==='Escape')dismiss('manual');if(e.key==='Tab'){e.preventDefault();close.focus();}});
- window.addEventListener('pageshow',e=>{if(e.persisted)fail();});
+ window.addEventListener('pageshow',e=>{if(e.persisted)dismiss('history');});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&deadline&&performance.now()>=deadline)dismiss('elapsed');});
  function readConfig(){return normalize(typeof DB!=='undefined'?DB.settings?.startupScreen:config);}
  const editable=()=>typeof admin!=='undefined'&&admin&&typeof GGFC!=='undefined'&&GGFC.canEdit();
  function status(text){const el=document.getElementById('startupSettingsStatus');if(el)el.textContent=text;}
@@ -51,17 +53,19 @@ window.GGFCStartup=(()=>{
   const panel=document.getElementById('startupSettingsPanel');if(!panel)return;panel.hidden=!(typeof admin!=='undefined'&&admin);if(panel.hidden)return;
   if(!dirty)draft=readConfig();
   document.getElementById('startupEnabled').checked=draft.enabled;
+  const duration=document.getElementById('startupDuration');duration.value=draft.durationSeconds;duration.oninput=()=>{if(!editable())return;draft.durationSeconds=duration.value;changed();};
   const url=document.getElementById('startupImageURL');url.value=draft.image.startsWith('http')?draft.image:'';
   document.getElementById('startupEnabled').onchange=e=>{if(!editable())return;draft.enabled=e.target.checked;changed();};
   url.oninput=()=>{if(!editable())return;draft.image=url.value.trim();changed();};
   url.onchange=()=>{if(editable())previewImage();};
   document.getElementById('startupImageUpload').onchange=upload;
   document.getElementById('startupUseDefault').onclick=()=>{if(!editable())return;ticket++;uploading=false;draft.image='';url.value='';changed();previewImage();};
-  document.getElementById('startupPreview').onclick=()=>{if(!editable())return;const image=safeImage(draft.image);if(draft.image&&!image){status('http(s) 이미지 주소를 확인하세요.');return;}show({...draft,image},true);};
+  document.getElementById('startupPreview').onclick=()=>{if(!editable())return;const image=safeImage(draft.image);if(draft.image&&!image){status('http(s) 이미지 주소를 확인하세요.');return;}if(!validDuration(draft.durationSeconds)){status('표시 시간은 0.5~15초, 0.5초 단위로 입력하세요.');return;}show({...draft,image},true);};
   document.getElementById('startupSave').onclick=()=>{
    if(!editable())return;if(uploading){status('사진 처리 완료 후 저장해 주세요.');return;}
    const image=safeImage(draft.image);if(draft.image&&!image){status('올바른 http(s) 이미지 주소를 입력해 주세요.');return;}
-   DB.settings.startupScreen={enabled:draft.enabled,image};dirty=false;configure(DB.settings.startupScreen);save();renderSettings();status('설정 적용 · 공유 저장 상태를 하단에서 확인하세요.');
+   if(!validDuration(draft.durationSeconds)){status('표시 시간은 0.5~15초, 0.5초 단위로 입력하세요.');return;}
+   DB.settings.startupScreen={enabled:draft.enabled,image,durationSeconds:Number(draft.durationSeconds)};dirty=false;configure(DB.settings.startupScreen);save();renderSettings();status('설정 적용 · 공유 저장 상태를 하단에서 확인하세요.');
   };
   document.getElementById('startupReload').onclick=()=>{if(!editable())return;discard();renderSettings();GGFC.refreshUI();};
   previewImage();status(dirty?'저장 전 변경':'현재 저장된 설정');
@@ -85,5 +89,5 @@ window.GGFCStartup=(()=>{
  try{config=normalize(JSON.parse(localStorage.getItem(key)||'null'));}catch{}
  if(config.enabled)show(config);
  document.addEventListener('DOMContentLoaded',()=>{if(!root.hidden)isolate(true);},{once:true});
- return {configure,finish,fail,renderSettings,discard,safeImage,normalize,get dirty(){return dirty;},get draft(){return draft?normalize(draft):null;}};
+ return {configure,renderSettings,discard,safeImage,normalize,get dirty(){return dirty;},get draft(){return draft?normalize(draft):null;}};
 })();

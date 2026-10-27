@@ -7,14 +7,12 @@
 .ggfc-startup-caption{text-align:center;flex-shrink:0;font-family:system-ui,-apple-system,sans-serif}
 .ggfc-startup-caption strong{display:block;font-size:16px;letter-spacing:.12em;color:#fff}
 .ggfc-startup-caption p{margin:10px 0 15px;color:#d9dfef;font-size:13px}
-.ggfc-startup-spinner{display:inline-block;width:15px;height:15px;margin-right:8px;vertical-align:-3px;border:2px solid #ffffff40;border-top-color:#8fe5d2;border-radius:50%;animation:ggfc-start-spin .8s linear infinite}
 .ggfc-startup-close{font:inherit;font-size:12px;padding:8px 17px;color:#edf4ff;border:1px solid #ffffff40;border-radius:30px;background:#ffffff0a;cursor:pointer}
 .ggfc-startup-close:focus-visible{outline:3px solid #8fe5d2;outline-offset:4px}
-@keyframes ggfc-start-spin{to{transform:rotate(360deg)}}
-@media(prefers-reduced-motion:reduce){.ggfc-startup{transition:none}.ggfc-startup-spinner{animation:none}}
+@media(prefers-reduced-motion:reduce){.ggfc-startup{transition:none}}
 .startup-settings-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(210px,.7fr);gap:24px;align-items:start}
 .startup-settings-controls{display:grid;gap:14px}.startup-settings-controls>label{display:grid;gap:6px;font-weight:700}
-.startup-settings-controls input[type=url]{width:100%;box-sizing:border-box}
+.startup-settings-controls input[type=url],.startup-settings-controls input[type=number]{width:100%;box-sizing:border-box}
 .startup-settings-toggle{display:flex!important;align-items:center;gap:10px!important}
 .startup-settings-toggle input{width:20px;height:20px;accent-color:#148678}
 .startup-settings-actions{display:flex;gap:8px;flex-wrap:wrap}
