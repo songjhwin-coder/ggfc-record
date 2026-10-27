@@ -1,4 +1,4 @@
-/* V3.25.49: one timed launch intro, independent of record loading and refresh. */
+/* V3.25.50: launch-only intro; browser/app reload and history navigation skip it. */
 window.GGFCStartup=(()=>{
  'use strict';
  const root=document.getElementById('ggfcStartup'),picture=document.getElementById('ggfcStartupImage'),close=document.getElementById('ggfcStartupClose');
@@ -86,8 +86,21 @@ window.GGFCStartup=(()=>{
   }catch(e){if(current===ticket)status('사진 준비 실패: '+e.message);}finally{bitmap?.close?.();if(objectURL)URL.revokeObjectURL(objectURL);if(current===ticket)uploading=false;}
  }
  function discard(){ticket++;uploading=false;dirty=false;draft=null;}
+ // A reload is not an app launch. Do not use a persistent "already shown"
+ // flag: that would incorrectly suppress a later, genuinely new app window.
+ function launchAllowed(){
+  let seen=false,sessionAvailable=false;
+  try{const sessionKey='ggfc-startup-window-v1:'+base;seen=sessionStorage.getItem(sessionKey)==='1';sessionStorage.setItem(sessionKey,'1');sessionAvailable=true;}catch{}
+  let internal=false;
+  try{const ref=new URL(document.referrer),app=new URL(base);internal=ref.origin===app.origin&&['index.html','mobile.html',''].some(name=>ref.pathname===new URL(name,base).pathname);}catch{}
+  try{const type=performance.getEntriesByType('navigation')[0]?.type;if(type)return type==='navigate'&&!internal;}catch{}
+  try{const type=performance.navigation?.type;if(type===1||type===2)return false;if(type===0)return !internal;}catch{}
+  // Older browsers: once per tab/window; storage failure fails open to the app.
+  return sessionAvailable&&!seen&&!internal;
+ }
  try{config=normalize(JSON.parse(localStorage.getItem(key)||'null'));}catch{}
- if(config.enabled)show(config);
+ const isLaunch=launchAllowed();
+ if(config.enabled&&isLaunch)show(config);
  document.addEventListener('DOMContentLoaded',()=>{if(!root.hidden)isolate(true);},{once:true});
  return {configure,renderSettings,discard,safeImage,normalize,get dirty(){return dirty;},get draft(){return draft?normalize(draft):null;}};
 })();
