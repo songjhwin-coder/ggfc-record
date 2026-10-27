@@ -6,8 +6,8 @@ const GGFC = (() => {
   let database=null,auth=null,dataRef=null,readTimer=null,saveTimer=null,editLease=false;
   let started=false,connectionPromise=null,lastSnapshotText=null,cacheSavedAt=null,cacheWarning='';
   const CACHE_VERSION=2,CACHE_MAX_AGE=180*86400000;
-  const hasSettingsDraft=()=>!!((typeof squadAppearanceDirty!=='undefined'&&squadAppearanceDirty)||(typeof menuSettingsDirty!=='undefined'&&menuSettingsDirty)||(typeof careerFrameSettingsDirty!=='undefined'&&careerFrameSettingsDirty)||(typeof analysisStartSettingsDirty!=='undefined'&&analysisStartSettingsDirty)||(typeof cardDesignSettingsDirty!=='undefined'&&cardDesignSettingsDirty));
-  function discardSettingsDraft(){if(typeof squadAppearanceDirty!=='undefined'){squadAppearanceDirty=false;squadAppearanceDraft=null;}if(typeof menuSettingsDirty!=='undefined'){menuSettingsDirty=false;menuEditorDraft=null;}if(typeof cardDesignSettingsDirty!=='undefined')cardDesignSettingsDirty=false;if(typeof careerFrameSettingsDirty!=='undefined')careerFrameSettingsDirty=false;if(typeof analysisStartSettingsDirty!=='undefined')analysisStartSettingsDirty=false;}
+  const hasSettingsDraft=()=>!!(window.GGFCStartup?.dirty||(typeof squadAppearanceDirty!=='undefined'&&squadAppearanceDirty)||(typeof menuSettingsDirty!=='undefined'&&menuSettingsDirty)||(typeof careerFrameSettingsDirty!=='undefined'&&careerFrameSettingsDirty)||(typeof analysisStartSettingsDirty!=='undefined'&&analysisStartSettingsDirty)||(typeof cardDesignSettingsDirty!=='undefined'&&cardDesignSettingsDirty));
+  function discardSettingsDraft(){window.GGFCStartup?.discard();if(typeof squadAppearanceDirty!=='undefined'){squadAppearanceDirty=false;squadAppearanceDraft=null;}if(typeof menuSettingsDirty!=='undefined'){menuSettingsDirty=false;menuEditorDraft=null;}if(typeof cardDesignSettingsDirty!=='undefined')cardDesignSettingsDirty=false;if(typeof careerFrameSettingsDirty!=='undefined')careerFrameSettingsDirty=false;if(typeof analysisStartSettingsDirty!=='undefined')analysisStartSettingsDirty=false;}
   const fields=['matches','attendance','goals','saves','fouls','moms','specials','roster','soccerbee'];
   const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
   const copy=v=>JSON.parse(JSON.stringify(v));
@@ -70,6 +70,7 @@ const GGFC = (() => {
   function cacheKey(){return 'ggfc-v318-public:'+String((window.GGFC_CONFIG||{}).databaseURL||'');}
   function canEdit(){return state.authorized && state.ready && state.serverSeen && state.connected && navigator.onLine!==false && !state.conflict && !state.error;}
   function refreshUI(){
+    if(state.error&&!state.ready)window.GGFCStartup?.fail();
     const box=document.querySelector('#cloudStatus'),line=document.querySelector('#cloudStatusText');
     if(!box||!line)return;
     let message=state.status;
@@ -97,6 +98,7 @@ const GGFC = (() => {
     DB=Object.assign(blankDB(),next);abilityPriorYearPoolCache=null;if(typeof v319CareerCache!=='undefined')v319CareerCache={key:'',map:null};
     state.revision=Number(raw?.meta?.revision)||0;state.savedAt=raw?.meta?.savedAt||null;
     state.ready=true;state.error='';
+    window.GGFCStartup?.configure(DB.settings?.startupScreen);
     ensureAbilityData();
     if(first){latestDbPeriodSignature='';applyLatestDbPeriodDefaults(true);}
     else applyLatestDbPeriodDefaults(false);
@@ -111,6 +113,7 @@ const GGFC = (() => {
     status(fromCache?'최근 기록 표시 중 · 최신 데이터 확인 중…':raw?'공유 기록 최신 상태'+(stamp?' · '+stamp:''):'등록된 공유 기록이 없습니다. 관리자에게 기록 등록을 요청해 주세요.');
     if(first&&typeof applyMenuStartup==='function')applyMenuStartup();
     renderAll();
+    window.GGFCStartup?.finish();
     try{performance.mark(fromCache?'ggfc-cache-ready':'ggfc-data-ready');}catch(e){}
     if(typeof playerCardHistoryState!=='undefined' && playerCardHistoryState && document.querySelector('#playerCardMask')?.classList.contains('on')){
       openPlayerCard(playerCardHistoryState.player,playerCardHistoryState.query);
@@ -285,7 +288,7 @@ const GGFC = (() => {
   }
 
   function installGuards(){
-    const selectors='#squadAppearancePanel,#v-menus,#v-abilityguide,#v-data,#v-rep,#v-abilitycfg,#seasonPanel,#soccerbeeUpload,#soccerbeeClear,#abilitySystemEnabled,#logoFilepick,#filepick,#soccerbeeFilepick';
+    const selectors='#startupSettingsPanel,#squadAppearancePanel,#v-menus,#v-abilityguide,#v-data,#v-rep,#v-abilitycfg,#seasonPanel,#soccerbeeUpload,#soccerbeeClear,#abilitySystemEnabled,#logoFilepick,#filepick,#soccerbeeFilepick';
     for(const type of ['click','change','input'])document.addEventListener(type,e=>{
       if(e.target.closest?.(selectors) && !canEdit()){
         e.preventDefault();e.stopImmediatePropagation();toast('관리자 인증과 서버 연결을 확인해 주세요.');
@@ -400,6 +403,7 @@ const GGFC = (() => {
       if(typeof analysisStartSettingsDirty!=='undefined'&&analysisStartSettingsDirty)draft.settings.analysisStartPlayer=document.getElementById('analysisStartPlayer').value;
       if(typeof menuSettingsDirty!=='undefined'&&menuSettingsDirty&&menuEditorDraft){draft.settings.menuNavigation=JSON.parse(JSON.stringify(menuEditorDraft.navigation));draft.settings.menuVisibility={...menuEditorDraft.visibility};draft.settings.mobileSwipe=mobileSwipeSettings(menuEditorDraft.mobileSwipe);}
       if(typeof squadAppearanceDirty!=='undefined'&&squadAppearanceDirty&&squadAppearanceDraft)draft.settings.squadAppearance=normalizeSquadAppearance(squadAppearanceDraft);
+      if(window.GGFCStartup?.dirty&&window.GGFCStartup.draft)draft.settings.startupScreen=window.GGFCStartup.draft;
       download('GGFC_미저장기록.json',JSON.stringify(draft,null,2),'application/json');
     };
     const config=window.GGFC_CONFIG||{};
@@ -428,4 +432,4 @@ const GGFC = (() => {
   }
   return {get editing(){return editLease||hasSettingsDraft();},get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving||state.busy>0;},canEdit,normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,signIn,loginOrLogout,closeLogin,togglePassword};
 })();
-window.GGFC_VERSION='3.25.47';
+window.GGFC_VERSION='3.25.48';

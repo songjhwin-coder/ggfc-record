@@ -6275,6 +6275,7 @@ function renderData(){
   ["#upAll","#clearBtn","#importJson","#sampleBtn"].forEach(s=>$(s).disabled=!admin);
   renderDisplaySettings();
   renderLogoManager();
+  window.GGFCStartup?.renderSettings();
   renderRecordDataValidation();
   renderPlayerPhotoAudit();
 }
