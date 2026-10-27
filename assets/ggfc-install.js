@@ -78,11 +78,33 @@
     finally{prompting=false;el('installNow').disabled=false;refresh();}
   });
   document.querySelectorAll('[data-device]').forEach(b=>b.addEventListener('click',()=>showGuide(b.dataset.device)));
-  el('copyURL').addEventListener('click',async()=>{
-    const url=new URL('install.html',document.baseURI).href;
-    try{await navigator.clipboard.writeText(url);el('copyStatus').textContent='주소를 복사했습니다. Chrome 또는 Safari 주소창에 붙여넣으세요.';}
-    catch(e){el('copyStatus').textContent='주소를 길게 눌러 복사해 주세요: '+url;}
-  });
+  // Share the clean installation page, without referral parameters or a hash.
+  const installURL=new URL('install.html',document.baseURI).href;
+  el('shareInstallURL').value=installURL;
+  el('shareInstallURL').addEventListener('click',event=>event.target.select());
+  async function copyInstallURL(button,statusNode,message){
+    if(button.disabled)return;
+    button.disabled=true;let copied=false;
+    try{
+      try{await navigator.clipboard.writeText(installURL);copied=true;}catch(error){
+        // Some in-app browsers expose no Clipboard API or reject its permission.
+        const active=document.activeElement,input=document.createElement('textarea');
+        input.value=installURL;input.readOnly=true;input.tabIndex=-1;
+        Object.assign(input.style,{position:'fixed',top:'0',left:'0',width:'1px',height:'1px',opacity:'0'});
+        document.body.append(input);
+        try{input.focus({preventScroll:true});input.select();copied=document.execCommand('copy');}catch(error){}
+        finally{input.remove();if(active?.isConnected)active.focus({preventScroll:true});}
+      }
+      if(copied)statusNode.textContent=message;
+      else{
+        statusNode.textContent='자동 복사가 제한되어 있습니다. 아래 설치 안내 링크를 길게 누르거나 선택된 주소를 복사해 주세요.';
+        el('shareCopyStatus').textContent=statusNode.textContent;
+        el('shareInstallURL').focus();el('shareInstallURL').select();
+      }
+    }finally{button.disabled=false;}
+  }
+  el('copyURL').addEventListener('click',()=>copyInstallURL(el('copyURL'),el('copyStatus'),'주소를 복사했습니다. Chrome 또는 Safari 주소창에 붙여넣으세요.'));
+  el('shareCopyURL').addEventListener('click',()=>copyInstallURL(el('shareCopyURL'),el('shareCopyStatus'),'설치 링크를 복사했습니다. 카카오톡이나 문자에 붙여넣어 회원에게 보내주세요.'));
   showGuide(selected);refresh();
   if('serviceWorker' in navigator&&isSecureContext){
     const register=()=>navigator.serviceWorker.register(new URL('service-worker.js',document.baseURI),{scope:new URL('./',document.baseURI).pathname,updateViaCache:'none'}).catch(()=>status('앱 저장을 준비하지 못했습니다. 인터넷 연결 후 다시 열거나 GGFC를 웹으로 이용하세요.'));

@@ -68,8 +68,12 @@ function initMobilePageSwipe(){
   main.append(frame);frame.append(panel);
   panel.hidden=false;panel.inert=true;panel.setAttribute('aria-hidden','true');panel.classList.add('swipe-content');
   Object.assign(panel.style,{position:'relative',left:'0',top:(top-origin)+'px',width:'100%',margin:'0',display:'block'});
-  const firstVisible=[...panel.children].find(el=>el.getClientRects().length);
-  if(childTop!==null&&firstVisible)panel.style.top=(top-origin+childTop-firstVisible.getBoundingClientRect().top)+'px';
+  // Only the outgoing page needs collapsed-margin alignment; do not force a
+  // layout of the incoming long table/card tree just to find an unused child.
+  if(childTop!==null){
+   const firstVisible=[...panel.children].find(el=>el.getClientRects().length);
+   if(firstVisible)panel.style.top=(top-origin+childTop-firstVisible.getBoundingClientRect().top)+'px';
+  }
   return {node:frame,content:state,anchor,temporary};
  }
  function stage(g){

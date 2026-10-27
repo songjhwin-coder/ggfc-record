@@ -2849,6 +2849,8 @@ function renderAbilityTopRisers(risers,date){
 }
 
 function renderAbility(){
+  // Date/sort/refresh controls use the same short-lived lookup cache as menu navigation.
+  if(!renderCalculationCache)return withRenderCalculationCache(renderAbility);
   syncAbilityAdminControls();bindAbilityNameSearch();
   const original=playerAbilityRecordAtDate,memo=new Map();
   playerAbilityRecordAtDate=function(...args){const key=JSON.stringify(args);if(!memo.has(key))memo.set(key,original(...args));return memo.get(key);};
@@ -6403,8 +6405,9 @@ function syncMenuNavigation(){
 function selectMenuView(v){
  const id=canonicalMenu(v);
  document.querySelectorAll('#tabs button[data-v], [data-top-menu]').forEach(el=>{const active=(el.dataset.v||el.dataset.topMenu)===id;el.classList.toggle('on',active);if(active)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');});
- document.querySelectorAll('section.view').forEach(el=>el.classList.toggle('on',el.id==='v-'+id));syncMobileNav(id);
  const top=document.getElementById('topMenuNav'),button=top?.querySelector('.on');if(button&&(button.offsetLeft<top.scrollLeft||button.offsetLeft+button.offsetWidth>top.scrollLeft+top.clientWidth))top.scrollLeft=Math.max(0,button.offsetLeft-(top.clientWidth-button.offsetWidth)/2);
+ // Measure the small navigation before revealing a potentially long, unlaid-out view.
+ document.querySelectorAll('section.view').forEach(el=>el.classList.toggle('on',el.id==='v-'+id));syncMobileNav(id);
 }
 function menuDraft(){
  if(!menuEditorDraft)menuEditorDraft={navigation:navigationSettings(),mobileSwipe:mobileSwipeSettings(),visibility:Object.fromEntries(MEMBER_MENUS.map(m=>[m.id,memberMenuOpen(m.id)]))};return menuEditorDraft;
@@ -6486,8 +6489,16 @@ function renderActiveView(v,options={}){
 }
 function renderMenuContent(next){
   const renderers={interleague:renderInterleagueStats,menus:renderMenuManagement,closed:renderMenusClosed,goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide};
+  return withRenderCalculationCache(renderers[next]);
+}
+// Cache only within one synchronous render: a new render always sees current DB/settings.
+// No scores, rules, source records or cross-render calculation results are stored here.
+function withRenderCalculationCache(render){
+  if(renderCalculationCache)return render();
   const previous=renderCalculationCache,oldDate=normDate,oldName=normalizePlayerMatchKey;
   const oldRoster=selectPlayerRoster,oldHalf=abilityHalfInfo,oldMatches=abilityMatches,oldAbility=playerAbilityRecordAtDate;
+  const oldCanonical=soccerBeeCanonicalPlayerMap,oldSbBase=soccerBeeAbilityBaseMap,oldSbLatest=soccerBeeLatestMap;
+  const oldLinks=teamPlayerRecordLinks,oldSlump=slumpAppearanceData,oldSaves=playerSaveRows;
   const memoize=fn=>{const cache=new Map();return value=>{
     if(value!==null&&typeof value==='object')return fn(value);
     if(!cache.has(value))cache.set(value,fn(value));return cache.get(value);
@@ -6500,11 +6511,30 @@ function renderMenuContent(next){
   selectPlayerRoster=memoArgs(oldRoster,value=>value?{...value}:value);
   abilityHalfInfo=memoArgs(oldHalf,value=>({...value}));
   abilityMatches=memoArgs(oldMatches,value=>value.slice());
-  playerAbilityRecordAtDate=memoArgs(oldAbility);
-  try{renderers[next]();}
+  // The top-riser comparison passes an explicit date; the season list passes ''.
+  // Resolve that omitted date exactly as the existing calculator does, so both
+  // callers can reuse the same result (including its full-precision values).
+  const abilityMemo=new Map();
+  playerAbilityRecordAtDate=(player,year,half,cutoffDate,includeCarry=true)=>{
+    const name=String(player||'').trim(),info=abilityHalfInfo(year,half);
+    const dates=cutoffDate?[]:playerAbilityRoundRows(name,info).map(r=>r.date);
+    const cutoff=normDate(cutoffDate||dates[dates.length-1]||info.end);
+    const key=JSON.stringify([name,year,half,cutoff,includeCarry]);
+    if(!abilityMemo.has(key))abilityMemo.set(key,oldAbility(player,year,half,cutoffDate,includeCarry));
+    return abilityMemo.get(key);
+  };
+  soccerBeeCanonicalPlayerMap=memoArgs(oldCanonical);
+  soccerBeeAbilityBaseMap=memoArgs(oldSbBase);
+  soccerBeeLatestMap=memoArgs(oldSbLatest);
+  teamPlayerRecordLinks=memoArgs(oldLinks);
+  slumpAppearanceData=memoArgs(oldSlump);
+  playerSaveRows=memoArgs(oldSaves,value=>value.slice());
+  try{return render();}
   finally{
    renderCalculationCache=previous;normDate=oldDate;normalizePlayerMatchKey=oldName;
    selectPlayerRoster=oldRoster;abilityHalfInfo=oldHalf;abilityMatches=oldMatches;playerAbilityRecordAtDate=oldAbility;
+   soccerBeeCanonicalPlayerMap=oldCanonical;soccerBeeAbilityBaseMap=oldSbBase;soccerBeeLatestMap=oldSbLatest;
+   teamPlayerRecordLinks=oldLinks;slumpAppearanceData=oldSlump;playerSaveRows=oldSaves;
   }
 }
 function renderAll(){

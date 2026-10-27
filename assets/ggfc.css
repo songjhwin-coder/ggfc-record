@@ -3663,3 +3663,13 @@ body:not(.admin-mode) .squad-export-admin{display:none!important}
 #v-dash .overview-leader>td:not(.league-standing-cell){background:#fff2cf!important;border-bottom-color:#dfc16f;color:#172e50;font-weight:800}#v-dash .overview-leader .rank{display:inline-flex;align-items:center;justify-content:center;gap:3px;width:auto;min-width:30px;background:transparent;color:#8f6112}#v-dash .overview-rank-medal{width:15px;height:19px;object-fit:contain;vertical-align:middle}
 .sidebar-query-controls{padding:8px 0 18px;border-bottom:1px solid #ffffff26;margin-bottom:8px}.pwa-menu-actions #lockBadge{justify-self:start;font-size:11px;background:#ffffff10;border:1px solid #ffffff22;color:#dae4f1}.pwa-menu-actions #lockBadge.open{background:#ecf7f0;color:#216540}
 @media(max-width:620px){.best5-team-logo,.best5-team-initial{width:18px;height:18px}#v-dash .overview-rank-medal{width:12px;height:15px}#v-dash .overview-leader .rank{gap:1px;min-width:24px}}
+
+/* V3.25.46: keep every record in the DOM; defer layout/paint of distant mobile cards.
+   Browsers without support retain the existing layout. Remember measured heights
+   for revisits; desktop tables, sticky headers and exported posters are untouched. */
+@supports(content-visibility:auto){
+ .ggfc-mobile #v-ability .member-card{content-visibility:auto;contain-intrinsic-size:auto 300px}
+}
+@media print{
+ .ggfc-mobile #v-ability .member-card{content-visibility:visible;contain-intrinsic-size:none}
+}
