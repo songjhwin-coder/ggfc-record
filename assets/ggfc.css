@@ -3673,3 +3673,13 @@ body:not(.admin-mode) .squad-export-admin{display:none!important}
 @media print{
  .ggfc-mobile #v-ability .member-card{content-visibility:visible;contain-intrinsic-size:none}
 }
+
+/* V3.25.47: recoverable SLUMP, outside the decorative player card. */
+.slump-recovery-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0}
+.slump-recovery-grid>div{padding:10px;border:1px solid var(--line,#d8e2e9);border-radius:10px;background:var(--card,#fff)}
+.slump-recovery-grid small{display:block;font-size:11px;color:var(--muted,#667788)}
+.slump-recovery-grid b{display:block;font-size:20px;margin-top:4px;font-variant-numeric:tabular-nums}
+.slump-recovery-grid b small{display:inline;font-size:11px}
+.slump-recovery-progress{display:block;width:100%;height:9px;accent-color:#168b80}
+.slump-axis-details{margin:12px 0}.slump-axis-details summary{cursor:pointer;font-weight:700}
+@media(max-width:480px){.slump-recovery-grid{gap:5px}.slump-recovery-grid>div{padding:8px 5px}.slump-recovery-grid b{font-size:17px}}

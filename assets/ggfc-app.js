@@ -1897,6 +1897,8 @@ function deepMergeAbility(base,custom){
 function abilityConfig(){
   if(renderCalculationCache?.config)return renderCalculationCache.config;
   const a=ensureAbilityData(),config=deepMergeAbility(ABILITY_DEFAULTS,a.config||{});
+  // Existing custom start dates later than the rollout must remain valid.
+  if(a.config?.slump?.recoveryStartDate===undefined&&config.slump.recoveryStartDate<config.slump.startDate)config.slump.recoveryStartDate=config.slump.startDate;
   if(renderCalculationCache)renderCalculationCache.config=config;
   return config;
 }
@@ -2443,6 +2445,9 @@ function playerAbilityRecordAtDate(player,year,half,cutoffDate,includeCarry=true
     keys.forEach(k=>careerGrowth[k]+=career[k]-beforeLong[k]);
   });
 
+  // Keep growth/retest calculations on the unpenalized core; project SLUMP only for output.
+  const coreSkills={...career},slumpProjected=GGFCSlump.project(coreSkills,slumpState,cfg.scoreMin);
+  keys.forEach(k=>{careerGrowth[k]+=slumpProjected[k]-career[k];career[k]=slumpProjected[k];});
   /* V3.24: BASE는 Career 원점수, FORM은 최근 5R 상태, CURRENT는 BASE OVR에만 FORM 보정을 적용한다. */
   const vals=Object.assign({},career), displayVals={}; keys.forEach(k=>displayVals[k]=Math.floor(num(vals[k])));
   const weightSum=keys.reduce((t,k)=>t+Math.max(0,num(ow[k])),0);
@@ -2455,8 +2460,8 @@ function playerAbilityRecordAtDate(player,year,half,cutoffDate,includeCarry=true
   const careerAbsenceRounds=allRounds.filter(r=>!abilityRoundPlayed(r)).length, absenceCfg=cfg.absence||{}, absencePenalty={};
   keys.forEach(k=>absencePenalty[k]=careerAbsenceRounds*Math.min(0,num(absenceCfg[k])));
   const growth={}; keys.forEach(k=>growth[k]=num(careerGrowth[k]));
-  const longForm=slumpResult(slumpTimeline,slumpState,longState,cfg,effectiveCutoff);
-  return {longForm,player,team,info,base:start,start,initialSkills,soccerBeeInitial:sbInitial,growth,careerGrowth,career,absence:{rounds:periodAbsenceRounds,careerRounds:careerAbsenceRounds,penalty:absencePenalty},rounds,careerRounds:allRounds,summary,measurementBase,matchGrowth,retestGrowth,clampAdjustment,measurementDates,partialMeasurement:Object.keys(lastMeasured).length<4,measured,provisional:Object.keys(lastMeasured).length<4,sbDate,cutoffDate:effectiveCutoff,mode:'BASE+FORM',benchmark:null,benchmarkEligible:false,benchmarkStats:null,benchmarkRecord:null,position:ovrProfile.position||ovrProfile.rawPosition||'',ovrWeightSource:ovrProfile.source,display:displayVals,pac:vals.pac,sho:vals.sho,pas:vals.pas,dri:vals.dri,def:vals.def,phy:vals.phy,ovr,ovrRaw:baseOvrRaw,baseOvr,baseOvrRaw,currentOvr,currentOvrRaw,form,ovrProgress,nextBaseOvr};
+  const longForm=slumpResult(slumpTimeline,slumpState,longState,cfg,effectiveCutoff,ow,coreSkills,career);
+  return {longForm,coreSkills,player,team,info,base:start,start,initialSkills,soccerBeeInitial:sbInitial,growth,careerGrowth,career,absence:{rounds:periodAbsenceRounds,careerRounds:careerAbsenceRounds,penalty:absencePenalty},rounds,careerRounds:allRounds,summary,measurementBase,matchGrowth,retestGrowth,clampAdjustment,measurementDates,partialMeasurement:Object.keys(lastMeasured).length<4,measured,provisional:Object.keys(lastMeasured).length<4,sbDate,cutoffDate:effectiveCutoff,mode:'BASE+FORM',benchmark:null,benchmarkEligible:false,benchmarkStats:null,benchmarkRecord:null,position:ovrProfile.position||ovrProfile.rawPosition||'',ovrWeightSource:ovrProfile.source,display:displayVals,pac:vals.pac,sho:vals.sho,pas:vals.pas,dri:vals.dri,def:vals.def,phy:vals.phy,ovr,ovrRaw:baseOvrRaw,baseOvr,baseOvrRaw,currentOvr,currentOvrRaw,form,ovrProgress,nextBaseOvr};
 }
 function playerAbilityRecord(player,year,half,includeCarry=true){return playerAbilityRecordAtDate(player,year,half,'',includeCarry);}
 function abilityHalfGameDates(info){
@@ -2686,7 +2691,7 @@ function renderAbilityConfig(){
     '<div class="ability-config-card full"><div class="ability-config-title"><div><h3>SoccerBee 공통 지표 점수</h3><p>각 지표의 5개 원본 기준값에 대응하는 절대점수 · 기준 사이 값은 선형보간</p></div></div><div style="overflow-x:auto"><table class="ability-config-table"><thead><tr>'+(c.soccerbee.scorePoints||[]).map((x,i)=>'<th>단계 '+(i+1)+'</th>').join('')+'</tr></thead><tbody><tr>'+(c.soccerbee.scorePoints||[]).map((x,i)=>'<td>'+abilityCfgInput('soccerbee.scorePoints.'+i,num(x),'1','0','100')+'</td>').join('')+'</tr></tbody></table></div></div>'+
     Object.entries(c.soccerbee.criteria||{}).map(([k,v])=>criteriaCard(k,v)).join('')+
     weightCard('pac',c.soccerbee.weights.pac)+weightCard('dri',c.soccerbee.weights.dri)+weightCard('def',c.soccerbee.weights.def)+weightCard('phy',c.soccerbee.weights.phy)+
-    '</div><div class="ability-config-actions"><div class="left"><span class="ability-config-badge" id="abilityCfgStatus">현재 설정값</span><br>입력 후 <b>설정 저장</b>을 눌러야 적용됩니다. 변경값은 JSON 백업에도 저장됩니다.</div><div class="right"><button class="btn" type="button" id="abilityCfgReload">저장값 다시 불러오기</button><button class="btn" type="button" id="abilityCfgReset">V3.25.27 기본값 복원</button><button class="btn primary" type="button" id="abilityCfgSave">능력치 설정 저장</button></div></div>';
+    '</div><div class="ability-config-actions"><div class="left"><span class="ability-config-badge" id="abilityCfgStatus">현재 설정값</span><br>입력 후 <b>설정 저장</b>을 눌러야 적용됩니다. 변경값은 JSON 백업에도 저장됩니다.</div><div class="right"><button class="btn" type="button" id="abilityCfgReload">저장값 다시 불러오기</button><button class="btn" type="button" id="abilityCfgReset">V3.25.47 기본값 복원</button><button class="btn primary" type="button" id="abilityCfgSave">능력치 설정 저장</button></div></div>';
   bindAbilityConfigEvents();
 }
 function setByPath(obj,path,value){
@@ -2698,7 +2703,7 @@ function readAbilityConfigForm(){
     const path=el.dataset.abilityCfg; let v=num(el.value);
     if(/^growthRates\.\d+\.value$/.test(path) || /^soccerbee\.weights\./.test(path) || /^positionOvrWeights\./.test(path) || path==='soccerbee.retestMultiplier') v/=100;
     if(['longForm.enabled','slump.enabled','slump.storyEnabled'].includes(path))v=el.value==='1';
-    if(path==='slump.startDate')v=el.value;
+    if(['slump.startDate','slump.recoveryStartDate'].includes(path))v=el.value;
     setByPath(cfg,path,v);
   });
   return cfg;
@@ -2736,7 +2741,7 @@ function bindAbilityConfigEvents(){
   const saveBtn=$("#abilityCfgSave"), resetBtn=$("#abilityCfgReset"), reloadBtn=$("#abilityCfgReload");
   $$('[data-ability-cfg]').forEach(el=>el.oninput=()=>{const st=$("#abilityCfgStatus");if(st){st.textContent='저장 전 변경';st.classList.add('changed');}});
   if(saveBtn)saveBtn.onclick=()=>{if(!admin)return;const cfg=readAbilityConfigForm(),err=validateAbilityConfig(cfg);if(err){toast(err);return;}abilityConfigSet(cfg);save();renderAll();renderAbilityConfig();toast('능력치 설정을 저장하고 전체 능력치를 재계산했습니다.');};
-  if(resetBtn)resetBtn.onclick=()=>{if(!admin)return;if(confirm('능력치 계산 설정을 현재 V3.25.27 BASE+FORM+SLUMP 기본값으로 복원할까요?')){abilityConfigSet(deepClone(ABILITY_DEFAULTS));save();renderAll();renderAbilityConfig();toast('V3.25.27 SLUMP 포함 기본값으로 복원했습니다.');}};
+  if(resetBtn)resetBtn.onclick=()=>{if(!admin)return;if(confirm('능력치 계산 설정을 현재 V3.25.47 BASE+FORM+회복형 SLUMP 기본값으로 복원할까요?')){abilityConfigSet(deepClone(ABILITY_DEFAULTS));save();renderAll();renderAbilityConfig();toast('V3.25.47 회복형 SLUMP 포함 기본값으로 복원했습니다.');}};
   if(reloadBtn)reloadBtn.onclick=()=>{renderAbilityConfig();toast('저장된 능력치 설정을 다시 불러왔습니다.');};
 }
 
