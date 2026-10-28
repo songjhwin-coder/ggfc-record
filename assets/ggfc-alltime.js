@@ -44,7 +44,8 @@ function atRanked(){
 function atPhoto(p){
  const candidates=(DB.roster||[]).filter(r=>normalizePlayerMatchKey(r.player)===normalizePlayerMatchKey(p.player)).sort((a,b)=>String(b.year||'').localeCompare(String(a.year||'')));
  const rosterPhoto=candidates.map(r=>normalizePlayerPhotoUrl(r.photo)).find(Boolean),rosterCutout=candidates.map(r=>normalizePlayerPhotoUrl(r.photoCutout)).find(Boolean);
- const urls=[p.photo,p.photoCutout,rosterPhoto,rosterCutout].map(normalizePlayerPhotoUrl).filter(Boolean),photo=urls[0],fallback=urls.find(u=>u!==photo);
+ const uploaded=uploadedPlayerPhoto(p.player);
+ const urls=(uploaded?[uploaded]:[p.photo,p.photoCutout,rosterPhoto,rosterCutout]).map(normalizePlayerPhotoUrl).filter(Boolean),photo=urls[0],fallback=urls.find(u=>u!==photo);
  return '<span class="at-avatar"><span aria-hidden="true">'+esc(p.player.slice(0,1))+'</span>'+(photo?'<img src="'+esc(photo)+'" '+(fallback?'data-at-fallback="'+esc(fallback)+'"':'')+' alt="'+esc(p.player)+' 사진" loading="lazy" referrerpolicy="no-referrer" onerror="atPhotoError(this)">':'')+'</span>';
 }
 function atPhotoError(img){const fallback=img.dataset.atFallback;delete img.dataset.atFallback;if(fallback){img.src=fallback;return;}img.hidden=true;}

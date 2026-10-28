@@ -1682,7 +1682,8 @@ function selectPlayerRoster(player,year){
   const selected=(exact[0]?.source!=='MATCH_ONLY'&&exact[0])||draft||exact[0]||latest;
   const photo=selected.photo||rows.find(r=>String(r.photo||'').trim())?.photo||'';
   const photoCutout=selected.photoCutout||rows.find(r=>String(r.photoCutout||'').trim())?.photoCutout||'';
-  return {...selected,photo,photoCutout};
+  const uploaded=uploadedPlayerPhoto(name);
+  return {...selected,photo:uploaded||photo,photoCutout:uploaded||photoCutout,photoUploaded:!!uploaded};
 }
 function playerCardRoster(player,query){
   const info=query||resolvePlayerCardQuery();
@@ -3427,8 +3428,8 @@ function openPlayerCard(player,query){
   const roster=playerCardRoster(name,cardInfo)||{};
   const stat=playerCardCurrentStats(name,cardInfo);
   const team=playerSquadDisplayTeam(name,cardInfo);
-  const cutout=normalizePlayerPhotoUrl(roster.photoCutout);
-  const photo=cutout?roster.photoCutout:(roster.photo||"" );
+  const uploaded=uploadedPlayerPhoto(name),cutout=normalizePlayerPhotoUrl(uploaded||roster.photoCutout);
+  const photo=cutout||(roster.photo||"" );
   const tLogo=teamLogo(team), hLogo=headerLogo();
   const pos=String(roster.pos||"").trim()||"PLAYER";
   const displayName=String(roster.engName||"").trim()||name;
@@ -3455,7 +3456,7 @@ function openPlayerCard(player,query){
   renderPlayerTeamHistory(name,playerCardCutoff);renderPlayerCurrentTeam(name,cardInfo);
 
   const photoWrap=$("#playerCardPhotoWrap");
-  photoWrap.title='';photoWrap.dataset.photoState='empty';photoWrap.dataset.photoKind=cutout?'cutout':'original';
+  photoWrap.title='';photoWrap.dataset.photoState='empty';photoWrap.dataset.photoKind=uploaded?'uploaded':cutout?'cutout':'original';
   photoWrap.innerHTML='<div class="ggfc-player-card-photo-fallback">'+esc(playerInitials(name))+'</div>';
   if(normalizePlayerPhotoUrl(photo)){
     const img=document.createElement('img');img.className='ggfc-player-card-photo';
@@ -5719,7 +5720,7 @@ function normalizePlayerPhotoUrl(src){
 function updatePlayerCardPhotoStatus(){
   const box=document.getElementById('playerCardPhotoStatus'),wrap=document.getElementById('playerCardPhotoWrap');if(!box||!wrap)return;
   box.hidden=!admin;
-  const img=wrap.querySelector('img'),kind=wrap.dataset.photoKind==='cutout'?'사진(URL) 배경삭제':'사진(URL)',state=wrap.dataset.photoState;
+  const img=wrap.querySelector('img'),kind=wrap.dataset.photoKind==='uploaded'?'관리자 업로드 사진':wrap.dataset.photoKind==='cutout'?'사진(URL) 배경삭제':'사진(URL)',state=wrap.dataset.photoState;
   if(state==='loading')box.textContent=kind+' · 사진을 불러오는 중입니다.';
   else if(state==='loaded')box.textContent=kind+' · 표시 완료';
   else if(state==='original-fallback')box.textContent='배경삭제 사진 연결 실패 · 기존 사진으로 전환 중입니다.';
@@ -5756,6 +5757,7 @@ function handlePlayerPhotoError(img){
   img.remove();if(wrapper?.id==='playerCardPhotoWrap')updatePlayerCardPhotoStatus();
 }
 function playerPhoto(name,year=chemYear){
+  const uploaded=uploadedPlayerPhoto(name);if(uploaded)return uploaded;
   const row=selectPlayerRoster(name,year==='ALL'?'':year);
   return normalizePlayerPhotoUrl(row?.photo||'');
 }
@@ -6348,7 +6350,7 @@ const MEMBER_MENUS=[
  {id:'leadership',label:'역대 운영진'}, {id:'team',label:'Team Stats',defaultOpen:false}
 ];
 const ADMIN_MENUS=[
- {id:'menus',label:'메뉴 공개 관리'}, {id:'abilityguide',label:'능력치 운영 안내'},
+ {id:'menus',label:'메뉴 공개 관리'}, {id:'photos',label:'선수 사진 관리'}, {id:'abilityguide',label:'능력치 운영 안내'},
  {id:'abilitycfg',label:'선수 능력치 설정'}, {id:'rep',label:'대표승점 설정'}, {id:'data',label:'데이터 관리'}
 ];
 let menuEditorDraft=null,menuSettingsDirty=false;
@@ -6494,7 +6496,7 @@ function renderActiveView(v,options={}){
   mobilePageSwipe?.rendered(next);
 }
 function renderMenuContent(next){
-  const renderers={interleague:renderInterleagueStats,menus:renderMenuManagement,closed:renderMenusClosed,goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide};
+  const renderers={photos:renderPlayerPhotoManager,interleague:renderInterleagueStats,menus:renderMenuManagement,closed:renderMenusClosed,goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide};
   return withRenderCalculationCache(renderers[next]);
 }
 // Cache only within one synchronous render: a new render always sees current DB/settings.
