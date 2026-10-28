@@ -3449,7 +3449,7 @@ function openPlayerCard(player,query){
     if(!abilityCalc) abilityMeta.innerHTML='';
     else{const f=abilityCalc.form||{level:0,status:abilityFormStatus(0)}, sign=f.level>0?'+':''; abilityMeta.innerHTML='<div class="pc-ability-meta-row"><span>BASE <b>'+fmtAbility(abilityCalc.baseOvrRaw)+'</b></span><span class="pc-form-badge '+(f.level>0?'hot':f.level<0?'cold':'normal')+'">'+esc(f.status.icon)+' FORM '+sign+f.level+' · '+esc(f.status.label)+'</span></div><div class="pc-progress"><span style="width:'+Math.round(abilityCalc.ovrProgress)+'%"></span></div><small>BASE '+abilityCalc.nextBaseOvr+'까지 '+Math.round(abilityCalc.ovrProgress)+'% · '+(abilityCalc.measured?(abilityCalc.partialMeasurement?'SOCCERBEE PARTIAL ':'SOCCERBEE MEASURED ')+esc(abilityCalc.sbDate):'SOCCERBEE 68P · PROVISIONAL')+'</small>'; }
   }
-  if(abilityMeta&&abilityCalc)abilityMeta.insertAdjacentHTML('beforeend',longFormCardHtml(abilityCalc));
+  if(abilityMeta&&abilityCalc){const slumpHtml=longFormCardHtml(abilityCalc);if(slumpHtml)abilityMeta.insertAdjacentHTML('beforeend','<details class="pc-slump-details"><summary>SLUMP 상세 보기</summary>'+slumpHtml+'</details>');}
   labels.forEach((k,i)=>{ const el=$("#playerCardStat"+k); if(el) el.textContent=abilities[i]===null?"—":String(abilities[i]); });
   renderPlayerCardPerformance(name,stat,playerCardCutoff,cardInfo);
   renderPlayerCardAchievements(name,playerCardCutoff);
@@ -3850,17 +3850,33 @@ function selectedTournamentNames(date){
   if(filtered) return [filtered];
   return [...new Set(day)];
 }
+/* V3.25.52: shared presentation metadata for Overview and its export header. */
+function dashboardResultHeaderInfo(date){
+  const day=normDate(date||''),year=day.slice(0,4)||String(new Date().getFullYear());
+  const list=uniqueRecordMatches(recordBaseMatches().filter(m=>normDate(m.date)===day));
+  const key=day?selectedHalfContext(day).half:'';
+  const halfName=key==='H1'?'상반기':key==='H2'?'하반기':list.length?'반기 확인 필요':'';
+  const rounds=[...new Set(list.map(recordMatchRoundNumber).filter(n=>n>0))].sort((a,b)=>a-b);
+  const round=rounds.length?'ROUND '+rounds[0]+(rounds.length>1?'–'+rounds[rounds.length-1]:''):'라운드 미등록';
+  const weekday=day?['일','월','화','수','목','금','토'][new Date(day+'T12:00:00').getDay()]:'';
+  const dateText=day?day.replace(/-0?/g,'.')+' ('+weekday+')':'경기일 미선택';
+  return {date:day,year,half:halfName,round,dateText,brand:displaySettings().brandTitle||'GGFC'};
+}
+function renderDashboardResultHeader(date){
+  const root=document.getElementById('dashResultHeader');if(!root)return;
+  const info=dashboardResultHeaderInfo(date),primary=headerLogo(),secondary=headerLogo('secondary');
+  const logos=(primary?'<img class="dashboard-result-brand-logo" src="'+esc(primary)+'" alt="기본 헤더 로고">':'')+(secondary?'<img class="dashboard-result-secondary-logo" src="'+esc(secondary)+'" alt="추가 헤더 로고">':'');
+  root.innerHTML=(logos?'<div class="dashboard-result-logos">'+logos+'</div>':'')+'<div class="dashboard-result-header-copy"><div class="dashboard-result-league">'+esc(info.year)+' '+esc(info.brand)+'</div><div class="dashboard-result-title-row"><h3 class="sec-t" id="dashLeagueSummaryTitle">'+esc(info.half?info.half+' 경기결과':'경기결과')+'</h3>'+(info.date?'<span class="dashboard-result-round">'+esc(info.round)+'</span>':'')+'</div><div class="dashboard-result-date" id="dashLeagueSummaryDate">'+esc(info.dateText)+'</div></div>';
+  root.querySelectorAll('img').forEach(img=>img.addEventListener('error',()=>{img.hidden=true;},{once:true}));
+}
 function renderLeagueSummary(){
   ensureDashboardDate();
-  const box=$("#dashLeagueSummary"), title=$("#dashLeagueSummaryTitle"), dateLabel=$("#dashLeagueSummaryDate");
+  const box=$("#dashLeagueSummary");
+  renderDashboardResultHeader(dashDate);
   if(!dashDate){
-    if(title) title.textContent="경기결과";
-    if(dateLabel) dateLabel.textContent="";
     box.innerHTML='<div class="empty">등록된 경기가 없습니다.</div>'; return;
   }
   const ctx=selectedHalfContext(dashDate), halfName=ctx.half==="H1"?"상반기":ctx.half==="H2"?"하반기":"선택 기간";
-  if(title) title.textContent="경기결과";
-  if(dateLabel) dateLabel.textContent=dashDate.replace(/-/g,".");
   box.innerHTML=(admin?'<div class="league-rule-note" data-dashboard-admin data-export-ignore><b>'+halfName+' 당일 집계:</b> 슈퍼리그/챌린지리그 팀 구성은 선택한 날짜에 유효한 <b>팀스쿼드 반기·그룹</b>을 기준으로 합니다. 슈퍼리그·챌린지리그·인터리그(기존 정규리그 포함) 결과를 합산하며, 날짜별 그룹 변경은 조회 날짜 변경 시 자동 반영됩니다. 토너먼트 대회는 상단 현황에 반영하지 않습니다.</div>':'')+
     '<div class="league-overview">'+leagueZone("A",dashDate)+leagueZone("B",dashDate)+'</div>';
 }
@@ -7366,7 +7382,7 @@ function highlightOverviewLeaders(root){
     row.classList.add('overview-leader');
     if(!rank.querySelector('.overview-rank-medal')){
       const mark=row.closest('.team-league-standing')?posterGoldMedalHtml():posterCrownHtml();
-      rank.innerHTML=mark.replace(/poster-medal|poster-crown/g,'overview-rank-medal')+'<span>1</span>';
+      rank.innerHTML=mark.replace(/poster-medal|poster-crown/g,'overview-rank-medal')+'<span class="overview-rank-number">1</span>';
     }
   });
 }
@@ -7437,15 +7453,12 @@ function posterAttendanceHtml(list){
   }).join('')+'</tbody></table>';
 }
 function buildReferencePoster(doc,source){
-  const date=normDate(dashDate||''),year=date.slice(0,4)||String(new Date().getFullYear());
+  const meta=dashboardResultHeaderInfo(dashDate),date=meta.date,year=meta.year;
   const dayMatches=uniqueRecordMatches(recordBaseMatches().filter(m=>normDate(m.date)===date)).sort((a,b)=>String(a.no||'').localeCompare(String(b.no||''),undefined,{numeric:true}));
-  const half=dayMatches.length?(selectedHalfContext(date).half==='H2'?'하반기':'상반기'):'';
-  const rounds=[...new Set(dayMatches.map(recordMatchRoundNumber).filter(n=>n>0))].sort((a,b)=>a-b);
-  const round=rounds.length?'ROUND '+rounds[0]+(rounds.length>1?'–'+rounds[rounds.length-1]:''):'MATCH DAY';
-  const brand=displaySettings().brandTitle||'GGFC';
+  const half=meta.half,round=meta.round==='라운드 미등록'?'MATCH DAY':meta.round;
+  const brand=meta.brand;
   const title=String(brand).replace(/\s*풋살리그/g,'').trim()||'GGFC';
-  const weekday=date?['일','월','화','수','목','금','토'][new Date(date+'T12:00:00').getDay()]:'';
-  const dateText=date?date.replace(/-0?/g,'.')+' ('+weekday+')':'경기일 미선택';
+  const dateText=meta.dateText;
   const originalLogo=headerLogo();
   const brandLogo=originalLogo?'<img class="poster-brand-logo" src="'+originalLogo+'" alt="'+esc(brand)+'">':'<span class="poster-brand-logo poster-brand-fallback">'+esc(brand)+'</span>';
   const secondLogo=headerLogo('secondary');
@@ -7561,7 +7574,7 @@ async function createDashboardExportSnapshot(source){
   try{
     const doc=frame.contentDocument;doc.documentElement.lang='ko';
     const base=doc.createElement('base');base.href=document.baseURI;doc.head.appendChild(base);
-    const style=doc.createElement('link');style.rel='stylesheet';style.href=new URL('assets/ggfc-export.css?v=226a816452c833ba',document.baseURI).href;
+    const style=doc.createElement('link');style.rel='stylesheet';style.href=new URL('assets/ggfc-export.css?v=688243a3fea37d35',document.baseURI).href;
     const ready=settleExportResource(style,12000,()=>!!style.sheet);doc.head.appendChild(style);await ready;
     if(!style.sheet)throw new Error('출력 스타일을 불러오지 못했습니다.');
     const root=buildReferencePoster(doc,source);doc.body.appendChild(root);

@@ -3683,3 +3683,68 @@ body:not(.admin-mode) .squad-export-admin{display:none!important}
 .slump-recovery-progress{display:block;width:100%;height:9px;accent-color:#168b80}
 .slump-axis-details{margin:12px 0}.slump-axis-details summary{cursor:pointer;font-weight:700}
 @media(max-width:480px){.slump-recovery-grid{gap:5px}.slump-recovery-grid>div{padding:8px 5px}.slump-recovery-grid b{font-size:17px}}
+
+/* V3.25.52 — selected matchday league header, visible in member/admin modes. */
+#exportMatchResultSection .dashboard-date-title{display:flex;flex-direction:column;align-items:stretch;gap:12px}
+#exportMatchResultSection .dashboard-date-controls{align-self:flex-end;max-width:100%}
+#dashResultHeader{display:flex;align-items:center;gap:18px;padding:18px 20px;border:1px solid #dce5ee;border-left:4px solid var(--kl-navy,#061f44);border-radius:12px;background:#f4f8fc;min-width:0}
+.dashboard-result-logos{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.dashboard-result-logos img{display:block;width:60px;height:64px;object-fit:contain}
+.dashboard-result-logos .dashboard-result-brand-logo{width:48px;height:52px}
+.dashboard-result-header-copy{min-width:0}
+.dashboard-result-league{color:var(--kl-navy,#061f44);font-size:20px;font-weight:900;line-height:1.4;overflow-wrap:anywhere}
+.dashboard-result-title-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0 7px}
+#dashResultHeader .sec-t{font-size:18px;line-height:1.4;margin:0;color:var(--kl-navy,#061f44)}
+.dashboard-result-round{display:inline-block;border-radius:6px;padding:3px 9px;background:var(--kl-navy,#061f44);color:white;font-size:13px;font-weight:800;line-height:1.5;white-space:nowrap}
+#dashResultHeader .dashboard-result-date{font-size:14px;line-height:1.5;color:#536b83;font-weight:700;white-space:normal}
+@media(max-width:720px){
+ #dashResultHeader{padding:14px 12px;gap:12px}
+ .dashboard-result-logos{gap:6px}.dashboard-result-logos img{width:48px;height:52px}.dashboard-result-logos .dashboard-result-brand-logo{width:36px;height:40px}
+ .dashboard-result-league{font-size:18px}#dashResultHeader .sec-t{font-size:16px}.dashboard-result-title-row{gap:6px}.dashboard-result-round{font-size:12px;padding:2px 7px}#dashResultHeader .dashboard-result-date{font-size:13px}
+ #exportMatchResultSection .dashboard-date-controls{width:100%;align-self:stretch}
+}
+
+/* V3.25.53 — consistent first-place rank size, with a full-height gold medal. */
+#v-dash #exportTeamStandingSection .league-standing-rank{width:28px;height:28px;font-size:15px;line-height:1;font-weight:950;flex-shrink:0}
+#v-dash #exportTeamStandingSection .overview-leader .league-standing-rank{width:auto;min-width:52px;height:28px;gap:4px}
+#v-dash #exportTeamStandingSection .overview-rank-number{font:inherit;line-height:1}
+#v-dash #exportTeamStandingSection .overview-rank-medal{width:24px;height:28px;object-fit:contain;flex-shrink:0}
+
+/* Team identity + vertical power gauges on the left; coaching staff on the right. */
+#v-squad .ts-team-header{grid-template-columns:minmax(0,1fr);align-items:center;gap:28px}
+#v-squad .ts-team-header.has-staff{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}
+#v-squad .ts-team-summary{grid-column:1;grid-row:1;position:relative;z-index:1;min-width:0;display:grid;gap:22px}
+#v-squad .ts-team-summary .ts-team-brand{display:grid;grid-template-columns:133px minmax(0,1fr);align-items:center;gap:18px;min-height:0;padding:0}
+#v-squad .ts-team-summary .ts-team-copy{min-width:0}
+#v-squad .ts-team-summary .ts-team-bars{grid-template-columns:minmax(0,1fr);gap:14px;align-self:start}
+#v-squad .ts-team-header>.ts-staff-showcase{grid-column:2;grid-row:1;position:relative;z-index:1;width:100%;max-width:100%;margin:0;align-self:center;min-width:0}
+#v-squad .ts-team-header>.ts-staff-showcase .ts-staff-stack{min-height:0;box-sizing:border-box;align-items:end;padding:30px;gap:12px}
+#v-squad .ts-team-header>.ts-staff-showcase .ts-staff-kicker{right:30px}
+@media(max-width:760px){
+ #v-squad .ts-team-header{padding:18px 14px;gap:14px}
+ #v-squad .ts-team-header.has-staff{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}
+ #v-squad .ts-team-summary{gap:16px}
+ #v-squad .ts-team-summary .ts-team-brand{grid-template-columns:minmax(0,1fr);gap:9px}
+ #v-squad .ts-team-summary .ts-team-logo{width:70px;height:85px;max-width:100%}
+ #v-squad .ts-team-summary .ts-logo-fallback{width:64px;height:64px;font-size:19px}
+ #v-squad .ts-team-summary .ts-team-copy h3{font-size:22px;line-height:1.25;margin-bottom:7px}
+ #v-squad .ts-team-summary .ts-overall{gap:5px}
+ #v-squad .ts-team-summary .ts-overall>span:first-child{width:100%;font-size:9px}
+ #v-squad .ts-team-summary .ts-overall>.ts-stars{width:100%}
+ #v-squad .ts-team-summary .ts-overall .ts-star,#v-squad .ts-team-summary .ts-overall .ts-star svg{width:12px;height:12px}
+ #v-squad .ts-team-summary .ts-overall .ts-star>span{height:12px}
+ #v-squad .ts-team-summary .ts-team-bars{gap:12px}
+ #v-squad .ts-team-summary .ts-axis-heading{font-size:11px;gap:4px}
+ #v-squad .ts-team-summary .ts-axis-heading strong{font-size:17px}
+ #v-squad .ts-team-header>.ts-staff-showcase{padding-top:17px}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-stack{grid-template-columns:minmax(0,1fr);padding:30px 15px;gap:20px}
+ #v-squad .ts-team-header>.ts-staff-showcase :is(.ts-staff-manager,.ts-staff-coach){grid-column:1}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-kicker{font-size:7px;letter-spacing:.06em;right:0}
+ #v-squad .ts-staff-caption{min-width:0;padding:3px 0 0}
+ #v-squad .ts-staff-caption b{font-size:11px}
+}
+/* Only the full-card SLUMP detail is collapsed; ability calculations are untouched. */
+.pc-slump-details{margin-top:12px;border-top:1px solid #d3e0eb;padding-top:8px;color:#345770;text-align:left}
+.pc-slump-details>summary{cursor:pointer;font-size:12px;font-weight:800;line-height:1.7;padding:3px 0}
+.pc-slump-details>summary:focus-visible{outline:2px solid #2783de;outline-offset:3px;border-radius:3px}
+.pc-slump-details>.slump-panel{margin-top:8px}
