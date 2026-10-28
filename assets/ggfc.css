@@ -3809,3 +3809,13 @@ body:not(.admin-mode) #playerRecordQueryPanel{display:none!important}
  #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-caption span{font-size:9px}
  #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-caption b{font-size:11px}
 }
+
+/* V3.25.56: stack the result header's two logos, primary above additional. */
+#dashResultHeader .dashboard-result-logos{flex-direction:column;align-items:center;justify-content:center;gap:8px}
+/* Keep the mobile portrait columns; enlarge image scale and window height 30%.
+   Side regions outside the window remain clipped to prevent portrait overlap. */
+@media(max-width:820px){
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-manager .ts-staff-photo{aspect-ratio:171.6 / 283.92}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-coach .ts-staff-photo{aspect-ratio:148.2 / 253.5}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-photo img{width:130%;max-width:none;height:100%;left:-15%;right:auto;top:0;bottom:auto;object-fit:contain;object-position:center bottom}
+}
