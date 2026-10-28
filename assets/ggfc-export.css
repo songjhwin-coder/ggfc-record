@@ -169,3 +169,6 @@ tbody tr:nth-child(even){background:#f8fafc}
 /* V3.25.45: half-sized primary header logo; additional logo directly below. */
 .poster-header-logos{position:absolute;left:12px;top:16px;width:76px;display:flex;flex-direction:column;align-items:center;gap:8px}
 .poster-header-logos .poster-brand-logo{position:static;display:flex;flex:none;width:38px;height:38px;object-fit:contain}.poster-header-logos .poster-brand-fallback{font-size:9px;border-width:1px}
+
+/* V3.25.52: enlarge only the additional header logo by 50% (38 -> 57px). */
+.poster-header-logos .poster-secondary-logo{width:57px;height:57px;object-fit:contain}
