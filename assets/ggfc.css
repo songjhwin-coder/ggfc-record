@@ -3787,3 +3787,25 @@ body:not(.admin-mode) #playerRecordQueryPanel{display:none!important}
  #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-caption span{font-size:8px}
  #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-caption b{font-size:10px;margin-top:3px;white-space:nowrap}
 }
+
+/* V3.25.55: give mobile staff portraits the right three quarters of the row.
+   2x portrait targets fit proportionally when the physical viewport is narrower. */
+@media(max-width:820px){
+ #v-squad .ts-team-header.has-staff{grid-template-columns:minmax(74px,.7fr) minmax(0,2fr);column-gap:12px}
+ #v-squad .ts-team-header.has-staff .ts-team-bars{min-width:0;gap:17px}
+ #v-squad .ts-team-summary .ts-axis-heading{font-size:10px;gap:3px;flex-wrap:wrap;align-items:baseline}
+ #v-squad .ts-team-summary .ts-axis-heading strong{font-size:16px;line-height:1.25}
+ #v-squad .ts-team-summary .ts-axis .ts-stars{gap:1px}
+ #v-squad .ts-team-summary .ts-axis .ts-star,#v-squad .ts-team-summary .ts-axis .ts-star svg{width:10px;height:10px}
+ #v-squad .ts-team-summary .ts-axis .ts-star>span{height:10px}
+ #v-squad .ts-team-summary .ts-axis .ts-stars>b{font-size:9px;margin-left:3px}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-stack{grid-template-columns:minmax(0,var(--ts-manager-col,1.18fr)) minmax(0,var(--ts-coach-col,1fr));padding:8px 0;gap:10px;isolation:isolate}
+ #v-squad .ts-team-header>.ts-staff-showcase :is(.ts-staff-manager,.ts-staff-coach){width:100%;min-width:0;max-width:100%;margin:0;align-self:end;z-index:1}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-manager{grid-column:1;grid-row:1}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-coach{grid-column:2;grid-row:1}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-manager .ts-staff-photo{width:calc(343.2px * var(--ts-manager-scale,1));max-width:100%;height:auto;aspect-ratio:171.6 / 218.4}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-coach .ts-staff-photo{width:calc(296.4px * var(--ts-coach-scale,1));max-width:100%;height:auto;aspect-ratio:148.2 / 195}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-caption{margin:6px auto 0;text-align:center}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-caption span{font-size:9px}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-caption b{font-size:11px}
+}

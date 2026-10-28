@@ -3,7 +3,7 @@ window.GGFCStartup=(()=>{
  'use strict';
  const root=document.getElementById('ggfcStartup'),picture=document.getElementById('ggfcStartupImage'),close=document.getElementById('ggfcStartupClose');
  const base=new URL('../',document.currentScript.src).href,defaultImage='assets/ggfc-startup-default.png',key='ggfc-startup-v1:'+base;
- let previewing=false,dirty=false,draft=null,config={enabled:true,image:'',durationSeconds:3},timer=0,fade=0,ticket=0,uploading=false,previousFocus=null,showId=0,deadline=0;
+ let previewing=false,dirty=false,draft=null,config={enabled:true,image:'',durationSeconds:3},timer=0,fade=0,fadeEnd=null,ticket=0,uploading=false,previousFocus=null,showId=0,deadline=0;
  const inertState=new Map();
  function safeImage(value){
   if(typeof value!=='string'||value.length>750000)return '';
@@ -23,9 +23,12 @@ window.GGFCStartup=(()=>{
   const url=source(value);if(picture.getAttribute('src')!==url)picture.src=url;
  }
  picture.onerror=()=>{picture.hidden=true;picture.parentElement.classList.add('is-missing');};
+ function cancelFade(){
+  clearTimeout(fade);fade=0;if(fadeEnd){root.removeEventListener('transitionend',fadeEnd);fadeEnd=null;}
+ }
  function show(value,preview=false){
-  const current=++showId,settings=normalize(value);if(preview)previousFocus=document.activeElement;
-  clearTimeout(fade);clearTimeout(timer);deadline=0;root.classList.remove('is-leaving');root.hidden=false;setPicture(settings);previewing=preview;isolate(true);
+  const current=++showId,settings=normalize(value);if(preview&&!root.contains(document.activeElement))previousFocus=document.activeElement;
+  cancelFade();clearTimeout(timer);deadline=0;root.classList.remove('is-leaving');root.hidden=false;setPicture(settings);previewing=preview;isolate(true);
   document.getElementById('ggfcStartupMessage').textContent=preview?'앱 시작 화면 · '+settings.durationSeconds+'초 미리보기':'WELCOME TO GGFC';
   close.textContent=preview?'미리보기 닫기':'건너뛰기';
   if(preview)close.focus();
@@ -33,10 +36,19 @@ window.GGFCStartup=(()=>{
   requestAnimationFrame(()=>{if(current!==showId||root.hidden)return;deadline=performance.now()+settings.durationSeconds*1000;timer=setTimeout(()=>dismiss('duration'),settings.durationSeconds*1000);});
  }
  function dismiss(reason='duration'){
-  ++showId;clearTimeout(timer);deadline=0;if(root.hidden)return;
-  const wasPreview=previewing;previewing=false;root.classList.add('is-leaving');isolate(false);
-  const done=()=>{root.hidden=true;root.classList.remove('is-leaving');if(wasPreview&&previousFocus?.isConnected)previousFocus.focus();};
-  if(matchMedia('(prefers-reduced-motion: reduce)').matches)done();else fade=setTimeout(done,180);
+  if(root.hidden||(root.classList.contains('is-leaving')&&reason!=='history'))return;
+  const current=++showId;clearTimeout(timer);deadline=0;cancelFade();
+  const wasPreview=previewing;previewing=false;
+  const done=()=>{
+   if(current!==showId)return;cancelFade();root.hidden=true;root.classList.remove('is-leaving');isolate(false);
+   if(wasPreview&&previousFocus?.isConnected)previousFocus.focus({preventScroll:true});previousFocus=null;
+  };
+  if(reason==='history'||matchMedia('(prefers-reduced-motion: reduce)').matches){done();return;}
+  // Keep background controls inert until the overlay has actually disappeared.
+  fadeEnd=event=>{if(event.target===root&&event.propertyName==='opacity')done();};
+  root.addEventListener('transitionend',fadeEnd);root.classList.add('is-leaving');
+  // Event-based cleanup with a fallback for interrupted/missing transitions.
+  fade=setTimeout(done,750);
  }
  // Shared changes become the next launch's settings; never replace/restart a running intro.
  function configure(value){config=normalize(value);cache(config);}
