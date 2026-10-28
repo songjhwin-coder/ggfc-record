@@ -3,7 +3,8 @@ const BASE=new URL('./',self.location.href);
 const PREFIX='ggfc-static:'+BASE.pathname+':',CACHE=PREFIX+RELEASE;
 const RUNTIME='ggfc-config:'+BASE.pathname;
 const absolute=value=>new URL(value,BASE).href;
-const entries=new Map(ASSETS.map(item=>[absolute(item.url),item]));
+// Audit assets are integrity-checked and cached only when requested, never on install.
+const entries=new Map([...ASSETS,...LAZY_ASSETS].map(item=>[absolute(item.url),item]));
 const configURL=absolute('firebase-config.js');
 async function hash(response){
  const value=await crypto.subtle.digest('SHA-256',await response.clone().arrayBuffer());

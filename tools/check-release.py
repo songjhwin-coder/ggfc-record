@@ -25,6 +25,9 @@ m=json.loads((r/'manifest.webmanifest').read_text());assert m['scope']=='./' and
 assert any(i.get('purpose')=='maskable' for i in m['icons'])
 for i in m['icons']:assert (r/i['src']).exists()
 s=(r/'service-worker.js').read_text();assets=json.loads(re.search(r'const ASSETS = (\[.*?\]);',s,re.S)[1])
+lazy=json.loads(re.search(r'const LAZY_ASSETS = (\[.*?\]);',s,re.S)[1])
+assert not any('ggfc-ability-audit' in a['url'] for a in assets),'Audit must not be preloaded'
+assets+=lazy
 for a in assets:
  p=r/a['url'].split('?')[0];assert p.is_file(),a['url'];assert hashlib.sha256(p.read_bytes()).hexdigest()==a['sha256'],'Stale service worker: '+a['url']
 v=json.loads((r/'app-version.json').read_text())['version']

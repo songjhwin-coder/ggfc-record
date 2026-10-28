@@ -6366,7 +6366,7 @@ const MEMBER_MENUS=[
  {id:'leadership',label:'역대 운영진'}, {id:'team',label:'Team Stats',defaultOpen:false}
 ];
 const ADMIN_MENUS=[
- {id:'menus',label:'메뉴 공개 관리'}, {id:'photos',label:'선수 사진 관리'}, {id:'abilityguide',label:'능력치 운영 안내'},
+ {id:'menus',label:'메뉴 공개 관리'}, {id:'photos',label:'선수 사진 관리'}, {id:'abilityguide',label:'능력치 운영 안내'}, {id:'abilityaudit',label:'능력치 변동 분석'},
  {id:'abilitycfg',label:'선수 능력치 설정'}, {id:'rep',label:'대표승점 설정'}, {id:'data',label:'데이터 관리'}
 ];
 let menuEditorDraft=null,menuSettingsDirty=false;
@@ -6507,12 +6507,30 @@ function renderActiveView(v,options={}){
     history.replaceState(null,'','#'+next);
     if(document.getElementById('playerCardMask')?.classList.contains('on'))closePlayerCard();
   }
+  if(activeView==='abilityaudit'&&next!==activeView)window.GGFCAbilityAudit?.stop(true);
   activeView=next;syncMenuNavigation();selectMenuView(next);
   if(!options.swipePrepared||!mobilePageSwipe?.isPrepared(next))renderMenuContent(next);
   mobilePageSwipe?.rendered(next);
 }
+// Analysis assets are requested only by an administrator opening this menu.
+const ABILITY_AUDIT_ASSETS={ui:'assets/ggfc-ability-audit.js?v=943c442cdfe0abd8',css:'assets/ggfc-ability-audit.css?v=d5fe30eb3cbed20f',worker:'assets/ggfc-ability-audit-worker.js?v=de4a6bf1381660e1'};
+let abilityAuditLoader=null;
+function renderAbilityAudit(){
+ const root=document.getElementById('abilityAuditRoot');
+ if(!root||!admin||activeView!=='abilityaudit')return;
+ if(window.GGFCAbilityAudit){window.GGFCAbilityAudit.render(root,ABILITY_AUDIT_ASSETS);return;}
+ root.textContent='분석 메뉴를 준비하고 있습니다…';
+ if(!abilityAuditLoader){
+  abilityAuditLoader=new Promise((resolve,reject)=>{
+   if(!document.getElementById('abilityAuditStyle')){const link=document.createElement('link');link.id='abilityAuditStyle';link.rel='stylesheet';link.href=ABILITY_AUDIT_ASSETS.css;document.head.appendChild(link);}
+   const script=document.createElement('script');script.src=ABILITY_AUDIT_ASSETS.ui;script.onload=resolve;script.onerror=()=>{script.remove();abilityAuditLoader=null;reject(Error('분석 메뉴 파일을 불러오지 못했습니다. 앱 업데이트 확인 후 다시 시도해 주세요.'));};document.head.appendChild(script);
+  });
+ }
+ abilityAuditLoader.then(()=>{if(admin&&activeView==='abilityaudit')window.GGFCAbilityAudit.render(root,ABILITY_AUDIT_ASSETS);}).catch(e=>{if(admin&&activeView==='abilityaudit')root.textContent=e.message;});
+}
+
 function renderMenuContent(next){
-  const renderers={photos:renderPlayerPhotoManager,interleague:renderInterleagueStats,menus:renderMenuManagement,closed:renderMenusClosed,goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide};
+  const renderers={abilityaudit:renderAbilityAudit,photos:renderPlayerPhotoManager,interleague:renderInterleagueStats,menus:renderMenuManagement,closed:renderMenusClosed,goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide};
   return withRenderCalculationCache(renderers[next]);
 }
 // Cache only within one synchronous render: a new render always sees current DB/settings.
@@ -7101,7 +7119,7 @@ function setAdmin(v){
   v=!!v && GGFC.authorized;
   const enteringAdmin=v&&!admin;
   if(enteringAdmin){applyLatestDbPeriodDefaults();resetDashboardRankingDefaults();}
-  admin=v;if(!v){photoAuditStop(false);const photoAuditBox=document.getElementById("playerPhotoAudit");if(photoAuditBox)photoAuditBox.hidden=true;}syncAbilityAdminControls();
+  admin=v;if(!v){window.GGFCAbilityAudit?.stop(true);photoAuditStop(false);const photoAuditBox=document.getElementById("playerPhotoAudit");if(photoAuditBox)photoAuditBox.hidden=true;}syncAbilityAdminControls();
   document.body.classList.toggle("admin-mode", !!v);
   if(!v) $("#seasonPanel").style.display="none";
   $("#lockBadge").className="badge "+(v?"open":"locked");

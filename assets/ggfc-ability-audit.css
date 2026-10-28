@@ -1,0 +1,25 @@
+#v-abilityaudit .aa-search{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
+#v-abilityaudit label{display:flex;gap:6px;flex-direction:column}
+#v-abilityaudit input{min-height:42px;min-width:180px}
+#v-abilityaudit input,#v-abilityaudit select{font:inherit;color:inherit;background:#fff;border:1px solid #cbd8e4;border-radius:8px;padding:9px 10px}
+#v-abilityaudit .aa-suggestions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+#v-abilityaudit .aa-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+#v-abilityaudit .aa-summary>div{padding:14px;background:#f1f6fa;border:1px solid #d5e1e9;border-radius:12px;text-align:center}
+#v-abilityaudit .aa-summary b{display:block;font-size:24px;color:#163754}
+#v-abilityaudit .aa-summary small{display:block;color:#506477}
+#v-abilityaudit .aa-table{overflow:auto;max-width:100%;margin:12px 0}
+#v-abilityaudit table{width:100%;border-collapse:collapse;white-space:nowrap;font-variant-numeric:tabular-nums}
+#v-abilityaudit th,#v-abilityaudit td{padding:10px 12px;text-align:center;border-bottom:1px solid #e0e7ef}
+#v-abilityaudit th{background:#e8eff6;color:#193a54;font-weight:800}
+#v-abilityaudit .aa-up{color:#087e70;font-weight:700}
+#v-abilityaudit .aa-down{color:#b94a57;font-weight:700}
+#v-abilityaudit .aa-zero{color:#748291}
+#v-abilityaudit .aa-filters,#v-abilityaudit .aa-pages{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+#v-abilityaudit summary{cursor:pointer;font-weight:700;padding:12px 0}
+#v-abilityaudit .aa-detail{margin-top:18px;padding:16px;border:1px solid #cbdde5;border-radius:12px;background:#fbfdff}
+#v-abilityaudit .aa-detail details{border-bottom:1px solid #dfe8ee;padding:0 6px}
+#v-abilityaudit .aa-step-total{font-size:12px;font-weight:400;margin-left:8px}
+#v-abilityaudit pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:300px;overflow:auto}
+#v-abilityaudit p{line-height:1.65;overflow-wrap:anywhere}
+body:not(.admin-mode) #v-abilityaudit{display:none!important}
+@media(max-width:600px){#v-abilityaudit .aa-summary{gap:6px}#v-abilityaudit .aa-summary>div{padding:10px 4px}#v-abilityaudit .aa-summary b{font-size:20px}#v-abilityaudit .aa-summary small{font-size:11px}#v-abilityaudit .aa-search>label{flex:1;min-width:130px}#v-abilityaudit input{width:100%;min-width:0}#v-abilityaudit .aa-detail{padding:10px}#v-abilityaudit .aa-step-total{display:block;margin:5px 0 0}}
