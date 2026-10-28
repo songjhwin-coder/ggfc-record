@@ -3748,3 +3748,42 @@ body:not(.admin-mode) .squad-export-admin{display:none!important}
 .pc-slump-details>summary{cursor:pointer;font-size:12px;font-weight:800;line-height:1.7;padding:3px 0}
 .pc-slump-details>summary:focus-visible{outline:2px solid #2783de;outline-offset:3px;border-radius:3px}
 .pc-slump-details>.slump-panel{margin-top:8px}
+
+/* V3.25.54 — Player Stats query controls are administrator-only. */
+body:not(.admin-mode) #playerRecordQueryPanel{display:none!important}
+
+/* Fixed two-digit representative-point badge and 30% larger adjacent club logo. */
+#v-dash #dashTeamPointRank .rep-point{box-sizing:border-box;width:44px;min-width:44px;max-width:44px;height:30px;padding:3px 4px;white-space:nowrap;font-variant-numeric:tabular-nums;flex-shrink:0}
+#v-dash #dashTeamPointRank .team-logo-sm{width:28.6px;height:28.6px;object-fit:contain;flex:none}
+.ggfc-mobile #v-dash #dashTeamPointRank .rep-point{width:36px;min-width:36px;max-width:36px;height:28px;padding:2px 3px;font-size:13px;white-space:nowrap}
+.ggfc-mobile #v-dash #dashTeamPointRank .team-logo-sm{width:32.5px;height:32.5px;object-fit:contain;flex:none}
+
+/* A restrained ink-navy gradient for the two Overview league headings. */
+#v-dash #dashLeagueSummary .league-zone .league-zone-head{background:linear-gradient(115deg,#121d2e 0%,#1d2c40 60%,#2b3c50 100%)!important;color:#f5f7fa!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.09)}
+#v-dash #dashLeagueSummary .league-zone-title{color:#f5f7fa;letter-spacing:-.035em}
+
+/* Mobile squad: identity across the top; gauges left; overlapping portraits right. */
+@media(max-width:820px){
+ #v-squad .ts-team-header{padding:18px 14px;gap:18px 12px;align-items:center}
+ #v-squad .ts-team-header.has-staff{grid-template-columns:minmax(0,1fr) minmax(0,.95fr)}
+ #v-squad .ts-team-summary{display:contents}
+ #v-squad .ts-team-summary .ts-team-brand{grid-column:1 / -1;grid-row:1;grid-template-columns:70px minmax(0,1fr);align-items:center;gap:14px}
+ #v-squad .ts-team-summary .ts-team-logo{width:70px;height:85px}
+ #v-squad .ts-team-summary .ts-team-copy h3{margin-bottom:7px;font-size:22px;line-height:1.3}
+ #v-squad .ts-team-summary .ts-overall{gap:6px 9px}
+ #v-squad .ts-team-summary .ts-overall>span:first-child{width:auto;font-size:10px;letter-spacing:.02em}
+ #v-squad .ts-team-summary .ts-overall>.ts-stars{width:100%}
+ #v-squad .ts-team-summary .ts-current-score{font-size:27px}
+ #v-squad .ts-team-summary .ts-team-bars{grid-row:2;grid-column:1 / -1;align-self:center;gap:15px}
+ #v-squad .ts-team-header.has-staff .ts-team-bars{grid-column:1}
+ #v-squad .ts-team-header>.ts-staff-showcase{grid-row:2;grid-column:2;align-self:center;justify-content:center;padding:18px 0 0;margin:0}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-kicker{top:0;left:0;right:0;text-align:center;font-size:7px;letter-spacing:.07em}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-stack{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:end;gap:0;padding:7px 4px 8px 0;min-height:0;isolation:isolate}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-manager{grid-row:1;grid-column:1;position:relative;z-index:3;align-self:end;width:calc(100% + 20px);margin:0}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-coach{grid-row:1;grid-column:2;position:relative;z-index:2;align-self:end;width:calc(100% + 12px);margin:0 0 0 -26px}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-manager .ts-staff-photo{width:calc(100% * var(--ts-manager-scale,1));max-width:150%;height:auto;aspect-ratio:171.6 / 218.4}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-coach .ts-staff-photo{width:calc(90% * var(--ts-coach-scale,1));max-width:150%;height:auto;aspect-ratio:148.2 / 195}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-caption{position:relative;z-index:4;margin:5px auto 0;min-width:0;padding:0;line-height:1.25;max-width:100%;width:max-content}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-caption span{font-size:8px}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-caption b{font-size:10px;margin-top:3px;white-space:nowrap}
+}
