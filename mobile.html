@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <script defer src="assets/ggfc-browser-handoff.js?v=9aa37103839739b5"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>GGFC 모바일 기록센터 · 3.25.60</title>
+<title>GGFC 모바일 기록센터 · 3.25.61</title>
 <link rel="stylesheet" href="assets/ggfc.css?v=cae65f06975500c5">
 <link rel="stylesheet" href="assets/ggfc-startup.css?v=ef78b300cd483a0e">
 <link rel="manifest" href="manifest.webmanifest">
@@ -62,7 +62,7 @@
     <button data-v="team" class="temp-team-menu"><span>Team Stats</span></button>
   </nav>
   <div class="pwa-menu-actions"><a class="btn sm pwa-guide-link" href="install.html">앱 설치 안내</a><button class="btn sm" id="pwaInstall" hidden>GGFC를 앱으로 설치</button><button class="btn sm" id="pwaCheck">앱 업데이트 확인</button><button class="btn sm" id="lockBtn" type="button">관리자 로그인</button><span class="badge locked" id="lockBadge">🔒 열람 모드</span><p id="pwaStatus" role="status" aria-live="polite"></p></div>
-  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.25.60 · 기록센터</span></footer>
+  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.25.61 · 기록센터</span></footer>
 </aside>
 <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" tabindex="-1" aria-label="메뉴 닫기" hidden></button>
 
@@ -450,7 +450,7 @@
   <section class="view" id="v-goalkeeper"><div class="head"><h2>골레이로 랭킹</h2><p>실제 GR 수행시간을 기준으로 실점·선방을 비교합니다. 조회기간과 최소 수행시간을 선택하세요.</p></div><div class="card" id="goalkeeperRanking"></div></section>
 
   <section class="view" id="v-ability">
-    <div class="head"><h2>Player Ratings</h2><p>개인 경기력 비교 기반 SLUMP 조정을 포함합니다. V3.25.60 · 경기기록과 팀별 기록지의 성장·감점, SoccerBee 축별 초기값·재측정, 최근 FORM을 반영합니다. BASE는 장기 누적 능력치이며 CURRENT OVR은 BASE+FORM입니다. 상세 계산식과 현재 저장된 요율은 아래 설명자료에서 확인하세요.</p></div>
+    <div class="head"><h2>Player Ratings</h2><p>현재 기록지부터 출석 한도와 강화된 기록 성장을 반영합니다. BASE는 누적 능력치, FORM은 최근 실제 출전 5경기의 평소 대비 상태, CURRENT OVR은 BASE+FORM입니다. 개인파울은 페어플레이 기록으로만 집계합니다.</p></div>
 
     <div class="ability-kpi-grid" id="abilityKpis" data-ability-admin></div>
 
@@ -497,11 +497,11 @@
 
     <div class="grid g2 ability-rule-grid" style="margin-bottom:16px">
       <div class="card">
-        <div class="sec-t">경기기록 → 성장·감점·FORM · V3.25.60</div>
+        <div class="sec-t">경기기록 → 성장·감점·FORM · V3.25.61</div>
         <div id="abilityGrowthRules"></div>
       </div>
       <div class="card">
-        <div class="sec-t">SoccerBee → 축별 초기값·재측정 · V3.25.60</div>
+        <div class="sec-t">SoccerBee → 축별 초기값·재측정 · V3.25.61</div>
         <div id="abilitySoccerbeeRules"></div>
       </div>
     </div>
@@ -520,7 +520,7 @@
   <section class="view" id="v-abilityaudit" hidden><div class="head"><h2>능력치 변동 분석</h2><p>선택한 선수의 상승·하락 원인을 확인합니다.</p></div><div id="abilityAuditRoot"></div></section>
   <section class="view" id="v-abilityguide" hidden><div class="head"><h2>능력치 운영 안내</h2><p>현재 저장된 설정을 기준으로 계산 구조와 요율을 확인합니다.</p></div><div class="card"><button class="btn primary" id="soccerbeeGuideUpload">SoccerBee DB 업로드</button><p>통합 기록지 선수명단을 먼저 등록하세요. 업로드할 엑셀에 유지할 전체 측정 이력을 포함하세요. 엑셀에서 삭제한 행은 DB에서도 삭제됩니다. 양식 헤더만 있는 빈 엑셀은 사커비 DB를 비웁니다. 잘못된 값·선수명·중복 충돌은 전체 업로드를 취소하고 기존 DB를 유지합니다.</p></div><div id="abilityGuideBody"></div></section>
   <section class="view" id="v-abilitycfg">
-    <div class="head"><h2>선수 능력치 설정</h2><p>선수 능력치 계산에 사용하는 <b>초기능력치 산정 · 골당 SHO 가산 · Round 이벤트 성장값 · 결석 능력치 감점 · SoccerBee 환산률 · 포지션별 OVR</b>을 관리자 기준으로 조정합니다. <b>현재 저장된 설정을 설명자료와 계산에 함께 적용합니다.</b></p></div>
+    <div class="head"><h2>선수 능력치 설정</h2><p>선수 능력치 계산에 사용하는 <b>시작값 · 출석 연간 한도 · 기록 성장 요율 · 최근 5경기 FORM · 지속 부진 보정 · SoccerBee 환산률 · 포지션별 OVR</b>을 관리자 기준으로 조정합니다. <b>현재 저장된 설정을 설명자료와 계산에 함께 적용합니다.</b></p></div>
     <div class="callout warn" style="margin-bottom:16px"><span>⚙️</span><span>설정 변경은 저장 후 즉시 선수 능력치와 선수카드 재계산에 적용됩니다. <b>기본값 복원</b>을 누르면 현재 버전 기준값으로 되돌릴 수 있습니다.</span></div>
     <div id="abilityConfigBody"></div>
   </section>
@@ -819,7 +819,7 @@
     </div>
   </section>
   <footer class="page-status-footer" aria-label="프로그램 버전 및 공유 기록 상태">
-  <div class="release-version" aria-label="현재 프로그램 버전">GGFC · V3.25.60</div>
+  <div class="release-version" aria-label="현재 프로그램 버전">GGFC · V3.25.61</div>
   <section class="cloud-status" id="cloudStatus" role="status" aria-live="polite"><span id="cloudStatusText">공유 기록을 확인하고 있습니다…</span>
     <div class="cloud-actions"><button id="cloudRetry" class="btn sm" hidden>공유 저장 재시도</button><button id="cloudDownload" class="btn sm" hidden>미저장 내용 내려받기</button><button id="cloudReload" class="btn sm" hidden>서버 기록 다시 받기</button></div>
   </section>
@@ -1017,17 +1017,17 @@
 <input type="file" id="soccerbeeFilepick" accept=".xlsx" hidden>
 
 <script defer src="firebase-config.js"></script>
-<script defer src="assets/ggfc-sync.js?v=49de8cda025bd8fe"></script>
-<script defer src="assets/ggfc-mobile.js?v=4f5dd82918d4b884"></script>
+<script defer src="assets/ggfc-sync.js?v=3005c51787cf8dff"></script>
+<script defer src="assets/ggfc-mobile.js?v=bcb68defad29c742"></script>
 <script defer src="assets/ggfc-details.js?v=3.25.31"></script>
 <script defer src="assets/ggfc-squad.js?v=976876a2b9935c50"></script>
 <script defer src="assets/ggfc-card-design.js?v=3.25.31"></script>
 <script defer src="assets/ggfc-alltime.js?v=898aa7b903e24445"></script>
 <script defer src="assets/ggfc-maker.js?v=eb8bf0806a0dcad6"></script>
-<script defer src="assets/ggfc-slump.js?v=2e0bdfcc7d4d9235"></script>
+<script defer src="assets/ggfc-slump.js?v=143871985b3a6ab3"></script>
 <script defer src="assets/ggfc-interleague.js?v=0aaf193602821f70"></script>
 <script defer src="assets/ggfc-player-photos.js?v=eb60fa7fd5b16b5f"></script>
-<script defer src="assets/ggfc-app.js?v=a218039be633c1e7"></script>
+<script defer src="assets/ggfc-app.js?v=4e759e38e294ecb9"></script>
 <script defer src="assets/ggfc-duo.js?v=3.25.31"></script>
 <script defer src="assets/pwa-update.js?v=22cfff45cda7a34f"></script>
 <aside class="pwa-update" id="pwaUpdate" hidden aria-label="앱 업데이트">

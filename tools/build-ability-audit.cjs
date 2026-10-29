@@ -23,7 +23,7 @@ const selected=new Set();function add(name){if(!map.has(name)||selected.has(name
 ['playerAbilityRecordAtDate','abilityLatestContext','abilityHalfForDate','abilityMetricLabel'].forEach(add);
 const instrument=require('./ability-audit-trace.js');
 const code=[...map].filter(([n])=>selected.has(n)).map(([n,v])=>n==='playerAbilityRecordAtDate'?instrument(v.code):v.code).join('\n');
-if(/\b(?:document|localStorage|sessionStorage)\b/.test(code))throw Error('DOM dependency leaked into the audit worker.');
+if(/\b(?:document|localStorage|sessionStorage)\b/.test(code))throw Error('DOM dependency leaked into the audit worker: '+[...selected].filter(n=>/\b(?:document|localStorage|sessionStorage)\b/.test(map.get(n).code)).join(', '));
 const signature=crypto.createHash('sha256').update([...map].filter(([n])=>selected.has(n)).map(([,v])=>v.code).join('\n')).digest('hex');
 fs.writeFileSync(path.join(root,'assets/ggfc-ability-audit-worker.js'),'/* Generated from current core + SLUMP; source SHA256 '+signature+' */\n'+code+'\n'+fs.readFileSync(path.join(__dirname,'ability-audit-worker-runtime.js'),'utf8'));
 console.log('Built isolated ability audit worker from '+selected.size+' application declarations.');

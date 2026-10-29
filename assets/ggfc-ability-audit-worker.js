@@ -1,4 +1,4 @@
-/* Generated from current core + SLUMP; source SHA256 daa55f1f00fda44df83089abd06cdd6950e78c6d680713bc410c41c0955ca3c4 */
+/* Generated from current core + SLUMP; source SHA256 a909425d386c4286b2cdf8195bd1ca28d2c6dc385af92a2b0384e66889756b77 */
 const GGFCSlump=(()=>{
  const defaults={enabled:true,startDate:'2026-10-20',recentGames:10,baselineGames:20,minimumBaselineGames:10,formTrigger:-2,performanceTrigger:75,persistenceRounds:4,interval:4,recoveryPerformance:85,recoveryRounds:3,slumpDrop:.20,severeDrop:.35,criticalDrop:.50,seasonCap:1.5,storyEnabled:false};
  Object.assign(defaults,{recoveryStartDate:'2026-10-27',recoveryPercent:25,severePerformance:70,criticalPerformance:60});
@@ -171,7 +171,7 @@ function slumpAppearanceData(){
  for(const r of people.values()){
   if(playerTeams.get(String(r.id)+'|'+normalizePlayerMatchKey(r.player)).size!==1)continue;
   const m=matches.get(String(r.id)),k=key(r),t=teamKey(r.id,r.team),gf=num(r.team===m.home?m.hs:m.as),g=goals.get(k),extra=extras.get(k),completeGoals=(teamGoals.get(t)||0)===gf;
-  const row={id:verifiedFixtureKey(m),date:normDate(m.date),no:String(m.no||''),round:String(m.round||''),team:r.team,player:r.player,g:completeGoals?(g?.g||0):null,a:(teamAssists.get(t)>0||gf===0)?(g?.a||0):null,mom:mom.get(k)||0,sot:extra?.sot??null,keyPass:extra?.keyPass??null,defSuccess:extra?.defSuccess??null};
+  const row={id:verifiedFixtureKey(m),date:normDate(m.date),no:String(m.no||''),round:String(m.round||''),team:r.team,player:r.player,g:completeGoals?(g?.g||0):null,a:(m[r.team===m.home?'hAssistsRecorded':'aAssistsRecorded']===true||teamAssists.get(t)>0||gf===0)?(g?.a||0):null,mom:mom.get(k)||0,sot:extra?.sot??null,keyPass:extra?.keyPass??null,defSuccess:extra?.defSuccess??null};
   const p=normalizePlayerMatchKey(r.player);if(!byPlayer.has(p))byPlayer.set(p,[]);byPlayer.get(p).push(row);byFixture.set(k,row);
  }
  const gkByPlayer=new Map(),keeper=goalkeeperRecordData();
@@ -215,8 +215,8 @@ function verifiedRecords(){
  for(const group of groups.values()){
   const first={...group[0]},ids=new Set(group.map(m=>m.id)),reasons=[];
   if([...ids].some(id=>!id||idKeys.get(id).size>1))reasons.push('경기 ID가 여러 대진에 연결됨');
-  const aligned=group.map(m=>m.home===first.home?m:{...m,home:m.away,away:m.home,hs:m.as,as:m.hs,hf:m.af,af:m.hf,hExtraFouls:m.aExtraFouls,aExtraFouls:m.hExtraFouls,hPointDeduction:m.aPointDeduction,aPointDeduction:m.hPointDeduction,homeGroup:m.awayGroup,awayGroup:m.homeGroup});
-  for(const key of ['hs','as','hf','af','hExtraFouls','aExtraFouls','hPointDeduction','aPointDeduction','homeGroup','awayGroup','half']){const values=aligned.map(m=>m[key]).filter(present);if(new Set(values.map(text)).size>1)reasons.push('경기 값 충돌: '+key);else if(values.length)first[key]=values[0];}
+  const aligned=group.map(m=>m.home===first.home?m:{...m,home:m.away,away:m.home,hs:m.as,as:m.hs,hf:m.af,af:m.hf,hExtraFouls:m.aExtraFouls,aExtraFouls:m.hExtraFouls,hPointDeduction:m.aPointDeduction,aPointDeduction:m.hPointDeduction,homeGroup:m.awayGroup,awayGroup:m.homeGroup,hAssistsRecorded:m.aAssistsRecorded,aAssistsRecorded:m.hAssistsRecorded});
+  for(const key of ['hs','as','hf','af','hExtraFouls','aExtraFouls','hPointDeduction','aPointDeduction','homeGroup','awayGroup','half','hAssistsRecorded','aAssistsRecorded']){const values=aligned.map(m=>m[key]).filter(present);if(new Set(values.map(text)).size>1)reasons.push('경기 값 충돌: '+key);else if(values.length)first[key]=values[0];}
   if(new Set(group.map(m=>forfeitTeamNames(m).slice().sort().join('|'))).size>1)reasons.push('몰수패 값 충돌');
   const pending={};
   for(const f of fields.slice(1)){
@@ -593,82 +593,545 @@ function playerOvrProfile(player,year,cfg){
   return {position:pos,rawPosition:rawPos,weights,source:pos?'POSITION':'FALLBACK'};
 }
 const ABILITY_DEFAULTS={
-  version:240,
-  unassessed:{pac:68,dri:68,def:68,phy:68},
-  /* V3.24 초기 능력치: 미측정 SoccerBee 항목은 68P(Provisional), 측정 시 68~87 절대평가로 교체 */
-  initialSkills:{careerStartYear:2026,reliabilityRounds:5,scoreMin:60,scoreMid:70,scoreMax:86,fallbackSho:70,fallbackPas:70},
-  skillBase:{sho:70,pas:70},
-  maxRounds:0,
-  scoreMin:0,
-  scoreMax:99,
-  /* V3.24 성장 요율: 출석 x2 */
-  attendance:{pac:0,sho:0,pas:.08,dri:.10,def:.04,phy:.12},
-  /* 득점 x2.5 */
-  teamRecords:{sot:{rate:.03,cap:.12},keyPass:{rate:.04,cap:.16},defSuccess:{rate:.03,cap:.18}},
-  goalPerGoal:.15,
-  goalSteps:[{min:1,value:.20},{min:2,value:.35},{min:3,value:.50},{min:4,value:.65},{min:5,value:.80}],
-  /* 도움 x2.5 */
-  assistSteps:[{min:1,value:.20},{min:2,value:.35},{min:3,value:.50},{min:4,value:.65},{min:5,value:.80}],
-  /* 선방 x2.5 */
-  saveSteps:[{min:5,value:.125},{min:10,value:.25},{min:15,value:.375},{min:20,value:.50},{min:25,value:.625}],
-  /* 파울 Career 감점 x0.5 */
-  foulPenaltySteps:[{min:1,value:-.01},{min:2,value:-.025},{min:3,value:-.04},{min:4,value:-.05}],
-  /* MOM x3 */
-  mom:{firstSeasonBonus:{pac:0,sho:.09,pas:.09,dri:.09,def:.09,phy:.09}},
-  pointMultipliers:[{min:0,value:1},{min:4,value:1.03},{min:7,value:1.06},{min:10,value:1.08},{min:12,value:1.10}],
-  /* V3.24 Growth Curve V2 — 상위권에서도 꾸준히 성장하되 90+부터 강한 Soft Cap */
-  growthRates:[{min:95,value:.25},{min:90,value:.50},{min:85,value:.80},{min:80,value:1.00},{min:70,value:1.20},{min:60,value:1.30},{min:0,value:1.35}],
-  caps:{pac:5,sho:8,pas:8,dri:6,def:6,phy:6},
-  ovrWeights:{pac:1,sho:1,pas:1,dri:1,def:1,phy:1},
-  positionOvrWeights:{
-    PV:{pac:.10,sho:.25,pas:.10,dri:.20,def:.10,phy:.25},
-    AL:{pac:.25,sho:.20,pas:.15,dri:.25,def:.10,phy:.05},
-    FS:{pac:.10,sho:.05,pas:.15,dri:.10,def:.35,phy:.25},
-    GR:{pac:.05,sho:.05,pas:.25,dri:.05,def:.45,phy:.15}
+  "version": 361,
+  "unassessed": {
+    "pac": 68,
+    "dri": 68,
+    "def": 68,
+    "phy": 68
   },
-  /* 결석 Career 감점은 기존의 20%만 유지. 주된 하락은 FORM에서 처리 */
-  absence:{pac:0,sho:-.004,pas:-.006,dri:-.008,def:-.006,phy:-.010},
-  slump:GGFCSlump.defaults,
-  longForm:{enabled:true,window:10,interval:4,warningThreshold:-1.5,slumpThreshold:-2.5,severeThreshold:-3.5,extremeThreshold:-4.5,slumpDrop:.20,severeDrop:.35,extremeDrop:.50,seasonCap:1.5,absenceFactor:.25,axisCap:.75,recoveryLevel:-1},
-  form:{
-    enabled:true,
-    window:5,
-    recency:[.35,.25,.20,.12,.08],
-    attendance:{5:1.5,4:.8,3:0,2:-1,1:-2,0:-3},
-    consecutiveAbsence:{2:-.3,3:-.6,4:-1},
-    events:{goal:.55,assist:.45,savePer5:.25,saveMax:.75,mom:.90,foul:-.30,win:.20,draw:0,loss:-.15,roundMax:2.50,roundMin:-1.50},
-    ovrModifier:{5:3.0,4:2.5,3:2.0,2:1.2,1:.6,0:0,"-1":-.7,"-2":-1.5,"-3":-2.5,"-4":-3.5,"-5":-5.0},
-    growthMultiplier:{5:1.10,4:1.08,3:1.06,2:1.04,1:1.02,0:1,"-1":.98,"-2":.95,"-3":.92,"-4":.88,"-5":.85}
+  "initialSkills": {
+    "careerStartYear": 2026,
+    "reliabilityRounds": 5,
+    "scoreMin": 60,
+    "scoreMid": 70,
+    "scoreMax": 86,
+    "fallbackSho": 60,
+    "fallbackPas": 60,
+    "fixedStart": true
   },
-  soccerbee:{
-    sprintVersion:1,
-    scorePoints:[0,25,50,75,100],
-    abilityMin:68,
-    abilityMax:87,
-    retestMultiplier:.50,
-    criteria:{
-      spm:[0,.1,.2,.4,.6],sprintPer10:[0,1,2,4,6],sprintMetersPer10:[0,10,25,50,90],
-      maxSpeed:[16.1,18.125,22.2,22.6,24.7],
-      hpm:[0,.025,.15,.275,.30],
-      hsrRatio:[0,.30,1.95,3.075,3.60],
-      hapm:[.20,.325,.50,.75,.80],
-      apm:[1.10,1.225,1.60,1.975,2.50],
-      accel:[7,8.25,10,12.5,15],
-      activityRange:[31.9,44.55,50.95,64.25,69.4],
-      avgSpeed:[2.9,4.125,4.4,4.675,4.8],
-      action:[16,17.5,19,25.75,37],
-      highAccel:[1,3,3.5,4,6],
-      decel:[8,9,9.5,13.75,22],
-      highDecel:[0,2.25,3.5,4.75,5],
-      dpm:[49.1,68.925,73.25,78.475,80.9],
-      energy:[6.0,6.1,6.15,6.275,6.6]
+  "skillBase": {
+    "sho": 60,
+    "pas": 60
+  },
+  "maxRounds": 0,
+  "scoreMin": 0,
+  "scoreMax": 99,
+  "attendance": {
+    "pac": 0,
+    "sho": 0,
+    "pas": 0.08,
+    "dri": 0.1,
+    "def": 0.04,
+    "phy": 0.12
+  },
+  "teamRecords": {
+    "sot": {
+      "rate": 0.045,
+      "cap": 0.18
     },
-    weights:{
-      pac:{maxSpeed:.24,hpm:.16,hsrRatio:.12,hapm:.20,highAccel:.08,spm:.10,sprintPer10:.05,sprintMetersPer10:.05},
-      dri:{apm:.3325,hapm:.2375,accel:.19,activityRange:.095,action:.095,spm:.05},
-      def:{decel:.30,highDecel:.30,hapm:.20,dpm:.20},
-      phy:{dpm:.2975,energy:.17,hapm:.17,activityRange:.1275,avgSpeed:.085,spm:.05,sprintPer10:.05,sprintMetersPer10:.05}
+    "keyPass": {
+      "rate": 0.06,
+      "cap": 0.24
+    },
+    "defSuccess": {
+      "rate": 0.045,
+      "cap": 0.27
     }
+  },
+  "goalPerGoal": 0.225,
+  "goalSteps": [
+    {
+      "min": 1,
+      "value": 0.2
+    },
+    {
+      "min": 2,
+      "value": 0.35
+    },
+    {
+      "min": 3,
+      "value": 0.5
+    },
+    {
+      "min": 4,
+      "value": 0.65
+    },
+    {
+      "min": 5,
+      "value": 0.8
+    }
+  ],
+  "assistSteps": [
+    {
+      "min": 1,
+      "value": 0.3
+    },
+    {
+      "min": 2,
+      "value": 0.525
+    },
+    {
+      "min": 3,
+      "value": 0.75
+    },
+    {
+      "min": 4,
+      "value": 0.975
+    },
+    {
+      "min": 5,
+      "value": 1.2
+    }
+  ],
+  "saveSteps": [
+    {
+      "min": 5,
+      "value": 0.1875
+    },
+    {
+      "min": 10,
+      "value": 0.375
+    },
+    {
+      "min": 15,
+      "value": 0.5625
+    },
+    {
+      "min": 20,
+      "value": 0.75
+    },
+    {
+      "min": 25,
+      "value": 0.9375
+    }
+  ],
+  "foulPenaltySteps": [
+    {
+      "min": 1,
+      "value": 0
+    },
+    {
+      "min": 2,
+      "value": 0
+    },
+    {
+      "min": 3,
+      "value": 0
+    },
+    {
+      "min": 4,
+      "value": 0
+    }
+  ],
+  "mom": {
+    "firstSeasonBonus": {
+      "pac": 0,
+      "sho": 0.135,
+      "pas": 0.135,
+      "dri": 0.135,
+      "def": 0.135,
+      "phy": 0.135
+    }
+  },
+  "pointMultipliers": [
+    {
+      "min": 0,
+      "value": 1
+    },
+    {
+      "min": 4,
+      "value": 1.03
+    },
+    {
+      "min": 7,
+      "value": 1.06
+    },
+    {
+      "min": 10,
+      "value": 1.08
+    },
+    {
+      "min": 12,
+      "value": 1.1
+    }
+  ],
+  "growthRates": [
+    {
+      "min": 95,
+      "value": 0.25
+    },
+    {
+      "min": 90,
+      "value": 0.5
+    },
+    {
+      "min": 85,
+      "value": 0.8
+    },
+    {
+      "min": 80,
+      "value": 1
+    },
+    {
+      "min": 70,
+      "value": 1.2
+    },
+    {
+      "min": 60,
+      "value": 1.3
+    },
+    {
+      "min": 0,
+      "value": 1.35
+    }
+  ],
+  "caps": {
+    "pac": 5,
+    "sho": 8,
+    "pas": 8,
+    "dri": 6,
+    "def": 6,
+    "phy": 6
+  },
+  "ovrWeights": {
+    "pac": 1,
+    "sho": 1,
+    "pas": 1,
+    "dri": 1,
+    "def": 1,
+    "phy": 1
+  },
+  "positionOvrWeights": {
+    "PV": {
+      "pac": 0.1,
+      "sho": 0.25,
+      "pas": 0.1,
+      "dri": 0.2,
+      "def": 0.1,
+      "phy": 0.25
+    },
+    "AL": {
+      "pac": 0.25,
+      "sho": 0.2,
+      "pas": 0.15,
+      "dri": 0.25,
+      "def": 0.1,
+      "phy": 0.05
+    },
+    "FS": {
+      "pac": 0.1,
+      "sho": 0.05,
+      "pas": 0.15,
+      "dri": 0.1,
+      "def": 0.35,
+      "phy": 0.25
+    },
+    "GR": {
+      "pac": 0.05,
+      "sho": 0.05,
+      "pas": 0.25,
+      "dri": 0.05,
+      "def": 0.45,
+      "phy": 0.15
+    }
+  },
+  "absence": {
+    "pac": 0,
+    "sho": 0,
+    "pas": 0,
+    "dri": 0,
+    "def": 0,
+    "phy": 0
+  },
+  "slump": {
+    "enabled": false,
+    "startDate": "2026-10-20",
+    "recentGames": 10,
+    "baselineGames": 20,
+    "minimumBaselineGames": 10,
+    "formTrigger": -2,
+    "performanceTrigger": 75,
+    "persistenceRounds": 4,
+    "interval": 4,
+    "recoveryPerformance": 85,
+    "recoveryRounds": 3,
+    "slumpDrop": 0.2,
+    "severeDrop": 0.35,
+    "criticalDrop": 0.5,
+    "seasonCap": 1.5,
+    "storyEnabled": false,
+    "recoveryStartDate": "2026-10-27",
+    "recoveryPercent": 25,
+    "severePerformance": 70,
+    "criticalPerformance": 60
+  },
+  "longForm": {
+    "enabled": false,
+    "window": 10,
+    "interval": 4,
+    "warningThreshold": -1.5,
+    "slumpThreshold": -2.5,
+    "severeThreshold": -3.5,
+    "extremeThreshold": -4.5,
+    "slumpDrop": 0.2,
+    "severeDrop": 0.35,
+    "extremeDrop": 0.5,
+    "seasonCap": 1.5,
+    "absenceFactor": 0.25,
+    "axisCap": 0.75,
+    "recoveryLevel": -1
+  },
+  "form": {
+    "enabled": true,
+    "window": 5,
+    "recency": [
+      0.35,
+      0.25,
+      0.2,
+      0.12,
+      0.08
+    ],
+    "attendance": {
+      "0": 0,
+      "1": 0,
+      "2": 0,
+      "3": 0,
+      "4": 0,
+      "5": 0
+    },
+    "consecutiveAbsence": {
+      "2": 0,
+      "3": 0,
+      "4": 0
+    },
+    "events": {
+      "goal": 0.55,
+      "assist": 0.45,
+      "savePer5": 0.25,
+      "saveMax": 0.75,
+      "mom": 0.9,
+      "foul": 0,
+      "win": 0.2,
+      "draw": 0,
+      "loss": -0.15,
+      "roundMax": 2.5,
+      "roundMin": -1.5
+    },
+    "ovrModifier": {
+      "0": 0,
+      "1": 0.8,
+      "2": 1.6,
+      "3": 2.4000000000000004,
+      "4": 3.2,
+      "5": 4,
+      "-5": -4,
+      "-4": -3.2,
+      "-3": -2.4000000000000004,
+      "-2": -1.6,
+      "-1": -0.8
+    },
+    "growthMultiplier": {
+      "0": 1,
+      "1": 1.02,
+      "2": 1.04,
+      "3": 1.06,
+      "4": 1.08,
+      "5": 1.1,
+      "-5": 0.9,
+      "-4": 0.92,
+      "-3": 0.94,
+      "-2": 0.96,
+      "-1": 0.98
+    }
+  },
+  "soccerbee": {
+    "sprintVersion": 1,
+    "scorePoints": [
+      0,
+      25,
+      50,
+      75,
+      100
+    ],
+    "abilityMin": 68,
+    "abilityMax": 87,
+    "retestMultiplier": 0.5,
+    "criteria": {
+      "spm": [
+        0,
+        0.1,
+        0.2,
+        0.4,
+        0.6
+      ],
+      "sprintPer10": [
+        0,
+        1,
+        2,
+        4,
+        6
+      ],
+      "sprintMetersPer10": [
+        0,
+        10,
+        25,
+        50,
+        90
+      ],
+      "maxSpeed": [
+        16.1,
+        18.125,
+        22.2,
+        22.6,
+        24.7
+      ],
+      "hpm": [
+        0,
+        0.025,
+        0.15,
+        0.275,
+        0.3
+      ],
+      "hsrRatio": [
+        0,
+        0.3,
+        1.95,
+        3.075,
+        3.6
+      ],
+      "hapm": [
+        0.2,
+        0.325,
+        0.5,
+        0.75,
+        0.8
+      ],
+      "apm": [
+        1.1,
+        1.225,
+        1.6,
+        1.975,
+        2.5
+      ],
+      "accel": [
+        7,
+        8.25,
+        10,
+        12.5,
+        15
+      ],
+      "activityRange": [
+        31.9,
+        44.55,
+        50.95,
+        64.25,
+        69.4
+      ],
+      "avgSpeed": [
+        2.9,
+        4.125,
+        4.4,
+        4.675,
+        4.8
+      ],
+      "action": [
+        16,
+        17.5,
+        19,
+        25.75,
+        37
+      ],
+      "highAccel": [
+        1,
+        3,
+        3.5,
+        4,
+        6
+      ],
+      "decel": [
+        8,
+        9,
+        9.5,
+        13.75,
+        22
+      ],
+      "highDecel": [
+        0,
+        2.25,
+        3.5,
+        4.75,
+        5
+      ],
+      "dpm": [
+        49.1,
+        68.925,
+        73.25,
+        78.475,
+        80.9
+      ],
+      "energy": [
+        6,
+        6.1,
+        6.15,
+        6.275,
+        6.6
+      ]
+    },
+    "weights": {
+      "pac": {
+        "maxSpeed": 0.24,
+        "hpm": 0.16,
+        "hsrRatio": 0.12,
+        "hapm": 0.2,
+        "highAccel": 0.08,
+        "spm": 0.1,
+        "sprintPer10": 0.05,
+        "sprintMetersPer10": 0.05
+      },
+      "dri": {
+        "apm": 0.3325,
+        "hapm": 0.2375,
+        "accel": 0.19,
+        "activityRange": 0.095,
+        "action": 0.095,
+        "spm": 0.05
+      },
+      "def": {
+        "decel": 0.3,
+        "highDecel": 0.3,
+        "hapm": 0.2,
+        "dpm": 0.2
+      },
+      "phy": {
+        "dpm": 0.2975,
+        "energy": 0.17,
+        "hapm": 0.17,
+        "activityRange": 0.1275,
+        "avgSpeed": 0.085,
+        "spm": 0.05,
+        "sprintPer10": 0.05,
+        "sprintMetersPer10": 0.05
+      }
+    }
+  },
+  "growthPolicy": {
+    "attendanceAxisCap": 1,
+    "minimumMatches": 8,
+    "baselineGames": 20,
+    "minimumBaseline": 3,
+    "coverage": 0.8,
+    "roleCoverage": 0.6,
+    "smoothingMatches": 4,
+    "minimumKeeperShots": 20,
+    "formLimit": 4,
+    "fullFormChange": 0.5,
+    "formMom": 0.25,
+    "sustainedDays": 6,
+    "sustainedInterval": 4,
+    "sustainedTrigger": -2,
+    "sustainedAxisDrop": 0.15,
+    "sustainedSeasonCap": 1
   }
 };
 function deepClone(v){return JSON.parse(JSON.stringify(v));}
@@ -698,40 +1161,13 @@ function ensureAbilityData(){
   DB.settings=DB.settings||{}; DB.settings.ability=DB.settings.ability||{};
   if(typeof DB.settings.ability.enabled!=="boolean") DB.settings.ability.enabled=true;
   if(!DB.settings.ability.config || typeof DB.settings.ability.config!=="object") DB.settings.ability.config=deepClone(ABILITY_DEFAULTS);
-  /* V3.24: 기존 DB는 기록을 바꾸지 않고 계산 설정만 새 Ability Engine 기본값으로 자동 마이그레이션한다.
-     포지션 OVR, SoccerBee 기준표/가중치, 초기 SHO/PAS 등 사용자가 조정했을 수 있는 구조값은 보존하고
-     이번 버전에서 합의한 성장·FORM·Provisional 요율은 V3.24 기본값으로 갱신한다. */
-  else if(num(DB.settings.ability.config.version)!==240){
-    const old=DB.settings.ability.config||{};
+  /* V3.25.61: preserve source records and back up old config; apply reviewed growth/FORM rates once. */
+  else if(num(DB.settings.ability.config.version)!==361){
+    const old=DB.settings.ability.config;
+    DB.settings.ability.previousConfig={version:old.version||0,config:deepClone(old)};
     const migrated=deepMergeAbility(ABILITY_DEFAULTS,old);
-    migrated.version=240;
-    migrated.unassessed=deepClone(ABILITY_DEFAULTS.unassessed);
-    migrated.attendance=deepClone(ABILITY_DEFAULTS.attendance);
-    migrated.goalPerGoal=ABILITY_DEFAULTS.goalPerGoal;
-    migrated.goalSteps=deepClone(ABILITY_DEFAULTS.goalSteps);
-    migrated.assistSteps=deepClone(ABILITY_DEFAULTS.assistSteps);
-    migrated.saveSteps=deepClone(ABILITY_DEFAULTS.saveSteps);
-    migrated.foulPenaltySteps=deepClone(ABILITY_DEFAULTS.foulPenaltySteps);
-    migrated.mom=deepClone(ABILITY_DEFAULTS.mom);
-    migrated.growthRates=deepClone(ABILITY_DEFAULTS.growthRates);
-    migrated.absence=deepClone(ABILITY_DEFAULTS.absence);
-    migrated.form=deepClone(ABILITY_DEFAULTS.form);
-    migrated.soccerbee=deepMergeAbility(ABILITY_DEFAULTS.soccerbee,old.soccerbee||{});
-    if(!old.soccerbee?.sprintVersion && old.soccerbee?.weights){
-      delete migrated.soccerbee.sprintVersion;
-      for(const key of ["pac","dri","phy"]){
-        if(old.soccerbee.weights[key])migrated.soccerbee.weights[key]=deepClone(old.soccerbee.weights[key]);
-      }
-    }
-    migrated.soccerbee.abilityMin=ABILITY_DEFAULTS.soccerbee.abilityMin;
-    migrated.soccerbee.abilityMax=ABILITY_DEFAULTS.soccerbee.abilityMax;
-    migrated.initialSkills=deepMergeAbility(ABILITY_DEFAULTS.initialSkills,old.initialSkills||{});
-    if(!old.initialSkills && old.skillBase){
-      if(Number.isFinite(Number(old.skillBase.sho))) migrated.initialSkills.fallbackSho=num(old.skillBase.sho);
-      if(Number.isFinite(Number(old.skillBase.pas))) migrated.initialSkills.fallbackPas=num(old.skillBase.pas);
-    }
+    for(const key of ['version','initialSkills','skillBase','growthPolicy','attendance','goalPerGoal','goalSteps','assistSteps','saveSteps','teamRecords','foulPenaltySteps','mom','growthRates','absence','form','slump','longForm'])migrated[key]=deepClone(ABILITY_DEFAULTS[key]);
     DB.settings.ability.config=migrated;
-    DB.settings.ability.enabled=true;
   }
   DB.settings.ability.config.teamRecords=deepMergeAbility(ABILITY_DEFAULTS.teamRecords,DB.settings.ability.config.teamRecords||{});
   const sc=DB.settings.ability.config.soccerbee;
@@ -894,7 +1330,9 @@ function abilityPriorYearSkillPool(){
   return abilityPriorYearPoolCache;
 }
 function abilityInitialSkillProfile(player){
-  player=String(player||'').trim(); const init=abilityConfig().initialSkills||{}, pool=abilityPriorYearSkillPool();
+  player=String(player||'').trim(); const init=abilityConfig().initialSkills||{};
+  if(init.fixedStart)return {source:'FIXED_START',year:abilityCareerStartYear(),att:0,g:0,a:0,gpr:0,apr:0,reliability:0,sho:num(init.fallbackSho),pas:num(init.fallbackPas),shoPercentile:null,pasPercentile:null};
+  const pool=abilityPriorYearSkillPool();
   const row=pool.entries.find(x=>x.player===player);
   if(!row){
     return {source:'NO_HISTORY',year:pool.year,att:0,g:0,a:0,gpr:0,apr:0,reliability:0,leagueGpr:pool.leagueGpr,leagueApr:pool.leagueApr,adjustedGpr:pool.leagueGpr,adjustedApr:pool.leagueApr,shoPercentile:null,pasPercentile:null,sho:num(init.fallbackSho),pas:num(init.fallbackPas)};
@@ -920,7 +1358,6 @@ function stepValue(n,steps,mode){n=num(n);const arr=(steps||[]).slice().sort((a,
 function goalGrowth(n){return Math.max(0,num(n))*Math.max(0,num(abilityConfig().goalPerGoal));}
 function assistGrowth(n){return stepValue(n,abilityConfig().assistSteps);}
 function saveGrowth(n){return stepValue(n,abilityConfig().saveSteps);}
-function foulPenalty(n){return stepValue(n,abilityConfig().foulPenaltySteps);}
 function pointMultiplier(pts){return stepValue(pts,abilityConfig().pointMultipliers,'multiplier');}
 function abilityGrowthRate(v){
   v=num(v);
@@ -1077,7 +1514,7 @@ function playerAbilityAllRoundRows(player,cutoff){
      따라서 선수의 첫 실제 출전 여부와 관계없이 소속팀 첫 경기 Round부터 미출전 시 결석으로 카운트한다. */
   return playerAbilityRoundRows(player,{start:abilityCareerStartDate(),end});
 }
-function abilityRoundPlayed(r){return !!(r&&(r.att||r.g||r.a||r.sv||r.f||r.mom||r.sot>0||r.keyPass>0||r.defSuccess>0));}
+function abilityRoundPlayed(r){return !!(r&&(r.att||r.g||r.a||r.sv||r.mom||r.sot>0||r.keyPass>0||r.defSuccess>0));}
 function abilitySeasonStats(rounds,basisRound){
   /* V3.17: 선수 능력치의 출석R은 명단 출석 플래그만 보지 않고 해당 Round에서 실제 활동(출석/득점/도움/선방/개인파울/MOM)이 있으면 출석으로 본다.
      따라서 해당 반기/기준일까지 모든 소속팀 Round는 반드시 출석 또는 결석 중 하나로 분류되어 출석R + 누적결석R = 진행 Round가 된다. */
@@ -1103,9 +1540,10 @@ function playerAbilityRecordAtDate(player,year,half,cutoffDate,includeCarry=true
   const measurementBase={...start},matchGrowth=Object.fromEntries(keys.map(k=>[k,0])),retestGrowth={...matchGrowth},clampAdjustment={...matchGrowth};
   const career=Object.assign({},start), careerGrowth={pac:0,sho:0,pas:0,dri:0,def:0,phy:0};
   const allRounds=playerAbilityAllRoundRows(player,effectiveCutoff), sbRows=sbInitial.retests||[];
-  const roundForms=new Map(allRounds.map((r,i)=>[r.date,abilityFormFromRounds(allRounds.slice(0,i+1))]));
-  const slumpTimeline=playerSlumpTimeline(player,allRounds,roundForms,cfg),slumpByDate=new Map(slumpTimeline.map(x=>[x.date,x])),slumpState={byYear:{},events:[],skills:Object.fromEntries(keys.map(k=>[k,0]))};
-  const longTimeline=longFormTimeline(allRounds,roundForms,cfg),longByDate=new Map(longTimeline.map(x=>[x.date,x])),longState={byYear:{},events:[],skills:Object.fromEntries(keys.map(k=>[k,0]))},absenceLedger={};
+  const roundForms=new Map(allRounds.map((r,i)=>[r.date,abilityPerformanceForm(player,allRounds.slice(0,i+1),cfg)]));
+  const attendanceLedger={},sustainedState={streak:0,played:0,last:-Infinity,byYear:{},events:[]};
+  const slumpTimeline=cfg.slump.enabled?playerSlumpTimeline(player,allRounds,roundForms,cfg):[],slumpByDate=new Map(slumpTimeline.map(x=>[x.date,x])),slumpState={byYear:{},events:[],skills:Object.fromEntries(keys.map(k=>[k,0]))};
+  const longTimeline=cfg.longForm.enabled?longFormTimeline(allRounds,roundForms,cfg):[],longByDate=new Map(longTimeline.map(x=>[x.date,x])),longState={byYear:{},events:[],skills:Object.fromEntries(keys.map(k=>[k,0]))},absenceLedger={};
 
   const events=[];
   allRounds.forEach(R=>events.push({date:R.date,type:'round',R}));
@@ -1115,59 +1553,52 @@ function playerAbilityRecordAtDate(player,year,half,cutoffDate,includeCarry=true
   const measurementDates={...(sbBase?.measurementDates||{})};
   let measured=Object.keys(lastMeasured).length>0,sbDate=measured?normDate(sbBase.date):'';
   events.forEach(ev=>{
-    const beforeEvent={...career};
- auditBegin(ev,career,slumpState,cfg);
+    const beforeEvent={...career};auditBegin(ev,career,slumpState,cfg);
     if(ev.type==='sb'){
       const cur=(soccerBeeAbilityBaseMap(ev.date)||{})[player];if(!cur)return;
       for(const k of sbKeys){
         if(!Number.isFinite(cur[k])||cur.measurementDates[k]!==ev.date)continue;
-        let delta; const auditOldMeasured=lastMeasured[k],auditOldBase=measurementBase[k];
+        let delta;const auditOldMeasured=lastMeasured[k],auditOldBase=measurementBase[k];
         if(Number.isFinite(lastMeasured[k])){delta=soccerBeeDeltaValue(cur[k]-lastMeasured[k]);retestGrowth[k]+=delta;}
         else{delta=cur[k]-measurementBase[k];measurementBase[k]=cur[k];}
         career[k]+=delta;careerGrowth[k]+=delta;lastMeasured[k]=cur[k];measurementDates[k]=ev.date;
  auditCapture(Number.isFinite(auditOldMeasured)?'SoccerBee 재측정':'SoccerBee 첫 측정',career,{axis:k,previous:Number.isFinite(auditOldMeasured)?auditOldMeasured:auditOldBase,measured:cur[k],multiplier:Number.isFinite(auditOldMeasured)?cfg.soccerbee.retestMultiplier:1,index:cur.index[k],metrics:cur.metricScores[k],raw:cur.raw,coverage:cur.coverage[k]});
       }
       keys.forEach(k=>{const raw=career[k];career[k]=Math.max(num(cfg.scoreMin),Math.min(num(cfg.scoreMax),raw));clampAdjustment[k]+=career[k]-raw;});
-      auditCapture('상·하한 보정',career,{min:cfg.scoreMin,max:cfg.scoreMax});auditFinish(career,slumpState,cfg);measured=Object.keys(lastMeasured).length>0;sbDate=Object.values(measurementDates).sort().pop()||'';return;
+      auditCapture('상·하한',career,{min:cfg.scoreMin,max:cfg.scoreMax});auditFinish(career,slumpState,cfg);measured=Object.keys(lastMeasured).length>0;sbDate=Object.values(measurementDates).sort().pop()||'';return;
     }
     const R=ev.R, att=cfg.attendance||{}, add={
-      pac:R.att?num(att.pac):0,
-      sho:goalGrowth(R.g)+teamRecordGrowth(R.sot,'sot')+(R.att?num(att.sho):0),
-      pas:assistGrowth(R.a)+teamRecordGrowth(R.keyPass,'keyPass')+(R.att?num(att.pas):0),
-      dri:R.att?num(att.dri):0,
-      def:saveGrowth(R.sv)+teamRecordGrowth(R.defSuccess,'defSuccess')+(R.att?num(att.def):0),
-      phy:R.att?num(att.phy):0
+      pac:0,
+      sho:goalGrowth(R.g)+teamRecordGrowth(R.sot,'sot'),
+      pas:assistGrowth(R.a)+teamRecordGrowth(R.keyPass,'keyPass'),
+      dri:0,
+      def:saveGrowth(R.sv)+teamRecordGrowth(R.defSuccess,'defSuccess'),
+      phy:0
     }, pm=pointMultiplier(R.pts), roundForm=roundForms.get(R.date), fm=roundForm.growthMultiplier;
     const auditRates=Object.fromEntries(keys.map(k=>[k,abilityGrowthRate(career[k])]));
  keys.forEach(k=>{const inc=add[k]*pm*abilityGrowthRate(career[k])*fm;career[k]+=inc;careerGrowth[k]+=inc;});
- auditCapture('경기 성장',career,{R,add,pm,fm,rates:auditRates,form:roundForm,parts:{
- pac:{attendance:R.att?num(att.pac):0},sho:{goal:goalGrowth(R.g),sot:teamRecordGrowth(R.sot,'sot'),attendance:R.att?num(att.sho):0},
- pas:{assist:assistGrowth(R.a),keyPass:teamRecordGrowth(R.keyPass,'keyPass'),attendance:R.att?num(att.pas):0},dri:{attendance:R.att?num(att.dri):0},
- def:{save:saveGrowth(R.sv),defSuccess:teamRecordGrowth(R.defSuccess,'defSuccess'),attendance:R.att?num(att.def):0},phy:{attendance:R.att?num(att.phy):0}}});
+ auditCapture('경기 기록 성장',career,{R,add,pm,fm,rates:auditRates});
+    const attendanceApplied=abilityApplyAttendance(career,R,cfg,attendanceLedger,fm);keys.forEach(k=>careerGrowth[k]+=attendanceApplied[k]);
+ auditCapture('연간 한도 출석 가산',career,{applied:attendanceApplied,annual:attendanceLedger[R.date.slice(0,4)],axisCap:cfg.growthPolicy.attendanceAxisCap});
     /* MOM은 희소 이벤트 보상(+0.09)이며 FORM 성장배율도 함께 적용한다. */
     const mb=(cfg.mom&&cfg.mom.firstSeasonBonus)||{};
-    ['sho','pas','dri','def','phy'].forEach(k=>{const inc=Math.max(0,num(R.mom))*Math.max(0,num(mb[k]))*fm;career[k]+=inc;careerGrowth[k]+=inc;});
+    ['sho','pas','dri','def','phy'].forEach(k=>{const inc=Math.max(0,num(R.mom))*Math.max(0,num(mb[k]))*fm*abilityGrowthRate(career[k]);career[k]+=inc;careerGrowth[k]+=inc;});
     /* 개인파울 역시 해당 Round에서 1회만 DEF 감점 이벤트로 반영한다. */
-    auditCapture('MOM 보너스',career,{count:R.mom,rates:mb,fm});
- const fp=foulPenalty(R.f); if(fp){career.def+=fp;careerGrowth.def+=fp;}
+    auditCapture('MOM 성장',career,{count:R.mom,rates:mb,fm,softcap:true});const fp=0; if(fp){career.def+=fp;careerGrowth.def+=fp;}
     /* V3.17 결석 감점: Career 시작일 이후 소속팀이 실제 경기한 Round에서 미출전한 경우 첫 Round부터 Career에 직접 1회 감점. */
-    auditCapture('개인파울 감점',career,{count:R.f,penalty:fp,steps:cfg.foulPenaltySteps});
- if(!abilityRoundPlayed(R)){
+    auditCapture('페어플레이 분리',career,{fouls:R.f,abilityImpact:0});if(!abilityRoundPlayed(R)){
       const ap=cfg.absence||{},aw=longFormWeights(playerOvrProfile(player,R.date.slice(0,4),cfg).weights||{});
       absenceLedger[R.date]=keys.filter(k=>k!=='pac').reduce((sum,k)=>sum+Math.min(Math.max(0,career[k]-cfg.scoreMin),Math.max(0,-num(ap[k])))*aw[k],0);
       keys.forEach(k=>{const dec=Math.min(0,num(ap[k])); if(dec){career[k]+=dec;careerGrowth[k]+=dec;}});
     }
-    auditCapture('결석 감점',career,{played:abilityRoundPlayed(R),expectedTeam:R.expectedTeam,rates:cfg.absence});
- keys.forEach(k=>career[k]=Math.max(num(cfg.scoreMin),Math.min(num(cfg.scoreMax),career[k])));
- auditCapture('상·하한 보정',career,{min:cfg.scoreMin,max:cfg.scoreMax});
+    auditCapture('결석 직접 감점 미사용',career,{});keys.forEach(k=>career[k]=Math.max(num(cfg.scoreMin),Math.min(num(cfg.scoreMax),career[k])));auditCapture('상·하한',career,{min:cfg.scoreMin,max:cfg.scoreMax});
     keys.forEach(k=>matchGrowth[k]+=career[k]-beforeEvent[k]);
     const beforeLong={...career},entry=longByDate.get(R.date);
     // Preserve the previous release before the transition date; never stack old/new decay.
-    if(R.date<cfg.slump.startDate)applyLongFormCheckpoint(career,playerOvrProfile(player,R.date.slice(0,4),cfg).weights||{},longState,entry,allRounds,entry.round-1,cfg,absenceLedger);
-    auditCapture('이전 LONG FORM',career,{checkpoint:entry,event:longState.events.at(-1)?.date===R.date?longState.events.at(-1):null});
- GGFCSlump.apply(career,playerOvrProfile(player,R.date.slice(0,4),cfg).weights||{},slumpState,slumpByDate.get(R.date),cfg.slump,cfg.scoreMin,player);
-    keys.forEach(k=>careerGrowth[k]+=career[k]-beforeLong[k]);
- auditCapture('이전 SLUMP 영구 감점',career,{checkpoint:slumpByDate.get(R.date)});auditFinish(career,slumpState,cfg,slumpByDate.get(R.date),roundForm);
+    if(cfg.longForm.enabled&&entry&&R.date<cfg.slump.startDate)applyLongFormCheckpoint(career,playerOvrProfile(player,R.date.slice(0,4),cfg).weights||{},longState,entry,allRounds,entry.round-1,cfg,absenceLedger);
+    GGFCSlump.apply(career,playerOvrProfile(player,R.date.slice(0,4),cfg).weights||{},slumpState,slumpByDate.get(R.date),cfg.slump,cfg.scoreMin,player);
+    abilityApplySustained(career,R,roundForm,cfg,sustainedState,playerOvrProfile(player,R.date.slice(0,4),cfg).weights);
+    keys.forEach(k=>careerGrowth[k]+=career[k]-beforeLong[k]);auditCapture('지속 부진 BASE 보정',career,{form:roundForm,streak:sustainedState.streak,events:sustainedState.events.filter(e=>e.date===R.date)});auditFinish(career,slumpState,cfg,slumpByDate.get(R.date),roundForm);
   });
 
   // Keep growth/retest calculations on the unpenalized core; project SLUMP only for output.
@@ -1177,7 +1608,7 @@ function playerAbilityRecordAtDate(player,year,half,cutoffDate,includeCarry=true
   const vals=Object.assign({},career), displayVals={}; keys.forEach(k=>displayVals[k]=Math.floor(num(vals[k])));
   const weightSum=keys.reduce((t,k)=>t+Math.max(0,num(ow[k])),0);
   const baseOvrRaw=weightSum>0?keys.reduce((t,k)=>t+num(vals[k])*Math.max(0,num(ow[k])),0)/weightSum:keys.reduce((t,k)=>t+num(vals[k]),0)/6;
-  const baseOvr=Math.floor(baseOvrRaw), form=abilityFormFromRounds(allRounds), currentOvrRaw=Math.max(num(cfg.scoreMin),Math.min(num(cfg.scoreMax),baseOvrRaw+form.modifier)), currentOvr=Math.round(currentOvrRaw), ovr=baseOvr;
+  const baseOvr=Math.floor(baseOvrRaw), form=abilityPerformanceForm(player,allRounds,cfg), currentOvrRaw=Math.max(num(cfg.scoreMin),Math.min(num(cfg.scoreMax),baseOvrRaw+form.modifier)), currentOvr=Math.round(currentOvrRaw), ovr=baseOvr;
   const baseFloor=Math.floor(baseOvrRaw), ovrProgress=baseFloor>=num(cfg.scoreMax)?100:Math.max(0,Math.min(100,(baseOvrRaw-baseFloor)*100)), nextBaseOvr=Math.min(num(cfg.scoreMax),baseFloor+1);
   const rounds=playerAbilityRoundRows(player,info).filter(r=>r.date<=effectiveCutoff), periodBasis=rounds.length, summary=abilitySeasonStats(rounds,periodBasis), team=playerSquadDisplayTeam(player,{asOf:effectiveCutoff,comp:'정규리그'});
   /* 화면의 누적 결석R은 선택 반기/기준일까지의 Round 안에서 계산한다. Career 결석감점은 Career 시작일부터 누적된 전체 결석을 그대로 사용한다. */
@@ -1186,7 +1617,7 @@ function playerAbilityRecordAtDate(player,year,half,cutoffDate,includeCarry=true
   keys.forEach(k=>absencePenalty[k]=careerAbsenceRounds*Math.min(0,num(absenceCfg[k])));
   const growth={}; keys.forEach(k=>growth[k]=num(careerGrowth[k]));
   const longForm=slumpResult(slumpTimeline,slumpState,longState,cfg,effectiveCutoff,ow,coreSkills,career);
-  return {longForm,coreSkills,player,team,info,base:start,start,initialSkills,soccerBeeInitial:sbInitial,growth,careerGrowth,career,absence:{rounds:periodAbsenceRounds,careerRounds:careerAbsenceRounds,penalty:absencePenalty},rounds,careerRounds:allRounds,summary,measurementBase,matchGrowth,retestGrowth,clampAdjustment,measurementDates,partialMeasurement:Object.keys(lastMeasured).length<4,measured,provisional:Object.keys(lastMeasured).length<4,sbDate,cutoffDate:effectiveCutoff,mode:'BASE+FORM',benchmark:null,benchmarkEligible:false,benchmarkStats:null,benchmarkRecord:null,position:ovrProfile.position||ovrProfile.rawPosition||'',ovrWeightSource:ovrProfile.source,display:displayVals,pac:vals.pac,sho:vals.sho,pas:vals.pas,dri:vals.dri,def:vals.def,phy:vals.phy,ovr,ovrRaw:baseOvrRaw,baseOvr,baseOvrRaw,currentOvr,currentOvrRaw,form,ovrProgress,nextBaseOvr};
+  return {growthPolicy:{attendanceLedger,sustainedState,assessmentReady:form.totalGames>=cfg.growthPolicy.minimumMatches},longForm,coreSkills,player,team,info,base:start,start,initialSkills,soccerBeeInitial:sbInitial,growth,careerGrowth,career,absence:{rounds:periodAbsenceRounds,careerRounds:careerAbsenceRounds,penalty:absencePenalty},rounds,careerRounds:allRounds,summary,measurementBase,matchGrowth,retestGrowth,clampAdjustment,measurementDates,partialMeasurement:Object.keys(lastMeasured).length<4,measured,provisional:Object.keys(lastMeasured).length<4,sbDate,cutoffDate:effectiveCutoff,mode:'BASE+FORM',benchmark:null,benchmarkEligible:false,benchmarkStats:null,benchmarkRecord:null,position:ovrProfile.position||ovrProfile.rawPosition||'',ovrWeightSource:ovrProfile.source,display:displayVals,pac:vals.pac,sho:vals.sho,pas:vals.pas,dri:vals.dri,def:vals.def,phy:vals.phy,ovr,ovrRaw:baseOvrRaw,baseOvr,baseOvrRaw,currentOvr,currentOvrRaw,form,ovrProgress,nextBaseOvr};
 }
 function abilityHalfForDate(year,date){
   const d=normDate(date), c=seasonCfg(String(year));
@@ -1229,6 +1660,74 @@ function playerSquadDisplayTeam(player,info={}){
   const teams=squadPlayerTeams(squadQueryContext(info),player);
   // Missing/ambiguous squad membership must not silently resurrect an old match team.
   return teams.length?teams.join(' · '):'-';
+}
+function abilityPerformanceForm(player,rounds,cfg){
+ const f=cfg.form||{}, p=cfg.growthPolicy||{}, cutoff=rounds.at(-1)?.date||'', position=playerOvrProfile(player,cutoff.slice(0,4)||String(abilityCareerStartYear()),cfg).position;
+ const empty=reason=>({level:0,raw:0,modifier:0,growthMultiplier:1,status:abilityFormStatus(0),attendanceBase:0,streakPenalty:0,performance:0,recent:[],played:0,consecutive:0,ready:false,reason,position,indices:{},metrics:{},mode:'MATCH_PERFORMANCE',coverage:0});
+ if(f.enabled===false)return empty('FORM 사용 안 함');
+ const source=slumpAppearanceData(),key=normalizePlayerMatchKey(player),win=Math.max(1,Math.floor(num(f.window)||5));
+ const rows=(position==='GR'?source.gkByPlayer:source.byPlayer).get(key)||[],seen=new Set();
+ const games=rows.filter(g=>g.date>=abilityCareerStartDate()&&g.date<=cutoff&&!seen.has(g.id)&&seen.add(g.id));
+ const recent=games.slice(-win),baseline=games.slice(Math.max(0,games.length-win-num(p.baselineGames)),Math.max(0,games.length-win));
+ const out={...empty('최소 '+p.minimumMatches+'경기 및 비교 기록 대기'),recent,played:recent.length,recentGames:recent.length,baselineGames:baseline.length,totalGames:games.length};
+ if(recent.length&&recent.at(-1).date!==cutoff){out.reason='기준 경기일 미출전 · 새 FORM 평가 보류';return out;}
+ if(games.length<num(p.minimumMatches)||recent.length<win||baseline.length<num(p.minimumBaseline))return out;
+ const metrics={},indices={},finite=x=>typeof x==='number'&&Number.isFinite(x)&&x>=0;
+ const select=(list,keys)=>list.filter(g=>keys.every(k=>finite(g[k])));
+ const weights=(f.recency||[.35,.25,.20,.12,.08]);
+ const rate=(list,key,weighted)=>{let total=0,den=0;for(const g of list){const i=recent.indexOf(g),w=weighted?Math.max(0,num(weights[recent.length-1-i])||0):1;total+=g[key]*w;den+=w;}return den?total/den:0;};
+ const pairs=(keys)=>{const r=select(recent,keys),b=select(baseline,keys);return {r,b,ready:r.length/recent.length>=num(p.coverage)&&b.length/baseline.length>=num(p.coverage)&&b.length>=num(p.minimumBaseline)};};
+ const metric=(key,pair,floor,inverse=false)=>{
+  if(!pair.ready)return null;
+  const b=rate(pair.b,key,false),raw=rate(pair.r,key,true),r=(raw*pair.r.length+b*num(p.smoothingMatches))/(pair.r.length+num(p.smoothingMatches));
+  const change=(r-b)/Math.max(b,floor)*(inverse?-1:1),value=Math.max(-1,Math.min(1,change));
+  metrics[key]={recent:raw,baseline:b,smoothed:r,change:value,recentKnown:pair.r.length,baselineKnown:pair.b.length};return value;
+ };
+ if(position==='GR'){
+  const pair=pairs(['ga','saves','minutes']);
+  const aggregate=list=>({shots:list.reduce((s,g)=>s+g.ga+g.saves,0),saves:list.reduce((s,g)=>s+g.saves,0),ga:list.reduce((s,g)=>s+g.ga,0),minutes:list.reduce((s,g)=>s+g.minutes,0)});
+  const r=aggregate(pair.r),b=aggregate(pair.b);
+  if(pair.ready&&r.shots+b.shots>=num(p.minimumKeeperShots)&&r.shots>0&&b.shots>0&&r.minutes>0&&b.minutes>0){
+   const saveChange=(r.saves/r.shots-b.saves/b.shots),ga=(r.ga/r.minutes*15-b.ga/b.minutes*15)/Math.max(b.ga/b.minutes*15,1);
+   const q=pair.r.length/(pair.r.length+num(p.smoothingMatches));
+   indices.def=Math.max(-1,Math.min(1,(saveChange*.7-ga*.3)*q));metrics.keeper={recent:r,baseline:b,change:indices.def};
+  }
+ }else{
+  const shots=pairs(['g','sot']),passes=pairs(['a','keyPass']),defence=pairs(['defSuccess']);
+  const g=metric('g',shots,.25),s=metric('sot',shots,.5),a=metric('a',passes,.25),k=metric('keyPass',passes,.5),d=metric('defSuccess',defence,1);
+  if(g!==null&&s!==null)indices.sho=.4*g+.6*s;
+  if(a!==null&&k!==null)indices.pas=.4*a+.6*k;
+  if(d!==null)indices.def=d;
+ }
+ const role=position==='GR'?{def:1}:(GGFCSlump.weights[position]||GGFCSlump.weights.AL),coverage=Object.entries(role).reduce((s,[k,w])=>s+(Number.isFinite(indices[k])?w:0),0);
+ Object.assign(out,{indices,metrics,coverage});
+ if(coverage<num(p.roleCoverage)){out.reason='역할별 필수 기록 부족 · 빈칸 감점 보류';return out;}
+ const change=Object.entries(role).reduce((s,[k,w])=>s+(Number.isFinite(indices[k])?indices[k]*w:0),0)/coverage;
+ const mom=Math.min(1,recent.reduce((s,g)=>s+Math.max(0,num(g.mom)),0)*num(p.formMom));
+ const limit=Math.max(0,num(p.formLimit)),modifier=Math.max(-limit,Math.min(limit,change/num(p.fullFormChange)*limit+mom));
+ const level=limit?Math.max(-5,Math.min(5,Math.round(modifier/limit*5))):0;
+ return {...out,ready:true,reason:'최근 실제 출전 '+win+'경기 / 직전 최대 '+p.baselineGames+'경기 비교',modifier,level,raw:level,performance:change,growthMultiplier:Math.max(.9,Math.min(1.1,1+modifier*.025)),status:abilityFormStatus(level)};
+}
+function abilityApplyAttendance(career,R,cfg,ledger,fm){
+ const year=R.date.slice(0,4),used=ledger[year]||(ledger[year]={}),applied={};
+ for(const k of ['pac','sho','pas','dri','def','phy']){
+  const remaining=Math.max(0,num(cfg.growthPolicy.attendanceAxisCap)-num(used[k]));
+  const wanted=R.att?Math.max(0,num(cfg.attendance[k]))*abilityGrowthRate(career[k])*fm:0;
+  const inc=Math.max(0,Math.min(remaining,wanted,num(cfg.scoreMax)-career[k]));
+  career[k]+=inc;used[k]=num(used[k])+inc;applied[k]=inc;
+ }return applied;
+}
+function abilityApplySustained(career,R,form,cfg,state,weights){
+ const p=cfg.growthPolicy,played=form.recent?.some(g=>g.date===R.date);
+ if(!played)return;
+ state.streak=form.ready&&form.modifier<=num(p.sustainedTrigger)?state.streak+1:0;
+ state.played++;
+ if(state.streak<num(p.sustainedDays)||state.played-state.last<num(p.sustainedInterval))return;
+ const w=longFormWeights(weights),year=R.date.slice(0,4),remaining=Math.max(0,num(p.sustainedSeasonCap)-num(state.byYear[year])),loss={};
+ for(const k of ['sho','pas','def'])loss[k]=Number.isFinite(form.indices[k])&&form.indices[k]<=-num(p.fullFormChange)/2?Math.min(num(p.sustainedAxisDrop),Math.max(0,career[k]-num(cfg.scoreMin))):0;
+ const planned=Object.entries(loss).reduce((s,[k,v])=>s+v*w[k],0),scale=planned?Math.min(1,remaining/planned):0;
+ for(const [k,v] of Object.entries(loss)){loss[k]=v*scale;career[k]-=loss[k];}
+ const actual=planned*scale;if(actual>0){state.byYear[year]=num(state.byYear[year])+actual;state.last=state.played;state.events.push({date:R.date,loss,actual});}
 }
 function uploadedPlayerPhoto(){return ''}
 /* Worker-only report collector. Does not write the source database. */
