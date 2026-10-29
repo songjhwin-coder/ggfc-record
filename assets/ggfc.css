@@ -3828,3 +3828,8 @@ body:not(.admin-mode) #playerRecordQueryPanel{display:none!important}
 .atr-changes .ability-riser-deltas{justify-content:center;gap:6px}
 .atr-changes .ability-riser-delta{white-space:nowrap}
 .atr-changes>small{display:block;text-align:center;color:#617487;font-size:10px;line-height:1.5;margin-top:10px}
+
+/* V3.25.60: president emblem within the existing leadership cards. */
+.lh-person .lh-role{display:inline-flex;align-items:center;justify-content:center;gap:5px;line-height:1.5}
+.lh-president-icon{display:inline-block;width:20px;height:20px;flex:none;vertical-align:middle}
+.lh-hero+.lh-history{margin-top:24px}

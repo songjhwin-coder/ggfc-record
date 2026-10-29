@@ -7512,7 +7512,7 @@ function buildReferencePoster(doc,source){
   return root;
 }
 
-function enlargeDashboardPosterText(root){
+function resizeDashboardPosterText(root){
   // Measure before typography changes. Keep every table/cell at its fitted size;
   // grow only the surrounding poster sections when larger labels need more room.
   const win=root.ownerDocument.defaultView;
@@ -7536,7 +7536,12 @@ function enlargeDashboardPosterText(root){
       Object.assign(cell.style,{position:'absolute',display:'block',left:left+'px',top:top+'px',width:width+'px',height:height+'px',padding:'0',backgroundColor:background});
     });
   });
-  fonts.forEach(([node,size])=>{if(Number.isFinite(size))node.style.fontSize=(size*1.2)+'px';});
+  // Relative to V3.25.59: hero text -20%, all other text -10%.
+  // The fitted table/cell dimensions above remain unchanged.
+  fonts.forEach(([node,size])=>{
+    const multiplier=node.closest('.poster-hero')?1.2*.8:1.2*.9;
+    if(Number.isFinite(size))node.style.fontSize=(size*multiplier)+'px';
+  });
   root.classList.add('poster-larger-text');
   // The hero and results may become taller; this never changes a table's scale.
   const hero=root.querySelector('.poster-hero');
@@ -7560,11 +7565,12 @@ function enlargeDashboardPosterText(root){
   lanes.forEach(lane=>lane.style.height=laneHeight+'px');
   root.querySelector('.poster-results').style.height=(laneHeight+3)+'px';
   root.style.height='auto';
-  root.dataset.typographyScale='1.2';
+  root.dataset.typographyScale='1.08';
+  root.dataset.heroTypographyScale='0.96';
 }
 function fitDashboardPoster(root){
   // html2canvas clones the already fitted snapshot. Do not enlarge or fit twice.
-  if(root.dataset.typographyScale==='1.2')return;
+  if(root.dataset.typographyScale==='1.08')return;
   // Keep the previous fit scale; result enlargement must not shrink the whole page.
   root.classList.remove('poster-enlarged-results');root.style.height='';
   const results=root.querySelector('.poster-results');if(results)results.style.height='';
@@ -7631,7 +7637,7 @@ function fitDashboardPoster(root){
   lanes.forEach(lane=>{lane.style.height=laneHeight+'px';lane.firstElementChild.style.transform='scale('+scale+')';});
   if(results)results.style.height=(laneHeight+3)+'px';
   root.style.height=(2047+laneHeight-565)+'px';
-  enlargeDashboardPosterText(root);
+  resizeDashboardPosterText(root);
 }
 async function createDashboardExportSnapshot(source){
   if(!source.getBoundingClientRect().width)throw new Error('종합기록 화면을 연 뒤 다시 저장해 주세요.');
