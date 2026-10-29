@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <script defer src="assets/ggfc-browser-handoff.js?v=9aa37103839739b5"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>GGFC 모바일 기록센터 · 3.25.58</title>
-<link rel="stylesheet" href="assets/ggfc.css?v=57e4cedcf2b9df24">
+<title>GGFC 모바일 기록센터 · 3.25.59</title>
+<link rel="stylesheet" href="assets/ggfc.css?v=5efaf6cb65db1d10">
 <link rel="stylesheet" href="assets/ggfc-startup.css?v=ef78b300cd483a0e">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="mobile-web-app-capable" content="yes">
@@ -62,7 +62,7 @@
     <button data-v="team" class="temp-team-menu"><span>Team Stats</span></button>
   </nav>
   <div class="pwa-menu-actions"><a class="btn sm pwa-guide-link" href="install.html">앱 설치 안내</a><button class="btn sm" id="pwaInstall" hidden>GGFC를 앱으로 설치</button><button class="btn sm" id="pwaCheck">앱 업데이트 확인</button><button class="btn sm" id="lockBtn" type="button">관리자 로그인</button><span class="badge locked" id="lockBadge">🔒 열람 모드</span><p id="pwaStatus" role="status" aria-live="polite"></p></div>
-  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.25.58 · 기록센터</span></footer>
+  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.25.59 · 기록센터</span></footer>
 </aside>
 <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" tabindex="-1" aria-label="메뉴 닫기" hidden></button>
 
@@ -450,7 +450,7 @@
   <section class="view" id="v-goalkeeper"><div class="head"><h2>골레이로 랭킹</h2><p>실제 GR 수행시간을 기준으로 실점·선방을 비교합니다. 조회기간과 최소 수행시간을 선택하세요.</p></div><div class="card" id="goalkeeperRanking"></div></section>
 
   <section class="view" id="v-ability">
-    <div class="head"><h2>Player Ratings</h2><p>개인 경기력 비교 기반 SLUMP 조정을 포함합니다. V3.25.58 · 경기기록과 팀별 기록지의 성장·감점, SoccerBee 축별 초기값·재측정, 최근 FORM을 반영합니다. BASE는 장기 누적 능력치이며 CURRENT OVR은 BASE+FORM입니다. 상세 계산식과 현재 저장된 요율은 아래 설명자료에서 확인하세요.</p></div>
+    <div class="head"><h2>Player Ratings</h2><p>개인 경기력 비교 기반 SLUMP 조정을 포함합니다. V3.25.59 · 경기기록과 팀별 기록지의 성장·감점, SoccerBee 축별 초기값·재측정, 최근 FORM을 반영합니다. BASE는 장기 누적 능력치이며 CURRENT OVR은 BASE+FORM입니다. 상세 계산식과 현재 저장된 요율은 아래 설명자료에서 확인하세요.</p></div>
 
     <div class="ability-kpi-grid" id="abilityKpis" data-ability-admin></div>
 
@@ -497,11 +497,11 @@
 
     <div class="grid g2 ability-rule-grid" style="margin-bottom:16px">
       <div class="card">
-        <div class="sec-t">경기기록 → 성장·감점·FORM · V3.25.58</div>
+        <div class="sec-t">경기기록 → 성장·감점·FORM · V3.25.59</div>
         <div id="abilityGrowthRules"></div>
       </div>
       <div class="card">
-        <div class="sec-t">SoccerBee → 축별 초기값·재측정 · V3.25.58</div>
+        <div class="sec-t">SoccerBee → 축별 초기값·재측정 · V3.25.59</div>
         <div id="abilitySoccerbeeRules"></div>
       </div>
     </div>
@@ -819,7 +819,7 @@
     </div>
   </section>
   <footer class="page-status-footer" aria-label="프로그램 버전 및 공유 기록 상태">
-  <div class="release-version" aria-label="현재 프로그램 버전">GGFC · V3.25.58</div>
+  <div class="release-version" aria-label="현재 프로그램 버전">GGFC · V3.25.59</div>
   <section class="cloud-status" id="cloudStatus" role="status" aria-live="polite"><span id="cloudStatusText">공유 기록을 확인하고 있습니다…</span>
     <div class="cloud-actions"><button id="cloudRetry" class="btn sm" hidden>공유 저장 재시도</button><button id="cloudDownload" class="btn sm" hidden>미저장 내용 내려받기</button><button id="cloudReload" class="btn sm" hidden>서버 기록 다시 받기</button></div>
   </section>
@@ -1017,12 +1017,12 @@
 <input type="file" id="soccerbeeFilepick" accept=".xlsx" hidden>
 
 <script defer src="firebase-config.js"></script>
-<script defer src="assets/ggfc-sync.js?v=4c5b3a5108d58f04"></script>
+<script defer src="assets/ggfc-sync.js?v=d031789963b97279"></script>
 <script defer src="assets/ggfc-mobile.js?v=4f5dd82918d4b884"></script>
 <script defer src="assets/ggfc-details.js?v=3.25.31"></script>
-<script defer src="assets/ggfc-squad.js?v=85bfa21f18567c19"></script>
+<script defer src="assets/ggfc-squad.js?v=976876a2b9935c50"></script>
 <script defer src="assets/ggfc-card-design.js?v=3.25.31"></script>
-<script defer src="assets/ggfc-alltime.js?v=72aba8105035d231"></script>
+<script defer src="assets/ggfc-alltime.js?v=cdecee713c8b33e2"></script>
 <script defer src="assets/ggfc-maker.js?v=eb8bf0806a0dcad6"></script>
 <script defer src="assets/ggfc-slump.js?v=2e0bdfcc7d4d9235"></script>
 <script defer src="assets/ggfc-interleague.js?v=0aaf193602821f70"></script>

@@ -169,21 +169,7 @@ function leadershipView(year=Number(new Intl.DateTimeFormat('en',{timeZone:'Asia
 }
 function leadershipMemberPhoto(member){
  const archive=allTimeRows().find(r=>normalizePlayerMatchKey(r.player)===normalizePlayerMatchKey(member.player));
- const roster=(DB.roster||[]).filter(r=>normalizePlayerMatchKey(r.player)===normalizePlayerMatchKey(member.player)).sort((a,b)=>String(b.year||'').localeCompare(String(a.year||'')));
- const photo=[uploadedPlayerPhoto(member.player),...roster.map(r=>r.photoCutout),archive?.photoCutout,...roster.map(r=>r.photo),archive?.photo].map(normalizePlayerPhotoUrl).find(Boolean);
- return '<div class="lh-portrait"><span class="lh-photo-fallback" aria-hidden="true">'+esc(member.player.slice(0,1))+'</span>'+(photo?'<img src="'+esc(photo)+'" alt="'+esc(member.player+' '+member.role+' 사진')+'" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">':'')+'</div>';
-}
-function leadershipFormationHtml(members){
- const president=members.find(m=>/^(?:현)?회장(?:$|겸|[·/,])/.test(String(m.role||'').replace(/\s/g,'')));
- const others=members.filter(m=>m!==president),side=president?Math.ceil(others.length/2):0;
- const slots=president?side*2+1:Math.max(1,members.length);
- const positions=new Map();
- if(president){positions.set(president,side+1);others.forEach((m,i)=>positions.set(m,side+1+(i%2===0?-1:1)*(Math.floor(i/2)+1)));}
- else members.forEach((m,i)=>positions.set(m,i+1));
- return '<div class="lh-members lh-formation" style="--lh-slots:'+slots+'" aria-label="'+(president?'회장을 중심으로 좌우에 선 운영진':'운영진 단체 모습')+'">'+members.map(m=>{
-  const front=m===president,column=positions.get(m),depth=president?Math.abs(column-side-1):0;
-  return '<article class="lh-person'+(front?' lh-president':'')+'" style="grid-column:'+column+';z-index:'+(front?30:20-depth)+'">'+leadershipMemberPhoto(m)+'<div class="lh-caption"><span>'+esc(m.role)+'</span><h4>'+esc(m.player)+'</h4></div></article>';
- }).join('')+'</div>';
+ return atPhoto({...archive,player:member.player});
 }
 function renderLeadership(){
  const root=document.getElementById('leadershipContent');if(!root)return;
@@ -192,6 +178,6 @@ function renderLeadership(){
  const kpis=[['현재 운영기수',current?.term||'확인 필요'],['현재 운영진',current?current.members.length+'명':'—'],['운영 이력',view.rows.length+'개 기수'],['함께한 운영진',unique.size+'명']];
  root.innerHTML='<div class="lh-hero"><div><span>GGFC · PEOPLE BEHIND THE CLUB</span><h3>함께 만든 시간, 이어가는 GGFC</h3><p>'+esc(current?current.period+' · '+current.term+' 운영진이 함께합니다.':'등록된 운영진 이력을 최신 운영년도 순으로 표시합니다.')+'</p></div><div class="lh-hero-mark" aria-hidden="true">GGFC</div></div><div class="lh-kpis">'+kpis.map(([label,value])=>'<div><span>'+label+'</span><strong>'+esc(value)+'</strong></div>').join('')+'</div><div class="lh-history">'+view.rows.map(r=>{
   const active=r===current,status=active?'진행 중':r.start>view.year?'예정':'역대 운영진';
-  return '<section class="lh-term '+(active?'is-current':'')+'"><header><div><span class="lh-term-label">'+esc(r.period)+'</span><h3>'+esc(r.term)+' 운영진</h3></div><span class="lh-status">'+status+'</span></header>'+leadershipFormationHtml(r.members)+'</section>';
+  return '<section class="lh-term '+(active?'is-current':'')+'"><header><div><span class="lh-term-label">'+esc(r.period)+'</span><h3>'+esc(r.term)+' 운영진</h3></div><span class="lh-status">'+status+'</span></header><div class="lh-members">'+r.members.map(m=>'<article class="lh-person">'+leadershipMemberPhoto(m)+'<div><span>'+esc(m.role)+'</span><h4>'+esc(m.player)+'</h4></div></article>').join('')+'</div></section>';
  }).join('')+'</div>'+(admin?'<p class="note">역대 운영진 시트의 운영년도·기수·이름(직무)를 읽습니다. 사진은 선수명단과 역대기록의 동일 이름으로 연결합니다. 운영년도 2026~는 종료년도 미정이며 현재 연도에 해당하는 최신 기수를 진행 중으로 표시합니다. 명단이 없는 행은 표시하지 않습니다.</p>':'');
 }
