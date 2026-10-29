@@ -233,7 +233,7 @@ function applySquadAppearance(root=document.getElementById('teamSquadContent'),s
  if(!root)return;
  root.querySelectorAll('.ts-team').forEach(box=>{
   const team=box.dataset.team,photo=settings.teams[team]||settings;
-  box.style.setProperty('--ts-manager-col',String(226.2*photo.manager.scale/100)+'fr');box.style.setProperty('--ts-coach-col',String(191.1*photo.coach.scale/100)+'fr');
+  box.style.setProperty('--ts-manager-col',String(226.2*photo.manager.scale/100)+'fr');box.style.setProperty('--ts-coach-col',String(226.2*photo.coach.scale/100)+'fr');
   box.style.setProperty('--ts-team-color',settings.colors[team]||teamRecordColor(team));
   box.classList.toggle('ts-color-border',settings.border);
   box.style.setProperty('--ts-logo-size',settings.logoSize+'%');box.style.setProperty('--ts-logo-opacity',String(settings.logoOpacity/100));

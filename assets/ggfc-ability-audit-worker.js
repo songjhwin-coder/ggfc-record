@@ -1,4 +1,4 @@
-/* Generated from current core + SLUMP; source SHA256 4e1e2d045186edb55abfeab2f30eb91635fc180b2288a74d989b749b19b7ad74 */
+/* Generated from current core + SLUMP; source SHA256 daa55f1f00fda44df83089abd06cdd6950e78c6d680713bc410c41c0955ca3c4 */
 const GGFCSlump=(()=>{
  const defaults={enabled:true,startDate:'2026-10-20',recentGames:10,baselineGames:20,minimumBaselineGames:10,formTrigger:-2,performanceTrigger:75,persistenceRounds:4,interval:4,recoveryPerformance:85,recoveryRounds:3,slumpDrop:.20,severeDrop:.35,criticalDrop:.50,seasonCap:1.5,storyEnabled:false};
  Object.assign(defaults,{recoveryStartDate:'2026-10-27',recoveryPercent:25,severePerformance:70,criticalPerformance:60});

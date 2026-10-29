@@ -172,3 +172,16 @@ tbody tr:nth-child(even){background:#f8fafc}
 
 /* V3.25.52: enlarge only the additional header logo by 50% (38 -> 57px). */
 .poster-header-logos .poster-secondary-logo{width:57px;height:57px;object-fit:contain}
+
+/* V3.25.58: primary logo removed, additional artwork enlarged by 30%. */
+.poster-header-logos .poster-secondary-logo{width:74.1px;height:74.1px;object-fit:contain}
+/* Typography is measured and enlarged once, after the original table layout fits.
+   Fixed cell rectangles retain the original table dimensions and merged leagues. */
+.poster-fixed-table{border-collapse:separate}
+.poster-fixed-table .poster-cell-content{position:absolute;left:0;top:50%;transform:translateY(-50%);width:100%;line-height:1.15;text-align:inherit;overflow-wrap:anywhere;white-space:normal}
+.poster-fixed-table .poster-cell-content *{line-height:1.15}
+.poster-fixed-table .poster-cell-content .team-chip{max-width:100%}
+.poster-larger-text .poster-score{letter-spacing:0}
+.poster-larger-text .poster-hero{padding-top:15px}
+.poster-standing-table th:last-child{line-height:1.1}
+.poster-rank-team th:nth-child(2),.poster-ranking-summary .poster-rank-fouls th:nth-child(2){width:46px}
