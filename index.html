@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <script defer src="assets/ggfc-browser-handoff.js?v=9aa37103839739b5"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>GGFC 기록센터 · 3.25.68</title>
+<title>GGFC 기록센터 · 3.25.69</title>
 <link rel="stylesheet" href="assets/ggfc.css?v=487133a5681dde08">
 <link rel="stylesheet" href="assets/ggfc-startup.css?v=026c02cbc9a0bd71">
 <link rel="manifest" href="manifest.webmanifest">
@@ -66,7 +66,7 @@
     <button data-v="team" class="temp-team-menu"><span>Team Stats</span></button>
   </nav>
   <div class="pwa-menu-actions"><a class="btn sm pwa-guide-link" href="install.html">앱 설치 안내</a><button class="btn sm" id="pwaInstall" hidden>GGFC를 앱으로 설치</button><button class="btn sm" id="pwaCheck">앱 업데이트 확인</button><button class="btn sm" id="lockBtn" type="button">관리자 로그인</button><button class="btn sm" id="operatorLoginBtn" type="button">운영진 로그인</button><span id="operatorModeBadge" class="badge open" hidden>운영진 · 썸네일 전용</span><span class="badge locked" id="lockBadge">🔒 열람 모드</span><p id="pwaStatus" role="status" aria-live="polite"></p></div>
-  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.25.68 · 기록센터</span></footer>
+  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.25.69 · 기록센터</span></footer>
 </aside>
 <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" tabindex="-1" aria-label="메뉴 닫기" hidden></button>
 
@@ -491,11 +491,11 @@
 
     <div class="grid g2 ability-rule-grid" id="abilityRulePanels" data-ability-admin hidden style="margin-bottom:16px">
       <div class="card">
-        <div class="sec-t">경기기록 → 성장·감점·FORM · V3.25.68</div>
+        <div class="sec-t">경기기록 → 성장·감점·FORM · V3.25.69</div>
         <div id="abilityGrowthRules"></div>
       </div>
       <div class="card">
-        <div class="sec-t">SoccerBee → 축별 초기값·재측정 · V3.25.68</div>
+        <div class="sec-t">SoccerBee → 축별 초기값·재측정 · V3.25.69</div>
         <div id="abilitySoccerbeeRules"></div>
       </div>
     </div>
@@ -829,7 +829,7 @@
     </div>
   </section>
   <footer class="page-status-footer" aria-label="프로그램 버전 및 공유 기록 상태">
-  <div class="release-version" aria-label="현재 프로그램 버전">GGFC · V3.25.68</div>
+  <div class="release-version" aria-label="현재 프로그램 버전">GGFC · V3.25.69</div>
   <section class="cloud-status" id="cloudStatus" role="status" aria-live="polite"><span id="cloudStatusText">공유 기록을 확인하고 있습니다…</span>
     <div class="cloud-actions"><button id="cloudRetry" class="btn sm" hidden>공유 저장 재시도</button><button id="cloudDownload" class="btn sm" hidden>미저장 내용 내려받기</button><button id="cloudReload" class="btn sm" hidden>서버 기록 다시 받기</button></div>
   </section>
@@ -1023,7 +1023,7 @@
 
 <dialog id="adminPasswordDialog" class="admin-password-dialog" aria-labelledby="adminPasswordTitle"><h3 id="adminPasswordTitle">관리자 비밀번호 변경</h3><p>현재 비밀번호를 다시 확인합니다. 변경 후 다음 로그인부터 새 비밀번호를 사용하세요.</p><form id="adminPasswordChangeForm" aria-busy="false"><input type="text" name="username" value="ggfc-admin@example.com" autocomplete="username" hidden><label for="adminPasswordCurrent">현재 비밀번호</label><input id="adminPasswordCurrent" name="current-password" type="password" autocomplete="current-password" maxlength="4096" required><label for="adminPasswordNew">새 비밀번호</label><input id="adminPasswordNew" name="new-password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required><label for="adminPasswordConfirm">새 비밀번호 확인</label><input id="adminPasswordConfirm" name="confirm-password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required><label class="admin-password-show"><input id="adminPasswordShowValues" type="checkbox"> 입력값 보기</label><p class="note">새 비밀번호는 8~128자입니다. Firebase에 별도 비밀번호 정책이 있으면 해당 조건도 충족해야 합니다.</p><p id="adminPasswordChangeStatus" class="admin-password-status" role="status" aria-live="polite"></p><div class="admin-password-actions"><button type="button" class="btn" id="adminPasswordChangeCancel">취소</button><button type="submit" class="btn primary" id="adminPasswordChangeSubmit">비밀번호 변경</button></div></form></dialog>
 <dialog id="operatorSetupDialog" class="yt-login-dialog" aria-labelledby="operatorSetupTitle"><h3 id="operatorSetupTitle">운영진 권한 규칙 안내</h3><p>운영진 계정과 썸네일 저장에는 Firebase의 별도 경로 권한이 필요합니다. 규칙이 없으면 비밀번호 설정과 썸네일 저장이 거절됩니다.</p><ol><li>아래 권한 규칙 파일을 받습니다.</li><li>Firebase 프로젝트의 <b>Realtime Database → 규칙</b>을 열고 기존 규칙을 백업합니다.</li><li>제공한 규칙을 확인해 게시합니다. 별도 맞춤 규칙이 있으면 기존 내용을 보존하고 thumbnailAccess·thumbnailTemplate 두 항목을 합칩니다.</li><li>앱으로 돌아와 <b>연결 다시 확인</b>을 누른 뒤 운영진 비밀번호를 설정합니다.</li></ol><p>이 파일은 ‘규칙’ 화면에 적용합니다. 경기 데이터에 가져오는 파일이 아닙니다.</p><div class="yt-actions"><a class="btn" href="assets/ggfc-operator-rules.json" download="GGFC_운영진_권한규칙.json">권한 규칙 파일 받기</a><a class="btn" href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer">Firebase 콘솔 열기</a><button class="btn" type="button" id="operatorSetupClose">닫기</button></div></dialog>
-<dialog id="adminRecoveryDialog" class="admin-password-dialog" aria-labelledby="adminRecoveryTitle"><h3 id="adminRecoveryTitle">관리자 비밀번호 복구</h3><p><b>기존 비밀번호는 조회할 수 없습니다.</b> Firebase 프로젝트 관리 권한으로 새 비밀번호를 설정하는 방식으로 복구합니다.</p><p>현재 고정 관리자 계정은 <b>ggfc-admin@example.com</b>입니다. 메일을 받을 수 없는 주소이므로 비밀번호 재설정 메일로 복구할 수 없습니다.</p><ol><li>이 프로젝트를 관리하는 Google 계정으로 Cloud Shell을 엽니다.</li><li>아래 복구 도구를 내려받아 Cloud Shell의 파일 업로드로 올립니다.</li><li>아래 확인 명령을 실행하고 프로젝트·관리자 계정을 확인합니다.</li><li>재설정 명령을 실행해 새 비밀번호를 두 번 입력하고 최종 확인합니다. 이후 앱에 새 비밀번호로 로그인합니다.</li></ol><p>계정 확인 · 변경 없음</p><pre id="adminRecoveryCheckCommand"></pre><p>비밀번호 재설정</p><pre id="adminRecoveryResetCommand"></pre><p>앱 관리자 로그인과 프로젝트 관리용 Google 로그인은 별개입니다. 프로젝트에 사용자 조회·변경 권한이 있는 Google 계정이 필요합니다. 새 비밀번호는 화면에 표시되거나 파일에 저장되지 않습니다.</p><div class="admin-password-actions"><a class="btn" href="assets/ggfc-admin-recovery.py" download="ggfc-admin-recovery.py">복구 도구 받기 (.py)</a><a class="btn" id="adminRecoveryCloudShell" target="_blank" rel="noopener noreferrer">Cloud Shell 열기</a><button type="button" class="btn" id="adminRecoveryClose">닫기</button></div></dialog>
+<dialog id="adminRecoveryDialog" class="admin-password-dialog" aria-labelledby="adminRecoveryTitle"><h3 id="adminRecoveryTitle" tabindex="-1">관리자 비밀번호 복구</h3><p><b>기존 비밀번호는 조회할 수 없습니다.</b> Firebase 프로젝트 관리 권한으로 새 비밀번호를 설정하는 방식으로 복구합니다.</p><p>현재 고정 관리자 계정은 <b>ggfc-admin@example.com</b>입니다. 메일을 받을 수 없는 주소이므로 비밀번호 재설정 메일로 복구할 수 없습니다.</p><ol><li>이 프로젝트를 관리하는 Google 계정으로 Cloud Shell을 엽니다.</li><li>아래 복구 도구를 내려받아 Cloud Shell의 파일 업로드로 올립니다.</li><li>아래 진단 명령을 실행하고 프로젝트·권한·관리자 계정 조회 결과를 확인합니다.</li><li>관리자 계정 조회가 성공하고 변경 권한이 확인되면 재설정 명령을 실행합니다. 새 비밀번호를 두 번 입력하고 최종 확인한 뒤 앱에 로그인합니다.</li></ol><p>연결·권한 진단 · 비밀번호 변경 없음</p><pre id="adminRecoveryCheckCommand"></pre><p>비밀번호 재설정 · 마지막에 RESET_ADMIN 입력</p><pre id="adminRecoveryResetCommand"></pre><p>진단에는 HTTP 상태·오류 코드와 권한 확인 결과가 표시됩니다. 오류가 있으면 표시된 안내에 따라 확인하세요. 앱 관리자 로그인과 프로젝트 관리용 Google 로그인은 별개입니다. 프로젝트에 사용자 조회·변경 권한이 있는 Google 계정이 필요합니다. 새 비밀번호는 화면에 표시되거나 파일에 저장되지 않습니다.</p><div class="admin-password-actions"><a class="btn" href="assets/ggfc-admin-recovery-v2.py?v=1f9a30682f276cfd" download="ggfc-admin-recovery-v2.py">복구 도구 v2 받기 (.py)</a><a class="btn" id="adminRecoveryCloudShell" target="_blank" rel="noopener noreferrer">Cloud Shell 열기</a><button type="button" class="btn" id="adminRecoveryClose">닫기</button></div></dialog>
 <dialog id="operatorLoginDialog" class="yt-login-dialog" aria-labelledby="operatorLoginTitle"><h3 id="operatorLoginTitle">운영진 로그인</h3><p>유튜브 썸네일 편집과 이미지 다운로드 전용입니다.</p><form id="operatorLoginForm"><label for="operatorPassword">운영진 비밀번호</label><input id="operatorPassword" name="password" type="password" autocomplete="current-password" maxlength="4096" required><p id="operatorLoginError" class="yt-status is-error" role="alert"></p><div class="yt-actions"><button type="button" class="btn" id="operatorLoginCancel">취소</button><button type="submit" class="btn primary" id="operatorLoginOk">로그인</button></div></form></dialog>
 <dialog id="duoDialog" class="duo-dialog" aria-labelledby="duoTitle"><button type="button" class="duo-close" data-duo-close aria-label="DUO 분석 닫기">×</button><div id="duoDialogContent"></div></dialog>
 <div class="toast" id="toast" role="status"></div>
@@ -1032,7 +1032,7 @@
 <input type="file" id="soccerbeeFilepick" accept=".xlsx" hidden>
 
 <script defer src="firebase-config.js"></script>
-<script defer src="assets/ggfc-sync.js?v=314d46ab12d0025c"></script>
+<script defer src="assets/ggfc-sync.js?v=0a6742701e8ab5c4"></script>
 <script defer src="assets/ggfc-mobile.js?v=f33897d7705ae186"></script>
 <script defer src="assets/ggfc-details.js?v=3.25.31"></script>
 <script defer src="assets/ggfc-squad.js?v=976876a2b9935c50"></script>
@@ -1043,7 +1043,7 @@
 <script defer src="assets/ggfc-interleague.js?v=875a790dc704cb0c"></script>
 <script defer src="assets/ggfc-player-photos.js?v=eb60fa7fd5b16b5f"></script>
 <script defer src="assets/ggfc-app.js?v=b3b4fcc446f8639c"></script>
-<script defer src="assets/ggfc-admin-password.js?v=1f74db95d4d7afdc"></script>
+<script defer src="assets/ggfc-admin-password.js?v=89e60e87013241cf"></script>
 <script defer src="assets/ggfc-thumbnail-access.js?v=cc38f357421d7711"></script>
 <script defer src="assets/ggfc-thumbnail.js?v=4b99cf8be60398fd"></script>
 <script defer src="assets/ggfc-duo.js?v=3.25.31"></script>
