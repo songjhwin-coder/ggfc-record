@@ -32,7 +32,7 @@ let repAdminDrafts = {};
 
 /* V3.25.23: one derived record view for every calculation. Raw DB is never rewritten. */
 let verifiedRecordCache=null;
-function invalidateVerifiedRecords(){slumpAppearanceCache=null;verifiedRecordCache=null;teamPlayerRecordCache=null;abilityPriorYearPoolCache=null;v319CareerCache={key:'',map:null};}
+function invalidateVerifiedRecords(){menuAbilityCache=null;slumpAppearanceCache=null;verifiedRecordCache=null;teamPlayerRecordCache=null;abilityPriorYearPoolCache=null;v319CareerCache={key:'',map:null};}
 function verifiedFixtureKey(m){
  const round=String(m.round||'').trim(),no=String(m.no||'').trim();
  return JSON.stringify([normDate(m.date),isLeagueFamilyComp(m.comp)?'LEAGUE':compCompact(m.comp),round,no,[String(m.home||'').trim(),String(m.away||'').trim()].sort(),round||no?'':String(m.id)]);
@@ -1521,9 +1521,9 @@ function partnerRecordBonus(a,b,shared,rows){
 function partnerRecordSummary(row){return (row.recordMetrics||[]).map(r=>r.label+' '+(r.total===null?'미기록':r.total+'회 / '+r.games+'경기')).join(' · ');}
 function newRecordMethodHtml(){return '<section class="new-record-method"><h4>베스트커플 · DUO 신규 기록 반영 (V3.25.9)</h4><p>같은 경기·팀에 실제 함께 출전한 두 선수의 명시 기록만 커플 보너스에 포함합니다. 기존 점수 = 승률×0.5 + 동행 비율×0.3 + min(동행 경기당 본인 득점×33,100)×0.2. 최종 = round(min(100, 기존 점수 + 신규 기록 보너스)). 감독점수는 유지합니다.</p><p>항목별 보너스 = 8 × 가중치 × min(기록 경기당 두 선수의 확인된 합계 ÷ 기준,1) × min(기록 경기 수÷5,1) × (기록 경기 수÷동행 경기 수). 유효슛 25%/기준 4회, 키패스 25%/3회, 수비성공 30%/6회, 선방 20%/4회. 총 보너스 최대 8점이며 100점 상한에서 실제 반영량은 작아질 수 있습니다. 기준은 GGFC 초기 운영값입니다.</p><p>빈칸은 0이 아닙니다. 두 선수 중 한 명만 기록한 경기는 확인된 횟수만 합산합니다. 표본·기록 비율로 보너스를 축소하므로 오래된 미기록 경기 때문에 감점하지 않습니다. 실제 두 선수 사이의 패스나 득점 연결을 입증하는 지표는 아닙니다.</p><p>DUO는 시즌별로 항목을 기록한 경기당 평균을 선수 간 백분위로 환산합니다. 항목별 기록 5경기 이상, 본인 출전 대비 기록률 50% 이상, 비교 가능 선수 4명 이상이어야 직접 반영합니다. ATTACK=기존 축 80%+유효슛 20%, CREATION=기존 축 75%+키패스 25%, POWER=기존 축 70%+수비성공 20%+선방 10%. 사용 불가능한 항목은 제외하고 남은 가중치를 재정규화합니다. 선방 횟수는 수비 관여도이며 키퍼 능력의 절대평가가 아닙니다.</p><p>DUO 최종의 특성 70%·동행 성적 20%·CHEMISTRY 10%와 20종 분류 조건은 유지합니다. CHEMISTRY에는 신규 커플점수가 연결됩니다. 기존 SHO/PAS/DEF의 기록 성장에 더해 직접 관여 지표를 작은 비중으로 반영하므로 효과가 완전히 독립적이지는 않습니다. 사커비 배점과 능력치 상승·하강 계수는 이번 변경에서 유지합니다.</p></section>';}
 
-function chemistry(target,list){
-  const ms=uniqueRecordMatches(list||chemMatches()), M=new Map(ms.map(m=>[detailMatchKey(m.id),m]));
-  const goal=analysisGoalLookup(ms),performanceRows=explicitPerformanceRows();
+function chemistryAttendanceGroups(ms,M){
+ const key=renderCalculationCache?JSON.stringify(ms.map(m=>detailMatchKey(m.id))):null;
+ if(key!==null&&renderCalculationCache.chemistry.has(key))return renderCalculationCache.chemistry.get(key);
   const attendance=analysisAttendance(ms).map(r=>({...r,id:detailMatchKey(r.id),player:String(r.player||'').trim(),team:String(r.team||'').trim()})).filter(r=>{
     const m=M.get(r.id);return m&&r.player&&!isOwnGoalPlayer(r.player)&&[m.home,m.away].includes(r.team);
   });
@@ -1538,6 +1538,14 @@ function chemistry(target,list){
     const group=groups.get(key);group.players.add(r.player);
     squadStaffAtMatch(M.get(r.id),r.team).directors.forEach(name=>group.coaches.add(name));
   });
+
+ if(key!==null)renderCalculationCache.chemistry.set(key,groups);
+ return groups;
+}
+function chemistry(target,list){
+  const ms=uniqueRecordMatches(list||chemMatches()), M=new Map(ms.map(m=>[detailMatchKey(m.id),m]));
+  const goal=analysisGoalLookup(ms),performanceRows=explicitPerformanceRows();
+  const groups=chemistryAttendanceGroups(ms,M);
   const mates=new Map(),coaches=new Map();let base=0,baseGoals=0,bw=0,bd=0,bl=0;
   groups.forEach(group=>{
     if(!group.players.has(target))return;
@@ -4825,9 +4833,12 @@ function renderRepresentativePointBreakdown(detail,info){
 }
 
 function refreshRecordLinkedViews(){
-  renderRecentMatches();
-  renderTeam();
-  renderPlayer();
+  mobilePageSwipe?.invalidate();
+  withRenderCalculationCache(()=>{
+    if(activeView==='dash')renderRecentMatches();
+    else if(activeView==='team')renderTeam();
+    else if(activeView==='player')renderPlayer();
+  });
 }
 function leagueMembershipForList(list){
   const ms=uniqueRecordMatches(list||[]).slice().sort((a,b)=>normDate(a.date).localeCompare(normDate(b.date)));
@@ -5158,6 +5169,7 @@ function renderV319Story(selectedDate=dashDate){
 }
 let insightDate='';
 function renderInsights(){
+  if(!renderCalculationCache)return withRenderCalculationCache(renderInsights);
   const dates=[...new Set(recordBaseMatches().map(m=>normDate(m.date)).filter(Boolean))].sort().reverse();
   if(!dates.includes(insightDate))insightDate=dates.includes(dashDate)?dashDate:(dates[0]||'');
   const select=document.getElementById('insightDate');
@@ -5730,6 +5742,7 @@ function playerSquadDisplayTeam(player,info={}){
   return teams.length?teams.join(' · '):'-';
 }
 function renderPlayer(){
+  if(!renderCalculationCache)return withRenderCalculationCache(renderPlayer);
   bindPlayerRecordSearch();
   renderLinkedRecordControls("player");
   const info=recordQueryInfo(), list=info.list||[];
@@ -5755,14 +5768,22 @@ function renderPlayer(){
   filterPlayerRecordRows();
 }
 
-function pairStats(a,b,list){
-  const ms=uniqueRecordMatches(list||chemMatches()), ids=new Set(ms.map(m=>detailMatchKey(m.id)));
-  const goal=analysisGoalLookup(ms);
+function analysisPairTeams(ms,ids){
+ const key=renderCalculationCache?JSON.stringify(ms.map(m=>detailMatchKey(m.id))):null;
+ if(key!==null&&renderCalculationCache.pairs.has(key))return renderCalculationCache.pairs.get(key);
   const teamOf=new Map(); analysisAttendance(ms).forEach(r=>{
     const id=detailMatchKey(r.id),team=String(r.team||'').trim();
     if(!ids.has(id)||!r.player||!team)return;
     const key=JSON.stringify([id,normalizePlayerMatchKey(r.player)]);if(!teamOf.has(key))teamOf.set(key,new Set());teamOf.get(key).add(team);
   });
+
+ if(key!==null)renderCalculationCache.pairs.set(key,teamOf);
+ return teamOf;
+}
+function pairStats(a,b,list){
+  const ms=uniqueRecordMatches(list||chemMatches()), ids=new Set(ms.map(m=>detailMatchKey(m.id)));
+  const goal=analysisGoalLookup(ms);
+  const teamOf=analysisPairTeams(ms,ids);
   const tog={p:0,w:0,d:0,l:0,ag:0,bg:0,rows:[]};
   const vs ={p:0,aw:0,d:0,bw:0,ag:0,bg:0,rows:[]};
   ms.slice().sort((x,y)=>(y.date||"").localeCompare(x.date||"")).forEach(m=>{
@@ -6085,6 +6106,7 @@ function bindChemistryZoom(){
   setChemistryZoom(100,true);
 }
 function renderChemistryMap(){
+  if(!renderCalculationCache)return withRenderCalculationCache(renderChemistryMap);
   const map=$('#chemistryMap'),side=$('#chemistryMapSide'),note=$('#chemMapNote'),depthSel=$('#chemDepth');if(!map||!side)return;
   chemDepth=chemDepth===3?3:2;if(depthSel)depthSel.value=String(chemDepth);
   if(!chemSel){map.innerHTML='<div class="empty chemistry-map-empty">분석할 선수를 선택해 주세요.</div>';side.innerHTML='';bindChemistryZoom();return;}
@@ -6360,6 +6382,7 @@ function renderPair(a,b){
     '</div>';
 }
 function renderChem(){
+  if(!renderCalculationCache)return withRenderCalculationCache(renderChem);
   const ys = yearList(), ysel = $("#chemYear");
   if(chemYear!=="ALL" && !ys.includes(chemYear)) chemYear="ALL";
   ysel.innerHTML = '<option value="ALL"'+(chemYear==="ALL"?" selected":"")+'>전체 연도</option>'+
@@ -6828,12 +6851,13 @@ function syncMenuNavigation(){
  }
  const brand=document.getElementById('topBrandName');if(brand)brand.textContent=displaySettings().brandTitle||'GGFC';
 }
+let recordTableScrollRefresh=null;
 function selectMenuView(v){
  const id=canonicalMenu(v);
  document.querySelectorAll('#tabs button[data-v], [data-top-menu]').forEach(el=>{const active=(el.dataset.v||el.dataset.topMenu)===id;el.classList.toggle('on',active);if(active)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');});
  const top=document.getElementById('topMenuNav'),button=top?.querySelector('.on');if(button&&(button.offsetLeft<top.scrollLeft||button.offsetLeft+button.offsetWidth>top.scrollLeft+top.clientWidth))top.scrollLeft=Math.max(0,button.offsetLeft-(top.clientWidth-button.offsetWidth)/2);
  // Measure the small navigation before revealing a potentially long, unlaid-out view.
- document.querySelectorAll('section.view').forEach(el=>el.classList.toggle('on',el.id==='v-'+id));syncMobileNav(id);
+ document.querySelectorAll('section.view').forEach(el=>el.classList.toggle('on',el.id==='v-'+id));syncMobileNav(id);recordTableScrollRefresh?.();
 syncMemberPreviewUI();
 }
 function menuDraft(){
@@ -6937,23 +6961,45 @@ function renderMenuContent(next){
   const renderers={thumbnail:()=>window.GGFCThumbnail?.render(),abilityaudit:renderAbilityAudit,photos:renderPlayerPhotoManager,interleague:renderInterleagueStats,menus:renderMenuManagement,closed:renderMenusClosed,goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide};
   return withRenderCalculationCache(renderers[next]);
 }
-// Cache only within one synchronous render: a new render always sees current DB/settings.
-// No scores, rules, source records or cross-render calculation results are stored here.
+// Recheck calculation inputs on every render, including edits made in place.
+// Store only bounded, cloned derived results; never write cached results to the DB.
+let menuAbilityCache=null;
+function menuAbilitySignature(){
+ const settings=DB.settings||{};
+ const roster=(DB.roster||[]).map(r=>{const {photo,photoCutout,...fields}=r;return [fields,!!String(photo||'').trim()];});
+ return JSON.stringify([DB.matches,DB.attendance,DB.goals,DB.saves,DB.fouls,DB.moms,DB.specials,roster,DB.soccerbee,settings.seasons,settings.teamSquads,settings.teamPlayerRecords,settings.goalkeeperEntries,settings.ability,comp]);
+}
 function withRenderCalculationCache(render){
   if(renderCalculationCache)return render();
   const previous=renderCalculationCache,oldDate=normDate,oldName=normalizePlayerMatchKey;
   const oldRoster=selectPlayerRoster,oldHalf=abilityHalfInfo,oldMatches=abilityMatches,oldAbility=playerAbilityRecordAtDate;
   const oldCanonical=soccerBeeCanonicalPlayerMap,oldSbBase=soccerBeeAbilityBaseMap,oldSbLatest=soccerBeeLatestMap;
   const oldLinks=teamPlayerRecordLinks,oldSlump=slumpAppearanceData,oldSaves=playerSaveRows;
+  const oldProfile=playerOvrProfile,oldGoal=analysisGoalLookup,oldPerformance=explicitPerformanceRows,oldChemMatches=chemMatches;
+  const oldForm=abilityPerformanceForm;
   const memoize=fn=>{const cache=new Map();return value=>{
     if(value!==null&&typeof value==='object')return fn(value);
     if(!cache.has(value))cache.set(value,fn(value));return cache.get(value);
   };};
-  renderCalculationCache={attendance:new Map(),rounds:new Map(),config:null,ability:null};
+  renderCalculationCache={attendance:new Map(),rounds:new Map(),chemistry:new Map(),pairs:new Map(),config:null,ability:null};
   const memoArgs=(fn,copy=value=>value)=>{const cache=new Map();return (...args)=>{
     const key=JSON.stringify(args);if(!cache.has(key))cache.set(key,fn(...args));return copy(cache.get(key));
   };};
   normDate=memoize(oldDate);normalizePlayerMatchKey=memoize(oldName);
+  // Object identity avoids repeatedly serializing the full ability configuration.
+  const profiles=new Map(),forms=new Map();
+  abilityPerformanceForm=(player,rounds,cfg)=>{
+    if(!forms.has(cfg))forms.set(cfg,new Map());const entries=forms.get(cfg),key=JSON.stringify([player,rounds.at(-1)?.date||'']);
+    if(!entries.has(key))entries.set(key,oldForm(player,rounds,cfg));return entries.get(key);
+  };
+  playerOvrProfile=(player,year,cfg)=>{
+    cfg=cfg||abilityConfig();const key=JSON.stringify([player,year]);
+    if(!profiles.has(cfg))profiles.set(cfg,new Map());const entries=profiles.get(cfg);
+    if(!entries.has(key))entries.set(key,oldProfile(player,year,cfg));return entries.get(key);
+  };
+  analysisGoalLookup=memoArgs(oldGoal);
+  explicitPerformanceRows=memoArgs(oldPerformance);
+  chemMatches=memoArgs(oldChemMatches,value=>value.slice());
   selectPlayerRoster=memoArgs(oldRoster,value=>value?{...value}:value);
   abilityHalfInfo=memoArgs(oldHalf,value=>({...value}));
   abilityMatches=memoArgs(oldMatches,value=>value.slice());
@@ -6961,12 +7007,37 @@ function withRenderCalculationCache(render){
   // Resolve that omitted date exactly as the existing calculator does, so both
   // callers can reuse the same result (including its full-precision values).
   const abilityMemo=new Map();
+  let checkedAbilityInputs=false;
+  const sharedAbilityResults=()=>{
+    if(!checkedAbilityInputs){
+      ensureAbilityData();const signature=menuAbilitySignature();
+      if(!menuAbilityCache||menuAbilityCache.db!==DB||menuAbilityCache.signature!==signature){
+        if(menuAbilityCache)invalidateVerifiedRecords();
+        squadLookupCache={source:null,length:0,scopes:new Map(),teams:new Map(),players:new Map()};
+        participationStartCache={source:null,length:0,dates:new Map()};
+        menuAbilityCache={db:DB,signature,results:new Map(),cutoffs:new Map()};
+      }
+      checkedAbilityInputs=true;
+    }
+    return menuAbilityCache.results;
+  };
   playerAbilityRecordAtDate=(player,year,half,cutoffDate,includeCarry=true)=>{
-    const name=String(player||'').trim(),info=abilityHalfInfo(year,half);
-    const dates=cutoffDate?[]:playerAbilityRoundRows(name,info).map(r=>r.date);
-    const cutoff=normDate(cutoffDate||dates[dates.length-1]||info.end);
+    const shared=sharedAbilityResults();
+    const name=String(player||'').trim(),request=JSON.stringify([name,year,half]);
+    let cutoff=normDate(cutoffDate);
+    if(!cutoffDate){
+      cutoff=menuAbilityCache.cutoffs.get(request);
+      if(!cutoff){const info=abilityHalfInfo(year,half),dates=playerAbilityRoundRows(name,info).map(r=>r.date);cutoff=normDate(cutoffDate||dates[dates.length-1]||info.end);if(menuAbilityCache.cutoffs.size>=384)menuAbilityCache.cutoffs.delete(menuAbilityCache.cutoffs.keys().next().value);menuAbilityCache.cutoffs.set(request,cutoff);}
+    }
     const key=JSON.stringify([name,year,half,cutoff,includeCarry]);
-    if(!abilityMemo.has(key))abilityMemo.set(key,oldAbility(player,year,half,cutoffDate,includeCarry));
+    if(!abilityMemo.has(key)){
+      if(shared.has(key))abilityMemo.set(key,structuredClone(shared.get(key)));
+      else{
+        const result=oldAbility(player,year,half,cutoffDate,includeCarry);
+        if(shared.size>=384)shared.delete(shared.keys().next().value);
+        shared.set(key,structuredClone(result));abilityMemo.set(key,result);
+      }
+    }
     return abilityMemo.get(key);
   };
   soccerBeeCanonicalPlayerMap=memoArgs(oldCanonical);
@@ -6981,6 +7052,7 @@ function withRenderCalculationCache(render){
    selectPlayerRoster=oldRoster;abilityHalfInfo=oldHalf;abilityMatches=oldMatches;playerAbilityRecordAtDate=oldAbility;
    soccerBeeCanonicalPlayerMap=oldCanonical;soccerBeeAbilityBaseMap=oldSbBase;soccerBeeLatestMap=oldSbLatest;
    teamPlayerRecordLinks=oldLinks;slumpAppearanceData=oldSlump;playerSaveRows=oldSaves;
+   abilityPerformanceForm=oldForm;playerOvrProfile=oldProfile;analysisGoalLookup=oldGoal;explicitPerformanceRows=oldPerformance;chemMatches=oldChemMatches;
   }
 }
 function renderAll(){
@@ -8212,20 +8284,39 @@ document.getElementById('analysisStartPlayer').onchange=()=>{
 document.getElementById('analysisStartCancel').onclick=()=>{if(!admin)return;analysisStartSettingsDirty=false;renderAnalysisStartSettings();document.getElementById('analysisStartStatus').textContent='저장된 설정으로 되돌렸습니다.';GGFC.refreshUI();};
 
 function initRecordTableScrolling(){
+  const entries=[];let frame=0;
+  const update=()=>{
+    frame=0;if(document.body.classList.contains('swipe-active'))return;
+    const states=entries.map(({box})=>{
+      const width=box.clientWidth;
+      if(!width)return {wide:false};
+      const total=box.scrollWidth,left=box.scrollLeft;
+      return {wide:total>width+2,left:left<2,right:left+width>=total-2};
+    });
+    entries.forEach(({bar,buttons},i)=>{
+      const state=states[i];if(bar.hidden===state.wide)bar.hidden=!state.wide;
+      if(!state.wide)return;
+      if(buttons[0].disabled!==state.left)buttons[0].disabled=state.left;
+      if(buttons[1].disabled!==state.right)buttons[1].disabled=state.right;
+    });
+  };
+  const schedule=()=>{if(!frame)frame=requestAnimationFrame(update);};
+  recordTableScrollRefresh=schedule;
   const ids=['chemMate','chemCoach','monthlyStatTable','playerTable','dashTeamPointRank','dashPlayerPointRank','dashTeamFoulRank'];
   ids.forEach(id=>{
     const box=document.getElementById(id);if(!box||box.dataset.scrollReady)return;box.dataset.scrollReady='1';
     const bar=document.createElement('div');bar.className='record-scroll-controls';bar.dataset.exportIgnore='';
     bar.innerHTML='<span>좌우로 이동하여 전체 항목 보기</span><button type="button" class="btn sm" aria-label="표 왼쪽으로 이동">←</button><button type="button" class="btn sm" aria-label="표 오른쪽으로 이동">→</button>';box.before(bar);
     const buttons=bar.querySelectorAll('button');
-    const update=()=>{const wide=box.clientWidth>0&&box.scrollWidth>box.clientWidth+2;bar.hidden=!wide;buttons[0].disabled=box.scrollLeft<2;buttons[1].disabled=box.scrollLeft+box.clientWidth>=box.scrollWidth-2;};
+    entries.push({box,bar,buttons});
     buttons.forEach((b,i)=>b.onclick=()=>{box.scrollBy({left:(i?1:-1)*Math.max(180,box.clientWidth*.7),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});});
-    box.addEventListener('scroll',update,{passive:true});new ResizeObserver(update).observe(box);new MutationObserver(update).observe(box,{childList:true,subtree:true});update();
+    box.addEventListener('scroll',schedule,{passive:true});new ResizeObserver(schedule).observe(box);new MutationObserver(schedule).observe(box,{childList:true,subtree:true});schedule();
   });
 }
 
 /* ---------- boot ---------- */
-load();setAdmin(false);renderAll();
+// setAdmin already renders the loaded database once.
+load();setAdmin(false);
 if(location.hash)goTab(location.hash.slice(1),{startup:true});
 initMemberUI();initMemberPreviewUI();initRecordTableScrolling();GGFC.start();
 

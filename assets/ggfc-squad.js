@@ -137,6 +137,7 @@ function squadMovementHtml(currentRow,previousRow,previousDate,currentDate){
  return '<div class="ts-movement"><div class="ts-movement-head"><b>SQUAD MOVEMENT</b><span>'+esc(previousDate)+' → '+esc(currentDate||currentRow.date)+'</span></div>'+(groups.length?'<div class="ts-movement-groups">'+groups.join('')+'</div>':'<div class="ts-movement-empty ok">이전 스쿼드 대비 변경 없음</div>')+'</div>';
 }
 function renderTeamSquad(){
+  if(!renderCalculationCache)return withRenderCalculationCache(renderTeamSquad);
  const root=document.getElementById('teamSquadContent'),filter=document.getElementById('teamSquadComp'),changeSelect=document.getElementById('teamSquadChangeDate');if(!root)return;
  renderSquadAppearanceEditor();
  const exportButton=document.getElementById('squadExportButton');if(exportButton){exportButton.onclick=()=>exportTeamSquadImage(exportButton);exportButton.disabled=squadExportBusy;}

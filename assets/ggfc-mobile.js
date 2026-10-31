@@ -53,7 +53,7 @@ function initMobilePageSwipe(){
  function cancel(){
   clearTimeout(settleTimer);cancelAnimationFrame(paintFrame);paintFrame=0;
   const g=gesture;gesture=null;if(!g)return;
-  g.transitionCleanup?.();restore(g.incoming);restore(g.outgoing);g.backdrop?.remove();g.placeholder?.remove();if(g.locked)window.scrollTo({top:g.scrollY,behavior:'instant'});document.body.classList.remove('swipe-active');
+  g.transitionCleanup?.();restore(g.incoming);restore(g.outgoing);g.backdrop?.remove();g.placeholder?.remove();if(g.locked)window.scrollTo({top:g.scrollY,behavior:'instant'});document.body.classList.remove('swipe-active');recordTableScrollRefresh?.();
  }
  function invalidate(){cancel();prepared.clear();}
  function rendered(id){prepared.add(id);}
