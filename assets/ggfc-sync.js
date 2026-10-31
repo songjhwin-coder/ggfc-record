@@ -1,7 +1,7 @@
 /* GGFC sync: retain v3.18.4 wire schema; application version is declared below. */
 const GGFC = (() => {
   const ADMIN_LOGIN_ID='ggfc-admin@example.com';
-  let loginBusy=false;
+  let loginBusy=false,passwordBusy=false;
   const state={checking:true,ready:false,serverSeen:false,connected:false,authorized:false,user:null,revision:0,dirty:false,saving:false,busy:0,conflict:false,serial:0,latest:null,hasLatest:false,error:'',status:'공유 기록을 확인하고 있습니다…',savedAt:null,authGeneration:0};
   let database=null,auth=null,dataRef=null,readTimer=null,saveTimer=null,editLease=false;
   let started=false,connectionPromise=null,lastSnapshotText=null,cacheSavedAt=null,cacheWarning='';
@@ -68,7 +68,7 @@ const GGFC = (() => {
     return encoded;
   }
   function cacheKey(){return 'ggfc-v318-public:'+String((window.GGFC_CONFIG||{}).databaseURL||'');}
-  function canEdit(){return window.GGFC_MEMBER_PREVIEW!==true && state.authorized && state.ready && state.serverSeen && state.connected && navigator.onLine!==false && !state.conflict && !state.error;}
+  function canEdit(){return !passwordBusy && window.GGFC_MEMBER_PREVIEW!==true && state.authorized && state.ready && state.serverSeen && state.connected && navigator.onLine!==false && !state.conflict && !state.error;}
   function refreshUI(){
     const box=document.querySelector('#cloudStatus'),line=document.querySelector('#cloudStatusText');
     if(!box||!line)return;
@@ -91,6 +91,7 @@ const GGFC = (() => {
     const login=document.querySelector('#memberLogin');if(login)login.textContent=state.user?'로그아웃':'관리자 로그인';
     document.querySelectorAll('.member-admin').forEach(el=>el.hidden=!state.authorized||window.GGFC_MEMBER_PREVIEW===true);
     window.GGFCOperator?.refreshUI();
+    window.GGFCAdminPassword?.refreshUI();
   }
   function status(text){state.status=text;refreshUI();}
   function applySnapshot(raw,first=false,fromCache=false){
@@ -207,6 +208,7 @@ const GGFC = (() => {
     show.textContent=visible?'숨기기':'보기';show.setAttribute('aria-pressed',String(visible));input.focus();
   }
   async function signIn(){
+    if(passwordBusy){toast('관리자 비밀번호 변경을 마친 뒤 다시 시도하세요.');return false;}
     if(loginBusy)return false;
     if(!auth){authError('공유 서버 연결 설정을 먼저 완료해 주세요.');return false;}
     const input=document.querySelector('#adminPassword'),ok=document.querySelector('#pwOk'),cancel=document.querySelector('#pwCancel');
@@ -242,6 +244,7 @@ const GGFC = (() => {
     }
   }
   async function loginOrLogout(){
+    if(passwordBusy){toast('관리자 비밀번호 변경을 마친 뒤 다시 시도하세요.');return;}
     if(loginBusy)return;
     if(state.user){
       if(state.saving){toast('공유 저장 완료 후 로그아웃해 주세요.');return;}
@@ -286,6 +289,34 @@ const GGFC = (() => {
     }
   }
 
+  function adminPasswordStatus(){
+    if(!state.authorized||typeof admin==='undefined'||!admin||window.GGFC_MEMBER_PREVIEW===true||!auth?.currentUser||auth.currentUser.uid!==state.user?.uid||auth.currentUser.email!==ADMIN_LOGIN_ID)return {allowed:false,reason:'관리자 모드로 로그인한 뒤 사용할 수 있습니다.'};
+    if(passwordBusy)return {allowed:false,reason:'관리자 비밀번호를 변경하고 있습니다…'};
+    if(loginBusy)return {allowed:false,reason:'로그인 확인이 끝난 뒤 다시 시도하세요.'};
+    if(!canEdit())return {allowed:false,reason:'관리자 인증과 서버 연결을 확인하세요. 연결 후 변경할 수 있습니다.'};
+    if(state.dirty||state.saving||state.busy||editLease||hasSettingsDraft()||window.GGFCThumbnail?.dirty||window.GGFCOperator?.pending)return {allowed:false,reason:'기록·설정의 변경 내용을 먼저 저장하거나 취소한 뒤 비밀번호를 변경하세요.'};
+    return {allowed:true,reason:''};
+  }
+  async function changeAdminPassword(currentPassword,newPassword){
+    const permission=adminPasswordStatus();if(!permission.allowed)throw Object.assign(new Error(permission.reason),{code:'ggfc/password-change-blocked'});
+    if(typeof currentPassword!=='string'||!currentPassword||currentPassword.length>4096)throw Object.assign(new Error('현재 비밀번호를 입력하세요.'),{code:'ggfc/password-invalid'});
+    if(typeof newPassword!=='string'||newPassword.length<8||newPassword.length>128)throw Object.assign(new Error('새 비밀번호는 8~128자로 입력하세요.'),{code:'ggfc/password-invalid'});
+    if(currentPassword===newPassword)throw Object.assign(new Error('현재 비밀번호와 다른 새 비밀번호를 입력하세요.'),{code:'ggfc/password-invalid'});
+    const user=auth.currentUser;passwordBusy=true;state.busy++;refreshUI();
+    try{
+      const credential=firebase.auth.EmailAuthProvider.credential(ADMIN_LOGIN_ID,currentPassword);
+      await user.reauthenticateWithCredential(credential);
+      if(!state.authorized||!admin||window.GGFC_MEMBER_PREVIEW===true||auth.currentUser?.uid!==user.uid||state.user?.uid!==user.uid)throw Object.assign(new Error('관리자 인증이 변경되었습니다. 다시 로그인하세요.'),{code:'ggfc/password-change-blocked'});
+      await user.updatePassword(newPassword);
+      return true;
+    }finally{
+      passwordBusy=false;state.busy=Math.max(0,state.busy-1);
+      // A password change never writes the record DB. Apply records received while the Auth request was running.
+      if(state.hasLatest&&Number(state.latest?.meta?.revision)>state.revision&&!state.dirty&&!state.saving&&!state.busy&&!editLease&&!hasSettingsDraft()&&!window.GGFCThumbnail?.dirty&&!window.GGFCOperator?.pending){try{state.conflict=false;applySnapshot(state.latest);}catch(e){state.error='공유 기록을 읽지 못했습니다: '+e.message;}}
+      refreshUI();
+    }
+  }
+
   function installGuards(){
     const selectors='#v-thumbnail,#v-photos,#startupSettingsPanel,#squadAppearancePanel,#v-menus,#v-abilityguide,#v-data,#v-rep,#v-abilitycfg,#seasonPanel,#soccerbeeUpload,#soccerbeeClear,#abilitySystemEnabled,#logoFilepick,#filepick,#soccerbeeFilepick';
     for(const type of ['click','change','input'])document.addEventListener(type,e=>{
@@ -316,7 +347,7 @@ const GGFC = (() => {
         }
       };
     }
-    window.addEventListener('beforeunload',e=>{if(state.dirty||state.saving||editLease||hasSettingsDraft()||window.GGFCThumbnail?.dirty||window.GGFCOperator?.pending){e.preventDefault();e.returnValue='';}});
+    window.addEventListener('beforeunload',e=>{if(passwordBusy||state.dirty||state.saving||editLease||hasSettingsDraft()||window.GGFCThumbnail?.dirty||window.GGFCOperator?.pending){e.preventDefault();e.returnValue='';}});
   }
   function cacheSnapshot(raw){
     const savedAt=Date.now();
@@ -435,6 +466,6 @@ const GGFC = (() => {
     await connect();
 
   }
-  return {get editing(){return editLease||hasSettingsDraft()||!!window.GGFCThumbnail?.dirty||!!window.GGFCOperator?.pending;},get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving||state.busy>0;},canEdit,normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,signIn,loginOrLogout,closeLogin,togglePassword};
+  return {get editing(){return editLease||hasSettingsDraft()||!!window.GGFCThumbnail?.dirty||!!window.GGFCOperator?.pending;},get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving||state.busy>0;},canEdit,adminPasswordStatus,changeAdminPassword,get passwordChanging(){return passwordBusy;},normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,signIn,loginOrLogout,closeLogin,togglePassword};
 })();
-window.GGFC_VERSION='3.25.66';
+window.GGFC_VERSION='3.25.67';
