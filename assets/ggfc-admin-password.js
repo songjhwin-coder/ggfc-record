@@ -52,6 +52,13 @@ window.GGFCAdminPassword=(()=>{
   }catch(error){status(errorMessage(error),true);}
   finally{current='';next='';confirmation='';working=false;controls();clear();if(!administrator()){if(q('adminPasswordDialog').open)q('adminPasswordDialog').close();toast('관리자 인증을 다시 확인하세요.');}}
  }
+ function openRecovery(){
+  if(q('adminLoginForm').getAttribute('aria-busy')==='true'){toast('로그인 확인이 끝난 뒤 다시 시도하세요.');return;}
+  q('adminPassword').value='';const configured=String(window.GGFC_CONFIG?.projectId||''),project=/^[a-z][a-z0-9-]{4,61}[a-z0-9]$/.test(configured)?configured:'ggfc-database';
+  q('adminRecoveryCheckCommand').textContent='python3 ggfc-admin-recovery.py --project '+project+' --check';q('adminRecoveryResetCommand').textContent='python3 ggfc-admin-recovery.py --project '+project;
+  q('adminRecoveryCloudShell').href='https://console.cloud.google.com/cloudshell?project='+encodeURIComponent(project);q('adminRecoveryDialog').showModal();
+ }
+ q('adminForgotPassword').onclick=openRecovery;q('adminRecoveryClose').onclick=()=>{q('adminRecoveryDialog').close();q('adminForgotPassword').focus();};
  q('adminPasswordOpen').onclick=open;q('adminPasswordChangeCancel').onclick=close;q('adminPasswordChangeForm').onsubmit=submit;
  q('adminPasswordShowValues').onchange=e=>fields.forEach(id=>q(id).type=e.target.checked?'text':'password');
  q('adminPasswordDialog').addEventListener('cancel',e=>{if(working)e.preventDefault();else{clear();status('');}});

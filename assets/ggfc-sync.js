@@ -468,4 +468,4 @@ const GGFC = (() => {
   }
   return {get editing(){return editLease||hasSettingsDraft()||!!window.GGFCThumbnail?.dirty||!!window.GGFCOperator?.pending;},get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving||state.busy>0;},canEdit,adminPasswordStatus,changeAdminPassword,get passwordChanging(){return passwordBusy;},normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,signIn,loginOrLogout,closeLogin,togglePassword};
 })();
-window.GGFC_VERSION='3.25.67';
+window.GGFC_VERSION='3.25.68';
