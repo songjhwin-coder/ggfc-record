@@ -511,13 +511,13 @@ function dateStyleSet(stylesDoc){
   if(!stylesDoc) return set;
   const BUILTIN=new Set([14,15,16,17,22,27,28,29,30,31,32,33,34,35,36,45,46,47,50,51,52,53,54,55,56,57,58,59]);
   const custom={};
-  [...stylesDoc.getElementsByTagName("numFmt")].forEach(f=>{
+  [...stylesDoc.getElementsByTagNameNS('*',"numFmt")].forEach(f=>{
     const id=+f.getAttribute("numFmtId");
     const code=String(f.getAttribute("formatCode")||"").replace(/\[[^\]]*\]/g,"").replace(/"[^"]*"/g,"");
     custom[id]= /[ymdhs]/i.test(code) && /[ymd]/i.test(code);
   });
-  const xfsBlocks=[...stylesDoc.getElementsByTagName("cellXfs")];
-  const xfs = xfsBlocks.length? [...xfsBlocks[0].getElementsByTagName("xf")] : [];
+  const xfsBlocks=[...stylesDoc.getElementsByTagNameNS('*',"cellXfs")];
+  const xfs = xfsBlocks.length? [...xfsBlocks[0].getElementsByTagNameNS('*',"xf")] : [];
   xfs.forEach((xf,i)=>{
     const id=+(xf.getAttribute("numFmtId")||0);
     if(BUILTIN.has(id) || custom[id]) set.add(i);
@@ -555,14 +555,14 @@ function workbookHeaderRowIndex(rows){
 function sheetRows(doc, shared, dateStyles, hyperlinks={}){
   const cells=new Map();
   const rows=[];
-  [...doc.getElementsByTagName("row")].forEach(r=>{
+  [...doc.getElementsByTagNameNS('*',"row")].forEach(r=>{
     const arr=[];
-    [...r.getElementsByTagName("c")].forEach((c,idx)=>{
+    [...r.getElementsByTagNameNS('*',"c")].forEach((c,idx)=>{
       const ref=(c.getAttribute("r")||"").replace(/[0-9]/g,"");
       const ci = ref? colIdx(ref) : idx;
       const t=c.getAttribute("t"); let v="";
-      if(t==="inlineStr"){ const is=c.getElementsByTagName("is")[0]; v=is?is.textContent:""; }
-      else { const vv=c.getElementsByTagName("v")[0]; v=vv?vv.textContent:""; if(t==="s") v=shared[+v]??""; }
+      if(t==="inlineStr"){ const is=c.getElementsByTagNameNS('*',"is")[0]; v=is?is.textContent:""; }
+      else { const vv=c.getElementsByTagNameNS('*',"v")[0]; v=vv?vv.textContent:""; if(t==="s") v=shared[+v]??""; }
       // 셀 서식이 "날짜"면 엑셀은 숫자(일련번호)로 저장하므로 날짜로 복원한다
       const sIdx = c.getAttribute("s");
       if(dateStyles && sIdx!==null && dateStyles.has(+sIdx) && (!t || t==="n") && /^\d+(\.\d+)?$/.test(String(v))){
@@ -570,7 +570,7 @@ function sheetRows(doc, shared, dateStyles, hyperlinks={}){
         if(conv) v = conv;
       }
       arr[ci]=v;
-      const formula=c.getElementsByTagName("f")[0];
+      const formula=c.getElementsByTagNameNS('*',"f")[0];
       const address=String(c.getAttribute('r')||'').replace(/\$/g,'').toUpperCase();
       cells.set(address,{row:rows.length,col:ci,value:v,formula:formula?.textContent||'',href:hyperlinks[address]||''});
     });
@@ -1064,18 +1064,18 @@ function applyWorkbookSheets(sheets){
 async function importXlsx(buf){
   const zip=await unzip(buf), get=n=>zip[n]||zip[n.replace(/^\//,'')];
   const wb=xml(get('xl/workbook.xml')), rels=xml(get('xl/_rels/workbook.xml.rels'));
-  const relMap={}; [...rels.getElementsByTagName('Relationship')].forEach(r=>relMap[r.getAttribute('Id')]=r.getAttribute('Target'));
-  const ss=get('xl/sharedStrings.xml'), shared=ss?[...xml(ss).getElementsByTagName('si')].map(x=>x.textContent):[];
+  const relMap={}; [...rels.getElementsByTagNameNS('*','Relationship')].forEach(r=>relMap[r.getAttribute('Id')]=r.getAttribute('Target'));
+  const ss=get('xl/sharedStrings.xml'), shared=ss?[...xml(ss).getElementsByTagNameNS('*','si')].map(x=>x.textContent):[];
   const st=get('xl/styles.xml'), styles=dateStyleSet(st?xml(st):null), sheets=[];
-  for(const sh of [...wb.getElementsByTagName('sheet')]){
+  for(const sh of [...wb.getElementsByTagNameNS('*','sheet')]){
     const rid=sh.getAttribute('r:id')||sh.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id');
     let target=(relMap[rid]||'').replace(/^\//,''); if(!target.startsWith('xl/'))target='xl/'+target;
     const f=get(target);if(!f)continue;
     const dir=target.slice(0,target.lastIndexOf('/')+1), file=target.slice(target.lastIndexOf('/')+1);
     const rf=get(dir+'_rels/'+file+'.rels'), links={}, linkRels={};
-    if(rf)[...xml(rf).getElementsByTagName('Relationship')].forEach(r=>{if(r.getAttribute('TargetMode')==='External')linkRels[r.getAttribute('Id')]=r.getAttribute('Target');});
+    if(rf)[...xml(rf).getElementsByTagNameNS('*','Relationship')].forEach(r=>{if(r.getAttribute('TargetMode')==='External')linkRels[r.getAttribute('Id')]=r.getAttribute('Target');});
     const doc=xml(f);
-    [...doc.getElementsByTagName('hyperlink')].forEach(h=>{const id=h.getAttribute('r:id')||h.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id');if(linkRels[id])links[h.getAttribute('ref')]=linkRels[id];});
+    [...doc.getElementsByTagNameNS('*','hyperlink')].forEach(h=>{const id=h.getAttribute('r:id')||h.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id');if(linkRels[id])links[h.getAttribute('ref')]=linkRels[id];});
     const rawRows=sheetRows(doc,shared,styles,links),objs=rowsToObjects(rawRows);
     const headers=rawRows[Math.max(0,workbookHeaderRowIndex(rawRows))]||[];
     const kind=detectKind(sh.getAttribute('name'),objs.length?Object.keys(objs[0]):headers);
@@ -3009,10 +3009,10 @@ function parseSoccerBeeRows(rows){
 }
 async function importSoccerBeeXlsx(buf){
   const zip=await unzip(buf), get=n=>zip[n]||zip[n.replace(/^\//,'')]; const wb=xml(get('xl/workbook.xml')), rels=xml(get('xl/_rels/workbook.xml.rels'));
-  const relMap={}; [...rels.getElementsByTagName('Relationship')].forEach(r=>relMap[r.getAttribute('Id')]=r.getAttribute('Target'));
-  const ssFile=get('xl/sharedStrings.xml'), shared=ssFile?[...xml(ssFile).getElementsByTagName('si')].map(si=>si.textContent):[]; const stFile=get('xl/styles.xml'), dateStyles=dateStyleSet(stFile?xml(stFile):null);
+  const relMap={}; [...rels.getElementsByTagNameNS('*','Relationship')].forEach(r=>relMap[r.getAttribute('Id')]=r.getAttribute('Target'));
+  const ssFile=get('xl/sharedStrings.xml'), shared=ssFile?[...xml(ssFile).getElementsByTagNameNS('*','si')].map(si=>si.textContent):[]; const stFile=get('xl/styles.xml'), dateStyles=dateStyleSet(stFile?xml(stFile):null);
   const parsed=[];let recognized=0;
-  for(const sh of [...wb.getElementsByTagName('sheet')]){
+  for(const sh of [...wb.getElementsByTagNameNS('*','sheet')]){
     const rid=sh.getAttribute('r:id')||sh.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id');let tgt=(relMap[rid]||'').replace(/^\//,'');if(!tgt.startsWith('xl/'))tgt='xl/'+tgt;
     const f=get(tgt);if(!f)continue;
     const rows=sheetRows(xml(f),shared,dateStyles),hdr=rows.slice(0,6);
