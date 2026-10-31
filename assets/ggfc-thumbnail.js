@@ -1,9 +1,9 @@
 /* Additive thumbnail editor. Sporting records and existing image exports are read-only inputs. */
 window.GGFCThumbnail=(()=>{
  'use strict';
- const W=1280,H=720,MAX_LAYERS=24,MAX_BYTES=1200000;
- let draft=null,dirty=false,busy=false,selected='score',previewId='',model=null,drag=null,paintId=0,frame=0,uploadId=0,previewWarnings=[];
- const cache=new Map(),q=id=>document.getElementById(id),editable=()=>typeof admin!=='undefined'&&admin&&GGFC.canEdit();
+ const W=1280,H=720,MAX_LAYERS=32,MAX_BYTES=1200000;
+ let draft=null,dirty=false,busy=false,selected='score',previewId='',model=null,drag=null,paintId=0,frame=0,uploadId=0,previewWarnings=[],draftRevision=0,batchBusy=false,batchCancelled=false,previewBusy=false;
+ const cache=new Map(),q=id=>document.getElementById(id),editable=()=>!!window.GGFCOperator?.canEdit(),usable=()=>!!window.GGFCOperator?.canUse();
  const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),number=(n,f)=>Number.isFinite(Number(n))?Number(n):f;
  const copy=x=>JSON.parse(JSON.stringify(x));
  function imageSource(value){
@@ -13,9 +13,12 @@ window.GGFCThumbnail=(()=>{
   try{const url=new URL(src,document.baseURI);return ['http:','https:'].includes(url.protocol)&&!url.username&&!url.password&&(src.startsWith('http')||src.startsWith('assets/'))?url.href:'';}catch{return '';}
  }
  const color=(s,f='#ffffff')=>/^#[\da-f]{6}$/i.test(s||'')?s:f;
- function defaults(){return {version:1,enabled:true,background:'',wash:.24,layers:[
-  {id:'homePanel',kind:'team',field:'home',label:'왼쪽 로고·감독·코치',x:24,y:34,w:272,h:354},
-  {id:'awayPanel',kind:'team',field:'away',label:'오른쪽 로고·감독·코치',x:984,y:34,w:272,h:354},
+ function teamLayers(side,box){
+  const {x,y,w,h}=box,logo=Math.min(w*.44,h*.29),pw=(w-12)/2;
+  return [0,1,2,3].map(slot=>({id:side+'Staff'+slot,kind:'staff',field:side,slot,label:(side==='home'?'왼쪽':'오른쪽')+' 감독·코치 '+(slot+1),x:x+6+pw*(slot%2),y:y+h*.355+(slot>1?12:0),w:pw,h:h*.625})).concat([{id:side+'Logo',kind:'teamLogo',field:side,label:(side==='home'?'왼쪽':'오른쪽')+' 팀 로고',x:x+(w-logo)/2,y:y+h*.04,w:logo,h:logo}]);
+ }
+ function defaults(){return {version:2,enabled:true,background:'',wash:0,layers:[
+  ...teamLayers('home',{x:24,y:34,w:272,h:444}),...teamLayers('away',{x:984,y:34,w:272,h:444}),
   {id:'meta',kind:'autoText',field:'meta',label:'경기 날짜·라운드',x:328,y:22,w:624,h:38,font:24},
   {id:'homeName',kind:'autoText',field:'homeName',label:'왼쪽 팀명',x:326,y:76,w:270,h:76,font:52},
   {id:'awayName',kind:'autoText',field:'awayName',label:'오른쪽 팀명',x:684,y:76,w:270,h:76,font:52},
@@ -27,17 +30,18 @@ window.GGFCThumbnail=(()=>{
  const autoFields=new Set(['home','away','meta','homeName','awayName','score','homeScorers','awayScorers','clubLogo']);
  function normalize(value){
   const base=defaults(),input=value&&typeof value==='object'?value:base,seen=new Set(),layers=[];
-  for(const row of Array.isArray(input.layers)?input.layers:base.layers){
-   if(!row||!['team','autoText','club','text','image'].includes(row.kind)||layers.length>=MAX_LAYERS)continue;
+  const original=Array.isArray(input.layers)?input.layers:base.layers,rows=original.flatMap(row=>row?.kind==='team'&&['home','away'].includes(row.field)?teamLayers(row.field,{x:number(row.x,24),y:number(row.y,34),w:clamp(number(row.w,272),24,W),h:clamp(number(row.h,354),24,H)}).map(r=>({...r,visible:row.visible!==false})):row);
+  for(const row of rows){
+   if(!row||!['staff','teamLogo','autoText','club','text','image'].includes(row.kind)||layers.length>=MAX_LAYERS)continue;
    const id=String(row.id||'');if(!/^[a-z0-9_-]{1,60}$/i.test(id)||seen.has(id))continue;
-   const allowed={team:['home','away'],autoText:['meta','homeName','awayName','score','homeScorers','awayScorers'],club:['clubLogo']};
+   const allowed={staff:['home','away'],teamLogo:['home','away'],autoText:['meta','homeName','awayName','score','homeScorers','awayScorers'],club:['clubLogo']};
    if(allowed[row.kind]&&!allowed[row.kind].includes(row.field))continue;
    const w=clamp(number(row.w,200),24,W),h=clamp(number(row.h,100),24,H);
-   layers.push({id,kind:row.kind,field:autoFields.has(row.field)?row.field:'',label:String(row.label||'추가 항목').slice(0,50),x:clamp(number(row.x,0),0,W-w),y:clamp(number(row.y,0),0,H-h),w,h,font:clamp(number(row.font,48),8,300),color:color(row.color),visible:row.visible!==false,text:row.kind==='text'?String(row.text||'').slice(0,400):'',image:row.kind==='image'?imageSource(row.image):''});seen.add(id);
+   layers.push({id,kind:row.kind,field:autoFields.has(row.field)?row.field:'',slot:clamp(Math.floor(number(row.slot,0)),0,3),label:String(row.label||'추가 항목').slice(0,50),x:clamp(number(row.x,0),0,W-w),y:clamp(number(row.y,0),0,H-h),w,h,font:clamp(number(row.font,48),8,300),color:color(row.color),visible:row.visible!==false,text:row.kind==='text'?String(row.text||'').slice(0,400):'',image:row.kind==='image'?imageSource(row.image):''});seen.add(id);
   }
-  return {version:1,enabled:input.enabled!==false,background:imageSource(input.background),wash:clamp(number(input.wash,.24),0,.8),layers:layers.length?layers:base.layers};
+  return {version:2,enabled:input.enabled!==false,background:imageSource(input.background),wash:clamp(number(input.wash,0),0,.8),layers:layers.length?layers:base.layers};
  }
- const stored=()=>normalize(DB.settings?.youtubeThumbnail),configured=()=>DB.settings?.youtubeThumbnail?.version===1&&DB.settings.youtubeThumbnail.enabled!==false;
+ const rawStored=()=>window.GGFCOperator?.template||DB.settings?.youtubeThumbnail,stored=()=>normalize(rawStored()),configured=()=>[1,2].includes(rawStored()?.version)&&rawStored().enabled!==false;
  const totalBytes=value=>(value.background||'').length+value.layers.reduce((sum,r)=>sum+(r.image||'').length,0);
  function status(message,error=false){const el=q('ytStatus');if(el){el.textContent=message;el.classList.toggle('is-error',error);}}
  function changed(){dirty=true;GGFC.refreshUI();status('저장 전 변경 · Overview에는 저장한 배치가 적용됩니다.');}
@@ -78,7 +82,7 @@ window.GGFCThumbnail=(()=>{
   for(const layer of template.layers.filter(r=>r.visible)){
    if(layer.kind==='image'&&layer.image)jobs.push(loadImage(layer.image).then(img=>{assets.images.set(layer.id,img);if(!img)warnings.push(layer.label);}));
    if(layer.kind==='club'&&data.clubLogo)jobs.push(loadImage(data.clubLogo).then(img=>{assets.club=img;if(!img)warnings.push('기본 헤더 로고');}));
-   if(layer.kind==='team'){
+   if(['staff','teamLogo'].includes(layer.kind)&&!assets.teams[layer.field]){
     const team=data[layer.field];if(!team)continue;const item=assets.teams[layer.field]={logo:null,staff:[]};
     if(team.logo)jobs.push(loadImage(team.logo).then(img=>{item.logo=img;if(!img)warnings.push(team.name+' 로고');}));
     for(const p of team.staff.slice(0,4)){const person={...p,image:null};item.staff.push(person);jobs.push(firstImage(p.sources).then(img=>{person.image=img;if(!img)warnings.push(p.name+' 사진');}));}
@@ -86,24 +90,21 @@ window.GGFCThumbnail=(()=>{
   }
   await Promise.all(jobs);return {assets,warnings:[...new Set(warnings)]};
  }
- function paintTeam(ctx,layer,team,assets){
-  if(!team)return;const {x,y,w,h}=layer;
-  ctx.save();ctx.fillStyle='#f3f2f9ed';ctx.strokeStyle='#34716d';ctx.lineWidth=3;ctx.fillRect(x,y,w,h);ctx.strokeRect(x,y,w,h);
-  const logo=Math.min(w*.44,h*.29),lx=x+(w-logo)/2,ly=y+h*.04;
-  if(assets?.logo)contain(ctx,assets.logo,lx,ly,logo,logo);else initials(ctx,team.name,lx,ly,logo,logo);
-  const staff=assets?.staff||[],n=Math.max(1,staff.length),pw=(w-12)/n,py=y+h*.355,ph=h*.555;
-  if(!staff.length){silhouette(ctx,x+w*.3,py,w*.4,ph);paintText(ctx,'운영진 미등록',{x:x+8,y:y+h*.91,w:w-16,h:h*.075,font:18,color:'#1c3654'},700);}
-  staff.forEach((p,i)=>{const px=x+6+pw*i;if(p.image){const ratio=Math.min((pw+6)/p.image.width,ph/p.image.height),dw=p.image.width*ratio,dh=p.image.height*ratio;ctx.drawImage(p.image,px+(pw-dw)/2,py+ph-dh,dw,dh);}else silhouette(ctx,px+pw*.07,py,pw*.86,ph);paintText(ctx,p.role+' '+p.name,{x:px,y:y+h*.915,w:pw,h:h*.07,font:18,color:'#203b59'},700);});
-  if(team.staff.length>4)paintText(ctx,'외 '+(team.staff.length-4)+'명',{x:x+w*.6,y:y+h*.28,w:w*.35,h:h*.065,font:14,color:'#203b59'},700);ctx.restore();
+ function paintStaff(ctx,layer,team,assets){
+  if(!team)return;const {x,y,w,h}=layer,p=assets?.staff?.[layer.slot];
+  if(!p){if(!team.staff.length&&layer.slot===0){silhouette(ctx,x,y,w,h*.88);paintText(ctx,'운영진 미등록',{x,y:y+h*.88,w,h:h*.12,font:18,color:'#ffffff'},700);}return;}
+  const ph=h*.89;
+  if(p.image){const ratio=Math.min(w/p.image.width,ph/p.image.height),dw=p.image.width*ratio,dh=p.image.height*ratio;ctx.drawImage(p.image,x+(w-dw)/2,y+ph-dh,dw,dh);}else silhouette(ctx,x,y,w,ph);
+  paintText(ctx,p.role+' '+p.name+(layer.slot===3&&team.staff.length>4?' · 외 '+(team.staff.length-4)+'명':''),{x,y:y+ph,w,h:h-ph,font:18,color:'#ffffff'},700);
  }
  let fontReady=null;
  async function draw(canvas,template,data){
   fontReady||=document.fonts.load('850 30px GGFCThumbnail').catch(()=>[]);await fontReady;const loaded=await assetsFor(template,data),ctx=canvas.getContext('2d');canvas.width=W;canvas.height=H;
-  const gradient=ctx.createLinearGradient(0,0,W,H);gradient.addColorStop(0,'#32465d');gradient.addColorStop(.5,'#111f32');gradient.addColorStop(1,'#957047');ctx.fillStyle=gradient;ctx.fillRect(0,0,W,H);
-  if(loaded.assets.background){ctx.save();ctx.beginPath();ctx.rect(0,0,W,H);ctx.clip();contain(ctx,loaded.assets.background,0,0,W,H,true);ctx.restore();ctx.fillStyle='rgba(255,255,255,'+template.wash+')';ctx.fillRect(0,0,W,H);}
-  ctx.fillStyle='#10151bd4';ctx.beginPath();ctx.moveTo(620,0);ctx.lineTo(875,0);ctx.lineTo(455,H);ctx.lineTo(200,H);ctx.closePath();ctx.fill();ctx.fillStyle='#ac742de0';ctx.beginPath();ctx.moveTo(850,0);ctx.lineTo(1100,0);ctx.lineTo(680,H);ctx.lineTo(430,H);ctx.closePath();ctx.fill();
+  ctx.clearRect(0,0,W,H);
+  if(loaded.assets.background){ctx.save();ctx.beginPath();ctx.rect(0,0,W,H);ctx.clip();contain(ctx,loaded.assets.background,0,0,W,H,true);ctx.restore();if(template.wash){ctx.fillStyle='rgba(255,255,255,'+template.wash+')';ctx.fillRect(0,0,W,H);}}
   for(const layer of template.layers){if(!layer.visible)continue;ctx.save();
-   if(layer.kind==='team')paintTeam(ctx,layer,data[layer.field],loaded.assets.teams[layer.field]);
+   if(layer.kind==='staff')paintStaff(ctx,layer,data[layer.field],loaded.assets.teams[layer.field]);
+   else if(layer.kind==='teamLogo'){const img=loaded.assets.teams[layer.field]?.logo;if(img)contain(ctx,img,layer.x,layer.y,layer.w,layer.h);else initials(ctx,data[layer.field]?.name||'',layer.x,layer.y,layer.w,layer.h);}
    else if(layer.kind==='autoText')paintText(ctx,data[layer.field]||'',layer,layer.field==='score'?900:850);
    else if(layer.kind==='text')paintText(ctx,layer.text,layer,850);
    else if(layer.kind==='image'){const img=loaded.assets.images.get(layer.id);if(img)contain(ctx,img,layer.x,layer.y,layer.w,layer.h);else initials(ctx,'이미지',layer.x,layer.y,layer.w,layer.h);}
@@ -119,7 +120,7 @@ window.GGFCThumbnail=(()=>{
  function currentLayer(){return draft?.layers.find(r=>r.id===selected);}
  function syncInspector(){
   const layer=currentLayer(),box=q('ytInspector');if(!box)return;box.hidden=!layer;q('ytEmptySelection').hidden=!!layer;
-  const list=q('ytLayers');list.replaceChildren();draft.layers.forEach(row=>{const b=document.createElement('button');b.type='button';b.className='yt-layer-button'+(row.id===selected?' is-selected':'')+(!row.visible?' is-muted':'');b.textContent=row.label+(!row.visible?' · 숨김':'');b.setAttribute('aria-pressed',String(row.id===selected));b.onclick=()=>{selected=row.id;syncInspector();selection();};list.append(b);});
+  const list=q('ytLayers');list.replaceChildren();draft.layers.forEach(row=>{const b=document.createElement('button');b.type='button';b.className='yt-layer-button'+(row.id===selected?' is-selected':'')+(!row.visible?' is-muted':'');const p=row.kind==='staff'?model?.[row.field]?.staff?.[row.slot]:null;b.textContent=row.label+(row.kind==='staff'?' · '+(p?p.role+' '+p.name:'미등록'):'')+(!row.visible?' · 숨김':'');b.setAttribute('aria-pressed',String(row.id===selected));b.onclick=()=>{selected=row.id;syncInspector();selection();};list.append(b);});
   if(!layer)return;
   q('ytSelectedLabel').textContent=layer.label;q('ytLayerVisible').checked=layer.visible;
   for(const key of ['x','y','w','h','font'])q('ytProp-'+key).value=Math.round(number(layer[key],48));q('ytProp-color').value=layer.color||'#ffffff';
@@ -128,7 +129,7 @@ window.GGFCThumbnail=(()=>{
  function modify(key,value){if(!editable()||busy)return;const layer=currentLayer();if(!layer)return;layer[key]=value;const fixed=normalize({...draft,layers:[layer]}).layers[0];Object.assign(layer,fixed);changed();repaint();}
  function point(event){const r=q('ytStage').getBoundingClientRect();return {x:(event.clientX-r.left)/r.width*W,y:(event.clientY-r.top)/r.height*H};}
  function bindStage(){
-  const stage=q('ytStage');stage.onpointerdown=e=>{if(!editable()||busy||e.button!==0)return;const p=point(e),resizing=!!e.target.closest('[data-yt-resize]');if(!resizing){const hit=draft.layers.slice().reverse().find(r=>r.visible&&p.x>=r.x&&p.y>=r.y&&p.x<=r.x+r.w&&p.y<=r.y+r.h);selected=hit?.id||'';syncInspector();selection();}const layer=currentLayer();if(!layer)return;stage.focus({preventScroll:true});drag={pointer:e.pointerId,point:p,start:copy(layer),resizing};stage.setPointerCapture(e.pointerId);e.preventDefault();};
+  const stage=q('ytStage');stage.onpointerdown=e=>{if(!editable()||busy||e.button!==0)return;const p=point(e),resizing=!!e.target.closest('[data-yt-resize]');if(!resizing){const hit=draft.layers.slice().reverse().find(r=>r.visible&&(r.kind!=='staff'||model?.[r.field]?.staff?.[r.slot]||(!model?.[r.field]?.staff?.length&&r.slot===0))&&p.x>=r.x&&p.y>=r.y&&p.x<=r.x+r.w&&p.y<=r.y+r.h);selected=hit?.id||'';syncInspector();selection();}const layer=currentLayer();if(!layer)return;stage.focus({preventScroll:true});drag={pointer:e.pointerId,point:p,start:copy(layer),resizing};stage.setPointerCapture(e.pointerId);e.preventDefault();};
   stage.onpointermove=e=>{if(!drag||drag.pointer!==e.pointerId)return;if(!editable()){drag=null;return;}const p=point(e),dx=p.x-drag.point.x,dy=p.y-drag.point.y,layer=currentLayer(),s=drag.start;if(!layer)return;
    if(drag.resizing){layer.w=Math.round(clamp(s.w+dx,24,W-s.x));layer.h=Math.round(clamp(s.h+dy,24,H-s.y));if(['text','autoText'].includes(layer.kind))layer.font=clamp(s.font*Math.sqrt(layer.w/s.w*layer.h/s.h),8,300);}else{layer.x=Math.round(clamp(s.x+dx,0,W-s.w));layer.y=Math.round(clamp(s.y+dy,0,H-s.h));}
    if(Math.abs(dx)+Math.abs(dy)>1)changed();selection();repaint();};
@@ -151,14 +152,16 @@ window.GGFCThumbnail=(()=>{
    if(totalBytes(draft)>MAX_BYTES)throw Error('전체 이미지 용량이 약 1.2MB를 넘습니다.');syncInspector();repaint();status('이미지 추가 완료 · 설정 저장을 눌러 주세요.');
   }catch(e){if(token===uploadId)status(e.message,true);}finally{if(token===uploadId)busy=false;}
  }
- function saveTemplate(){
+ async function saveTemplate(){
   if(!editable())return false;if(busy){status('이미지 처리 완료 후 저장하세요.',true);return false;}const value=normalize(draft);if(totalBytes(value)>MAX_BYTES){status('전체 이미지 용량이 약 1.2MB를 넘습니다.',true);return false;}
-  DB.settings=DB.settings||{};DB.settings.youtubeThumbnail=value;draft=copy(value);dirty=false;save();syncOverview();GGFC.refreshUI();status('설정 적용 · 회원 공유 저장 상태는 하단에서 확인하세요.');return true;
+  busy=true;q('ytSave').disabled=true;status('썸네일 설정 공유 저장 중…');
+  try{draftRevision=await GGFCOperator.saveTemplate(value,draftRevision);draft=copy(value);dirty=false;syncOverview();GGFC.refreshUI();status('썸네일 설정 공유 저장 완료');return true;}catch(e){status(e.message,true);return false;}finally{busy=false;if(q('ytSave'))q('ytSave').disabled=false;GGFC.refreshUI();}
  }
+ function sharedChanged(){syncOverview();if(typeof activeView!=='undefined'&&activeView==='thumbnail'&&usable()){if(!dirty&&!busy)render();else if(draftRevision!==GGFCOperator.revision)status('다른 사용자가 썸네일을 변경했습니다. 현재 배치를 PNG로 보관한 뒤 저장값을 다시 불러오세요.',true);}}
  function render(){
-  const root=q('youtubeThumbnailEditor');if(!root||!admin)return;if(!dirty)draft=stored();if(!draft)draft=defaults();const list=allMatches();if(!list.some(m=>String(m.id)===previewId))previewId=String(list[0]?.id||'');model=matchModel(getMatch(previewId));
-  root.innerHTML=`<div class="yt-editor"><div class="yt-settings"><section class="card"><h3>배경과 추가 항목</h3><label class="yt-setting-toggle"><input type="checkbox" id="ytEnabled"> Overview 다운로드 버튼 표시</label><label>배경 이미지 등록<input id="ytBackgroundUpload" type="file" accept="image/png,image/jpeg,image/webp"></label><div class="yt-actions"><button type="button" class="btn" id="ytBackgroundClear">배경 사진 제거</button></div><label style="margin-top:10px">배경 사진 밝게<input id="ytWash" type="range" min="0" max="80" step="1"></label><div class="yt-actions"><button class="btn" type="button" id="ytAddText">문구 추가</button><label class="btn" style="margin:0;cursor:pointer">이미지 추가<input id="ytImageUpload" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden></label></div><p>PNG·JPG·WebP 장당 15MB 이하 · 자동 압축 · 전체 이미지 약 1.2MB 이내</p></section><section class="card"><h3>항목과 배치</h3><div id="ytLayers" class="yt-layer-list"></div><div id="ytEmptySelection" class="yt-empty-selection">항목을 선택하세요.</div><div id="ytInspector"><div id="ytSelectedLabel" class="yt-inspector-title"></div><label class="yt-setting-toggle"><input id="ytLayerVisible" type="checkbox"> 표시</label><label id="ytCustomTextWrap">추가 문구<textarea id="ytCustomText" maxlength="400"></textarea></label><div class="yt-props">${[['x','왼쪽 위치',0,W],['y','위쪽 위치',0,H],['w','너비',24,W],['h','높이',24,H]].map(([k,label,min,max])=>`<label>${label}<input id="ytProp-${k}" type="number" min="${min}" max="${max}" step="1"></label>`).join('')}</div><div class="yt-props" id="ytTextProps" style="margin-top:8px"><label>글자 크기<input id="ytProp-font" type="number" min="8" max="300" step="1"></label><label>글자 색<input id="ytProp-color" type="color"></label></div><div class="yt-actions yt-layer-order"><button type="button" class="btn" id="ytBackward">뒤로</button><button type="button" class="btn" id="ytForward">앞으로</button><button type="button" class="btn" id="ytDelete">추가 항목 삭제</button></div></div><button type="button" class="btn" id="ytLayoutReset">기본 항목 배치 복원</button><p>자동 항목은 경기기록을 사용합니다. 추가 문구·사진은 모든 경기 썸네일에 함께 적용됩니다.</p></section></div><div class="yt-workspace"><section class="card"><label class="yt-match-select">미리보기 경기<select id="ytPreviewMatch"></select></label><div id="ytStage" class="yt-stage" tabindex="0" role="group" aria-label="썸네일 배치 편집. 드래그 이동, 오른쪽 아래 손잡이로 크기 조절" data-no-menu-swipe><canvas id="ytCanvas" width="1280" height="720" aria-label="썸네일 미리보기"></canvas><div id="ytSelection" class="yt-selection" hidden><button type="button" class="yt-resize" data-yt-resize aria-label="선택 항목 크기 조절"></button></div></div><p>항목을 클릭해 선택한 뒤 드래그로 이동하고 모서리 손잡이로 크기를 조절하세요. 방향키로 이동 · Shift 10px · Alt 크기 조절</p><p id="ytWarnings" class="yt-notice" hidden></p><div class="yt-save-row"><div class="yt-actions"><button type="button" class="btn primary" id="ytSave">설정 저장</button><button type="button" class="btn" id="ytReload">저장값 다시 불러오기</button></div><button type="button" class="btn" id="ytDownloadPreview">미리보기 PNG 저장</button></div><p id="ytStatus" class="yt-status" role="status" aria-live="polite"></p><p>1280 × 720 PNG · 미리보기는 편집 중인 배치, Overview 다운로드는 저장된 배치입니다.</p></section></div></div>`;
-  const select=q('ytPreviewMatch');if(!list.length)select.add(new Option('등록 경기 없음 · 배치 예시',''));list.forEach(m=>select.add(new Option([m.date,m.no,m.round,teamDisplayName(m.home)+' '+num(m.hs)+':'+num(m.as)+' '+teamDisplayName(m.away)].filter(Boolean).join(' · '),String(m.id))));select.value=previewId;select.onchange=()=>{previewId=select.value;model=matchModel(getMatch(previewId));repaint();};
+  const root=q('youtubeThumbnailEditor');if(!root||!usable())return;if(!dirty){draft=stored();draftRevision=GGFCOperator.revision;}if(!draft)draft=defaults();const list=allMatches();if(!list.some(m=>String(m.id)===previewId))previewId=String(list[0]?.id||'');model=matchModel(getMatch(previewId));
+  root.innerHTML=`<div class="yt-editor"><div class="yt-settings"><div id="ytOperatorSettings" data-operator-admin></div><section class="card"><h3>배경과 추가 항목</h3><p id="ytAccessNotice" class="yt-notice" hidden></p><label class="yt-setting-toggle"><input type="checkbox" id="ytEnabled"> Overview 다운로드 버튼 표시</label><label>배경 이미지 등록<input id="ytBackgroundUpload" type="file" accept="image/png,image/jpeg,image/webp"></label><div class="yt-actions"><button type="button" class="btn" id="ytBackgroundClear">배경 사진 제거</button></div><label style="margin-top:10px">배경 사진 밝게<input id="ytWash" type="range" min="0" max="80" step="1"></label><div class="yt-actions"><button class="btn" type="button" id="ytAddText">문구 추가</button><label class="btn" style="margin:0;cursor:pointer">이미지 추가<input id="ytImageUpload" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden></label></div><p>등록한 배경 이미지만 사용하며 배경이 없으면 투명하게 저장됩니다.</p><p>PNG·JPG·WebP 장당 15MB 이하 · 자동 압축 · 전체 이미지 약 1.2MB 이내</p></section><section class="card"><h3>항목과 배치</h3><div id="ytLayers" class="yt-layer-list"></div><div id="ytEmptySelection" class="yt-empty-selection">항목을 선택하세요.</div><div id="ytInspector"><div id="ytSelectedLabel" class="yt-inspector-title"></div><label class="yt-setting-toggle"><input id="ytLayerVisible" type="checkbox"> 표시</label><label id="ytCustomTextWrap">추가 문구<textarea id="ytCustomText" maxlength="400"></textarea></label><div class="yt-props">${[['x','왼쪽 위치',0,W],['y','위쪽 위치',0,H],['w','너비',24,W],['h','높이',24,H]].map(([k,label,min,max])=>`<label>${label}<input id="ytProp-${k}" type="number" min="${min}" max="${max}" step="1"></label>`).join('')}</div><div class="yt-props" id="ytTextProps" style="margin-top:8px"><label>글자 크기<input id="ytProp-font" type="number" min="8" max="300" step="1"></label><label>글자 색<input id="ytProp-color" type="color"></label></div><div class="yt-actions yt-layer-order"><button type="button" class="btn" id="ytBackward">뒤로</button><button type="button" class="btn" id="ytForward">앞으로</button><button type="button" class="btn" id="ytDelete">추가 항목 삭제</button></div></div><button type="button" class="btn" id="ytLayoutReset">기본 항목 배치 복원</button><p>팀 로고와 감독·코치 사진은 각각 따로 이동·확대할 수 있습니다. 자동 항목은 경기기록을 사용합니다. 추가 문구·사진은 모든 경기 썸네일에 함께 적용됩니다.</p></section></div><div class="yt-workspace"><section class="card"><label class="yt-match-select">미리보기 경기<select id="ytPreviewMatch"></select></label><div id="ytStage" class="yt-stage" tabindex="0" role="group" aria-label="썸네일 배치 편집. 드래그 이동, 오른쪽 아래 손잡이로 크기 조절" data-no-menu-swipe><canvas id="ytCanvas" width="1280" height="720" aria-label="썸네일 미리보기"></canvas><div id="ytSelection" class="yt-selection" hidden><button type="button" class="yt-resize" data-yt-resize aria-label="선택 항목 크기 조절"></button></div></div><p>항목을 클릭해 선택한 뒤 드래그로 이동하고 모서리 손잡이로 크기를 조절하세요. 방향키로 이동 · Shift 10px · Alt 크기 조절</p><p id="ytWarnings" class="yt-notice" hidden></p><div class="yt-save-row"><div class="yt-actions"><button type="button" class="btn primary" id="ytSave">설정 저장</button><button type="button" class="btn" id="ytReload">저장값 다시 불러오기</button></div><button type="button" class="btn" id="ytDownloadPreview">미리보기 PNG 저장</button></div><p id="ytStatus" class="yt-status" role="status" aria-live="polite"></p><p>1280 × 720 PNG · 미리보기는 편집 중인 배치, Overview 다운로드는 저장된 배치입니다.</p></section></div></div>`;
+  const select=q('ytPreviewMatch');if(!list.length)select.add(new Option('등록 경기 없음 · 배치 예시',''));list.forEach(m=>select.add(new Option([m.date,m.no,m.round,teamDisplayName(m.home)+' '+num(m.hs)+':'+num(m.as)+' '+teamDisplayName(m.away)].filter(Boolean).join(' · '),String(m.id))));select.value=previewId;select.onchange=()=>{previewId=select.value;model=matchModel(getMatch(previewId));syncInspector();repaint();};
   q('ytEnabled').checked=draft.enabled;q('ytEnabled').onchange=e=>{if(!editable())return;draft.enabled=e.target.checked;changed();};q('ytWash').value=draft.wash*100;q('ytWash').oninput=e=>{if(!editable())return;draft.wash=Number(e.target.value)/100;changed();repaint();};
   q('ytBackgroundUpload').onchange=e=>upload(e,true);q('ytImageUpload').onchange=e=>upload(e,false);q('ytBackgroundClear').onclick=()=>{if(!editable()||busy)return;draft.background='';changed();repaint();};
   q('ytAddText').onclick=()=>{if(!editable()||busy)return;if(draft.layers.length>=MAX_LAYERS){status('항목은 '+MAX_LAYERS+'개까지 사용할 수 있습니다.',true);return;}const id='text_'+Date.now().toString(36)+'_'+draft.layers.length;draft.layers.push({id,kind:'text',label:'추가 문구 '+(draft.layers.filter(r=>r.kind==='text').length+1),text:'추가 문구',x:355,y:621,w:570,h:70,font:48,color:'#ffffff',visible:true});selected=id;changed();syncInspector();repaint();};
@@ -166,19 +169,47 @@ window.GGFCThumbnail=(()=>{
   for(const [id,step] of [['ytBackward',-1],['ytForward',1]])q(id).onclick=()=>{if(!editable()||busy)return;const i=draft.layers.findIndex(r=>r.id===selected),j=clamp(i+step,0,draft.layers.length-1);if(i<0||i===j)return;[draft.layers[i],draft.layers[j]]=[draft.layers[j],draft.layers[i]];changed();syncInspector();repaint();};
   q('ytDelete').onclick=()=>{if(!editable()||busy||!['image','text'].includes(currentLayer()?.kind))return;draft.layers=draft.layers.filter(r=>r.id!==selected);selected=draft.layers.at(-1)?.id||'';changed();syncInspector();repaint();};
   q('ytLayoutReset').onclick=()=>{if(!editable()||busy)return;draft.layers=[...defaults().layers,...draft.layers.filter(r=>['text','image'].includes(r.kind))].slice(0,MAX_LAYERS);selected='score';changed();syncInspector();repaint();};
-  q('ytSave').onclick=saveTemplate;q('ytReload').onclick=()=>{if(!editable())return;discard();render();GGFC.refreshUI();};q('ytDownloadPreview').onclick=()=>downloadPreview();bindStage();syncInspector();repaint();status(dirty?'저장 전 변경':'현재 저장된 배치 · 설정 저장 후 Overview에서 다운로드할 수 있습니다.');
+  GGFCOperator.renderSettings(q('ytOperatorSettings'));GGFCOperator.refreshUI();q('ytSave').onclick=saveTemplate;q('ytReload').onclick=()=>{if(!editable())return;discard();render();GGFC.refreshUI();};q('ytDownloadPreview').onclick=()=>downloadPreview();bindStage();syncInspector();repaint();status(dirty?'저장 전 변경':'현재 저장된 배치 · 설정 저장 후 Overview에서 다운로드할 수 있습니다.');
  }
  async function png(canvas){return new Promise((resolve,reject)=>{try{canvas.toBlob(blob=>blob?resolve(blob):reject(Error('이미지 저장에 실패했습니다.')),'image/png');}catch(e){reject(e);}});}
  function sendDownload(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name.replace(/[<>:"/\\|?*\u0000-\u001f]/g,'_').slice(0,170);document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),20000);}
  async function exportMatch(match,template=stored()){
   const data=matchModel(match),canvas=document.createElement('canvas'),result=await draw(canvas,normalize(template),data),blob=await png(canvas);return {...result,blob,model:data};
  }
- async function downloadPreview(){if(!admin||!draft||busy)return;status('PNG를 준비하고 있습니다…');try{const match=getMatch(previewId),r=await exportMatch(match,copy(draft));sendDownload(r.blob,(match?match.date+'_'+match.no+'_':'')+'썸네일_미리보기.png');status('미리보기 저장 완료'+(r.warnings.length?' · 일부 사진은 이름 표시로 대체했습니다.':''));}catch(e){status(e.message,true);}}
+ async function downloadPreview(){if(!usable()||!draft||busy||previewBusy)return;previewBusy=true;q('ytDownloadPreview').disabled=true;status('PNG를 준비하고 있습니다…');try{const match=getMatch(previewId),r=await exportMatch(match,copy(draft));sendDownload(r.blob,(match?match.date+'_'+match.no+'_':'')+'썸네일_미리보기.png');status('미리보기 저장 완료'+(r.warnings.length?' · 일부 사진은 이름 표시로 대체했습니다.':''));}catch(e){status(e.message,true);}finally{previewBusy=false;if(q('ytDownloadPreview'))q('ytDownloadPreview').disabled=false;}}
+ const safeName=name=>name.replace(/[<>:"/\\|?*\u0000-\u001f]/g,'_').slice(0,170);
+ const matchFilename=match=>safeName([match.date,match.no,teamDisplayName(match.home)+'_vs_'+teamDisplayName(match.away),'썸네일.png'].filter(Boolean).join('_'));
+ function visibleMatches(){const ids=[...new Set(Array.from(q('v-dash')?.querySelectorAll('.ground-match.fixture-match-card[data-match-detail-id]')||[],c=>c.dataset.matchDetailId))];return ids.map(getMatch).filter(Boolean);}
+ // A thumbnail-specific UTF-8 ZIP keeps Korean PNG names readable without changing the existing XLSX ZIP writer.
+ function pngArchive(files){const encoder=new TextEncoder(),parts=[],central=[];let offset=0,length=0;
+  for(const f of files){const name=encoder.encode(f.name),size=f.data.length,crc=crc32(f.data),head=new DataView(new ArrayBuffer(30));head.setUint32(0,0x04034b50,true);head.setUint16(4,20,true);head.setUint16(6,0x800,true);head.setUint32(14,crc,true);head.setUint32(18,size,true);head.setUint32(22,size,true);head.setUint16(26,name.length,true);parts.push(head.buffer,name,f.data);const dir=new DataView(new ArrayBuffer(46));dir.setUint32(0,0x02014b50,true);dir.setUint16(4,20,true);dir.setUint16(6,20,true);dir.setUint16(8,0x800,true);dir.setUint32(16,crc,true);dir.setUint32(20,size,true);dir.setUint32(24,size,true);dir.setUint16(28,name.length,true);dir.setUint32(42,offset,true);central.push(dir.buffer,name);offset+=30+name.length+size;length+=46+name.length;}
+  const end=new DataView(new ArrayBuffer(22));end.setUint32(0,0x06054b50,true);end.setUint16(8,files.length,true);end.setUint16(10,files.length,true);end.setUint32(12,length,true);end.setUint32(16,offset,true);return new Blob([...parts,...central,end.buffer],{type:'application/zip'});
+ }
+ function batchStatus(text){const el=q('ytBatchStatus');if(el)el.textContent=text;}
+ async function downloadAll(){
+  if(batchBusy||!usable()||!configured())return;const matches=visibleMatches(),template=stored();if(!matches.length){toast('표시된 경기가 없습니다.');return;}
+  batchBusy=true;batchCancelled=false;syncOverview();const files=[],used=new Set();let bytes=0,missing=0;
+  try{for(let i=0;i<matches.length;i++){
+    if(batchCancelled)throw Error('취소했습니다.');if(!usable())throw Error('운영자 또는 관리자 로그인을 확인하세요.');
+    batchStatus('썸네일 생성 '+(i+1)+' / '+matches.length);const r=await exportMatch(matches[i],template);
+    if(batchCancelled)throw Error('취소했습니다.');if(!usable())throw Error('로그인이 종료되어 저장을 중단했습니다.');
+    missing+=r.warnings.length?1:0;const data=new Uint8Array(await r.blob.arrayBuffer());bytes+=data.length;if(bytes>160*1024*1024)throw Error('전체 이미지가 160MB를 넘습니다. 경기일을 나누어 저장하세요.');
+    let name=matchFilename(matches[i]);if(used.has(name))name=name.replace(/\.png$/,'_'+(i+1)+'.png');used.add(name);files.push({name,data});await new Promise(resolve=>setTimeout(resolve,0));
+   }
+   if(batchCancelled||!usable())throw Error('저장을 중단했습니다.');const dates=[...new Set(matches.map(m=>m.date))].sort();sendDownload(pngArchive(files),'GGFC_썸네일_'+dates[0]+(dates.length>1?'_'+dates.at(-1):'')+'_'+files.length+'경기.zip');batchStatus(files.length+'경기 ZIP 다운로드 요청'+(missing?' · '+missing+'경기는 일부 사진 대체':''));
+  }catch(e){batchStatus(e.message);toast(e.message);}finally{batchBusy=false;syncOverview();}
+ }
  function syncOverview(){
-  const root=q('v-dash');if(!root)return;const on=configured();if(!on){root.querySelectorAll('.yt-match-action').forEach(e=>e.remove());return;}
-  root.querySelectorAll('.ground-match.fixture-match-card[data-match-detail-id]').forEach(card=>{const id=card.dataset.matchDetailId,previous=card.previousElementSibling;if(previous?.classList.contains('yt-match-action')&&previous.dataset.ytMatch===id)return;const bar=document.createElement('div');bar.className='yt-match-action';bar.dataset.ytMatch=id;bar.setAttribute('data-export-ignore','');const button=document.createElement('button');button.type='button';button.className='btn sm';button.textContent='썸네일 이미지 다운로드';button.setAttribute('aria-label',(card.getAttribute('aria-label')||'경기')+' 썸네일 이미지 다운로드');button.onclick=async e=>{e.preventDefault();e.stopPropagation();const match=getMatch(id);if(!match||!configured()){toast('경기 기록과 저장된 썸네일 설정을 확인하세요.');return;}button.disabled=true;button.textContent='썸네일 준비 중…';try{const r=await exportMatch(match);sendDownload(r.blob,[match.date,match.no,teamDisplayName(match.home)+'_vs_'+teamDisplayName(match.away),'썸네일.png'].filter(Boolean).join('_'));toast(r.warnings.length?'썸네일 저장 완료 · 일부 사진은 이름 표시로 대체했습니다.':'썸네일 이미지 저장 완료');}catch(error){toast('썸네일 저장 실패: '+error.message);}finally{button.disabled=false;button.textContent='썸네일 이미지 다운로드';}};bar.append(button);card.before(bar);});
+  const root=q('v-dash');if(!root)return;const on=configured()&&usable();
+  if(!on){root.querySelectorAll('.yt-match-action,.yt-batch-action').forEach(e=>e.remove());if(batchBusy)batchCancelled=true;return;}
+  const matches=visibleMatches(),heading=q('dashResultHeader')?.closest('.dashboard-block-title')||root.querySelector('.dashboard-main-head');
+  let batch=q('ytBatchAction');if(!matches.length){batch?.remove();}else if(heading){
+   if(!batch){batch=document.createElement('div');batch.id='ytBatchAction';batch.className='yt-batch-action';batch.setAttribute('data-export-ignore','');batch.innerHTML='<button type="button" class="btn" id="ytDownloadAll">표시된 경기 썸네일 전체 저장 (ZIP)</button><button type="button" class="btn" id="ytCancelAll" hidden>취소</button><span id="ytBatchStatus" role="status" aria-live="polite"></span>';heading.after(batch);q('ytDownloadAll').onclick=downloadAll;q('ytCancelAll').onclick=()=>{batchCancelled=true;batchStatus('현재 이미지 처리 후 취소합니다…');};}
+   q('ytDownloadAll').disabled=batchBusy;q('ytDownloadAll').dataset.count=String(matches.length);q('ytCancelAll').hidden=!batchBusy;
+  }
+  root.querySelectorAll('.ground-match.fixture-match-card[data-match-detail-id]').forEach(card=>{const id=card.dataset.matchDetailId,previous=card.previousElementSibling;if(previous?.classList.contains('yt-match-action')&&previous.dataset.ytMatch===id)return;const bar=document.createElement('div');bar.className='yt-match-action';bar.dataset.ytMatch=id;bar.setAttribute('data-export-ignore','');const button=document.createElement('button');button.type='button';button.className='btn sm';button.textContent='썸네일 이미지 다운로드';button.setAttribute('aria-label',(card.getAttribute('aria-label')||'경기')+' 썸네일 이미지 다운로드');button.onclick=async e=>{e.preventDefault();e.stopPropagation();const match=getMatch(id);if(!match||!configured()||!usable()){toast('경기 기록과 운영자 또는 관리자 로그인을 확인하세요.');return;}button.disabled=true;button.textContent='썸네일 준비 중…';try{const r=await exportMatch(match);if(!usable())throw Error('다시 로그인해 주세요.');sendDownload(r.blob,matchFilename(match));toast(r.warnings.length?'썸네일 다운로드 요청 · 일부 사진은 이름 표시로 대체했습니다.':'썸네일 이미지 다운로드 요청');}catch(error){toast('썸네일 저장 실패: '+error.message);}finally{button.disabled=false;button.textContent='썸네일 이미지 다운로드';}};bar.append(button);card.before(bar);});
  }
  const overview=q('v-dash');if(overview){let queued=false;new MutationObserver(()=>{if(queued)return;queued=true;queueMicrotask(()=>{queued=false;syncOverview();});}).observe(overview,{childList:true,subtree:true});}
- syncOverview();if(typeof activeView!=='undefined'&&activeView==='thumbnail'&&admin)render();
- return {render,discard,normalize,defaults,syncOverview,matchModel,exportMatch,get dirty(){return dirty||busy;},get draft(){return draft?normalize(draft):null;}};
+ syncOverview();if(typeof activeView!=='undefined'&&activeView==='thumbnail'&&usable())render();
+ return {render,discard,normalize,defaults,syncOverview,sharedChanged,matchModel,exportMatch,downloadAll,get dirty(){return dirty||busy;},get draft(){return draft?normalize(draft):null;}};
 })();

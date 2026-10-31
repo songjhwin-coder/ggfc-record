@@ -6,7 +6,7 @@ const GGFC = (() => {
   let database=null,auth=null,dataRef=null,readTimer=null,saveTimer=null,editLease=false;
   let started=false,connectionPromise=null,lastSnapshotText=null,cacheSavedAt=null,cacheWarning='';
   const CACHE_VERSION=2,CACHE_MAX_AGE=180*86400000;
-  const hasSettingsDraft=()=>!!((typeof GGFCPlayerPhotos!=='undefined'&&GGFCPlayerPhotos.dirty)||window.GGFCStartup?.dirty||window.GGFCThumbnail?.dirty||(typeof squadAppearanceDirty!=='undefined'&&squadAppearanceDirty)||(typeof menuSettingsDirty!=='undefined'&&menuSettingsDirty)||(typeof careerFrameSettingsDirty!=='undefined'&&careerFrameSettingsDirty)||(typeof analysisStartSettingsDirty!=='undefined'&&analysisStartSettingsDirty)||(typeof cardDesignSettingsDirty!=='undefined'&&cardDesignSettingsDirty));
+  const hasSettingsDraft=()=>!!((typeof GGFCPlayerPhotos!=='undefined'&&GGFCPlayerPhotos.dirty)||window.GGFCStartup?.dirty||(typeof squadAppearanceDirty!=='undefined'&&squadAppearanceDirty)||(typeof menuSettingsDirty!=='undefined'&&menuSettingsDirty)||(typeof careerFrameSettingsDirty!=='undefined'&&careerFrameSettingsDirty)||(typeof analysisStartSettingsDirty!=='undefined'&&analysisStartSettingsDirty)||(typeof cardDesignSettingsDirty!=='undefined'&&cardDesignSettingsDirty));
   function discardSettingsDraft(){if(typeof GGFCPlayerPhotos!=='undefined')GGFCPlayerPhotos.discard();window.GGFCStartup?.discard();window.GGFCThumbnail?.discard();if(typeof squadAppearanceDirty!=='undefined'){squadAppearanceDirty=false;squadAppearanceDraft=null;}if(typeof menuSettingsDirty!=='undefined'){menuSettingsDirty=false;menuEditorDraft=null;}if(typeof cardDesignSettingsDirty!=='undefined')cardDesignSettingsDirty=false;if(typeof careerFrameSettingsDirty!=='undefined')careerFrameSettingsDirty=false;if(typeof analysisStartSettingsDirty!=='undefined')analysisStartSettingsDirty=false;}
   const fields=['matches','attendance','goals','saves','fouls','moms','specials','roster','soccerbee'];
   const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
@@ -87,9 +87,10 @@ const GGFC = (() => {
     line.title=cacheSavedAt?'이 기기에 저장된 시각: '+new Date(cacheSavedAt).toLocaleString('ko-KR'):'';
     const show=(id,v)=>{const el=document.querySelector(id);if(el)el.hidden=!v;};
     show('#cloudRetry',state.dirty && !state.saving && !state.conflict && state.authorized);
-    show('#cloudDownload',state.dirty||editLease||hasSettingsDraft());show('#cloudReload',state.conflict||!!state.error);
+    show('#cloudDownload',state.dirty||editLease||hasSettingsDraft()||window.GGFCThumbnail?.dirty||window.GGFCOperator?.pending);show('#cloudReload',state.conflict||!!state.error);
     const login=document.querySelector('#memberLogin');if(login)login.textContent=state.user?'로그아웃':'관리자 로그인';
     document.querySelectorAll('.member-admin').forEach(el=>el.hidden=!state.authorized||window.GGFC_MEMBER_PREVIEW===true);
+    window.GGFCOperator?.refreshUI();
   }
   function status(text){state.status=text;refreshUI();}
   function applySnapshot(raw,first=false,fromCache=false){
@@ -180,7 +181,7 @@ const GGFC = (() => {
   }
   async function reload(){
     if(state.saving){toast('공유 저장이 끝난 뒤 다시 시도해 주세요.');return;}
-    if((state.dirty||editLease||hasSettingsDraft())&&!confirm('미저장 변경을 버리고 서버 기록을 다시 받을까요? 필요한 내용은 먼저 내려받아 주세요.'))return;
+    if((state.dirty||editLease||hasSettingsDraft()||window.GGFCThumbnail?.dirty||window.GGFCOperator?.pending)&&!confirm('미저장 변경을 버리고 서버 기록을 다시 받을까요? 필요한 내용은 먼저 내려받아 주세요.'))return;
     if(!dataRef){location.reload();return;}
     try{
       const snap=await dataRef.get();
@@ -244,7 +245,7 @@ const GGFC = (() => {
     if(loginBusy)return;
     if(state.user){
       if(state.saving){toast('공유 저장 완료 후 로그아웃해 주세요.');return;}
-      if((state.dirty||editLease||hasSettingsDraft())&&!confirm('공유하지 않은 변경이 있습니다. 로그아웃하면 서버 기록으로 돌아갑니다. 계속할까요?'))return;
+      if((state.dirty||editLease||hasSettingsDraft()||window.GGFCThumbnail?.dirty||window.GGFCOperator?.pending)&&!confirm('공유하지 않은 변경이 있습니다. 로그아웃하면 서버 기록으로 돌아갑니다. 계속할까요?'))return;
       try{
         await auth.signOut();
         state.user=null;state.authorized=false;state.dirty=false;state.conflict=false;editLease=false;discardSettingsDraft();setAdmin(false);
@@ -290,6 +291,7 @@ const GGFC = (() => {
     for(const type of ['click','change','input'])document.addEventListener(type,e=>{
       // Preview is read-only; its own handler still requires an authenticated administrator.
       if(type==='click'&&e.target.closest?.('button[data-menu-preview]'))return;
+      if(e.target.closest?.('#v-thumbnail')&&!e.target.closest?.('[data-operator-admin]')&&window.GGFCOperator?.canEdit())return;
       if(e.target.closest?.(selectors) && !canEdit()){
         e.preventDefault();e.stopImmediatePropagation();toast('관리자 인증과 서버 연결을 확인해 주세요.');
       } else if(type==='input' && state.authorized && e.target.id!=='repAdminYear' && e.target.closest?.('#v-rep,#v-abilitycfg,#seasonPanel,#displayNameManagerCard'))editLease=true;
@@ -314,7 +316,7 @@ const GGFC = (() => {
         }
       };
     }
-    window.addEventListener('beforeunload',e=>{if(state.dirty||state.saving||editLease||hasSettingsDraft()){e.preventDefault();e.returnValue='';}});
+    window.addEventListener('beforeunload',e=>{if(state.dirty||state.saving||editLease||hasSettingsDraft()||window.GGFCThumbnail?.dirty||window.GGFCOperator?.pending){e.preventDefault();e.returnValue='';}});
   }
   function cacheSnapshot(raw){
     const savedAt=Date.now();
@@ -433,6 +435,6 @@ const GGFC = (() => {
     await connect();
 
   }
-  return {get editing(){return editLease||hasSettingsDraft();},get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving||state.busy>0;},canEdit,normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,signIn,loginOrLogout,closeLogin,togglePassword};
+  return {get editing(){return editLease||hasSettingsDraft()||!!window.GGFCThumbnail?.dirty||!!window.GGFCOperator?.pending;},get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving||state.busy>0;},canEdit,normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,signIn,loginOrLogout,closeLogin,togglePassword};
 })();
-window.GGFC_VERSION='3.25.65';
+window.GGFC_VERSION='3.25.66';

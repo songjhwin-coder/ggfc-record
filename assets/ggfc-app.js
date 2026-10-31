@@ -6790,7 +6790,7 @@ function memberMenuOpen(id){
  const item=MEMBER_MENUS.find(m=>m.id===canonicalMenu(id));if(!item)return false;
  const setting=DB.settings?.menuVisibility?.[item.id];return typeof setting==='boolean'?setting:item.defaultOpen!==false;
 }
-function menuViewAllowed(v){const id=canonicalMenu(v);return [...MEMBER_MENUS,...ADMIN_MENUS].some(m=>m.id===id)&&(admin||memberMenuOpen(id)||(memberPreviewActive&&id===memberPreviewTarget&&MEMBER_MENUS.some(m=>m.id===id)));}
+function menuViewAllowed(v){const id=canonicalMenu(v);return [...MEMBER_MENUS,...ADMIN_MENUS].some(m=>m.id===id)&&(admin||(id==='thumbnail'&&window.GGFCOperator?.active)||memberMenuOpen(id)||(memberPreviewActive&&id===memberPreviewTarget&&MEMBER_MENUS.some(m=>m.id===id)));}
 function menuFallbackView(){
  const nav=navigationSettings();if(memberMenuOpen(nav.home))return nav.home;
  return orderedMenus(false,nav).find(m=>memberMenuOpen(m.id))?.id||(admin?'dash':'closed');
@@ -6803,7 +6803,7 @@ function applyMenuStartup(){
 let menuNavigationSignature="";
 function syncMenuNavigation(){
  const nav=navigationSettings(),tabs=document.getElementById('tabs'),adminTitle=tabs.querySelector('.sidebar-admin-title');
-  const signature=JSON.stringify([nav,admin,memberPreviewActive,memberPreviewTarget,MEMBER_MENUS.map(m=>memberMenuOpen(m.id)),displaySettings().brandTitle,headerLogo(),headerLogo('secondary')]);
+  const signature=JSON.stringify([nav,admin,!!window.GGFCOperator?.active,memberPreviewActive,memberPreviewTarget,MEMBER_MENUS.map(m=>memberMenuOpen(m.id)),displaySettings().brandTitle,headerLogo(),headerLogo('secondary')]);
  if(signature===menuNavigationSignature)return;
  menuNavigationSignature=signature;
  orderedMenus(false,nav).forEach(m=>{
