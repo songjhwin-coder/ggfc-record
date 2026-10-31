@@ -3833,3 +3833,32 @@ body:not(.admin-mode) #playerRecordQueryPanel{display:none!important}
 .lh-person .lh-role{display:inline-flex;align-items:center;justify-content:center;gap:5px;line-height:1.5}
 .lh-president-icon{display:inline-block;width:20px;height:20px;flex:none;vertical-align:middle}
 .lh-hero+.lh-history{margin-top:24px}
+/* Local member preview and explicit sidebar pin. */
+.topbar-admin-actions{display:flex;align-items:center;flex:none}
+.topbar-admin-actions[hidden],#memberPreviewToggle[hidden],#memberPreviewBar[hidden]{display:none!important}
+#memberPreviewToggle{white-space:nowrap;font-size:12px;min-height:38px;padding:8px 12px}
+.member-preview-bar{position:fixed;top:calc(var(--ggfc-topbar-h) + 8px);right:28px;left:calc(var(--ggfc-sidebar-w) + 28px);z-index:1200;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:#eaf4fb;color:#143959;border:1px solid #a8c7df;border-radius:8px;box-shadow:0 3px 12px #09234812;font-size:13px}
+.sidebar-collapsed .member-preview-bar{left:28px}
+.member-preview-bar button{flex:none;font-size:12px}
+body.member-preview>main{padding-top:calc(var(--ggfc-topbar-h) + 94px)!important}
+body.member-preview #lockBtn,body.member-preview #memberLogin,body.member-preview .member-admin{display:none!important}
+.sidebar-tools{display:flex;align-items:center;gap:8px;margin-bottom:-8px;color:#c2cddd;flex:none}
+.sidebar-tools>span{margin-right:auto;font-size:10px;font-weight:800;letter-spacing:.12em}
+.sidebar-tools button{display:grid;place-items:center;width:36px;height:36px;flex:none;border:1px solid #ffffff30;border-radius:6px;color:#e3edf6;background:#ffffff0b;cursor:pointer;padding:7px}
+.sidebar-tools svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.sidebar-tools #sidebarDismiss{font-size:24px;line-height:1}
+.sidebar-tools #sidebarPin.is-pinned{background:#dcebf7;color:#153754;border-color:#dcebf7}
+.sidebar-tools #sidebarPin.is-pinned svg{fill:#8eb3d1}
+.menu-editor-row{grid-template-columns:38px minmax(0,1fr) 72px 100px 110px}
+.menu-preview-button{font-size:11px;white-space:nowrap}
+body:not(.admin-mode) .il-rules{display:none!important}
+.ggfc-mobile .ggfc-topbar{grid-template-columns:minmax(0,1fr) auto}
+.ggfc-mobile .topbar-brand-row{grid-column:1;grid-row:1;min-width:0;gap:8px;overflow:hidden}
+.ggfc-mobile .top-menu-nav{grid-column:1/-1;grid-row:2;min-width:0}
+.ggfc-mobile .topbar-admin-actions{grid-column:2;grid-row:1;margin-left:5px}
+.ggfc-mobile #memberPreviewToggle{font-size:11px;padding:7px;min-height:36px;max-width:76px;white-space:normal}
+.ggfc-mobile .member-preview-bar{left:12px;right:12px;gap:8px;font-size:11px;padding:8px 10px}
+.ggfc-mobile .member-preview-bar button{font-size:11px;padding:7px;max-width:128px}
+.ggfc-mobile body.member-preview>#mainContent{padding-top:calc(var(--ggfc-topbar-h) + 94px)!important}
+@media(max-width:820px){.menu-editor-row{grid-template-columns:32px minmax(0,1fr) 88px}.menu-preview-button{grid-column:2/4;justify-self:start}.menu-editor-row:has(.menu-preview-button) .menu-drag{grid-row:1/4}}
+@media print{.member-preview-bar,.sidebar-tools,.topbar-admin-actions{display:none!important}}

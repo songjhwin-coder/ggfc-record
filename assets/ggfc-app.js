@@ -1619,11 +1619,12 @@ function renderDisplaySettings(){
   const brand=$("#menuBrandTitle"); if(brand) brand.textContent=d.brandTitle;
   renderHeaderLogo();
   document.title=d.brandTitle+" | MATCH CENTRE";
+  const venueInput=$('#posterVenueInput');if(venueInput&&document.activeElement!==venueInput)venueInput.value=typeof DB.settings?.posterVenue==='string'?DB.settings.posterVenue:'갈매풋살장';
   const bi=$("#brandTitleInput"), ai=$("#leagueANameInput"), ci=$("#leagueBNameInput");
   if(bi) bi.value=d.brandTitle;
   if(ai) ai.value=d.leagueA;
   if(ci) ci.value=d.leagueB;
-  [bi,ai,ci,$("#displayNameSave"),$("#displayNameReset")].filter(Boolean).forEach(el=>el.disabled=!admin);
+  [bi,ai,ci,venueInput,$("#displayNameSave"),$("#displayNameReset")].filter(Boolean).forEach(el=>el.disabled=!admin);
 }
 function safeLogoSrc(src){
   const v=String(src||"");
@@ -6698,6 +6699,7 @@ function renderData(){
   renderPlayerPhotoAudit();
 }
 let activeView='dash';
+let memberPreviewActive=false,memberPreviewTarget='',memberPreviewRestoring=false;
 /* Weekly Best 5: deterministic match-day selection, never writes awards or abilities. */
 let best5Date='',best5Group='ALL';
 const BEST5_GROUPS=[{id:'ALL',label:'전체'},{id:'A',label:'슈퍼리그'},{id:'B',label:'챌린지리그'}];
@@ -6788,7 +6790,7 @@ function memberMenuOpen(id){
  const item=MEMBER_MENUS.find(m=>m.id===canonicalMenu(id));if(!item)return false;
  const setting=DB.settings?.menuVisibility?.[item.id];return typeof setting==='boolean'?setting:item.defaultOpen!==false;
 }
-function menuViewAllowed(v){const id=canonicalMenu(v);return [...MEMBER_MENUS,...ADMIN_MENUS].some(m=>m.id===id)&&(admin||memberMenuOpen(id));}
+function menuViewAllowed(v){const id=canonicalMenu(v);return [...MEMBER_MENUS,...ADMIN_MENUS].some(m=>m.id===id)&&(admin||memberMenuOpen(id)||(memberPreviewActive&&id===memberPreviewTarget&&MEMBER_MENUS.some(m=>m.id===id)));}
 function menuFallbackView(){
  const nav=navigationSettings();if(memberMenuOpen(nav.home))return nav.home;
  return orderedMenus(false,nav).find(m=>memberMenuOpen(m.id))?.id||(admin?'dash':'closed');
@@ -6801,7 +6803,7 @@ function applyMenuStartup(){
 let menuNavigationSignature="";
 function syncMenuNavigation(){
  const nav=navigationSettings(),tabs=document.getElementById('tabs'),adminTitle=tabs.querySelector('.sidebar-admin-title');
-  const signature=JSON.stringify([nav,admin,MEMBER_MENUS.map(m=>memberMenuOpen(m.id)),displaySettings().brandTitle,headerLogo(),headerLogo('secondary')]);
+  const signature=JSON.stringify([nav,admin,memberPreviewActive,memberPreviewTarget,MEMBER_MENUS.map(m=>memberMenuOpen(m.id)),displaySettings().brandTitle,headerLogo(),headerLogo('secondary')]);
  if(signature===menuNavigationSignature)return;
  menuNavigationSignature=signature;
  orderedMenus(false,nav).forEach(m=>{
@@ -6832,6 +6834,7 @@ function selectMenuView(v){
  const top=document.getElementById('topMenuNav'),button=top?.querySelector('.on');if(button&&(button.offsetLeft<top.scrollLeft||button.offsetLeft+button.offsetWidth>top.scrollLeft+top.clientWidth))top.scrollLeft=Math.max(0,button.offsetLeft-(top.clientWidth-button.offsetWidth)/2);
  // Measure the small navigation before revealing a potentially long, unlaid-out view.
  document.querySelectorAll('section.view').forEach(el=>el.classList.toggle('on',el.id==='v-'+id));syncMobileNav(id);
+syncMemberPreviewUI();
 }
 function menuDraft(){
  if(!menuEditorDraft)menuEditorDraft={navigation:navigationSettings(),mobileSwipe:mobileSwipeSettings(),visibility:Object.fromEntries(MEMBER_MENUS.map(m=>[m.id,memberMenuOpen(m.id)]))};return menuEditorDraft;
@@ -6845,7 +6848,7 @@ function menuDraftHomeOptions(){
 function renderMenuManagement(){
  const root=document.getElementById('menuManagement');if(!root||!admin)return;
  if(!menuSettingsDirty)menuEditorDraft=null;const d=menuDraft();
- const row=(m,i,isAdmin)=>'<div class="menu-editor-row" data-menu-row="'+m.id+'" data-menu-group="'+(isAdmin?'admin':'member')+'"><button class="menu-drag" type="button" aria-label="'+esc(menuLabel(m.id,d.navigation))+' 순서 이동" title="잡아서 위아래로 이동">⠿</button><div class="menu-editor-name"><label for="menuName-'+m.id+'">'+esc(m.label)+'</label><input id="menuName-'+m.id+'" data-menu-name="'+m.id+'" value="'+esc(menuLabel(m.id,d.navigation))+'" maxlength="32" aria-label="'+esc(m.label)+' 메뉴 이름"></div><div class="menu-move-buttons"><button type="button" data-menu-move="'+m.id+'" data-direction="-1" aria-label="'+esc(m.label)+' 위로">↑</button><button type="button" data-menu-move="'+m.id+'" data-direction="1" aria-label="'+esc(m.label)+' 아래로">↓</button></div>'+(isAdmin?'<span class="menu-locked-badge">관리자 전용</span>':'<button type="button" class="menu-publish-toggle" role="switch" aria-checked="'+d.visibility[m.id]+'" aria-label="'+esc(m.label)+' 열람모드 공개" data-menu-publish="'+m.id+'"><span class="menu-publish-track" aria-hidden="true"><i></i></span><span>'+(d.visibility[m.id]?'공개':'비공개')+'</span></button>')+'</div>';
+ const row=(m,i,isAdmin)=>'<div class="menu-editor-row" data-menu-row="'+m.id+'" data-menu-group="'+(isAdmin?'admin':'member')+'"><button class="menu-drag" type="button" aria-label="'+esc(menuLabel(m.id,d.navigation))+' 순서 이동" title="잡아서 위아래로 이동">⠿</button><div class="menu-editor-name"><label for="menuName-'+m.id+'">'+esc(m.label)+'</label><input id="menuName-'+m.id+'" data-menu-name="'+m.id+'" value="'+esc(menuLabel(m.id,d.navigation))+'" maxlength="32" aria-label="'+esc(m.label)+' 메뉴 이름"></div><div class="menu-move-buttons"><button type="button" data-menu-move="'+m.id+'" data-direction="-1" aria-label="'+esc(m.label)+' 위로">↑</button><button type="button" data-menu-move="'+m.id+'" data-direction="1" aria-label="'+esc(m.label)+' 아래로">↓</button></div>'+(isAdmin?'<span class="menu-locked-badge">관리자 전용</span>':'<button type="button" class="menu-publish-toggle" role="switch" aria-checked="'+d.visibility[m.id]+'" aria-label="'+esc(m.label)+' 열람모드 공개" data-menu-publish="'+m.id+'"><span class="menu-publish-track" aria-hidden="true"><i></i></span><span>'+(d.visibility[m.id]?'공개':'비공개')+'</span></button>')+(isAdmin?'':'<button class="btn sm menu-preview-button" type="button" data-menu-preview="'+m.id+'">열람 미리보기</button>')+'</div>';
  root.innerHTML='<div class="menu-publish-summary"><strong id="menuOpenCount">'+MEMBER_MENUS.filter(m=>d.visibility[m.id]).length+' / '+MEMBER_MENUS.length+' 메뉴 공개</strong><span>손잡이를 드래그하거나 ↑↓로 순서를 이동하세요. 이름·첫 화면·공개 여부를 편집한 뒤 설정 저장을 누르세요.</span></div><label class="menu-home-label" for="menuHomeSelect">접속 시 첫 화면<select id="menuHomeSelect"></select><small>메뉴 주소 없이 접속할 때 적용됩니다. 지정한 메뉴가 비공개이면 공개된 메뉴 중 첫 번째 메뉴를 엽니다.</small></label><div class="menu-editor-list" data-menu-list="member">'+orderedMenus(false,d.navigation).map((m,i)=>row(m,i,false)).join('')+'</div><details class="menu-publish-locked"><summary>관리자 전용 메뉴 · 이름과 순서 변경</summary><p>이 메뉴는 공개되지 않습니다. 관리자 메뉴 안에서 순서를 변경할 수 있습니다.</p><div class="menu-editor-list" data-menu-list="admin">'+orderedMenus(true,d.navigation).map((m,i)=>row(m,i,true)).join('')+'</div></details><div class="menu-editor-actions"><span id="menuEditorStatus" role="status">'+(menuSettingsDirty?'저장 전 변경':'현재 저장된 설정')+'</span><div><button type="button" class="btn" id="menuEditorReload">저장값 다시 불러오기</button><button type="button" class="btn primary" id="menuEditorSave">설정 저장</button></div></div><p class="note" id="menuMoveAnnouncement" aria-live="polite"></p>';
  const swipe=d.mobileSwipe;
  root.insertAdjacentHTML('afterbegin','<fieldset class="ggfc-ui-settings"><legend>모바일 메뉴 스와이프</legend><label><input id="menuSwipeEnabled" type="checkbox" '+(swipe.enabled?'checked':'')+'> 좌우 스와이프로 메뉴 이동</label><label>민감도<select id="menuSwipeSensitivity"><option value="low">낮음 · 길게 밀기</option><option value="normal">보통 · 기존 기준</option><option value="high">높음 · 짧게 밀기</option></select></label><p class="note">모든 회원에게 적용됩니다. 표 가로 스크롤, 버튼, 입력칸, 그래프 및 세로 스크롤은 우선 보호합니다. 아래 설정 저장 버튼으로 적용하세요.</p></fieldset>');
@@ -6878,6 +6881,7 @@ function saveMenuEditor(){
 }
 function bindMenuEditor(){
  const root=document.getElementById('menuManagement');
+ root.querySelectorAll('[data-menu-preview]').forEach(b=>b.onclick=()=>startMemberPreview(b.dataset.menuPreview));
  root.querySelectorAll('[data-menu-name]').forEach(input=>input.oninput=()=>{if(!admin)return;menuDraft().navigation.labels[input.dataset.menuName]=input.value;menuDraftChanged();menuDraftHomeOptions();});
  root.querySelectorAll('[data-menu-publish]').forEach(b=>b.onclick=()=>setMemberMenuOpen(b.dataset.menuPublish,!menuDraft().visibility[b.dataset.menuPublish]));
  root.querySelectorAll('[data-menu-move]').forEach(b=>b.onclick=()=>{moveMenuDraft(b.dataset.menuMove,null,Number(b.dataset.direction));b.focus({preventScroll:true});});
@@ -7004,6 +7008,7 @@ $("#playerCardClose").onclick=closePlayerCard;
 document.addEventListener("keydown",e=>{ if(e.key==="Escape" && $("#playerCardMask").classList.contains("on")) closePlayerCard(); });
 function goTab(v,options={}){
   mobilePageSwipe?.cancel();
+  if(memberPreviewActive&&MEMBER_MENUS.some(m=>m.id===canonicalMenu(v)))memberPreviewTarget=canonicalMenu(v);
   if(!options.startup)menuStartupPending=false;
   const next=resolveMenuView(v);
   if(next!==v)history.replaceState(null,'','#'+next);
@@ -7516,8 +7521,10 @@ bindLinkedRecordEvents("team");
 bindLinkedRecordEvents("player");
 
 function setAdmin(v){
-  v=!!v && GGFC.authorized;
-  const enteringAdmin=v&&!admin;
+  const authenticated=!!v&&GGFC.authorized;
+  if(!authenticated){memberPreviewActive=false;memberPreviewTarget='';window.GGFC_MEMBER_PREVIEW=false;}
+  v=authenticated&&!memberPreviewActive;
+  const enteringAdmin=v&&!admin&&!memberPreviewRestoring;
   if(enteringAdmin){applyLatestDbPeriodDefaults();resetDashboardRankingDefaults();}
   admin=v;if(!v){window.GGFCAbilityAudit?.stop(true);photoAuditStop(false);const photoAuditBox=document.getElementById("playerPhotoAudit");if(photoAuditBox)photoAuditBox.hidden=true;}syncAbilityAdminControls();
   document.body.classList.toggle("admin-mode", !!v);
@@ -7542,7 +7549,7 @@ function setAdmin(v){
   renderAll();
 }
 $("#lockBtn").onclick=()=>{
-  if(typeof closeMemberSidebar==='function') closeMemberSidebar(true);
+  if(typeof closeMemberSidebar==='function') closeMemberSidebar(true,true);
   GGFC.loginOrLogout();
 };
 $("#pwCancel").onclick=()=>GGFC.closeLogin();
@@ -7782,7 +7789,8 @@ async function containDashboardLogoImages(root){
       canvas.width=Math.ceil(width*6);canvas.height=Math.ceil(height*6);
       const ctx=canvas.getContext('2d');if(!ctx)continue;
       const scale=Math.min(canvas.width/img.naturalWidth,canvas.height/img.naturalHeight),w=img.naturalWidth*scale,h=img.naturalHeight*scale;
-      ctx.drawImage(img,(canvas.width-w)/2,(canvas.height-h)/2,w,h);
+      if(img.classList.contains('poster-hero-art'))ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      else ctx.drawImage(img,(canvas.width-w)/2,(canvas.height-h)/2,w,h);
       cache.set(key,canvas.toDataURL('image/png'));canvas.width=canvas.height=0;
     }
     img.src=cache.get(key);img.dataset.exportContained='true';
@@ -7876,9 +7884,11 @@ function buildReferencePoster(doc,source){
   const half=meta.half,round=meta.round==='라운드 미등록'?'MATCH DAY':meta.round;
   const brand=meta.brand;
   const title=String(brand).replace(/\s*풋살리그/g,'').trim()||'GGFC';
-  const dateText=meta.dateText;
-  const secondLogo=headerLogo('secondary');
-  const headerLogos=secondLogo?'<div class="poster-header-logos"><img class="poster-brand-logo poster-secondary-logo" src="'+esc(secondLogo)+'" alt="추가 헤더 로고"></div>':'';
+  const dateText=meta.date?meta.date.replace(/-/g,'.')+' '+(meta.dateText.match(/\([^)]*\)$/)?.[0]||''):meta.dateText;
+  const posterTitle=/풋살리그/.test(brand)?brand:title+'풋살리그';
+  const venue=typeof DB.settings?.posterVenue==='string'?DB.settings.posterVenue.trim():'갈매풋살장';
+  const primaryLogo=headerLogo(),secondLogo=headerLogo('secondary');
+  const headerLogos='<div class="poster-header-logos">'+(primaryLogo?'<img class="poster-brand-logo poster-primary-logo" src="'+esc(primaryLogo)+'" alt="기본 헤더 로고">':'<span class="poster-brand-logo poster-primary-logo poster-brand-fallback">GGFC</span>')+(secondLogo?'<img class="poster-brand-logo poster-secondary-logo" src="'+esc(secondLogo)+'" alt="추가 헤더 로고">':'')+'</div>';
   const lanes=['A','B'].map(code=>{
     const teams=groundTeamStats(code,date);
     const cards=teams.length?teams.map(t=>'<div class="poster-league-team">'+posterTeamIcon(t.team,'card-icon')+'<b>'+esc(teamDisplayName(t.team))+'</b><div>'+t.w+'승 '+t.d+'무 '+t.l+'패</div><div>'+t.gf+'득 '+t.ga+'실</div></div>').join(''):'<div class="poster-empty">팀 기록 없음</div>';
@@ -7891,7 +7901,7 @@ function buildReferencePoster(doc,source){
   const h2h=source.querySelector('#dashHeadToHead table')?.outerHTML||'<div class="poster-empty">상대전적 기록 없음</div>';
   const panel=(cls,title,html)=>'<section class="poster-rank-panel '+cls+'"><h3>'+title+'</h3>'+html+'</section>';
   const root=doc.createElement('article');root.id='ggfc-reference-poster';root.className='ggfc-reference-poster';
-  root.innerHTML='<header class="poster-hero poster-dark">'+headerLogos+'<div class="poster-hero-title">'+esc(year)+' '+esc(title)+'</div><div class="poster-hero-subtitle"><span>'+esc(half)+'</span> 경기결과</div><div class="poster-round">'+esc(round)+'</div><div class="poster-date">'+esc(dateText)+(DB.settings?.posterVenue?'<br>'+esc(DB.settings.posterVenue):'')+'</div></header>'+
+  root.innerHTML='<header class="poster-hero poster-dark"><img class="poster-hero-art" src="assets/ggfc-poster-header.svg" alt="">'+headerLogos+'<div class="poster-hero-title">'+esc(year)+' '+esc(posterTitle)+'</div><div class="poster-hero-subtitle"><span>'+esc(half)+'</span> 경기결과</div><div class="poster-round"><span>'+esc(round)+'</span></div><div class="poster-date"><div>'+esc(dateText)+'</div>'+(venue?'<div class="poster-venue"><svg viewBox="0 0 24 28" aria-hidden="true"><path d="M12 26C8 21 2 16 2 10a10 10 0 0 1 20 0c0 6-6 11-10 16Z"/><circle cx="12" cy="10" r="5"/></svg><span>'+esc(venue)+'</span></div>':'')+'</div></header>'+
     '<div class="poster-results">'+lanes+'</div>'+
     '<section class="poster-statistics poster-dark"><section class="poster-team-standing"><h3>#팀순위 <span>(구간'+(range?' · '+esc(range):'')+')</span></h3><div class="poster-period">'+esc(period)+'</div>'+posterStandingHtml(source)+'</section>'+
     '<div class="poster-ranking-guide"><div class="poster-ranking-period">'+esc(rankingPeriod)+'</div></div><div class="poster-rankings">'+
@@ -7948,7 +7958,8 @@ function resizeDashboardPosterText(root){
   root.classList.add('poster-larger-text');
   // The hero and results may become taller; this never changes a table's scale.
   const hero=root.querySelector('.poster-hero');
-  hero.style.height='154px';
+  hero.style.height='134px';
+  hero.querySelectorAll('.poster-hero-title,.poster-hero-subtitle,.poster-round span').forEach(node=>{let size=parseFloat(win.getComputedStyle(node).fontSize);while(node.scrollWidth>node.clientWidth+1&&size>12){size-=.25;node.style.fontSize=size+'px';}});
   const lanes=[...root.querySelectorAll('.poster-lane')];
   const equalHeight=nodes=>{
     nodes=nodes.filter(Boolean);nodes.forEach(node=>node.style.height='auto');
@@ -8049,7 +8060,7 @@ async function createDashboardExportSnapshot(source){
   try{
     const doc=frame.contentDocument;doc.documentElement.lang='ko';
     const base=doc.createElement('base');base.href=document.baseURI;doc.head.appendChild(base);
-    const style=doc.createElement('link');style.rel='stylesheet';style.href=new URL('assets/ggfc-export.css?v=9beadc6c7fd08087',document.baseURI).href;
+    const style=doc.createElement('link');style.rel='stylesheet';style.href=new URL('assets/ggfc-export.css?v=099d217743047372',document.baseURI).href;
     const ready=settleExportResource(style,12000,()=>!!style.sheet);doc.head.appendChild(style);await ready;
     if(!style.sheet)throw new Error('출력 스타일을 불러오지 못했습니다.');
     const root=buildReferencePoster(doc,source);doc.body.appendChild(root);
@@ -8128,10 +8139,12 @@ document.addEventListener('click',e=>{
 const displayNameSave=$("#displayNameSave");
 if(displayNameSave) displayNameSave.onclick=()=>{
   if(!admin){ toast("관리자 로그인 후 수정할 수 있습니다."); return; }
+  const venue=String($("#posterVenueInput").value||"").trim();
   const brand=String($("#brandTitleInput").value||"").trim();
   const leagueA=String($("#leagueANameInput").value||"").trim();
   const leagueB=String($("#leagueBNameInput").value||"").trim();
   if(!brand || !leagueA || !leagueB){ toast("표시명 3개를 모두 입력해 주세요."); return; }
+  DB.settings.posterVenue=venue;
   ensureLogoSettings();
   DB.settings.display={brandTitle:brand,leagueA,leagueB};
   save(); renderAll(); toast("화면 표시명을 저장했습니다.");
@@ -8140,6 +8153,7 @@ const displayNameReset=$("#displayNameReset");
 if(displayNameReset) displayNameReset.onclick=()=>{
   if(!admin){ toast("관리자 로그인 후 수정할 수 있습니다."); return; }
   ensureLogoSettings();
+  DB.settings.posterVenue='갈매풋살장';
   DB.settings.display={brandTitle:"GGFC",leagueA:"슈퍼리그",leagueB:"챌린지리그"};
   save(); renderAll(); toast("기본 표시명으로 복원했습니다.");
 };
@@ -8214,7 +8228,7 @@ function initRecordTableScrolling(){
 /* ---------- boot ---------- */
 load();setAdmin(false);renderAll();
 if(location.hash)goTab(location.hash.slice(1),{startup:true});
-initMemberUI();initRecordTableScrolling();GGFC.start();
+initMemberUI();initMemberPreviewUI();initRecordTableScrolling();GGFC.start();
 
 /* Release 3.25.61: bounded participation growth and evidence-based match FORM. */
 function abilityPerformanceForm(player,rounds,cfg){
@@ -8313,3 +8327,41 @@ function abilityPolicySoccerbeeHtml(c){
 }
 
 function abilityFormValue(f){return !f?.ready?'평가 보류':(f.modifier>0?'+':'')+Number(num(f.modifier).toFixed(2))+' OVR';}
+
+/* Local presentation preview. Authentication and published menu settings stay intact. */
+function syncMemberPreviewUI(){
+ const button=document.getElementById('memberPreviewToggle'),bar=document.getElementById('memberPreviewBar'),exit=document.getElementById('memberPreviewExit');
+ if(!button||!bar)return;
+ const member=MEMBER_MENUS.some(m=>m.id===canonicalMenu(activeView)),authenticated=GGFC.authorized;
+ button.hidden=!(authenticated&&(admin||memberPreviewActive));
+ button.parentElement.hidden=button.hidden;
+ button.disabled=!memberPreviewActive&&!member;
+ button.textContent=memberPreviewActive?'관리자 보기':member?'열람 미리보기':'관리자 전용 메뉴';
+ button.title=memberPreviewActive?'관리자 화면으로 돌아가기':member?'현재 메뉴를 일반 열람 화면으로 확인':'일반 열람모드에는 표시되지 않는 메뉴입니다';
+ button.setAttribute('aria-pressed',String(memberPreviewActive));
+ bar.hidden=!memberPreviewActive;document.body.classList.toggle('member-preview',memberPreviewActive);
+ if(memberPreviewActive)document.getElementById('memberPreviewStatus').textContent='열람 미리보기 · '+menuLabel(activeView)+(memberMenuOpen(activeView)?'':' · 현재 비공개 메뉴');
+ const badge=document.getElementById('lockBadge');if(memberPreviewActive&&badge)badge.textContent='열람 미리보기';
+ if(exit)exit.disabled=!authenticated;
+}
+function startMemberPreview(view=activeView){
+ const target=canonicalMenu(view);
+ if(!admin||!GGFC.authorized||!MEMBER_MENUS.some(m=>m.id===target))return false;
+ if(GGFC.editing||GGFC.pending){toast('저장 중이거나 수정 중인 내용을 마친 뒤 미리보기를 열어 주세요.');return false;}
+ if(typeof closePlayerCard==='function')closePlayerCard();
+ closeMemberSidebar(false);memberPreviewTarget=target;memberPreviewActive=true;window.GGFC_MEMBER_PREVIEW=true;
+ activeView=target;history.replaceState(null,'','#'+target);setAdmin(true);syncMemberPreviewUI();
+ document.getElementById(document.body.classList.contains('sidebar-open')?'sidebarDismiss':'memberPreviewExit').focus({preventScroll:true});return true;
+}
+function endMemberPreview(){
+ if(!memberPreviewActive)return;
+ closeMemberSidebar(false);memberPreviewActive=false;memberPreviewTarget='';window.GGFC_MEMBER_PREVIEW=false;
+ memberPreviewRestoring=true;
+ try{setAdmin(true);}finally{memberPreviewRestoring=false;}
+ syncMemberPreviewUI();document.getElementById(document.body.classList.contains('sidebar-open')?'sidebarPin':'memberPreviewToggle').focus({preventScroll:true});
+}
+function initMemberPreviewUI(){
+ document.getElementById('memberPreviewToggle').onclick=()=>memberPreviewActive?endMemberPreview():startMemberPreview();
+ document.getElementById('memberPreviewExit').onclick=endMemberPreview;
+ syncMemberPreviewUI();
+}

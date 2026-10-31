@@ -68,7 +68,7 @@ const GGFC = (() => {
     return encoded;
   }
   function cacheKey(){return 'ggfc-v318-public:'+String((window.GGFC_CONFIG||{}).databaseURL||'');}
-  function canEdit(){return state.authorized && state.ready && state.serverSeen && state.connected && navigator.onLine!==false && !state.conflict && !state.error;}
+  function canEdit(){return window.GGFC_MEMBER_PREVIEW!==true && state.authorized && state.ready && state.serverSeen && state.connected && navigator.onLine!==false && !state.conflict && !state.error;}
   function refreshUI(){
     const box=document.querySelector('#cloudStatus'),line=document.querySelector('#cloudStatusText');
     if(!box||!line)return;
@@ -89,7 +89,7 @@ const GGFC = (() => {
     show('#cloudRetry',state.dirty && !state.saving && !state.conflict && state.authorized);
     show('#cloudDownload',state.dirty||editLease||hasSettingsDraft());show('#cloudReload',state.conflict||!!state.error);
     const login=document.querySelector('#memberLogin');if(login)login.textContent=state.user?'로그아웃':'관리자 로그인';
-    document.querySelectorAll('.member-admin').forEach(el=>el.hidden=!state.authorized);
+    document.querySelectorAll('.member-admin').forEach(el=>el.hidden=!state.authorized||window.GGFC_MEMBER_PREVIEW===true);
   }
   function status(text){state.status=text;refreshUI();}
   function applySnapshot(raw,first=false,fromCache=false){
@@ -288,6 +288,8 @@ const GGFC = (() => {
   function installGuards(){
     const selectors='#v-photos,#startupSettingsPanel,#squadAppearancePanel,#v-menus,#v-abilityguide,#v-data,#v-rep,#v-abilitycfg,#seasonPanel,#soccerbeeUpload,#soccerbeeClear,#abilitySystemEnabled,#logoFilepick,#filepick,#soccerbeeFilepick';
     for(const type of ['click','change','input'])document.addEventListener(type,e=>{
+      // Preview is read-only; its own handler still requires an authenticated administrator.
+      if(type==='click'&&e.target.closest?.('button[data-menu-preview]'))return;
       if(e.target.closest?.(selectors) && !canEdit()){
         e.preventDefault();e.stopImmediatePropagation();toast('관리자 인증과 서버 연결을 확인해 주세요.');
       } else if(type==='input' && state.authorized && e.target.id!=='repAdminYear' && e.target.closest?.('#v-rep,#v-abilitycfg,#seasonPanel,#displayNameManagerCard'))editLease=true;
@@ -394,6 +396,7 @@ const GGFC = (() => {
         draft.settings.ability={...draft.settings.ability,config:readAbilityConfigForm()};
       }
       if(editLease && document.querySelector('#v-data')?.classList.contains('on')){
+        if(document.querySelector('#posterVenueInput'))draft.settings.posterVenue=document.querySelector('#posterVenueInput').value.trim();
         draft.settings.display={brandTitle:document.querySelector('#brandTitleInput').value.trim(),leagueA:document.querySelector('#leagueANameInput').value.trim(),leagueB:document.querySelector('#leagueBNameInput').value.trim()};
       }
       if(typeof careerFrameSettingsDirty!=='undefined'&&careerFrameSettingsDirty){
@@ -431,4 +434,4 @@ const GGFC = (() => {
   }
   return {get editing(){return editLease||hasSettingsDraft();},get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving||state.busy>0;},canEdit,normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,signIn,loginOrLogout,closeLogin,togglePassword};
 })();
-window.GGFC_VERSION='3.25.61';
+window.GGFC_VERSION='3.25.62';

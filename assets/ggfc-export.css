@@ -185,3 +185,24 @@ tbody tr:nth-child(even){background:#f8fafc}
 .poster-larger-text .poster-hero{padding-top:15px}
 .poster-standing-table th:last-child{line-height:1.1}
 .poster-rank-team th:nth-child(2),.poster-ranking-summary .poster-rank-fouls th:nth-child(2){width:46px}
+/* V3.25.62 reference header: primary left, additional right, centered typography. */
+.poster-hero{height:134px;overflow:hidden;padding:0;background:#15203e;border-bottom:4px solid #58667f}
+.poster-hero-art{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;z-index:0}
+.poster-header-logos{position:absolute;inset:0;width:auto;display:block;z-index:2}
+.poster-header-logos .poster-primary-logo{position:absolute;left:9px;top:8px;width:51px;height:51px;object-fit:contain}
+.poster-header-logos .poster-primary-logo.poster-brand-fallback{font-size:11px;border:1px solid #fff}
+.poster-header-logos .poster-secondary-logo{position:absolute;left:auto;right:4px;top:13px;width:72px;height:48px;object-fit:contain}
+.poster-hero-title{position:absolute;z-index:1;left:74px;right:80px;top:15px;text-align:center;font:700 24.5px/1.2 GGFCTitle;letter-spacing:-1.2px;white-space:nowrap;overflow-wrap:normal;text-shadow:0 1px 1px #0009}
+.poster-hero-subtitle{position:absolute;z-index:1;left:74px;right:80px;top:48px;text-align:center;font:700 31px/1.25 GGFCTitle;letter-spacing:-1.2px;white-space:nowrap;text-shadow:0 1px 1px #0009}
+.poster-hero-subtitle span{color:#81a5ce}
+.poster-round{position:absolute;z-index:1;left:28%;right:28%;top:88px;height:25px;margin:0;padding:0;display:flex;align-items:center;justify-content:center;background:none;font:400 23px/1 GGFCBody;letter-spacing:-1px;white-space:nowrap}
+.poster-round:before{content:'';position:absolute;left:0;right:0;top:7px;height:15px;background:#7c9dc5}
+.poster-round span{position:relative;display:block;max-width:100%;z-index:1;white-space:nowrap}
+.poster-date{z-index:1;right:5px;bottom:5px;font-size:11px;line-height:1.45;white-space:nowrap;text-shadow:0 1px 1px #0008}
+.poster-venue{display:flex;align-items:center;justify-content:flex-end;gap:3px;font-weight:700}
+.poster-venue svg{width:10px;height:13px;fill:none;stroke:currentColor;stroke-width:1.3;flex:none}
+.poster-larger-text .poster-hero{padding:0}
+.poster-hero-title,.poster-hero-subtitle{overflow:hidden;text-overflow:ellipsis}
+.poster-date{max-width:104px}
+.poster-date>div{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.poster-venue span{min-width:0;overflow:hidden;text-overflow:ellipsis}

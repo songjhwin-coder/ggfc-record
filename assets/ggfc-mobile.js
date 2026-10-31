@@ -188,7 +188,8 @@ function initMobilePageSwipe(){
  mobilePageSwipe={cancel,invalidate,rendered,isPrepared:id=>prepared.has(id)};
 }
 
-let sidebarReturnFocus=null;
+let sidebarReturnFocus=null,sidebarPinned=false;
+try{sidebarPinned=localStorage.getItem('ggfc-sidebar-pinned')==='1';}catch(e){}
 function desktopSidebarOpen(){return !document.body.classList.contains('sidebar-collapsed');}
 function setDesktopSidebar(open,persist=true){
  const mobile=document.documentElement.classList.contains('ggfc-mobile'),panel=document.getElementById('ggfcSidebar'),button=document.getElementById('sidebarToggle');
@@ -196,19 +197,23 @@ function setDesktopSidebar(open,persist=true){
  if(persist)try{localStorage.setItem('ggfc-sidebar-open',open?'1':'0');}catch(e){}
  if(!mobile){if(!open&&panel.contains(document.activeElement))button.focus();panel.inert=!open;panel.setAttribute('aria-hidden',String(!open));button.setAttribute('aria-expanded',String(open));button.setAttribute('aria-label',open?'왼쪽 메뉴 숨기기':'왼쪽 메뉴 열기');}
 }
-function closeMemberSidebar(restoreFocus=false){
+function closeMemberSidebar(restoreFocus=false,force=false){
+ if(sidebarPinned&&!force)return;
+ if(force)try{localStorage.setItem('ggfc-sidebar-open','0');}catch(e){}
  const panel=document.getElementById('ggfcSidebar'),toggle=document.getElementById('sidebarToggle'),mobile=document.documentElement.classList.contains('ggfc-mobile'),wasOpen=document.body.classList.contains('sidebar-open');
  document.body.classList.remove('sidebar-open');document.getElementById('sidebarBackdrop').hidden=true;
  document.getElementById('mainContent').inert=false;document.getElementById('ggfcTopbar').inert=false;
  panel.removeAttribute('aria-modal');panel.removeAttribute('role');
  if(restoreFocus&&wasOpen&&mobile)(sidebarReturnFocus?.isConnected?sidebarReturnFocus:toggle).focus();
- if(mobile){panel.inert=true;panel.setAttribute('aria-hidden','true');toggle.setAttribute('aria-expanded','false');toggle.setAttribute('aria-label','메뉴 열기');}
+ if(mobile){document.body.classList.add('sidebar-collapsed');panel.inert=true;panel.setAttribute('aria-hidden','true');toggle.setAttribute('aria-expanded','false');toggle.setAttribute('aria-label','메뉴 열기');}
  else setDesktopSidebar(false,false);
 }
 function openMemberSidebar(){
  mobilePageSwipe?.cancel();
  if(!document.documentElement.classList.contains('ggfc-mobile')){setDesktopSidebar(true);return;}
  const panel=document.getElementById('ggfcSidebar');sidebarReturnFocus=document.activeElement;
+ document.body.classList.remove('sidebar-collapsed');
+ try{localStorage.setItem('ggfc-sidebar-open','1');}catch(e){}
  document.body.classList.add('sidebar-open');document.getElementById('sidebarBackdrop').hidden=false;
  document.getElementById('sidebarToggle').setAttribute('aria-expanded','true');
  panel.inert=false;panel.removeAttribute('aria-hidden');panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');(panel.querySelector('select:not([disabled]),button:not([disabled]),a[href]')||panel).focus();
@@ -216,21 +221,24 @@ function openMemberSidebar(){
 }
 function initMemberUI(){
   const panel=document.querySelector('#ggfcSidebar'),toggle=document.getElementById('sidebarToggle');
-  setDesktopSidebar(false,false);
+  let pinOpen=sidebarPinned;try{pinOpen=pinOpen&&localStorage.getItem('ggfc-sidebar-open')!=='0';}catch(e){}
+  setDesktopSidebar(pinOpen,false);syncSidebarPinUI();
+  document.getElementById('sidebarPin').onclick=()=>setSidebarPinned(!sidebarPinned);
+  document.getElementById('sidebarDismiss').onclick=()=>closeMemberSidebar(true,true);
   document.getElementById('sidebarToggle').onclick=()=>document.documentElement.classList.contains('ggfc-mobile')?openMemberSidebar():setDesktopSidebar(!desktopSidebarOpen());
   document.getElementById('topBrandHome').onclick=()=>{location.hash=goTab(menuFallbackView());window.scrollTo({top:0,behavior:'smooth'});};
   document.getElementById('topMenuNav').onclick=e=>{const b=e.target.closest('[data-top-menu]');if(b){location.hash=goTab(b.dataset.topMenu);window.scrollTo({top:0,behavior:'smooth'});}};
   document.querySelector('#sidebarBackdrop').onclick=()=>closeMemberSidebar(true);
   // Mobile uses the backdrop so an outside tap never activates the page underneath.
   document.addEventListener('pointerdown',e=>{
-    if(document.documentElement.classList.contains('ggfc-mobile')||!desktopSidebarOpen())return;
+    if(sidebarPinned||document.documentElement.classList.contains('ggfc-mobile')||!desktopSidebarOpen())return;
     if(panel.contains(e.target)||toggle.contains(e.target)||e.target.closest('.mask,dialog'))return;
     setDesktopSidebar(false);
   },{capture:true});
   document.addEventListener('keydown',e=>{
     if(e.key==='Escape'&&!document.documentElement.classList.contains('ggfc-mobile')&&desktopSidebarOpen()){e.preventDefault();setDesktopSidebar(false);document.getElementById('sidebarToggle').focus();return;}
     if(!document.body.classList.contains('sidebar-open')) return;
-    if(e.key==='Escape'){e.preventDefault();closeMemberSidebar(true);return;}
+    if(e.key==='Escape'){e.preventDefault();closeMemberSidebar(true,true);return;}
     if(e.key!=='Tab')return;
     const focusable=[...panel.querySelectorAll('button:not([disabled]),select:not([disabled]),a[href],[tabindex="0"]')].filter(el=>el.getClientRects().length);
     const first=focusable[0],last=focusable[focusable.length-1];
@@ -244,12 +252,25 @@ function initMemberUI(){
   const update=()=>{
     const desktop=new URLSearchParams(location.search).get('view')==='desktop';
     const mobile=!desktop && (window.GGFC_MOBILE_ENTRY || media.matches);
-    // Release modal focus and page interaction before changing the layout.
-    closeMemberSidebar(true);
+    // Release modal focus before switching layouts, then restore pinned openness.
+    const keepPinnedOpen=sidebarPinned&&desktopSidebarOpen();
+    closeMemberSidebar(true,true);
     const focusInSidebar=panel.contains(document.activeElement);
     document.documentElement.classList.toggle('ggfc-mobile',!!mobile);
     if(mobile && focusInSidebar) toggle.focus();
-    closeMemberSidebar();
+    closeMemberSidebar(false,true);
+    if(keepPinnedOpen)openMemberSidebar();
   };
   media.addEventListener('change',update);update();initMobilePageSwipe();
+}
+
+function syncSidebarPinUI(){
+ const button=document.getElementById('sidebarPin');if(!button)return;
+ button.setAttribute('aria-pressed',String(sidebarPinned));button.setAttribute('aria-label',sidebarPinned?'왼쪽 메뉴 고정 해제':'왼쪽 메뉴 고정');
+ button.title=sidebarPinned?'고정 해제 · 자동 닫힘 사용':'고정 · 메뉴 이동과 본문 클릭에도 열림 유지';
+ button.classList.toggle('is-pinned',sidebarPinned);document.body.classList.toggle('sidebar-pinned',sidebarPinned);
+}
+function setSidebarPinned(value){
+ sidebarPinned=!!value;try{localStorage.setItem('ggfc-sidebar-pinned',sidebarPinned?'1':'0');}catch(e){}
+ if(sidebarPinned)openMemberSidebar();syncSidebarPinUI();
 }
