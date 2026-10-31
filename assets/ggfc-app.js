@@ -3051,7 +3051,7 @@ function abilityCfgInput(path,value,step='0.01',min='0',max=''){
 function abilityCfgField(label,path,value,step='0.01',min='0',max=''){
   return '<div class="ability-config-field"><label>'+esc(label)+'</label>'+abilityCfgInput(path,value,step,min,max)+'</div>';
 }
-function renderAbilityGuide(){const root=$('#abilityGuideBody');if(root){const c=abilityConfig();root.innerHTML=abilityPolicyGuideHtml(c)+abilityPolicySoccerbeeHtml(c)+teamRecordAuditHtml()+goalkeeperAuditHtml();}}
+function renderAbilityGuide(){syncAbilityAdminControls();const root=$('#abilityGuideBody');if(root){const c=abilityConfig();root.innerHTML=abilityPolicyGuideHtml(c)+abilityPolicySoccerbeeHtml(c)+teamRecordAuditHtml()+goalkeeperAuditHtml();}}
 
 function renderAbilityConfig(){
   const root=$("#abilityConfigBody"); if(!root)return; const c=abilityConfig(), ap=c.absence||{};
@@ -3199,8 +3199,8 @@ function handleAbilitySortChange(e){
   if(e.target.matches('[data-ability-sort-field]')) updateAbilitySort(e.target.value,abilitySort.direction,e.target);
 }
 function syncAbilityAdminControls(){
-  const box=$('#abilityAdminControls');if(box)box.hidden=!admin;
-  const initial=document.querySelector('[data-panel-toggle="sb-initial"]');if(initial)initial.hidden=!admin;
+  document.querySelectorAll('[data-ability-admin]').forEach(el=>el.hidden=!admin);
+  const toggle=$('#abilitySystemEnabled');if(toggle)toggle.checked=abilitySystemEnabled();
   ['abilityYear','abilityAsOfDate','abilityHalf','abilityDateLatest','abilityRefresh','abilitySystemEnabled','soccerbeeUpload','soccerbeeClear'].forEach(id=>{const el=$('#'+id);if(el)el.disabled=!admin;});
 }
 function applyAbilityNameSearch(){
@@ -7575,7 +7575,6 @@ if($("#abilityRefresh")) $("#abilityRefresh").onclick=()=>{if(!admin)return;rend
 if($("#abilitySystemEnabled")) $("#abilitySystemEnabled").onchange=e=>{
   if(!admin){e.target.checked=abilitySystemEnabled();return;} ensureAbilityData();DB.settings.ability.enabled=!!e.target.checked;save();renderAll();toast(e.target.checked?"선수 능력치 시스템을 선수카드에 적용합니다.":"선수 능력치 시스템을 비활성화했습니다. Draft 수동 능력치는 사용하지 않습니다.");
 };
-if($("#soccerbeeGuideUpload"))$("#soccerbeeGuideUpload").onclick=()=>{if(admin&&GGFC.canEdit())$("#soccerbeeFilepick").click();};
 if($("#soccerbeeUpload")) $("#soccerbeeUpload").onclick=()=>{if(!admin){toast("관리자 모드에서만 업로드할 수 있습니다.");return;}$("#soccerbeeFilepick").click();};
 if($("#soccerbeeFilepick")) $("#soccerbeeFilepick").onchange=async e=>{
   if(!admin||!GGFC.canEdit()){e.target.value="";return;}
@@ -7885,7 +7884,7 @@ function buildReferencePoster(doc,source){
   const brand=meta.brand;
   const title=String(brand).replace(/\s*풋살리그/g,'').trim()||'GGFC';
   const dateText=meta.date?meta.date.replace(/-/g,'.')+' '+(meta.dateText.match(/\([^)]*\)$/)?.[0]||''):meta.dateText;
-  const posterTitle=/풋살리그/.test(brand)?brand:title+'풋살리그';
+  const posterTitle=title;
   const venue=typeof DB.settings?.posterVenue==='string'?DB.settings.posterVenue.trim():'갈매풋살장';
   const primaryLogo=headerLogo(),secondLogo=headerLogo('secondary');
   const headerLogos='<div class="poster-header-logos">'+(primaryLogo?'<img class="poster-brand-logo poster-primary-logo" src="'+esc(primaryLogo)+'" alt="기본 헤더 로고">':'<span class="poster-brand-logo poster-primary-logo poster-brand-fallback">GGFC</span>')+(secondLogo?'<img class="poster-brand-logo poster-secondary-logo" src="'+esc(secondLogo)+'" alt="추가 헤더 로고">':'')+'</div>';
@@ -8060,7 +8059,7 @@ async function createDashboardExportSnapshot(source){
   try{
     const doc=frame.contentDocument;doc.documentElement.lang='ko';
     const base=doc.createElement('base');base.href=document.baseURI;doc.head.appendChild(base);
-    const style=doc.createElement('link');style.rel='stylesheet';style.href=new URL('assets/ggfc-export.css?v=099d217743047372',document.baseURI).href;
+    const style=doc.createElement('link');style.rel='stylesheet';style.href=new URL('assets/ggfc-export.css?v=f614bdabbb5ddf90',document.baseURI).href;
     const ready=settleExportResource(style,12000,()=>!!style.sheet);doc.head.appendChild(style);await ready;
     if(!style.sheet)throw new Error('출력 스타일을 불러오지 못했습니다.');
     const root=buildReferencePoster(doc,source);doc.body.appendChild(root);

@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <script defer src="assets/ggfc-browser-handoff.js?v=9aa37103839739b5"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>GGFC 모바일 기록센터 · 3.25.63</title>
-<link rel="stylesheet" href="assets/ggfc.css?v=d0c5ebd7054a012c">
+<title>GGFC 모바일 기록센터 · 3.25.64</title>
+<link rel="stylesheet" href="assets/ggfc.css?v=487133a5681dde08">
 <link rel="stylesheet" href="assets/ggfc-startup.css?v=026c02cbc9a0bd71">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="mobile-web-app-capable" content="yes">
@@ -63,7 +63,7 @@
     <button data-v="team" class="temp-team-menu"><span>Team Stats</span></button>
   </nav>
   <div class="pwa-menu-actions"><a class="btn sm pwa-guide-link" href="install.html">앱 설치 안내</a><button class="btn sm" id="pwaInstall" hidden>GGFC를 앱으로 설치</button><button class="btn sm" id="pwaCheck">앱 업데이트 확인</button><button class="btn sm" id="lockBtn" type="button">관리자 로그인</button><span class="badge locked" id="lockBadge">🔒 열람 모드</span><p id="pwaStatus" role="status" aria-live="polite"></p></div>
-  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.25.63 · 기록센터</span></footer>
+  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.25.64 · 기록센터</span></footer>
 </aside>
 <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" tabindex="-1" aria-label="메뉴 닫기" hidden></button>
 
@@ -456,23 +456,12 @@
     <div class="ability-kpi-grid" id="abilityKpis" data-ability-admin></div>
 
     <div class="card" id="abilityAdminControls" data-ability-admin hidden style="margin-bottom:16px">
-      <div class="dashboard-block-title">
-        <div>
-          <div class="sec-t">선수 능력치 조회 및 등록</div>
-          <div class="dashboard-block-note">상반기/하반기의 Round 수는 고정하지 않습니다. · 1Round는 해당 경기일의 팀별 경기 기록을 합산합니다.</div>
-        </div>
-      </div>
-      <div class="ability-control-grid" style="grid-template-columns:150px 190px minmax(245px,1fr) auto">
+      <div class="dashboard-block-title"><div><div class="sec-t">선수 능력치 조회</div><div class="dashboard-block-note">시즌과 경기 날짜를 선택하여 해당 경기 종료 시점의 능력치를 확인합니다.</div></div></div>
+      <div class="ability-control-grid ability-query-grid">
         <div class="record-field"><label for="abilityYear">시즌</label><select id="abilityYear"></select></div>
         <div class="record-field"><label for="abilityAsOfDate">경기 날짜</label><div style="display:flex;gap:6px"><select id="abilityAsOfDate" style="min-width:0;flex:1"></select><button class="btn" id="abilityDateLatest" type="button" style="padding:0 10px;white-space:nowrap">최신 경기</button></div></div>
-        <div class="record-field"><label>선수카드 적용</label><label class="ability-toggle"><input type="checkbox" id="abilitySystemEnabled"> 새 능력치 시스템 사용</label></div>
-        <div class="ability-actions">
-          <button class="btn primary" id="abilityRefresh" type="button">능력치 재계산</button>
-          <button class="btn" id="soccerbeeUpload" type="button" hidden>SoccerBee DB 업로드</button>
-          <button class="btn" id="soccerbeeClear" type="button" hidden>SoccerBee DB 초기화</button>
-        </div>
+        <div class="ability-actions"><button class="btn primary" id="abilityRefresh" type="button">능력치 재계산</button></div>
       </div>
-      <p class="note"><b>사커비 업로드:</b> 엑셀 전체로 DB를 교체합니다. 유지할 과거 측정도 엑셀에 포함하세요. 엑셀에서 빠진 행은 재업로드 시 삭제됩니다.</p><div class="callout" style="margin-top:14px"><span>ℹ️</span><span><b>현재 적용값:</b> 모든 가산치·배율·기본점수는 관리자 전용 <b>능력치 설정</b> 메뉴의 저장값을 사용합니다. SoccerBee 미평가 점수는 실력 평가가 아닌 미측정 기본값입니다.</span></div>
     </div>
 
     <section class="card ability-top-risers" aria-labelledby="abilityTopRiserTitle"><div class="sec-t" id="abilityTopRiserTitle">TOP 5 · 능력치 상승 선수</div><p class="dashboard-block-note" id="abilityTopRiserNote"></p><div class="ability-top-grid ts-card-gallery" id="abilityTopRisers"></div></section>
@@ -496,18 +485,18 @@
       <div class="ability-delta-note"><span class="up">▲ 상승</span> / <span class="down">▼ 하락</span> 표시는 선택한 <b>경기일과 그 직전 경기일</b>의 정수 능력치를 비교해 <b>1점 이상</b> 변동한 경우에만 표시합니다. 경기 날짜를 선택하지 않으면 각 반기의 최신 기록을 표시합니다.</div>
     </div>
 
-    <div class="grid g2 ability-rule-grid" style="margin-bottom:16px">
+    <div class="grid g2 ability-rule-grid" id="abilityRulePanels" data-ability-admin hidden style="margin-bottom:16px">
       <div class="card">
-        <div class="sec-t">경기기록 → 성장·감점·FORM · V3.25.63</div>
+        <div class="sec-t">경기기록 → 성장·감점·FORM · V3.25.64</div>
         <div id="abilityGrowthRules"></div>
       </div>
       <div class="card">
-        <div class="sec-t">SoccerBee → 축별 초기값·재측정 · V3.25.63</div>
+        <div class="sec-t">SoccerBee → 축별 초기값·재측정 · V3.25.64</div>
         <div id="abilitySoccerbeeRules"></div>
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="soccerbeeStatusPanel" data-ability-admin hidden>
       <div class="dashboard-block-title">
         <div><div class="sec-t" id="soccerbeeStatusTitle">SoccerBee 최신 측정 현황</div><div class="dashboard-block-note" id="soccerbeeStatusDesc">마지막 업로드 엑셀에 있는 측정 이력만 저장합니다. 엑셀에서 지운 행은 재업로드 시 삭제됩니다. 선수명은 통합 선수명단 DB와 자동 매칭합니다. 능력치 계산에는 선수명단 DB의 이름과 매칭한 뒤 축별 최신 유효 측정을 사용하며, 고정 절대평가 기준표로 PAC·DRI·DEF·PHY를 계산합니다. 현재 모델은 평균속도·가속감속액션·고강도 가속을 추가 사용하며, 참가자 상대평가는 능력치 결정에 사용하지 않습니다.</div></div>
       </div>
@@ -519,7 +508,20 @@
 
   <!-- PLAYER ABILITY SETTINGS / ADMIN ONLY -->
   <section class="view" id="v-abilityaudit" hidden><div class="head"><h2>능력치 변동 분석</h2><p>선택한 선수의 상승·하락 원인을 확인합니다.</p></div><div id="abilityAuditRoot"></div></section>
-  <section class="view" id="v-abilityguide" hidden><div class="head"><h2>능력치 운영 안내</h2><p>현재 저장된 설정을 기준으로 계산 구조와 요율을 확인합니다.</p></div><div class="card"><button class="btn primary" id="soccerbeeGuideUpload">SoccerBee DB 업로드</button><p>통합 기록지 선수명단을 먼저 등록하세요. 업로드할 엑셀에 유지할 전체 측정 이력을 포함하세요. 엑셀에서 삭제한 행은 DB에서도 삭제됩니다. 양식 헤더만 있는 빈 엑셀은 사커비 DB를 비웁니다. 잘못된 값·선수명·중복 충돌은 전체 업로드를 취소하고 기존 DB를 유지합니다.</p></div><div id="abilityGuideBody"></div></section>
+  <section class="view" id="v-abilityguide" hidden>
+    <div class="head"><h2>능력치 운영 안내</h2><p>선수 능력치를 등록·초기화하고, 현재 저장된 설정의 계산 구조와 요율을 확인합니다.</p></div>
+    <div class="card" id="abilityRegistrationControls" data-ability-admin hidden style="margin-bottom:16px">
+      <div class="dashboard-block-title"><div><div class="sec-t">선수 능력치 등록 및 초기화</div><div class="dashboard-block-note">SoccerBee 측정 이력을 등록하고 선수카드에 적용할 능력치 시스템을 관리합니다.</div></div></div>
+      <div class="ability-registration-grid">
+        <div class="record-field"><label>선수카드 적용</label><label class="ability-toggle"><input type="checkbox" id="abilitySystemEnabled"> 새 능력치 시스템 사용</label></div>
+        <div class="ability-actions"><button class="btn primary" id="soccerbeeUpload" type="button" hidden>SoccerBee DB 업로드</button><button class="btn" id="soccerbeeClear" type="button" hidden>SoccerBee DB 초기화</button></div>
+      </div>
+      <p class="note">통합 기록지 선수명단을 먼저 등록하세요. 업로드할 엑셀에 유지할 전체 측정 이력을 포함하세요. 엑셀에서 삭제한 행은 DB에서도 삭제됩니다. 양식 헤더만 있는 빈 엑셀은 사커비 DB를 비웁니다. 잘못된 값·선수명·중복 충돌은 전체 업로드를 취소하고 기존 DB를 유지합니다.</p>
+      <p class="note">SoccerBee DB 초기화는 측정 이력만 삭제합니다. 경기기록과 선수명단은 유지합니다.</p>
+      <div class="callout" style="margin-top:14px"><span>ℹ️</span><span><b>현재 적용값:</b> 모든 가산치·배율·기본점수는 관리자 전용 <b>능력치 설정</b> 메뉴의 저장값을 사용합니다. SoccerBee 미평가 점수는 실력 평가가 아닌 미측정 기본값입니다.</span></div>
+    </div>
+    <div id="abilityGuideBody"></div>
+  </section>
   <section class="view" id="v-abilitycfg">
     <div class="head"><h2>선수 능력치 설정</h2><p>선수 능력치 계산에 사용하는 <b>시작값 · 출석 연간 한도 · 기록 성장 요율 · 최근 5경기 FORM · 지속 부진 보정 · SoccerBee 환산률 · 포지션별 OVR</b>을 관리자 기준으로 조정합니다. <b>현재 저장된 설정을 설명자료와 계산에 함께 적용합니다.</b></p></div>
     <div class="callout warn" style="margin-bottom:16px"><span>⚙️</span><span>설정 변경은 저장 후 즉시 선수 능력치와 선수카드 재계산에 적용됩니다. <b>기본값 복원</b>을 누르면 현재 버전 기준값으로 되돌릴 수 있습니다.</span></div>
@@ -822,7 +824,7 @@
     </div>
   </section>
   <footer class="page-status-footer" aria-label="프로그램 버전 및 공유 기록 상태">
-  <div class="release-version" aria-label="현재 프로그램 버전">GGFC · V3.25.63</div>
+  <div class="release-version" aria-label="현재 프로그램 버전">GGFC · V3.25.64</div>
   <section class="cloud-status" id="cloudStatus" role="status" aria-live="polite"><span id="cloudStatusText">공유 기록을 확인하고 있습니다…</span>
     <div class="cloud-actions"><button id="cloudRetry" class="btn sm" hidden>공유 저장 재시도</button><button id="cloudDownload" class="btn sm" hidden>미저장 내용 내려받기</button><button id="cloudReload" class="btn sm" hidden>서버 기록 다시 받기</button></div>
   </section>
@@ -1020,7 +1022,7 @@
 <input type="file" id="soccerbeeFilepick" accept=".xlsx" hidden>
 
 <script defer src="firebase-config.js"></script>
-<script defer src="assets/ggfc-sync.js?v=ef5d4e80a3e84f90"></script>
+<script defer src="assets/ggfc-sync.js?v=d114400d21c52803"></script>
 <script defer src="assets/ggfc-mobile.js?v=f33897d7705ae186"></script>
 <script defer src="assets/ggfc-details.js?v=3.25.31"></script>
 <script defer src="assets/ggfc-squad.js?v=976876a2b9935c50"></script>
@@ -1030,7 +1032,7 @@
 <script defer src="assets/ggfc-slump.js?v=143871985b3a6ab3"></script>
 <script defer src="assets/ggfc-interleague.js?v=875a790dc704cb0c"></script>
 <script defer src="assets/ggfc-player-photos.js?v=eb60fa7fd5b16b5f"></script>
-<script defer src="assets/ggfc-app.js?v=9b83c5a4e447fd1b"></script>
+<script defer src="assets/ggfc-app.js?v=6e3dbbd82f64dbbf"></script>
 <script defer src="assets/ggfc-duo.js?v=3.25.31"></script>
 <script defer src="assets/pwa-update.js?v=22cfff45cda7a34f"></script>
 <aside class="pwa-update" id="pwaUpdate" hidden aria-label="앱 업데이트">
