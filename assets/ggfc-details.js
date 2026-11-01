@@ -98,6 +98,12 @@ function matchDetailAttrs(m){
   return ' role="button" tabindex="0" data-match-detail-id="'+esc(detailMatchKey(m.id))+'" aria-haspopup="dialog" aria-label="'+esc(label)+'"';
 }
 function detailMotionEnabled(){return !matchMedia('(prefers-reduced-motion: reduce)').matches;}
+function syncGGFCDetailViewport(){
+  const dialog=document.getElementById('ggfcDetailDialog');if(!dialog?.open)return;
+  dialog.style.setProperty('--ggfc-detail-viewport',Math.round(window.visualViewport?.height||innerHeight)+'px');
+}
+window.addEventListener('resize',syncGGFCDetailViewport,{passive:true});
+window.visualViewport?.addEventListener('resize',syncGGFCDetailViewport,{passive:true});
 function showGGFCDetail(kind,title,html,trigger){
   const dialog=document.querySelector('#ggfcDetailDialog'),wasOpen=dialog.open;
   clearTimeout(ggfcDetailCloseTimer);ggfcDetailCloseTimer=0;
@@ -108,6 +114,7 @@ function showGGFCDetail(kind,title,html,trigger){
   const body=document.querySelector('#ggfcDetailBody');body.classList.remove('detail-refreshing');body.innerHTML=html;body.scrollTop=0;
   document.querySelector('#ggfcDetailClose').setAttribute('aria-label',title+' 닫기');
   if(!wasOpen){dialog.showModal();document.body.style.overflow='hidden';}
+  syncGGFCDetailViewport();
   if(detailMotionEnabled()){
     const target=wasOpen?body:dialog;void target.offsetWidth;
     target.classList.add(wasOpen?'detail-refreshing':'detail-entering');
@@ -334,6 +341,7 @@ function restoreGGFCDetailState(){
   clearTimeout(ggfcDetailCloseTimer);ggfcDetailCloseTimer=0;
   ggfcDetailDialog.classList.remove('detail-entering','detail-leaving');
   document.querySelector('#ggfcDetailBody').classList.remove('detail-refreshing');
+  ggfcDetailDialog.style.removeProperty('--ggfc-detail-viewport');
   const state=ggfcDetailState;ggfcDetailState=null;
   if(!state)return;
   document.body.style.overflow=state.overflow;

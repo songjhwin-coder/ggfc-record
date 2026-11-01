@@ -3865,3 +3865,34 @@ body:not(.admin-mode) .il-rules{display:none!important}
 
 /* V3.25.64: ratings queries and administrator registration */
 .ability-control-grid.ability-query-grid{grid-template-columns:minmax(130px,.6fr) minmax(230px,1fr) auto}.ability-registration-grid{display:grid;grid-template-columns:minmax(240px,1fr) auto;gap:14px;align-items:end}.ability-registration-grid .record-field{min-width:0}.ability-registration-grid+.note{margin-top:14px}body:not(.admin-mode) #abilityRegistrationControls{display:none!important}@media(max-width:620px){.ability-control-grid.ability-query-grid,.ability-registration-grid{grid-template-columns:minmax(0,1fr)}.ability-registration-grid .ability-actions{justify-content:flex-start}}
+
+/* V3.25.72: explicit mobile dialog height; do not rely on an auto flex basis. */
+.ggfc-detail-body{flex:1 1 auto;min-width:0;-webkit-overflow-scrolling:touch}
+@media(max-width:620px){
+ .ggfc-detail-dialog{height:calc(var(--ggfc-detail-viewport,100vh) - 12px);max-height:calc(var(--ggfc-detail-viewport,100vh) - 12px);min-height:0;box-sizing:border-box}
+}
+.ggfc-mobile .ggfc-detail-dialog{height:calc(var(--ggfc-detail-viewport,100vh) - 12px);max-height:calc(var(--ggfc-detail-viewport,100vh) - 12px);min-height:0;box-sizing:border-box}
+
+/* Start card entry after layout, on a separate layer from the card's size scaling. */
+#playerCardMask.on #playerCardContainer{opacity:1;transform:none;filter:none;animation:none}
+#playerCardMask.on #playerCardContainer.card-waiting{opacity:0}
+#playerCardMask.on #playerCardContainer.card-revealing{animation:ggfc-card-visible-entry .7s cubic-bezier(.22,.7,.25,1) both}
+@keyframes ggfc-card-visible-entry{from{opacity:0;transform:translate3d(0,20px,0) scale(.92)}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
+.player-card-actions{position:absolute;right:0;top:-10px;display:flex;align-items:center;justify-content:flex-end;gap:8px;z-index:100}
+.player-card-actions #playerCardClose{position:static;margin:0;flex:none}
+.player-card-replay{font-size:12px;min-height:38px;background:#f3f7fc;color:#173b60;border:1px solid #adc1d7;white-space:nowrap}
+.player-card-motion-status{font-size:11px;color:#d3dfed;max-width:180px}
+.player-card-motion-status[hidden]{display:none}
+.ggfc-mobile .player-card-actions{position:sticky;top:0;flex-wrap:wrap;margin:0 0 8px;padding:4px 0;background:rgba(3,17,38,.94)}
+.ggfc-mobile .player-card-actions #playerCardClose{width:44px;height:44px;min-height:44px}
+@media(prefers-reduced-motion:reduce){#playerCardMask.on #playerCardContainer.card-waiting,#playerCardMask.on #playerCardContainer.card-revealing{opacity:1;transform:none;animation:none!important}}
+
+/* Overview ground strips: compact, understated navy. */
+#v-dash .ground-title{height:36.4px;min-height:0;padding:0 17px;display:flex;align-items:center;justify-content:center;line-height:1.2;background:linear-gradient(115deg,#13263d,#1c344f);color:#f6f8fc;border-bottom:1px solid #354c64;font-weight:800}
+#v-squad .ts-league-heading .league-symbol{background:#fff}
+
+/* Explanatory notes are administrator-only. Keep data, empty states and search controls. */
+body:not(.admin-mode) #v-ability :is(.note,.dashboard-block-note,.ability-half-meta,.ability-delta-note,.head>p),
+body:not(.admin-mode) #v-alltime :is(.at-footnote,.at-scope,.at-admin-note,.at-hero p,.at-empty p,.head>p),
+body:not(.admin-mode) #v-leadership :is(.note,.lh-hero p,.at-empty p,.head>p),
+body:not(.admin-mode) #v-interleague :is(.note,.head>p){display:none!important}

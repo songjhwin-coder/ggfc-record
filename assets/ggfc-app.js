@@ -3354,10 +3354,10 @@ function renderAbility(){
     const compareText=cutoff
       ? ('기준 '+cutoff+(cmp.latest?' · 최근 경기 '+cmp.latest:' · 선택 경기일까지 경기 없음')+(cmp.previous?' / 비교 '+cmp.previous:''))
       : (cmp.latest?(cmp.previous?'최근 '+cmp.latest+' / 비교 '+cmp.previous:'최근 '+cmp.latest+' / 비교일 없음'):'기록 없음');
-    const table=rows.length?'<div class="tablewrap ability-table-wrap"><table class="ability-table"><thead><tr>'+abilitySortHeader('player','선수')+'<th>팀</th>'+ABILITY_SORT_FIELDS.slice(1).map(([key,label])=>abilitySortHeader(key,label)).join('')+'<th title="명단 출석 또는 검증된 활동 기록이 있는 라운드. 공식 참석 수와 구분합니다.">참여R</th><th>누적 결석R</th><th>기준R</th><th>골</th><th>도움</th><th>파울(페어플레이)</th><th>선방</th><th>MOM</th><th>승점</th><th>결석 직접 감점(미사용)</th><th>평가</th><th>시스템</th></tr></thead><tbody>'+rows.map(r=>{
-      const p=prevMap[r.player]||null, abs=r.absence||{rounds:0,penalty:{}}, ap=abs.penalty||{};
+    const table=rows.length?'<div class="tablewrap ability-table-wrap"><table class="ability-table"><thead><tr>'+abilitySortHeader('player','선수')+'<th>팀</th>'+ABILITY_SORT_FIELDS.slice(1).map(([key,label])=>abilitySortHeader(key,label)).join('')+'<th title="명단 출석 또는 검증된 활동 기록이 있는 라운드. 공식 참석 수와 구분합니다.">참여R</th><th>누적 결석R</th><th>기준R</th><th>골</th><th>도움</th><th>파울(페어플레이)</th><th>선방</th><th>MOM</th><th>승점</th><th>평가</th><th>시스템</th></tr></thead><tbody>'+rows.map(r=>{
+      const p=prevMap[r.player]||null, abs=r.absence||{rounds:0,penalty:{}};
       return '<tr><td>'+playerCardLink(r.player,playerFaceChip(r.player,false,r.info?.year||abilityYear),Object.assign({},r.info,{asOf:r.cutoffDate,allCompetitions:true}))+'</td><td>'+(r.team?teamChip(r.team):'<span class="muted">—</span>')+'</td><td><b>'+abilityScoreWithDelta(r.currentOvr,p&&p.currentOvr)+'</b><small class="ability-form-inline '+(r.form.level>0?'hot':r.form.level<0?'cold':'normal')+'">'+esc(r.form.status.icon)+' '+abilityFormValue(r.form)+'</small></td><td><span class="ability-base-number">'+fmtAbility(r.baseOvrRaw)+'</span><small class="ability-progress-inline">→ '+r.nextBaseOvr+' · '+Math.round(r.ovrProgress)+'%</small>'+longFormBadge(r)+'</td><td>'+abilityScoreWithDelta(r.pac,p&&p.pac)+'</td><td>'+abilityScoreWithDelta(r.sho,p&&p.sho)+'</td><td>'+abilityScoreWithDelta(r.pas,p&&p.pas)+'</td><td>'+abilityScoreWithDelta(r.dri,p&&p.dri)+'</td><td>'+abilityScoreWithDelta(r.def,p&&p.def)+'</td><td>'+abilityScoreWithDelta(r.phy,p&&p.phy)+'</td>'+ 
-        '<td>'+r.summary.att+'</td><td>'+num(abs.rounds)+'</td><td><b>'+num(r.summary.att+num(abs.rounds))+' / '+num(r.summary.progress)+'R</b></td><td>'+r.summary.g+'</td><td>'+r.summary.a+'</td><td>'+r.summary.f+'</td><td>'+r.summary.sv+'</td><td>'+r.summary.mom+'</td><td>'+r.summary.pts+'</td><td><span class="ability-growth negative">SHO '+fmtGrowth(num(ap.sho))+' · PAS '+fmtGrowth(num(ap.pas))+' · DRI '+fmtGrowth(num(ap.dri))+' · DEF '+fmtGrowth(num(ap.def))+' · PHY '+fmtGrowth(num(ap.phy))+'</span></td><td><span class="ability-status '+(r.measured?'':'unassessed')+'">'+(r.measured?(r.partialMeasurement?'SB 일부 · ':'SB ')+esc(r.sbDate):'68P · PROVISIONAL')+'</span></td>'+ 
+        '<td>'+r.summary.att+'</td><td>'+num(abs.rounds)+'</td><td><b>'+num(r.summary.att+num(abs.rounds))+' / '+num(r.summary.progress)+'R</b></td><td>'+r.summary.g+'</td><td>'+r.summary.a+'</td><td>'+r.summary.f+'</td><td>'+r.summary.sv+'</td><td>'+r.summary.mom+'</td><td>'+r.summary.pts+'</td><td><span class="ability-status '+(r.measured?'':'unassessed')+'">'+(r.measured?(r.partialMeasurement?'SB 일부 · ':'SB ')+esc(r.sbDate):'68P · PROVISIONAL')+'</span></td>'+ 
         '<td><span class="ability-mode compare">BASE+FORM</span></td></tr>';
     }).join('')+'</tbody></table></div>':'<div class="empty">'+label+' 선수 데이터가 없습니다.</div>';
     return '<div class="ability-half-section" data-ability-half="'+half+'"><div class="ability-half-head"><div><div class="ability-half-title">'+label+(cutoff?' · '+cutoff+' 기준':'')+'</div><div class="ability-half-meta">'+cmp.info.start+' ~ '+cmp.info.end+' · 선택 경기일까지 최종 기준 '+abilityPeriodRoundBasis(cmp.info,cutoff||cmp.latest||cmp.info.end)+'R · 개인 기준R=시작일 이후 소속팀 경기일 수 · 참여R+결석R=개인 기준R · 참여R은 활동 증거 포함, 공식 참석 수와 구분 · 능력치 성장은 이전 시즌부터 연속 누적</div></div><div class="ability-half-compare">'+compareText+'</div></div>'+abilitySortToolbar(half)+table+mobileAbilityCards(rows,prevMap)+'<div class="empty" data-ability-search-empty hidden>'+label+'에서 검색한 이름과 일치하는 선수가 없습니다.</div></div>';
@@ -3720,11 +3720,17 @@ function bindPlayerCardHistory(){
 }
 bindPlayerCardHistory();
 
-let playerCardHexFrame=null, playerCardHexShowTimer=null, playerCardHexDrawTimer=null;
+let playerCardHexFrame=null,playerCardHexShowTimer=null,playerCardHexDrawTimer=null;
+let playerCardRevealFrame=null,playerCardHexObserver=null,playerCardVisibilityCleanup=null,playerCardRevealRun=0;
 function clearPlayerCardAnimation(){
-  if(playerCardHexFrame){ cancelAnimationFrame(playerCardHexFrame); playerCardHexFrame=null; }
-  if(playerCardHexShowTimer){ clearTimeout(playerCardHexShowTimer); playerCardHexShowTimer=null; }
-  if(playerCardHexDrawTimer){ clearTimeout(playerCardHexDrawTimer); playerCardHexDrawTimer=null; }
+  playerCardRevealRun++;
+  if(playerCardHexFrame!==null)cancelAnimationFrame(playerCardHexFrame);
+  if(playerCardRevealFrame!==null)cancelAnimationFrame(playerCardRevealFrame);
+  clearTimeout(playerCardHexShowTimer);clearTimeout(playerCardHexDrawTimer);
+  playerCardHexFrame=null;playerCardRevealFrame=null;playerCardHexShowTimer=null;playerCardHexDrawTimer=null;
+  playerCardHexObserver?.disconnect();playerCardHexObserver=null;
+  playerCardVisibilityCleanup?.();playerCardVisibilityCleanup=null;
+  document.getElementById('playerCardContainer')?.classList.remove('card-waiting','card-revealing');
 }
 function playerCardHexPoints(stats,progress){
   const angles=[-Math.PI/2,-Math.PI/6,Math.PI/6,Math.PI/2,5*Math.PI/6,-5*Math.PI/6];
@@ -3735,54 +3741,66 @@ function playerCardHexPoints(stats,progress){
     return x.toFixed(2)+","+y.toFixed(2);
   }).join(" ");
 }
+
 function resetPlayerCardHex(){
   clearPlayerCardAnimation();
-  const panel=$("#playerCardHexPanel"), shape=$("#playerCardHexShape");
-  if(panel) panel.classList.remove("visible","values-active");
-  if(shape){
-    shape.classList.remove("drawing","complete");
-    shape.setAttribute("points","50,50 50,50 50,50 50,50 50,50 50,50");
-    shape.style.strokeDasharray="280"; shape.style.strokeDashoffset="280"; shape.style.opacity="0";
-  }
-  ["Pac","Sho","Pas","Dri","Def","Phy"].forEach(k=>{ const el=$("#playerCardHex"+k); if(el) el.textContent="0"; });
+  const panel=document.getElementById('playerCardHexPanel'),shape=document.getElementById('playerCardHexShape');
+  panel?.classList.remove('visible','values-active');
+  if(shape){shape.classList.remove('drawing','complete');shape.setAttribute('points','50,50 50,50 50,50 50,50 50,50 50,50');shape.style.strokeDasharray='280';shape.style.strokeDashoffset='280';shape.style.opacity='0';}
+  ['Pac','Sho','Pas','Dri','Def','Phy'].forEach(k=>{const el=document.getElementById('playerCardHex'+k);if(el)el.textContent='0';});
 }
 function drawPlayerCardHex(stats){
-  const shape=$("#playerCardHexShape"); if(!shape) return;
-  const vals=stats.map(v=>Number.isFinite(v)?v:0);
-  const ids=["Pac","Sho","Pas","Dri","Def","Phy"];
-  const duration=1480, start=performance.now();
-  shape.classList.remove("complete"); shape.classList.add("drawing");
-  shape.style.opacity=".25"; shape.style.strokeDasharray="280"; shape.style.strokeDashoffset="280";
+  const shape=document.getElementById('playerCardHexShape');if(!shape)return;
+  const vals=stats.map(v=>Number.isFinite(v)?v:0),ids=['Pac','Sho','Pas','Dri','Def','Phy'],run=playerCardRevealRun;
+  let elapsed=0,previous=null;
+  shape.classList.remove('complete');shape.classList.add('drawing');shape.style.opacity='.25';shape.style.strokeDasharray='280';shape.style.strokeDashoffset='280';
   const frame=now=>{
-    const linear=Math.min(1,(now-start)/duration);
-    const p=1-Math.pow(1-linear,3);
-    shape.setAttribute("points",playerCardHexPoints(vals,p));
-    shape.style.strokeDashoffset=String(280*(1-p));
-    shape.style.opacity=String(.25+.75*p);
-    ids.forEach((k,i)=>{ const el=$("#playerCardHex"+k); if(el) el.textContent=String(Math.round(vals[i]*p)); });
-    if(linear<1) playerCardHexFrame=requestAnimationFrame(frame);
-    else{
-      playerCardHexFrame=null; shape.setAttribute("points",playerCardHexPoints(vals,1)); shape.style.strokeDashoffset="0"; shape.style.opacity="1";
-      shape.classList.remove("drawing"); shape.classList.add("complete");
-      ids.forEach((k,i)=>{ const el=$("#playerCardHex"+k); if(el) el.textContent=String(vals[i]); });
-    }
+    if(run!==playerCardRevealRun||!document.getElementById('playerCardMask').classList.contains('on'))return;
+    // Resume visibly after a background pause instead of jumping to the final frame.
+    if(document.hidden){previous=null;playerCardHexFrame=requestAnimationFrame(frame);return;}
+    if(previous!==null)elapsed+=Math.max(0,Math.min(80,now-previous));previous=now;
+    const linear=Math.min(1,elapsed/1480),p=1-Math.pow(1-linear,3);
+    shape.setAttribute('points',playerCardHexPoints(vals,p));shape.style.strokeDashoffset=String(280*(1-p));shape.style.opacity=String(.25+.75*p);
+    ids.forEach((k,i)=>{const el=document.getElementById('playerCardHex'+k);if(el)el.textContent=String(Math.round(vals[i]*p));});
+    if(linear<1)playerCardHexFrame=requestAnimationFrame(frame);
+    else{playerCardHexFrame=null;shape.setAttribute('points',playerCardHexPoints(vals,1));shape.style.strokeDashoffset='0';shape.style.opacity='1';shape.classList.remove('drawing');shape.classList.add('complete');ids.forEach((k,i)=>{const el=document.getElementById('playerCardHex'+k);if(el)el.textContent=String(vals[i]);});}
   };
   playerCardHexFrame=requestAnimationFrame(frame);
 }
 function playPlayerCardReveal(stats){
   resetPlayerCardHex();
-  const panel=$("#playerCardHexPanel"); if(!panel) return;
-  if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches){
-    panel.classList.add('visible','values-active');
-    const shape=$('#playerCardHexShape');if(shape){shape.setAttribute('points',playerCardHexPoints(stats,1));shape.style.opacity='1';shape.style.strokeDashoffset='0';shape.classList.add('complete');}
-    ['Pac','Sho','Pas','Dri','Def','Phy'].forEach((k,i)=>{const el=$('#playerCardHex'+k);if(el)el.textContent=String(stats[i]);});return;
+  const mask=document.getElementById('playerCardMask'),panel=document.getElementById('playerCardHexPanel'),container=document.getElementById('playerCardContainer'),dialog=mask.querySelector('.player-card-dialog');if(!panel||!container)return;
+  const run=playerCardRevealRun,valid=()=>run===playerCardRevealRun&&mask.classList.contains('on');
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches,replay=document.getElementById('playerCardReplay'),status=document.getElementById('playerCardMotionStatus');
+  if(replay){replay.disabled=reduce;replay.onclick=()=>playPlayerCardReveal(stats);}
+  if(status){status.hidden=!reduce;status.textContent=reduce?'기기의 동작 줄이기 설정 적용':'';}
+  if(reduce){
+    panel.classList.add('visible','values-active');const shape=document.getElementById('playerCardHexShape');shape.setAttribute('points',playerCardHexPoints(stats,1));shape.style.opacity='1';shape.style.strokeDashoffset='0';shape.classList.add('complete');
+    ['Pac','Sho','Pas','Dri','Def','Phy'].forEach((k,i)=>{const el=document.getElementById('playerCardHex'+k);if(el)el.textContent=String(stats[i]);});return;
   }
-  playerCardHexShowTimer=setTimeout(()=>{
-    playerCardHexShowTimer=null; panel.classList.add("visible");
-    playerCardHexDrawTimer=setTimeout(()=>{
-      playerCardHexDrawTimer=null; panel.classList.add("values-active"); drawPlayerCardHex(stats);
-    },760);
-  },520);
+  // Start the entrance after record/history layout has finished and a paint can occur.
+  container.classList.add('card-waiting');
+  playerCardRevealFrame=requestAnimationFrame(()=>{playerCardRevealFrame=requestAnimationFrame(()=>{
+    playerCardRevealFrame=null;if(!valid())return;container.classList.remove('card-waiting');container.classList.add('card-revealing');
+    container.onanimationend=e=>{if(e.target===container&&valid())container.classList.remove('card-revealing');};
+  });});
+  let began=false;
+  const begin=()=>{
+    if(began||!valid()||document.hidden)return;began=true;
+    playerCardHexObserver?.disconnect();playerCardHexObserver=null;playerCardVisibilityCleanup?.();playerCardVisibilityCleanup=null;
+    panel.classList.add('visible');playerCardHexDrawTimer=setTimeout(()=>{playerCardHexDrawTimer=null;if(valid()){panel.classList.add('values-active');drawPlayerCardHex(stats);}},260);
+  };
+  const check=()=>{
+    if(!valid()||document.hidden)return;const r=panel.getBoundingClientRect(),clip=dialog.getBoundingClientRect();
+    const visible=Math.min(r.bottom,clip.bottom,innerHeight)-Math.max(r.top,clip.top,0);
+    if(visible>=Math.min(70,r.height*.15)&&r.width>0)begin();
+  };
+  const fallback=typeof IntersectionObserver==='undefined';
+  if(!fallback){playerCardHexObserver=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting&&e.intersectionRatio>=.15))begin();},{threshold:[0,.15]});playerCardHexObserver.observe(panel);}
+  else{dialog.addEventListener('scroll',check,{passive:true});mask.addEventListener('scroll',check,{passive:true});window.addEventListener('resize',check,{passive:true});}
+  document.addEventListener('visibilitychange',check);
+  playerCardVisibilityCleanup=()=>{document.removeEventListener('visibilitychange',check);if(fallback){dialog.removeEventListener('scroll',check);mask.removeEventListener('scroll',check);window.removeEventListener('resize',check);}};
+  if(fallback)check();
 }
 function playerTeamTimeline(player,cutoff){
   const rows=squadRows().filter(r=>r.date<=cutoff),key=normalizePlayerMatchKey(player),out=[];
@@ -3898,10 +3916,10 @@ function openPlayerCard(player,query){
   void mask.offsetWidth;
   mask.classList.add("on"); mask.setAttribute("aria-hidden","false");
   document.body.style.overflow="hidden";
-  mask.scrollTop=0;
+  mask.scrollTop=0;mask.querySelector('.player-card-dialog').scrollTop=0;
   openPlayerCardHistory(name,cardInfo);
   playPlayerCardReveal(abilities.map(v=>v===null?0:v));
-  setTimeout(()=>$("#playerCardClose").focus(),80);
+  setTimeout(()=>{if(mask.classList.contains('on'))document.getElementById('playerCardClose').focus({preventScroll:true});},80);
 }
 function closePlayerCard(){
   const mask=$("#playerCardMask"); if(!mask) return;
