@@ -6941,7 +6941,7 @@ function renderActiveView(v,options={}){
   mobilePageSwipe?.rendered(next);
 }
 // Analysis assets are requested only by an administrator opening this menu.
-const ABILITY_AUDIT_ASSETS={ui:'assets/ggfc-ability-audit.js?v=78f8a0584038ce65',css:'assets/ggfc-ability-audit.css?v=d5fe30eb3cbed20f',worker:'assets/ggfc-ability-audit-worker.js?v=a5abb2fa3bb93b49'};
+const ABILITY_AUDIT_ASSETS={ui:'assets/ggfc-ability-audit.js?v=22be1871bfb48da7',css:'assets/ggfc-ability-audit.css?v=19c81455534472fa',worker:'assets/ggfc-ability-audit-worker.js?v=bdc0edc6f8f533c2'};
 let abilityAuditLoader=null;
 function renderAbilityAudit(){
  const root=document.getElementById('abilityAuditRoot');

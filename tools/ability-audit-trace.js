@@ -14,6 +14,8 @@ module.exports=function instrument(source){
  replace('const fp=0;',"auditCapture('MOM 성장',career,{count:R.mom,rates:mb,fm,softcap:true});const fp=0;");
  replace('if(!abilityRoundPlayed(R)){',"auditCapture('페어플레이 분리',career,{fouls:R.f,abilityImpact:0});if(!abilityRoundPlayed(R)){");
  replace('keys.forEach(k=>career[k]=Math.max(num(cfg.scoreMin),Math.min(num(cfg.scoreMax),career[k])));',"auditCapture('결석 직접 감점 미사용',career,{});keys.forEach(k=>career[k]=Math.max(num(cfg.scoreMin),Math.min(num(cfg.scoreMax),career[k])));auditCapture('상·하한',career,{min:cfg.scoreMin,max:cfg.scoreMax});");
+ replace('    GGFCSlump.apply(career,',"    auditCapture('이전 LONG FORM',career,{event:longState.events.filter(e=>e.date===R.date).at(-1)});\r\n    GGFCSlump.apply(career,");
+ replace('    abilityApplySustained(career,',"    auditCapture('이전 SLUMP 영구 감점',career,{checkpoint:slumpByDate.get(R.date)});\r\n    abilityApplySustained(career,");
  replace('keys.forEach(k=>careerGrowth[k]+=career[k]-beforeLong[k]);',"keys.forEach(k=>careerGrowth[k]+=career[k]-beforeLong[k]);auditCapture('지속 부진 BASE 보정',career,{form:roundForm,streak:sustainedState.streak,events:sustainedState.events.filter(e=>e.date===R.date)});auditFinish(career,slumpState,cfg,slumpByDate.get(R.date),roundForm);");
  return source;
 };

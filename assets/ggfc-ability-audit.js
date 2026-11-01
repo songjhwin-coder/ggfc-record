@@ -5,6 +5,7 @@ window.GGFCAbilityAudit=(()=>{
  const N=(v,d=4)=>{if(v===null||v===undefined||!Number.isFinite(Number(v)))return '—';const s=Number(v).toFixed(d);return s.includes('.')?s.replace(/\.?0+$/,''):s;};
  const signed=v=>Math.abs(v)<1e-10?'0':(v>0?'+':'')+N(v,6);
  let worker=null,token=0,report=null,page=0,root=null,names=[],timeout=null,assets=null,viewRequest=0;
+ const requests={},dailyPages={loss:0,trend:0};
  const allowed=()=>admin&&GGFC.authorized&&activeView==='abilityaudit';
  const yieldUI=()=>new Promise(r=>setTimeout(r,0));
  function stop(clear=false){token++;clearTimeout(timeout);worker?.terminate();worker=null;if(clear){report=null;if(root)root.innerHTML='';}if(root){root.querySelector('[data-run]')?.removeAttribute('disabled');root.querySelector('[data-cancel]')?.setAttribute('hidden','');}}
@@ -42,8 +43,10 @@ window.GGFCAbilityAudit=(()=>{
    w.onmessage=e=>{
     if(!valid())return;
     if(e.data.type==='error'){stop();message('분석을 완료하지 못했습니다: '+e.data.message);return;}
-    if(e.data.type==='page'){if(e.data.request===viewRequest)showEvents(e.data);return;}
-    if(e.data.type==='detail'){if(e.data.request===viewRequest)renderDetail(e.data.event);return;}
+    if(e.data.type==='page'){if(e.data.request===requests.events)showEvents(e.data);return;}
+    if(e.data.type==='dailyPage'){if(e.data.request===requests[e.data.mode])showDaily(e.data);return;}
+    if(e.data.type==='dayDetail'){if(e.data.request===requests[e.data.mode+'Detail'])renderDayDetail(e.data.day,e.data.mode);return;}
+    if(e.data.type==='detail'){if(e.data.request===requests.eventsDetail)renderDetail(e.data.event);return;}
     if(e.data.type!=='result')return;
     clearTimeout(timeout);report=e.data.report;report.elapsed=performance.now()-began;report.workerMs=e.data.workerMs;
     root.querySelector('[data-run]').disabled=false;root.querySelector('[data-cancel]').hidden=true;
@@ -91,24 +94,61 @@ window.GGFCAbilityAudit=(()=>{
  function renderReport(){
   if(!allowed()||!report)return;
   const r=report.result,box=root.querySelector('[data-result]');
-  box.innerHTML='<article class="card"><h3>'+E(report.player)+' · '+E(report.cutoff)+' 기준</h3>'+(report.enabled?'':'<p class="note">능력치 시스템이 OFF입니다. 아래는 엔진 계산 참고값이며 공개 화면 적용 상태와 구분해 주세요.</p>')+'<div class="aa-summary"><div>BASE OVR<b>'+N(r.baseOvrRaw)+'</b><small>표시 '+r.baseOvr+' · 내림</small></div><div>FORM<b>'+signed(r.form.modifier)+'</b><small>레벨 '+r.form.level+' · 성장 ×'+r.form.growthMultiplier+'</small></div><div>CURRENT OVR<b>'+r.currentOvr+'</b><small>원점수 '+N(r.currentOvrRaw)+' · 반올림</small></div></div><p>포지션 '+E(r.position||'기본 가중치')+' · OVR = '+axes.map(k=>k.toUpperCase()+' × '+N(report.weights[k]*100,2)+'%').join(' + ')+'</p>'+table(['능력치','시작','상승 합계','하락 합계','CORE','SLUMP 잔액','BASE 원점수','화면 표시'],axes.map(k=>{const totals=report.axisTotals[k];return [k.toUpperCase(),N(r.start[k]),deltaCell(totals.up),deltaCell(totals.down),N(r.coreSkills[k]),N(r.longForm.balance[k]||0),N(r.career[k]),r.display[k]];}))+'<p class="note">시작 + 상승 합계 + 하락 합계 = BASE 원점수 검증 완료. 소수점은 화면에서 최대 6자리로 줄여 표시합니다. CORE에는 과거 영구 감점이 포함될 수 있습니다. CURRENT는 BASE OVR + FORM 보정을 상·하한 제한 후 반올림한 값입니다.</p></article><details class="card"><summary>초기 능력치 근거</summary><div data-initial></div></details><details class="card"><summary>현재 FORM 상세 계산</summary><div data-form></div></details><details class="card"><summary>지속 부진 BASE 보정</summary><div data-slump></div></details><article class="card"><h3>날짜별 변동 내역</h3><div class="aa-filters"><label>능력치 <select data-axis><option value="">전체</option>'+axes.map(k=>'<option value="'+k+'">'+k.toUpperCase()+'</option>').join('')+'</select></label><label>유형 <select data-type><option value="">전체</option><option value="round">경기 기록</option><option value="sb">SoccerBee</option></select></label></div><p class="note">최신 날짜부터 12건씩 표시합니다. 한 날짜의 ‘이유 보기’를 누르면 원자료, 적용 배율, 증감 값, 보정 사유가 나옵니다. 능력치 필터는 해당 축의 변동이 있는 날짜만 표시합니다.</p><div data-events></div><div class="aa-pages"><button class="btn" data-prev>이전</button><span data-pages></span><button class="btn" data-next>다음</button></div><div data-detail></div></article><details class="card"><summary>계산 제외·연결 경고 ('+report.issueCount+')</summary><p class="note">검증 과정에서 발견된 DB 공통 경고입니다. 선택 선수와 직접 관계없는 경고도 포함됩니다. 화면 부담을 줄이기 위해 경기 경고 50건·팀 기록 연결 경고 50건까지만 표시합니다. 해당 경기의 충돌·누락을 확인해 주세요.</p><div data-issues></div></details>';
+  box.innerHTML='<article class="card"><h3>'+E(report.player)+' · '+E(report.cutoff)+' 기준</h3>'+(report.enabled?'':'<p class="note">능력치 시스템이 OFF입니다. 아래는 엔진 계산 참고값이며 공개 화면 적용 상태와 구분해 주세요.</p>')+'<div class="aa-summary"><div>BASE OVR<b>'+N(r.baseOvrRaw)+'</b><small>표시 '+r.baseOvr+' · 내림</small></div><div>FORM<b>'+signed(r.form.modifier)+'</b><small>레벨 '+r.form.level+' · 성장 ×'+r.form.growthMultiplier+'</small></div><div>CURRENT OVR<b>'+r.currentOvr+'</b><small>원점수 '+N(r.currentOvrRaw)+' · 반올림</small></div></div><p>포지션 '+E(r.position||'기본 가중치')+' · OVR = '+axes.map(k=>k.toUpperCase()+' × '+N(report.weights[k]*100,2)+'%').join(' + ')+'</p>'+table(['능력치','시작','상승 합계','하락 합계','CORE','SLUMP 잔액','BASE 원점수','화면 표시'],axes.map(k=>{const totals=report.axisTotals[k];return [k.toUpperCase(),N(r.start[k]),deltaCell(totals.up),deltaCell(totals.down),N(r.coreSkills[k]),N(r.longForm.balance[k]||0),N(r.career[k]),r.display[k]];}))+'<p class="note">시작 + 상승 합계 + 하락 합계 = BASE 원점수 검증 완료. 소수점은 화면에서 최대 6자리로 줄여 표시합니다. CORE에는 과거 영구 감점이 포함될 수 있습니다. CURRENT는 BASE OVR + FORM 보정을 상·하한 제한 후 반올림한 값입니다.</p></article><details class="card"><summary>초기 능력치 근거</summary><div data-initial></div></details><details class="card"><summary>현재 FORM 상세 계산</summary><div data-form></div></details><details class="card"><summary>지속 부진 BASE 보정</summary><div data-slump></div></details>'+dailyPanelsHtml()+'<article class="card"><h3>날짜별 변동 내역</h3><div class="aa-filters"><label>능력치 <select data-axis><option value="">전체</option>'+axes.map(k=>'<option value="'+k+'">'+k.toUpperCase()+'</option>').join('')+'</select></label><label>유형 <select data-type><option value="">전체</option><option value="round">경기 기록</option><option value="sb">SoccerBee</option></select></label></div><p class="note">최신 날짜부터 12건씩 표시합니다. 한 날짜의 ‘이유 보기’를 누르면 원자료, 적용 배율, 증감 값, 보정 사유가 나옵니다. 능력치 필터는 해당 축의 변동이 있는 날짜만 표시합니다.</p><div data-events></div><div class="aa-pages"><button class="btn" data-prev>이전</button><span data-pages></span><button class="btn" data-next>다음</button></div><div data-detail></div></article><details class="card"><summary>계산 제외·연결 경고 ('+report.issueCount+')</summary><p class="note">검증 과정에서 발견된 DB 공통 경고입니다. 선택 선수와 직접 관계없는 경고도 포함됩니다. 화면 부담을 줄이기 위해 경기 경고 50건·팀 기록 연결 경고 50건까지만 표시합니다. 해당 경기의 충돌·누락을 확인해 주세요.</p><div data-issues></div></details>';
   const lazy=(key,fn)=>{const el=box.querySelector('[data-'+key+']');el.parentElement.addEventListener('toggle',()=>{if(el.parentElement.open&&!el.dataset.ready){el.innerHTML=fn();el.dataset.ready='1';}});};
   lazy('initial',initialHtml);lazy('form',()=>formHtml(r.form));lazy('slump',()=>slumpHtml(r.longForm));lazy('issues',()=>'<pre>'+E(JSON.stringify([...report.issues,...report.teamIssues],null,2))+'</pre>');
   for(const key of ['axis','type'])box.querySelector('[data-'+key+']').onchange=()=>{page=0;renderEvents();};
   box.querySelector('[data-prev]').onclick=()=>{page--;renderEvents();};box.querySelector('[data-next]').onclick=()=>{page++;renderEvents();};
-  box.querySelector('[data-events]').onclick=e=>{const b=e.target.closest('[data-event]');if(b&&worker){root.querySelector('[data-detail]').textContent='상세 기록을 불러오는 중입니다…';worker.postMessage({type:'detail',index:Number(b.dataset.event),request:++viewRequest});}};
-  renderEvents();
+  box.querySelector('[data-events]').onclick=e=>{const b=e.target.closest('[data-event]');if(b&&worker){root.querySelector('[data-detail]').textContent='상세 기록을 불러오는 중입니다…';sendRequest('eventsDetail',{type:'detail',index:Number(b.dataset.event)});}};
+  bindDailyPanels(box);renderEvents();renderDaily('loss');renderDaily('trend');
  }
  function renderEvents(){
   if(!worker||!allowed())return;
   const axis=root.querySelector('[data-axis]').value,eventType=root.querySelector('[data-type]').value;
   root.querySelector('[data-detail]').innerHTML='';root.querySelector('[data-events]').textContent='내역을 불러오는 중입니다…';root.querySelector('[data-prev]').disabled=true;root.querySelector('[data-next]').disabled=true;
-  worker.postMessage({type:'page',axis,eventType,page,request:++viewRequest});
+  requests.eventsDetail=++viewRequest;sendRequest('events',{type:'page',axis,eventType,page});
  }
  function showEvents(data){
   page=data.page;
   root.querySelector('[data-events]').innerHTML=table(['날짜','유형',...axes.map(k=>k.toUpperCase()),'상세'],data.rows.map(e=>[E(e.date),e.type==='sb'?'측정':'경기',...axes.map(k=>deltaCell(e.delta[k])),'<button class="btn" data-event="'+e.i+'">이유 보기</button>']));
   root.querySelector('[data-pages]').textContent=(page+1)+' / '+data.pages+' · '+data.total+'건';root.querySelector('[data-prev]').disabled=page===0;root.querySelector('[data-next]').disabled=page===data.pages-1;
+ }
+ function sendRequest(key,payload){const request=++viewRequest;requests[key]=request;worker.postMessage({...payload,request});}
+ function dailyPanelsHtml(){
+  const summary=report.dailySummary||{};
+  return '<article class="card aa-daily-card" data-daily="loss"><h3>날짜별 하락 내역</h3><p class="note">BASE 차감과 FORM 하락이 발생한 날짜만 모았습니다. BASE 칸은 성장과 상쇄되기 전 하락 요인 합계이므로 당일 최종 순변동과 다를 수 있습니다. FORM은 OVR 보정이며 개별 능력치 감점과 별개입니다.</p><div class="aa-filters"><label>하락 항목<select data-daily-axis><option value="">모든 하락 (BASE·FORM)</option><option value="base">BASE 차감만</option><option value="form">FORM 하락만</option>'+axes.map(k=>'<option value="'+k+'">'+k.toUpperCase()+' 차감</option>').join('')+'</select></label></div><div data-daily-rows></div>'+dailyPager()+'<div data-daily-detail></div></article>'+
+   '<article class="card aa-daily-card" data-daily="trend"><h3>FORM · 부진 BASE 날짜별 변동</h3><div class="aa-daily-summary"><span>FORM 상승 <b>'+summary.formUp+'일</b></span><span>FORM 하락 <b>'+summary.formDown+'일</b></span><span>부진 BASE 상승 <b>'+summary.slumpUp+'일</b></span><span>부진 BASE 하락 <b>'+summary.slumpDown+'일</b></span></div><p class="note">날짜별 마지막 값을 직전 기록 날짜의 마지막 값과 비교합니다. 같은 날 측정과 경기가 있으면 한 줄로 합칩니다. OVR는 분석 기준일의 포지션 가중치로 비교하며 CURRENT는 상·하한 적용 후 원점수입니다.</p><p class="note">BASE 순변동에는 경기 성장·SoccerBee가 포함됩니다. 부진 BASE 조정은 지속 부진·이전 LONG FORM·SLUMP의 차감/복구분만 구분합니다. 현재 지속 부진 감점은 자동 환급하지 않으므로 FORM이 회복되어도 부진 BASE가 자동 상승하지 않습니다. 평가 보류는 실력 회복과 구분해 표시합니다.</p><div class="aa-filters"><label>비교 지표<select data-daily-metric><option value="">전체 지표</option><option value="form">FORM</option><option value="slump">부진 BASE 조정</option><option value="base">BASE 순변동</option><option value="current">CURRENT 순변동</option></select></label><label>변동 방향<select data-daily-direction><option value="">전체 (유지 포함)</option><option value="changed">변동 있음</option><option value="up">상승만</option><option value="down">하락만</option></select></label></div><div data-daily-rows></div>'+dailyPager()+'<div data-daily-detail></div></article>';
+ }
+ function dailyPager(){return '<div class="aa-pages"><button class="btn" type="button" data-daily-prev>이전</button><span data-daily-pages role="status"></span><button class="btn" type="button" data-daily-next>다음</button></div>';}
+ function bindDailyPanels(box){
+  for(const mode of ['loss','trend']){
+   const panel=box.querySelector('[data-daily="'+mode+'"]');dailyPages[mode]=0;
+   panel.querySelectorAll('select').forEach(el=>el.onchange=()=>{dailyPages[mode]=0;renderDaily(mode);});
+   panel.querySelector('[data-daily-prev]').onclick=()=>{dailyPages[mode]--;renderDaily(mode);};
+   panel.querySelector('[data-daily-next]').onclick=()=>{dailyPages[mode]++;renderDaily(mode);};
+   panel.querySelector('[data-daily-rows]').onclick=e=>{const button=e.target.closest('[data-day]');if(button&&worker&&allowed()){panel.querySelector('[data-daily-detail]').textContent='상세 기록을 불러오는 중입니다…';sendRequest(mode+'Detail',{type:'dayDetail',mode,date:button.dataset.day});}};
+  }
+ }
+ function renderDaily(mode){
+  if(!worker||!allowed())return;const panel=root.querySelector('[data-daily="'+mode+'"]');
+  requests[mode+'Detail']=++viewRequest;panel.querySelector('[data-daily-detail]').innerHTML='';panel.querySelector('[data-daily-rows]').textContent='내역을 불러오는 중입니다…';panel.querySelector('[data-daily-prev]').disabled=true;panel.querySelector('[data-daily-next]').disabled=true;
+  sendRequest(mode,{type:'dailyPage',mode,page:dailyPages[mode],axis:panel.querySelector('[data-daily-axis]')?.value||'',metric:panel.querySelector('[data-daily-metric]')?.value||'',direction:panel.querySelector('[data-daily-direction]')?.value||''});
+ }
+ function transitionCell(before,after){return '<span class="aa-transition">'+N(before)+' <span aria-label="에서">→</span> <b>'+N(after)+'</b></span>';}
+ function formState(f){return '<span class="aa-form-state '+(f.ready?'':'aa-pending')+'" title="'+E(f.reason)+'">'+(f.ready?'평가 가능':'평가 보류')+'</span>';}
+ function showDaily(data){
+  if(!allowed())return;const mode=data.mode,panel=root.querySelector('[data-daily="'+mode+'"]');dailyPages[mode]=data.page;
+  const detail=d=>'<button class="btn" type="button" data-day="'+E(d.date)+'">'+(mode==='loss'?'하락 이유':'변동 이유')+'</button>';
+  let html;
+  if(!data.rows.length)html='<p class="aa-empty">'+(mode==='loss'?'선택 조건에 해당하는 하락 내역이 없습니다.':'선택 조건에 해당하는 날짜별 변동이 없습니다.')+'</p>';
+  else if(mode==='loss')html=table(['날짜','하락 원인',...axes.map(k=>k.toUpperCase()),'BASE 차감 요인 (OVR)','FORM 하락 (OVR)','상세'],data.rows.map(d=>[E(d.date),'<span class="aa-reasons">'+d.reasons.map(E).join(' · ')+'</span>',...axes.map(k=>deltaCell(d.down[k])),deltaCell(d.baseDown),deltaCell(d.formDown),detail(d)]));
+  else html=table(['날짜','FORM 전 → 후','FORM 증감','부진 BASE 조정','부진 누적 영향','BASE 전 → 후','BASE 순변동','CURRENT 전 → 후','CURRENT 증감','FORM 평가','상세'],data.rows.map(d=>[E(d.date),transitionCell(d.formBefore.modifier,d.formAfter.modifier),deltaCell(d.formDelta),deltaCell(d.slumpDelta),deltaCell(d.slumpTotal),transitionCell(d.baseBefore,d.baseAfter),deltaCell(d.baseDelta),transitionCell(d.currentBefore,d.currentAfter),deltaCell(d.currentDelta),formState(d.formAfter),detail(d)]));
+  panel.querySelector('[data-daily-rows]').innerHTML=html;panel.querySelector('[data-daily-pages]').textContent=(data.page+1)+' / '+data.pages+' · '+data.total+'일';panel.querySelector('[data-daily-prev]').disabled=data.page===0;panel.querySelector('[data-daily-next]').disabled=data.page===data.pages-1;
+ }
+ function renderDayDetail(day,mode){
+  const panel=root.querySelector('[data-daily="'+mode+'"]'),negative=mode==='loss',steps=day.events.flatMap(e=>e.steps.map(step=>({...step,type:e.type}))).filter(s=>!negative||axes.some(k=>s.delta[k]< -1e-10));
+  const rows=steps.map(step=>[E(step.reason),step.type==='sb'?'측정':'경기',...axes.map(k=>deltaCell(negative?Math.min(0,step.delta[k]):step.delta[k]))]);
+  panel.querySelector('[data-daily-detail]').innerHTML='<div class="aa-detail"><h3>'+E(day.date)+' · '+(negative?'하락 요인':'날짜별 변동')+' 상세</h3>'+table(['원인','유형',...axes.map(k=>k.toUpperCase())],rows)+'<p>FORM '+transitionCell(day.formBefore.modifier,day.formAfter.modifier)+' · 증감 '+deltaCell(negative?day.formDown:day.formDelta)+' OVR</p><p>'+formState(day.formAfter)+' '+E(day.formAfter.reason)+'</p>'+(negative?'<p class="note">음수인 단계만 표시했습니다. 당일 성장과 합산한 최종 BASE는 아래 전체 날짜별 변동 내역에서 확인할 수 있습니다.</p>':table(['항목','변동 전','변동 후','증감'],[['BASE OVR',N(day.baseBefore),N(day.baseAfter),deltaCell(day.baseDelta)],['FORM',N(day.formBefore.modifier),N(day.formAfter.modifier),deltaCell(day.formDelta)],['부진 BASE 조정','—','—',deltaCell(day.slumpDelta)],['CURRENT OVR',N(day.currentBefore),N(day.currentAfter),deltaCell(day.currentDelta)]]))+'</div>';
  }
  function detailText(s){
   const d=s.detail||{},c=report.cfg;
