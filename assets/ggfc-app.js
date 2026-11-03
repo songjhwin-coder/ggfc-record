@@ -3245,6 +3245,11 @@ function abilityTopRiserRows(risers,date){
 function abilityRiserDeltasHtml(ups){
   return '<div class="ability-riser-deltas">'+(ups||[]).map(u=>'<span class="ability-riser-delta">'+esc(u.name)+' ▲'+num(u.delta)+'</span>').join('')+'</div>';
 }
+function playerCardBaseFormHtml(record){
+  if(!record)return '';
+  const f=record.form||{level:0,status:abilityFormStatus(0)},status=f.status||abilityFormStatus(f.level||0);
+  return '<div class="pc-ability-meta-row"><span>BASE <b>'+fmtAbility(record.baseOvrRaw)+'</b></span><span class="pc-form-badge '+(f.level>0?'hot':f.level<0?'cold':'normal')+'">'+esc(status.icon)+' FORM '+abilityFormValue(f)+' · '+esc(status.label)+'</span></div>';
+}
 function renderAbilityTopRisers(risers,date){
   const root=$('#abilityTopRisers'),note=$('#abilityTopRiserNote');if(!root)return;
   root.replaceChildren();
@@ -3259,6 +3264,7 @@ function renderAbilityTopRisers(risers,date){
     const signed=n=>(n>0?'+':'')+n;
     article.innerHTML='<header><span class="atr-rank">'+(i+1)+'</span><div><strong>CURRENT OVR '+signed(x.ovrGain)+'</strong><small>'+x.p.currentOvr+' → '+x.r.currentOvr+' · 6개 능력치 합계 '+signed(x.axisGain)+'</small></div></header>';
     article.append(squadPlayerCard({name:x.r.player,ability:x.r,role:'선수'},x.r.team,query,careerMaps.get(query.asOf)));
+    const meta=document.createElement('div');meta.className='atr-ability-meta';meta.innerHTML=playerCardBaseFormHtml(x.r);article.append(meta);
     const changes=document.createElement('div');changes.className='atr-changes';changes.innerHTML=abilityRiserDeltasHtml(x.ups)+'<small>'+esc(x.previousDate)+' → '+esc(x.date)+'</small>';article.append(changes);root.append(article);
   });
 }
@@ -3771,8 +3777,7 @@ function playPlayerCardReveal(stats){
   resetPlayerCardHex();
   const mask=document.getElementById('playerCardMask'),panel=document.getElementById('playerCardHexPanel'),container=document.getElementById('playerCardContainer'),dialog=mask.querySelector('.player-card-dialog');if(!panel||!container)return;
   const run=playerCardRevealRun,valid=()=>run===playerCardRevealRun&&mask.classList.contains('on');
-  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches,replay=document.getElementById('playerCardReplay'),status=document.getElementById('playerCardMotionStatus');
-  if(replay){replay.disabled=reduce;replay.onclick=()=>playPlayerCardReveal(stats);}
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches,status=document.getElementById('playerCardMotionStatus');
   if(status){status.hidden=!reduce;status.textContent=reduce?'기기의 동작 줄이기 설정 적용':'';}
   if(reduce){
     panel.classList.add('visible','values-active');const shape=document.getElementById('playerCardHexShape');shape.setAttribute('points',playerCardHexPoints(stats,1));shape.style.opacity='1';shape.style.strokeDashoffset='0';shape.classList.add('complete');
@@ -3849,6 +3854,37 @@ function renderPlayerSeasonGrowth(){
   const max=Math.max(1,...rows.flatMap(r=>Object.values(r.values).map(Math.abs)));
   box.innerHTML='<h4>SEASON GROWTH · 시즌별 성장량</h4><p class="note">카드 기준일 '+esc(cutoff)+'까지 · 시즌 시작 직전 대비 순변화. 결석·파울의 완화된 BASE 감점과 SoccerBee 측정 변화를 포함합니다. FORM은 별도 CURRENT OVR 보정이므로 이 막대에 포함하지 않습니다. 막대는 모든 시즌·항목에 같은 척도를 적용합니다.</p>'+(rows.length?'<div class="season-growth-grid">'+rows.map(r=>'<section><header><b>'+r.year+'</b><small>'+r.start+' ~ '+r.end+'</small></header>'+PLAYER_CARD_HISTORY_METRICS.map(m=>'<div class="season-growth-row"><span>'+m.label+'</span><div class="season-growth-track"><i class="'+(r.values[m.key]<0?'negative':'positive')+'" style="width:'+Math.abs(r.values[m.key])/max*50+'%"></i></div><b>'+playerCardHistoryDelta(r.values[m.key])+'</b></div>').join('')+'</section>').join('')+'</div>':'<p class="note">비교할 시즌 기록이 없습니다.</p>');
 }
+// A same-URL mobile entry lets the phone/browser Back action dismiss only the card.
+// Keep the menu hash intact so its normal history and swipe navigation remain usable.
+const PLAYER_CARD_NAV_KEY='ggfcPlayerCard';
+let playerCardNavigation=null,playerCardPendingBack=null,playerCardNavigationSerial=0;
+let playerCardReturnFocus=null,playerCardBodyOverflow='';
+function rememberPlayerCardNavigation(){
+  if(!document.documentElement.classList.contains('ggfc-mobile')||playerCardNavigation||playerCardPendingBack)return;
+  const token=Date.now()+'-'+(++playerCardNavigationSerial),state=history.state;
+  history.pushState({...state,[PLAYER_CARD_NAV_KEY]:token},'',location.href);
+  playerCardNavigation=token;
+}
+function releasePlayerCardNavigation(fromHistory){
+  const token=playerCardNavigation;playerCardNavigation=null;
+  if(fromHistory||!token||history.state?.[PLAYER_CARD_NAV_KEY]!==token)return;
+  playerCardPendingBack=token;history.back();
+}
+window.addEventListener('popstate',e=>{
+  const mask=document.getElementById('playerCardMask');
+  if(playerCardPendingBack){
+    playerCardPendingBack=null;
+    // A programmatic menu change or a rapid close/open must survive history cleanup.
+    if(location.hash!=='#'+activeView)history.replaceState(e.state,'','#'+activeView);
+    if(mask?.classList.contains('on'))rememberPlayerCardNavigation();
+  }else if(playerCardNavigation&&e.state?.[PLAYER_CARD_NAV_KEY]!==playerCardNavigation){
+    closePlayerCard({fromHistory:true});
+  }
+  // Forward through a dismissed card does not leave a stale modal marker behind.
+  if(!playerCardNavigation&&history.state?.[PLAYER_CARD_NAV_KEY]){
+    const state={...history.state};delete state[PLAYER_CARD_NAV_KEY];history.replaceState(state,'');
+  }
+});
 function openPlayerCard(player,query){
   const name=String(player||"").trim(); if(!name||isOwnGoalPlayer(name)) return;
   const cardInfo=resolvePlayerCardQuery(query);
@@ -3874,7 +3910,7 @@ function openPlayerCard(player,query){
   const abilityMeta=$("#playerCardAbilityMeta");
   if(abilityMeta){
     if(!abilityCalc) abilityMeta.innerHTML='';
-    else{const f=abilityCalc.form||{level:0,status:abilityFormStatus(0)}, sign=f.level>0?'+':''; abilityMeta.innerHTML='<div class="pc-ability-meta-row"><span>BASE <b>'+fmtAbility(abilityCalc.baseOvrRaw)+'</b></span><span class="pc-form-badge '+(f.level>0?'hot':f.level<0?'cold':'normal')+'">'+esc(f.status.icon)+' FORM '+abilityFormValue(f)+' · '+esc(f.status.label)+'</span></div><div class="pc-progress"><span style="width:'+Math.round(abilityCalc.ovrProgress)+'%"></span></div><small>BASE '+abilityCalc.nextBaseOvr+'까지 '+Math.round(abilityCalc.ovrProgress)+'% · '+(abilityCalc.measured?(abilityCalc.partialMeasurement?'SOCCERBEE PARTIAL ':'SOCCERBEE MEASURED ')+esc(abilityCalc.sbDate):'SOCCERBEE 68P · PROVISIONAL')+'</small>'; }
+    else abilityMeta.innerHTML=playerCardBaseFormHtml(abilityCalc)+'<div class="pc-progress"><span style="width:'+Math.round(abilityCalc.ovrProgress)+'%"></span></div><small>BASE '+abilityCalc.nextBaseOvr+'까지 '+Math.round(abilityCalc.ovrProgress)+'% · '+(abilityCalc.measured?(abilityCalc.partialMeasurement?'SOCCERBEE PARTIAL ':'SOCCERBEE MEASURED ')+esc(abilityCalc.sbDate):'SOCCERBEE 68P · PROVISIONAL')+'</small>';
   }
   if(abilityMeta&&abilityCalc){const slumpHtml=longFormCardHtml(abilityCalc);if(slumpHtml)abilityMeta.insertAdjacentHTML('beforeend','<details class="pc-slump-details"><summary>SLUMP 상세 보기</summary>'+slumpHtml+'</details>');}
   labels.forEach((k,i)=>{ const el=$("#playerCardStat"+k); if(el) el.textContent=abilities[i]===null?"—":String(abilities[i]); });
@@ -3911,6 +3947,8 @@ function openPlayerCard(player,query){
   watermark.style.backgroundImage=hLogo?'url("'+hLogo+'")':(tLogo?'url("'+tLogo+'")':'none');
 
   const mask=$("#playerCardMask");
+  if(!mask.classList.contains('on')){playerCardReturnFocus=document.activeElement;playerCardBodyOverflow=document.body.style.overflow;}
+  rememberPlayerCardNavigation();
   mask.classList.remove("on");
   resetPlayerCardHex();
   void mask.offsetWidth;
@@ -3919,15 +3957,18 @@ function openPlayerCard(player,query){
   mask.scrollTop=0;mask.querySelector('.player-card-dialog').scrollTop=0;
   openPlayerCardHistory(name,cardInfo);
   playPlayerCardReveal(abilities.map(v=>v===null?0:v));
-  setTimeout(()=>{if(mask.classList.contains('on'))document.getElementById('playerCardClose').focus({preventScroll:true});},80);
+  setTimeout(()=>{if(mask.classList.contains('on'))mask.querySelector('.player-card-dialog').focus({preventScroll:true});},80);
 }
-function closePlayerCard(){
-  const mask=$("#playerCardMask"); if(!mask) return;
+function closePlayerCard(options={}){
+  const mask=$("#playerCardMask"); if(!mask?.classList.contains('on')) return;
+  releasePlayerCardNavigation(options.fromHistory===true);
   clearPlayerCardAnimation();
   if(playerCardHistoryResize){playerCardHistoryResize.disconnect();playerCardHistoryResize=null;}
   playerCardHistoryState=null;playerCardSoccerBeeState=null;
   mask.classList.remove("on"); mask.setAttribute("aria-hidden","true");
-  document.body.style.overflow="";
+  document.body.style.overflow=playerCardBodyOverflow;
+  if(playerCardReturnFocus?.isConnected)playerCardReturnFocus.focus({preventScroll:true});
+  playerCardReturnFocus=null;
 }
 
 function leagueSymbolHtml(code){
@@ -7092,10 +7133,17 @@ document.addEventListener("click",e=>{
     if(scope){try{query=JSON.parse(scope.dataset.cardQuery);}catch(err){query=null;}}
     openPlayerCard(player.dataset.player||player.textContent,query);return;
   }
-  if(e.target===$("#playerCardMask")) closePlayerCard();
+  if(e.target.matches('#playerCardMask, #playerCardMask .player-card-dialog, #playerCardStage, #playerCardMask .player-card-upper, #playerCardMask .player-card-visuals, #playerCardMask .player-card-portrait-column'))closePlayerCard();
 });
-$("#playerCardClose").onclick=closePlayerCard;
-document.addEventListener("keydown",e=>{ if(e.key==="Escape" && $("#playerCardMask").classList.contains("on")) closePlayerCard(); });
+document.addEventListener('keydown',e=>{
+  const mask=$('#playerCardMask');if(!mask.classList.contains('on'))return;
+  if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();closePlayerCard();return;}
+  if(e.key!=='Tab')return;
+  const controls=[...mask.querySelectorAll('a[href],button,input,select,textarea,summary,[tabindex]:not([tabindex="-1"])')].filter(el=>!el.disabled&&el.getClientRects().length),first=controls[0],last=controls.at(-1);
+  if(!first){e.preventDefault();mask.querySelector('.player-card-dialog').focus();}
+  else if(e.shiftKey&&(document.activeElement===first||!controls.includes(document.activeElement))){e.preventDefault();last.focus();}
+  else if(!e.shiftKey&&(document.activeElement===last||!controls.includes(document.activeElement))){e.preventDefault();first.focus();}
+},true);
 function goTab(v,options={}){
   mobilePageSwipe?.cancel();
   if(memberPreviewActive&&MEMBER_MENUS.some(m=>m.id===canonicalMenu(v)))memberPreviewTarget=canonicalMenu(v);

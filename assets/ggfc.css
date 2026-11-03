@@ -3878,13 +3878,8 @@ body:not(.admin-mode) .il-rules{display:none!important}
 #playerCardMask.on #playerCardContainer.card-waiting{opacity:0}
 #playerCardMask.on #playerCardContainer.card-revealing{animation:ggfc-card-visible-entry .7s cubic-bezier(.22,.7,.25,1) both}
 @keyframes ggfc-card-visible-entry{from{opacity:0;transform:translate3d(0,20px,0) scale(.92)}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
-.player-card-actions{position:absolute;right:0;top:-10px;display:flex;align-items:center;justify-content:flex-end;gap:8px;z-index:100}
-.player-card-actions #playerCardClose{position:static;margin:0;flex:none}
-.player-card-replay{font-size:12px;min-height:38px;background:#f3f7fc;color:#173b60;border:1px solid #adc1d7;white-space:nowrap}
 .player-card-motion-status{font-size:11px;color:#d3dfed;max-width:180px}
 .player-card-motion-status[hidden]{display:none}
-.ggfc-mobile .player-card-actions{position:sticky;top:0;flex-wrap:wrap;margin:0 0 8px;padding:4px 0;background:rgba(3,17,38,.94)}
-.ggfc-mobile .player-card-actions #playerCardClose{width:44px;height:44px;min-height:44px}
 @media(prefers-reduced-motion:reduce){#playerCardMask.on #playerCardContainer.card-waiting,#playerCardMask.on #playerCardContainer.card-revealing{opacity:1;transform:none;animation:none!important}}
 
 /* Overview ground strips: compact, understated navy. */
@@ -3896,3 +3891,14 @@ body:not(.admin-mode) #v-ability :is(.note,.dashboard-block-note,.ability-half-m
 body:not(.admin-mode) #v-alltime :is(.at-footnote,.at-scope,.at-admin-note,.at-hero p,.at-empty p,.head>p),
 body:not(.admin-mode) #v-leadership :is(.note,.lh-hero p,.at-empty p,.head>p),
 body:not(.admin-mode) #v-interleague :is(.note,.head>p){display:none!important}
+
+/* V3.25.73: community shortcuts and the same BASE/FORM values below TOP5 cards. */
+.sidebar-community-links{display:grid;gap:8px;margin:12px 0 8px}
+.sidebar-community-links .sidebar-community-link{display:flex;align-items:center;justify-content:flex-start;gap:10px;width:100%;min-height:40px;text-decoration:none}
+.sidebar-community-link svg{display:block;width:24px;height:24px;flex:none}
+.atr-ability-meta{box-sizing:border-box;width:100%;margin-top:10px;padding:9px 8px;border:1px solid #cbdbe8;border-radius:9px;background:#f2f7fb;color:#12365b;font-size:11px;line-height:1.6}
+.atr-ability-meta .pc-ability-meta-row{justify-content:center;gap:5px}
+.atr-ability-meta .pc-ability-meta-row>span:first-child{background:#e0eaf4;color:#12365b;backdrop-filter:none}
+.atr-ability-meta .pc-form-badge{max-width:100%;overflow-wrap:anywhere;text-align:center}
+#playerCardMask .player-card-dialog:focus{outline:none}
+@media(max-width:620px){.atr-ability-meta{padding:8px 4px;font-size:10px}}
