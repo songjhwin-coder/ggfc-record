@@ -3941,3 +3941,15 @@ body:not(.admin-mode) #v-interleague :is(.note,.head>p){display:none!important}
 .player-table-head-copy th:first-child{position:relative!important;z-index:2}
 @media(max-width:620px){.ability-top-player .atr-rank{width:28px;height:26px;border-radius:4px}}
 @media print{.player-table-sticky-head{display:none!important}#playerTable{overflow:visible;max-height:none}}
+
+/* V3.25.75: half-size community artwork and match video links. */
+.sidebar-community-links{margin:14px 0 12px}
+.sidebar-community-links .sidebar-community-link{width:44px;flex:0 0 44px;min-height:44px;justify-content:center;gap:0}
+.sidebar-community-links .community-disc{width:32px;height:32px}
+.sidebar-community-links .community-disc svg{width:18px;height:14px}
+.match-youtube-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin:14px 0 22px}
+.match-youtube-link{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:44px;max-width:100%;padding:10px 18px;border:1px solid #b72036;border-radius:8px;background:#cf233c;color:#fff;font:inherit;font-size:14px;font-weight:800;line-height:1.5;text-align:center;text-decoration:none;overflow-wrap:anywhere}
+.match-youtube-link svg{width:24px;height:18px;flex:none;color:#fff}
+.match-youtube-link:hover{background:#b61b32;color:#fff}
+.match-youtube-link:focus-visible{outline:3px solid #287caf;outline-offset:3px}
+@media(max-width:620px){.match-youtube-link{font-size:13px;padding:10px 14px}}

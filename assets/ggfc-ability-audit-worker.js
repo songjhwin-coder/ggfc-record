@@ -1,4 +1,4 @@
-/* Generated from current core + SLUMP; source SHA256 a909425d386c4286b2cdf8195bd1ca28d2c6dc385af92a2b0384e66889756b77 */
+/* Generated from current core + SLUMP; source SHA256 c1fc4de638e27879d031c9892095216a1d0aaaa8ccb235ca235b3d4a505102e9 */
 const GGFCSlump=(()=>{
  const defaults={enabled:true,startDate:'2026-10-20',recentGames:10,baselineGames:20,minimumBaselineGames:10,formTrigger:-2,performanceTrigger:75,persistenceRounds:4,interval:4,recoveryPerformance:85,recoveryRounds:3,slumpDrop:.20,severeDrop:.35,criticalDrop:.50,seasonCap:1.5,storyEnabled:false};
  Object.assign(defaults,{recoveryStartDate:'2026-10-27',recoveryPercent:25,severePerformance:70,criticalPerformance:60});
@@ -214,6 +214,9 @@ function verifiedRecords(){
  const index={};for(const f of fields.slice(1)){index[f]=new Map();for(const r of DB[f]||[]){const id=text(r.id);if(!index[f].has(id))index[f].set(id,[]);index[f].get(id).push(r);}}
  for(const group of groups.values()){
   const first={...group[0]},ids=new Set(group.map(m=>m.id)),reasons=[];
+  // Video metadata never changes fixture identity, statistics or conflict rules.
+  const videoLinks=group.flatMap(m=>[...(Array.isArray(m.youtubeUrls)?m.youtubeUrls:[]),m.youtubeUrl||'',m.youtubeLink||'']).filter(v=>typeof v==='string'&&v.trim());
+  if(videoLinks.length)first.youtubeUrls=[...new Set(videoLinks)];
   if([...ids].some(id=>!id||idKeys.get(id).size>1))reasons.push('경기 ID가 여러 대진에 연결됨');
   const aligned=group.map(m=>m.home===first.home?m:{...m,home:m.away,away:m.home,hs:m.as,as:m.hs,hf:m.af,af:m.hf,hExtraFouls:m.aExtraFouls,aExtraFouls:m.hExtraFouls,hPointDeduction:m.aPointDeduction,aPointDeduction:m.hPointDeduction,homeGroup:m.awayGroup,awayGroup:m.homeGroup,hAssistsRecorded:m.aAssistsRecorded,aAssistsRecorded:m.hAssistsRecorded});
   for(const key of ['hs','as','hf','af','hExtraFouls','aExtraFouls','hPointDeduction','aPointDeduction','homeGroup','awayGroup','half','hAssistsRecorded','aAssistsRecorded']){const values=aligned.map(m=>m[key]).filter(present);if(new Set(values.map(text)).size>1)reasons.push('경기 값 충돌: '+key);else if(values.length)first[key]=values[0];}

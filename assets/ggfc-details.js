@@ -78,6 +78,10 @@ function detailUnassignedHtml(items){
   const contents=({kind,row:r})=>kind==='attendance'?'출석':kind==='goals'?'득점 '+num(r.g)+' · 도움 '+num(r.a):kind==='fouls'?'개인파울 '+num(r.fouls):kind==='saves'?'선방 '+num(r.saves):'MOM '+num(r.mom);
   return '<section class="detail-section"><h3>소속팀·선수 확인이 필요한 기록</h3><p class="detail-note">아래 기록은 팀이나 선수를 확정할 수 없어 선수별 표에 포함하지 않았습니다.</p><div class="detail-table-wrap"><table class="detail-table"><thead><tr><th>구분</th><th>등록팀</th><th>선수</th><th>기록</th></tr></thead><tbody>'+items.map(x=>'<tr><td>'+esc(x.label)+'</td><td>'+esc(x.row.team||'미등록')+'</td><td>'+esc(x.row.player||'미등록')+'</td><td>'+esc(contents(x))+'</td></tr>').join('')+'</tbody></table></div></section>';
 }
+function matchYoutubeButtonsHtml(match){
+  const urls=matchYoutubeUrls(match);if(!urls.length)return '';
+  return '<div class="match-youtube-actions" aria-label="경기 영상">'+urls.map((url,i)=>'<a class="match-youtube-link" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer" aria-label="유튜브 경기 영상'+(urls.length>1?' '+(i+1):'')+' 새 창에서 보기"><svg viewBox="0 0 24 18" aria-hidden="true"><rect x="1" y="1" width="22" height="16" rx="4" fill="currentColor"/><path d="m10 5 6 4-6 4z" fill="#cf233c"/></svg><span>유튜브 경기 영상 보기'+(urls.length>1?' '+(i+1):'')+'</span></a>').join('')+'</div>';
+}
 function matchDetailHtml(data){
   const m=data.match,round=recordMatchRoundNumber(m),ground=matchGround(m);
   const meta=[normDate(m.date),matchCompetition(m),halfLabel(matchHalfKey(m)),round?round+'R':'',m.round,m.no,ground?ground+'구장':''].filter(Boolean);
@@ -85,7 +89,7 @@ function matchDetailHtml(data){
     '<div class="detail-scoreboard">'+data.teams.map((t,i)=>
       (i===1?'<div class="detail-score"><b>'+num(m.hs)+' <span>:</span> '+num(m.as)+'</b>'+fixtureMomHtml(m)+'</div>':'')+
       '<div class="detail-score-team">'+fixtureLogoHtml(t.team)+'<strong>'+esc(teamDisplayName(t.team))+'</strong><span>'+detailResultLabel(t.result)+' · 승점 '+t.points+(t.group?' · '+esc(leagueGroupLabel(t.group)):'')+'</span></div>'
-    ).join('')+'</div>'+(forfeitText(m)?'<p class="detail-notice">'+esc(forfeitText(m))+' · 승패와 승점은 몰수패 판정을 적용합니다.</p>':'')+
+    ).join('')+'</div>'+matchYoutubeButtonsHtml(m)+(forfeitText(m)?'<p class="detail-notice">'+esc(forfeitText(m))+' · 승패와 승점은 몰수패 판정을 적용합니다.</p>':'')+
     '<div class="detail-team-columns">'+data.teams.map(t=>'<section class="detail-section"><h3>'+teamChip(t.team)+'</h3><p class="detail-note">감독: '+esc(t.coaches.join(', ')||'미등록')+' · 코치: '+esc(t.assistants.join(', ')||'미등록')+(t.squadDate?' · '+esc(t.squadDate)+' 스쿼드 기준':' · 해당 경기일 이전 팀스쿼드 없음')+'</p>'+detailMetricGrid([
       ['팀 득점',t.score],['도움',t.totals.a],['적용 팀파울',t.fouls],['개인파울 합계',t.totals.f],['선방',t.totals.sv],['MOM',t.totals.mom]
     ])+'<p class="detail-foul-note">팀파울 = 개인파울 + 추가 파울 · 추가 파울 '+t.rawFouls+'</p>'+detailPlayerTable(t)+(t.totals.ownGoal?'<p class="detail-note">자책골·베네핏 표기 '+t.totals.ownGoal+'골은 등록된 팀의 득점 기록에 포함됩니다.</p>':'')+

@@ -48,6 +48,9 @@ function verifiedRecords(){
  const index={};for(const f of fields.slice(1)){index[f]=new Map();for(const r of DB[f]||[]){const id=text(r.id);if(!index[f].has(id))index[f].set(id,[]);index[f].get(id).push(r);}}
  for(const group of groups.values()){
   const first={...group[0]},ids=new Set(group.map(m=>m.id)),reasons=[];
+  // Video metadata never changes fixture identity, statistics or conflict rules.
+  const videoLinks=group.flatMap(m=>[...(Array.isArray(m.youtubeUrls)?m.youtubeUrls:[]),m.youtubeUrl||'',m.youtubeLink||'']).filter(v=>typeof v==='string'&&v.trim());
+  if(videoLinks.length)first.youtubeUrls=[...new Set(videoLinks)];
   if([...ids].some(id=>!id||idKeys.get(id).size>1))reasons.push('경기 ID가 여러 대진에 연결됨');
   const aligned=group.map(m=>m.home===first.home?m:{...m,home:m.away,away:m.home,hs:m.as,as:m.hs,hf:m.af,af:m.hf,hExtraFouls:m.aExtraFouls,aExtraFouls:m.hExtraFouls,hPointDeduction:m.aPointDeduction,aPointDeduction:m.hPointDeduction,homeGroup:m.awayGroup,awayGroup:m.homeGroup,hAssistsRecorded:m.aAssistsRecorded,aAssistsRecorded:m.hAssistsRecorded});
   for(const key of ['hs','as','hf','af','hExtraFouls','aExtraFouls','hPointDeduction','aPointDeduction','homeGroup','awayGroup','half','hAssistsRecorded','aAssistsRecorded']){const values=aligned.map(m=>m[key]).filter(present);if(new Set(values.map(text)).size>1)reasons.push('경기 값 충돌: '+key);else if(values.length)first[key]=values[0];}
@@ -323,12 +326,12 @@ function parseCSV(text){
 const pick = (o,...keys) => { for(const k of keys){ for(const kk of Object.keys(o)){ if(kk.replace(/\s/g,"")===k) return o[kk]; } } return ""; };
 
 const SCHEMA = {
-  matches:{ name:"경기 기록지", head:"경기ID,날짜,대회,홈팀,원정팀,홈득점,원정득점,홈파울,원정파울",
+  matches:{ name:"경기 기록지", head:"경기ID,날짜,대회,홈팀,원정팀,홈득점,원정득점,홈파울,원정파울,유튜브 링크",
     sample:"M001,2026-03-07,정규리그,A특공대,풀파워,3,2,4,6\nM002,2026-03-07,정규리그,어우씨,D져스,1,1,3,3",
     map:o=>({ id:pick(o,"경기ID","ID","경기번호")||"", date:normDate(pick(o,"날짜","경기일","일자")),
       comp:pick(o,"대회","구분","리그")||"정규리그", home:pick(o,"홈팀","팀A","HOME"), away:pick(o,"원정팀","팀B","AWAY"),
       hs:num(pick(o,"홈득점","홈점수")), as:num(pick(o,"원정득점","원정점수")),
-      hf:num(pick(o,"홈파울")), af:num(pick(o,"원정파울")) }) },
+      hf:num(pick(o,"홈파울")), af:num(pick(o,"원정파울")), ...matchYoutubeMetadata(o) }) },
   attendance:{ name:"출석 기록", head:"경기ID,팀,선수,감독",
     sample:"M001,A특공대,김철수,박감독\nM001,풀파워,이영호,정감독",
     map:o=>({ id:pick(o,"경기ID","ID"), team:pick(o,"팀","소속팀"), player:pick(o,"선수","선수명","이름"), coach:pick(o,"감독","감독명") }) },
@@ -355,18 +358,18 @@ const SHEET_DESC = { matches:"날짜·대회·그룹·양 팀 득점·파울·�
 
 /* 통합 경기기록 시트 — 날짜별로 경기·출석·득점자를 한 줄씩 기록 */
 const MAXP = 15;
-function uniRow(date,comp,half,round,no,team,coach,opp,gf,ga,teamFoul,players,scorers,forfeit,group,assists,personalFouls,saves,mom,scorerCheck,pointDeduction=0){
+function uniRow(date,comp,half,round,no,team,coach,opp,gf,ga,teamFoul,players,scorers,forfeit,group,assists,personalFouls,saves,mom,scorerCheck,pointDeduction=0,youtubeLinks=''){
   const ps=players.slice(0,MAXP);
   /* 첨부 GGFC 통합 DB 양식과 동일한 열 순서 */
   return [date,comp,half,round,no,team,opp,gf,ga,teamFoul,pointDeduction||"",forfeit||"",scorers,assists||"",personalFouls||"",saves||"",mom||"",scorerCheck||""]
-    .concat(ps, Array(MAXP-ps.length).fill(""))
+    .concat(ps, Array(MAXP-ps.length).fill(""),[youtubeLinks])
     .map(v=>v==null?"":String(v));
 }
 const UNI = {
   name:"경기기록",
   head:"날짜,대회,반기,라운드,경기번호,팀,상대팀,득점,실점,추가 파울,승점삭감,몰수패,득점자,도움,개인파울,키퍼실점,MOM,득점자 열 검사,"+
-    Array.from({length:MAXP},(_,i)=>"선수"+(i+1)).join(","),
-  desc:"한 줄 = 한 경기의 한 팀. 첨부 GGFC DB 양식과 동일하게 추가 파울=개인에게 배정하지 않은 별도 팀파울, 도움·개인파울·MOM=선수별 기록입니다. 키퍼실점(P열)은 임일규-3(15) 또는 임일규3(15)처럼 이름·실점·키퍼 수행시간(분)을 적고 여러 선수는 쉼표로 구분합니다. 선방 횟수는 팀별 기록지의 선방 열에 기록합니다. 빈칸과 0은 구분합니다. 득점자·도움·개인파울·MOM은 '김철수 2, 최민수 1'처럼 이름과 횟수를 쉼표로 적습니다. 개인파울은 페어플레이 기록과 해당 경기·팀의 팀파울 합계에만 반영하며 능력치·FORM을 감점하지 않습니다. 도움 칸에 0을 입력하면 도움 없음이 확인된 경기로 구분하고 빈칸은 미기록으로 둡니다. 팀파울은 개인파울 합계 + 추가 파울입니다. 추가 파울은 개인 능력치를 감점하지 않습니다. K열 승점삭감에는 차감할 점수를 양수 정수로 입력합니다. 팀 누적승점과 해당 경기의 해당 팀 출석 선수 각각의 개인 누적승점에서 같은 점수를 한 번 차감합니다. 대진 점수·승무패·능력치에는 반영하지 않습니다. 구양식 파울수/파울은 기존 호환 규칙으로 읽으며 새 추가 파울 양식을 업로드하면 합산 규칙이 적용됩니다. MOM은 선수 능력치에 반영합니다. MOM은 수상 선수명을 입력하며 같은 선수가 한 Round에 여러 경기 MOM이면 횟수만큼 누적됩니다. 대회는 정규리그로 입력해도 경기일 기준 양 팀의 팀스쿼드 그룹으로 슈퍼리그·챌린지리그·인터리그를 자동 표시합니다. 경기기록의 반기 열은 호환용이며 경기일에 유효한 팀스쿼드의 반기·그룹을 사용합니다. 인터리그는 두 팀의 소속 그룹을 각각 유지합니다. 같은 경기의 두 행에는 같은 대회명을 입력하세요. 몰수패한 팀의 몰수패 칸에 '몰수패'를 입력하면 점수와 관계없이 패배로 판정되고 상대팀은 승리로 판정됩니다. 출석 선수를 선수1~15에 적습니다. 팀스쿼드의 반기는 상반기/하반기, 그룹은 A/슈퍼리그 또는 B/챌린지리그로 입력합니다. Rev.4는 라운드=1경기~6경기, 경기번호=1R-A·1R-B처럼 적습니다. 기존 라운드=R1, 경기번호=1A 형식도 지원합니다. 감독·코치 역시 팀스쿼드 기준입니다. 감독이 선수로 뛰었다면 선수 칸에도 이름을 적어야 출석으로 집계됩니다.",
+    Array.from({length:MAXP},(_,i)=>"선수"+(i+1)).join(",")+",유튜브 링크",
+  desc:"한 줄 = 한 경기의 한 팀. 첨부 GGFC DB 양식과 동일하게 추가 파울=개인에게 배정하지 않은 별도 팀파울, 도움·개인파울·MOM=선수별 기록입니다. 키퍼실점(P열)은 임일규-3(15) 또는 임일규3(15)처럼 이름·실점·키퍼 수행시간(분)을 적고 여러 선수는 쉼표로 구분합니다. 선방 횟수는 팀별 기록지의 선방 열에 기록합니다. 빈칸과 0은 구분합니다. 득점자·도움·개인파울·MOM은 '김철수 2, 최민수 1'처럼 이름과 횟수를 쉼표로 적습니다. 개인파울은 페어플레이 기록과 해당 경기·팀의 팀파울 합계에만 반영하며 능력치·FORM을 감점하지 않습니다. 도움 칸에 0을 입력하면 도움 없음이 확인된 경기로 구분하고 빈칸은 미기록으로 둡니다. 팀파울은 개인파울 합계 + 추가 파울입니다. 추가 파울은 개인 능력치를 감점하지 않습니다. K열 승점삭감에는 차감할 점수를 양수 정수로 입력합니다. 팀 누적승점과 해당 경기의 해당 팀 출석 선수 각각의 개인 누적승점에서 같은 점수를 한 번 차감합니다. 대진 점수·승무패·능력치에는 반영하지 않습니다. 구양식 파울수/파울은 기존 호환 규칙으로 읽으며 새 추가 파울 양식을 업로드하면 합산 규칙이 적용됩니다. MOM은 선수 능력치에 반영합니다. MOM은 수상 선수명을 입력하며 같은 선수가 한 Round에 여러 경기 MOM이면 횟수만큼 누적됩니다. 대회는 정규리그로 입력해도 경기일 기준 양 팀의 팀스쿼드 그룹으로 슈퍼리그·챌린지리그·인터리그를 자동 표시합니다. 경기기록의 반기 열은 호환용이며 경기일에 유효한 팀스쿼드의 반기·그룹을 사용합니다. 인터리그는 두 팀의 소속 그룹을 각각 유지합니다. 같은 경기의 두 행에는 같은 대회명을 입력하세요. 몰수패한 팀의 몰수패 칸에 '몰수패'를 입력하면 점수와 관계없이 패배로 판정되고 상대팀은 승리로 판정됩니다. 출석 선수를 선수1~15에 적습니다. 팀스쿼드의 반기는 상반기/하반기, 그룹은 A/슈퍼리그 또는 B/챌린지리그로 입력합니다. Rev.4는 라운드=1경기~6경기, 경기번호=1R-A·1R-B처럼 적습니다. 기존 라운드=R1, 경기번호=1A 형식도 지원합니다. 감독·코치 역시 팀스쿼드 기준입니다. 감독이 선수로 뛰었다면 선수 칸에도 이름을 적어야 출석으로 집계됩니다. 유튜브 링크 열에는 해당 경기의 영상 주소를 입력합니다. 한쪽 팀 행에만 입력해도 경기 상세에 연결하며, 같은 경기의 서로 다른 주소는 함께 표시합니다. 링크 열은 위치와 관계없이 이름으로 인식합니다.",
   rows:[
     uniRow("2026-03-07","슈퍼리그","상반기","R1","1A","A특공대","박감독","풀파워",3,2,4,["김철수","최민수","이준호","박도윤","장민석"],"김철수 2, 최민수 1","","A","최민수 1","김철수 1","박도윤2(15)","김철수",""),
     uniRow("2026-03-07","슈퍼리그","상반기","R1","1A","풀파워","정감독","A특공대",2,3,6,["이영호","한지훈","권태현","오세훈"],"이영호 2","","A","한지훈 1","이영호 2","오세훈3(15)","",""),
@@ -524,6 +527,30 @@ function dateStyleSet(stylesDoc){
   });
   return set;
 }
+function isMatchYoutubeHeader(value){
+  const key=String(value||'').normalize('NFKC').replace(/[\s()_\-]/g,'').toLowerCase();
+  return /^(?:(?:유튜브|유투브|youtube)(?:영상)?(?:링크|주소|url|link)?|경기영상(?:링크|주소|url)?)$/.test(key);
+}
+function normalizeMatchYoutubeUrl(value){
+  let raw=String(value??'').trim();if(!raw)return '';
+  const formula=photoFormulaArgument(raw);if(formula?.url!==null&&formula?.url!==undefined)raw=formula.url.trim();
+  if(/^(?:(?:www\.|m\.|music\.)?youtube\.com|youtu\.be)\//i.test(raw))raw='https://'+raw;
+  try{
+    const u=new URL(raw),hosts=new Set(['youtube.com','www.youtube.com','m.youtube.com','music.youtube.com','youtu.be','youtube-nocookie.com','www.youtube-nocookie.com']);
+    if(!['http:','https:'].includes(u.protocol)||!hosts.has(u.hostname)||u.username||u.password||(u.port&&u.port!=='443'))return '';
+    const parts=u.pathname.split('/').filter(Boolean),id=u.hostname==='youtu.be'?parts[0]:u.pathname==='/watch'?u.searchParams.get('v'):['shorts','live','embed'].includes(parts[0])?parts[1]:'';
+    if(!id||!/^[-_A-Za-z0-9]+$/.test(id))return '';
+    u.protocol='https:';return u.href;
+  }catch(e){return '';}
+}
+function matchYoutubeUrls(match){
+  const raw=[match?.youtubeUrls,match?.youtubeUrl,match?.youtubeLink].flat().filter(v=>typeof v==='string');
+  return [...new Set(raw.flatMap(v=>v.split(/\r?\n/)).map(normalizeMatchYoutubeUrl).filter(Boolean))];
+}
+function matchYoutubeMetadata(row){
+  const raw=Object.entries(row||{}).filter(([key])=>isMatchYoutubeHeader(key)).map(([,v])=>String(v??''));
+  const urls=matchYoutubeUrls({youtubeUrls:raw});return urls.length?{youtubeUrls:urls}:{};
+}
 function isPlayerPhotoHeader(value){
   const key=String(value||'').normalize('NFKC').replace(/[\s()_\-]/g,'').toLowerCase();
   return /^(?:(?:선수)?사진|프로필(?:사진)?|이미지|photo|image|profilephoto)(?:url|링크|주소|link)?$/.test(key);
@@ -578,7 +605,7 @@ function sheetRows(doc, shared, dateStyles, hyperlinks={}){
     rows.push(arr);
   });
   const headerIndex=workbookHeaderRowIndex(rows),header=rows[headerIndex]||[];
-  const photoColumns=new Set(header.map((v,i)=>isAnyPlayerPhotoHeader(v)?i:-1));
+  const photoColumns=new Set(header.map((v,i)=>isAnyPlayerPhotoHeader(v)||isMatchYoutubeHeader(v)?i:-1));
   const resolve=(cell,seen=new Set())=>{
     if(!cell||seen.has(cell)||seen.size>=8)return '';
     if(cell.href)return cell.href;
@@ -938,6 +965,8 @@ function applyUnified(objs){
         home:team, away:opp, hs:gf, as:ga, hf:foul, af:0, homeGroup:groupV, awayGroup:"" };
       idx[altKey]=m; M.push(m);
     }
+    const video=matchYoutubeMetadata(o).youtubeUrls||[];
+    if(video.length)m.youtubeUrls=[...new Set([...matchYoutubeUrls(m),...video])];
     if(extraFoul!==null)m[m.home===team?'hExtraFouls':'aExtraFouls']=extraFoul;
     m[m.home===team?'hPointDeduction':'aPointDeduction']=pointDeduction;
     const assistRaw=String(g("어시스트","도움","도움선수")??'').trim();
@@ -6540,7 +6569,7 @@ function buildRecordXlsx(){
       const sv = verifiedKeeperEntries().filter(g=>g.id===m.id && g.team===t).map(g=>g.text).join(", ");
       const mom = (verifiedRecords().moms||[]).filter(g=>g.id===m.id && g.team===t && num(g.mom)>0)
         .map(g=>g.player+(num(g.mom)>1?" "+num(g.mom):"")).join(", ");
-      mrows.push(uniRow(m.date, m.comp, halfLabel(matchHalfKey(m)), m.round||"", m.no||"", t, coach, o, gf, ga, f, att.map(a=>a.player), sc, isForfeitTeam(m,t)?"몰수패":"", matchTeamGroup(m,t), ac||(m[t===m.home?'hAssistsRecorded':'aAssistsRecorded']===true?'0':''), pf, sv, mom, "", matchPointDeduction(m,t)));
+      mrows.push(uniRow(m.date, m.comp, halfLabel(matchHalfKey(m)), m.round||"", m.no||"", t, coach, o, gf, ga, f, att.map(a=>a.player), sc, isForfeitTeam(m,t)?"몰수패":"", matchTeamGroup(m,t), ac||(m[t===m.home?'hAssistsRecorded':'aAssistsRecorded']===true?'0':''), pf, sv, mom, "", matchPointDeduction(m,t),matchYoutubeUrls(m).join("\n")));
     });
   });
   const registered=draftPlayerNameSet();
@@ -7000,7 +7029,7 @@ function renderActiveView(v,options={}){
   mobilePageSwipe?.rendered(next);
 }
 // Analysis assets are requested only by an administrator opening this menu.
-const ABILITY_AUDIT_ASSETS={ui:'assets/ggfc-ability-audit.js?v=22be1871bfb48da7',css:'assets/ggfc-ability-audit.css?v=19c81455534472fa',worker:'assets/ggfc-ability-audit-worker.js?v=bdc0edc6f8f533c2'};
+const ABILITY_AUDIT_ASSETS={ui:'assets/ggfc-ability-audit.js?v=22be1871bfb48da7',css:'assets/ggfc-ability-audit.css?v=19c81455534472fa',worker:'assets/ggfc-ability-audit-worker.js?v=68e36192f845788d'};
 let abilityAuditLoader=null;
 function renderAbilityAudit(){
  const root=document.getElementById('abilityAuditRoot');
