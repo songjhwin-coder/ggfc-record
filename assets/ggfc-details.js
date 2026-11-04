@@ -78,9 +78,28 @@ function detailUnassignedHtml(items){
   const contents=({kind,row:r})=>kind==='attendance'?'출석':kind==='goals'?'득점 '+num(r.g)+' · 도움 '+num(r.a):kind==='fouls'?'개인파울 '+num(r.fouls):kind==='saves'?'선방 '+num(r.saves):'MOM '+num(r.mom);
   return '<section class="detail-section"><h3>소속팀·선수 확인이 필요한 기록</h3><p class="detail-note">아래 기록은 팀이나 선수를 확정할 수 없어 선수별 표에 포함하지 않았습니다.</p><div class="detail-table-wrap"><table class="detail-table"><thead><tr><th>구분</th><th>등록팀</th><th>선수</th><th>기록</th></tr></thead><tbody>'+items.map(x=>'<tr><td>'+esc(x.label)+'</td><td>'+esc(x.row.team||'미등록')+'</td><td>'+esc(x.row.player||'미등록')+'</td><td>'+esc(contents(x))+'</td></tr>').join('')+'</tbody></table></div></section>';
 }
+function matchYoutubeEmbedUrl(value){
+  const safe=normalizeMatchYoutubeUrl(value);if(!safe)return '';
+  const u=new URL(safe),parts=u.pathname.split('/').filter(Boolean);
+  const id=u.hostname==='youtu.be'?parts[0]:u.pathname==='/watch'?u.searchParams.get('v'):parts[1];
+  if(!/^[-_A-Za-z0-9]{11}$/.test(id||''))return '';
+  const embed=new URL('https://www.youtube-nocookie.com/embed/'+id);
+  embed.searchParams.set('playsinline','1');embed.searchParams.set('autoplay','0');
+  const raw=u.searchParams.get('start')||u.searchParams.get('t')||new URLSearchParams(u.hash.slice(1)).get('t')||'';
+  const time=raw.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/i);
+  const seconds=/^\d+$/.test(raw)?Number(raw):time?Number(time[1]||0)*3600+Number(time[2]||0)*60+Number(time[3]||0):0;
+  if(Number.isSafeInteger(seconds)&&seconds>0)embed.searchParams.set('start',String(seconds));
+  return embed.href;
+}
 function matchYoutubeButtonsHtml(match){
   const urls=matchYoutubeUrls(match);if(!urls.length)return '';
-  return '<div class="match-youtube-actions" aria-label="경기 영상">'+urls.map((url,i)=>'<a class="match-youtube-link" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer" aria-label="유튜브 경기 영상'+(urls.length>1?' '+(i+1):'')+' 새 창에서 보기"><svg viewBox="0 0 24 18" aria-hidden="true"><rect x="1" y="1" width="22" height="16" rx="4" fill="currentColor"/><path d="m10 5 6 4-6 4z" fill="#cf233c"/></svg><span>유튜브 경기 영상 보기'+(urls.length>1?' '+(i+1):'')+'</span></a>').join('')+'</div>';
+  return '<section class="match-youtube-videos" aria-label="경기 영상">'+urls.map((url,i)=>{
+    const embed=matchYoutubeEmbedUrl(url),number=urls.length>1?' '+(i+1):'';
+    return '<div class="match-youtube-card">'+(embed?'<div class="match-youtube-player"><iframe class="match-youtube-frame" src="'+esc(embed)+'" title="유튜브 경기 영상'+number+'" width="800" height="450" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; picture-in-picture; fullscreen; web-share" allowfullscreen></iframe></div>':'')+'<div class="match-youtube-actions"><a class="match-youtube-link" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer" aria-label="유튜브 경기 영상'+number+' 새 창에서 보기"><svg viewBox="0 0 24 18" aria-hidden="true"><rect x="1" y="1" width="22" height="16" rx="4" fill="currentColor"/><path d="m10 5 6 4-6 4z" fill="#cf233c"/></svg><span>유튜브에서 보기'+number+'</span></a></div></div>';
+  }).join('')+'<p class="match-youtube-help">영상이 재생되지 않으면 ‘유튜브에서 보기’를 눌러주세요.</p></section>';
+}
+function stopMatchYoutubePlayers(){
+  document.querySelectorAll('#ggfcDetailBody .match-youtube-frame').forEach(frame=>frame.remove());
 }
 function matchDetailHtml(data){
   const m=data.match,round=recordMatchRoundNumber(m),ground=matchGround(m);
@@ -125,6 +144,7 @@ function showGGFCDetail(kind,title,html,trigger){
   }
 }
 function finishGGFCDetailClose(){
+  stopMatchYoutubePlayers();
   clearTimeout(ggfcDetailCloseTimer);ggfcDetailCloseTimer=0;
   const dialog=document.querySelector('#ggfcDetailDialog');
   dialog.classList.remove('detail-entering','detail-leaving');
@@ -134,6 +154,7 @@ function finishGGFCDetailClose(){
 function closeGGFCDetail(){
   const dialog=document.querySelector('#ggfcDetailDialog');
   if(!dialog.open||dialog.classList.contains('detail-leaving'))return;
+  stopMatchYoutubePlayers();
   if(!detailMotionEnabled()){finishGGFCDetailClose();return;}
   dialog.classList.remove('detail-entering');dialog.classList.add('detail-leaving');
   // animationend 미발생 시에도 닫기와 스크롤 복원이 완료되도록 한다.
@@ -342,6 +363,7 @@ ggfcDetailDialog.addEventListener('click',e=>{
   if(e.clientX<bounds.left||e.clientX>bounds.right||e.clientY<bounds.top||e.clientY>bounds.bottom)closeGGFCDetail();
 });
 function restoreGGFCDetailState(){
+  stopMatchYoutubePlayers();
   clearTimeout(ggfcDetailCloseTimer);ggfcDetailCloseTimer=0;
   ggfcDetailDialog.classList.remove('detail-entering','detail-leaving');
   document.querySelector('#ggfcDetailBody').classList.remove('detail-refreshing');
