@@ -3902,3 +3902,42 @@ body:not(.admin-mode) #v-interleague :is(.note,.head>p){display:none!important}
 .atr-ability-meta .pc-form-badge{max-width:100%;overflow-wrap:anywhere;text-align:center}
 #playerCardMask .player-card-dialog:focus{outline:none}
 @media(max-width:620px){.atr-ability-meta{padding:8px 4px;font-size:10px}}
+
+/* V3.25.74: horizontal community icons, menu pictograms and flexible rating cards. */
+.sidebar-community-links{display:flex;flex-wrap:nowrap;align-items:flex-start;justify-content:center;gap:14px;margin:20px 0 12px}
+.sidebar-community-links .sidebar-community-link{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:8px;width:72px;flex:0 0 72px;min-height:88px;padding:0;border:0;background:transparent;color:#e3edf6;box-shadow:none;text-decoration:none}
+.sidebar-community-links .community-disc{display:grid;place-items:center;width:64px;height:64px;border-radius:50%;overflow:hidden;box-shadow:0 3px 12px #0002}
+.community-youtube{background:#f00}.community-cafe{background:#f3fcf7}
+.sidebar-community-links .community-disc svg{width:36px;height:28px}
+.community-disc img{display:block;width:100%;height:100%;object-fit:cover}
+.sidebar-community-links .community-label{font-size:11px;font-weight:700;line-height:1.4;text-align:center}
+.sidebar-community-links .sidebar-community-link:hover{color:#fff;background:transparent}
+.sidebar-community-links .sidebar-community-link:focus-visible{outline:2px solid #adc9e5;outline-offset:4px;border-radius:9px}
+.ggfc-sidebar nav.tabs button{gap:11px}
+.sidebar-menu-icon{width:21px;height:21px;flex:0 0 21px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+.ggfc-sidebar nav.tabs button>span:last-child{min-width:0;flex:1;overflow-wrap:anywhere}
+.ability-top-player .atr-rank{width:32px;height:30px;border-radius:5px;background:linear-gradient(135deg,#0a213d,#1d3b5b);border:1px solid #334e6c;box-shadow:0 2px 5px #102b4418;color:#fff}
+#playerCardMask :is(#playerCardDataPanel,.player-card-career-panel,.player-card-history){border-radius:14px;background-clip:padding-box}
+.ggfc-mobile #v-ability :is(.ability-half-sections,.ability-half-section,.member-cards,.member-card){min-width:0;max-width:100%}
+.ggfc-mobile #v-ability .member-cards{grid-template-columns:minmax(0,1fr);width:100%}
+.ggfc-mobile #v-ability .member-card{width:100%;overflow-wrap:anywhere}
+.ggfc-mobile #v-ability .member-card header{flex-wrap:wrap;align-items:flex-start;gap:10px}
+.ggfc-mobile #v-ability .member-card header>div:first-child{flex:1 1 130px;min-width:0}
+.ggfc-mobile #v-ability .member-ovr{flex:0 0 auto;max-width:100%}
+.ggfc-mobile #v-ability :is(.member-card-foot,.lf-badge,.ability-sort-status){min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.ggfc-mobile #v-ability .ability-sort-toolbar>*{min-width:0;max-width:100%}
+.ggfc-mobile #v-ability .member-metrics{min-width:0;width:100%;grid-template-columns:repeat(3,minmax(0,1fr))}
+.ggfc-mobile #v-ability .member-metrics>div{min-width:0}
+.ggfc-mobile #v-ability .member-metrics dd{font-size:clamp(16px,5.5vw,21px)}
+.ggfc-mobile #v-ability .ability-score-wrap{max-width:100%;flex-wrap:wrap;justify-content:center}
+/* Player Stats flows with the page. Only its column heading is mirrored while scrolling. */
+#playerTable{height:auto;max-height:none;overflow-x:auto;overflow-y:hidden;scrollbar-gutter:auto;isolation:auto}
+#playerTable thead th{position:static!important}
+#playerTable thead th:first-child{position:sticky!important;top:auto;left:0;z-index:7}
+.player-table-sticky-head{position:fixed;z-index:19;overflow:hidden;pointer-events:none;background:#edf2f8;box-shadow:0 2px 5px #132b4524}
+.player-table-sticky-head[hidden]{display:none!important}
+.player-table-head-copy{border-collapse:separate;border-spacing:0;table-layout:fixed;margin:0;transform-origin:top left}
+.player-table-head-copy th{position:static!important;background:#edf2f8!important;color:#173b61!important;box-shadow:0 1px 0 #c9d6e5}
+.player-table-head-copy th:first-child{position:relative!important;z-index:2}
+@media(max-width:620px){.ability-top-player .atr-rank{width:28px;height:26px;border-radius:4px}}
+@media print{.player-table-sticky-head{display:none!important}#playerTable{overflow:visible;max-height:none}}
