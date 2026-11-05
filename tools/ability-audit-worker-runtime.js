@@ -82,9 +82,9 @@ function auditRun(player,cutoff){
 self.onmessage=e=>{
  try{
   const m=e.data;
-  if(m.type==='init'){DB={settings:{}};auditEvents=[];auditDays=[];auditReport=null;auditCurrent=null;return;}
-  if(m.type==='value'){const root=m.settings?DB.settings:DB;root[m.key]=m.value;return;}
-  if(m.type==='rows'){const root=m.settings?DB.settings:DB;(root[m.key]||=([])).push(...m.rows);return;}
+  if(m.type==='init'){DB={settings:{}};liveCounterTeamPlayerRecords=[];auditEvents=[];auditDays=[];auditReport=null;auditCurrent=null;return;}
+  if(m.type==='value'){if(m.key==='liveCounterTeamPlayerRecords'){liveCounterTeamPlayerRecords=m.value;return;}const root=m.settings?DB.settings:DB;root[m.key]=m.value;return;}
+  if(m.type==='rows'){if(m.key==='liveCounterTeamPlayerRecords'){liveCounterTeamPlayerRecords.push(...m.rows);return;}const root=m.settings?DB.settings:DB;(root[m.key]||=([])).push(...m.rows);return;}
   if(m.type==='run'){
    auditEvents=[];auditDays=[];const start=performance.now();auditReport=auditRun(m.player,m.cutoff);
    const {events,result,issues,teamIssues,...meta}=auditReport;

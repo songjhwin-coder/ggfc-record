@@ -1,4 +1,4 @@
-/* Generated from current core + SLUMP; source SHA256 abdc7dfc6f7f281647e44d39bd3c55c28c8ca88a737792529ea7362a6b225f9c */
+/* Generated from current core + SLUMP; source SHA256 c8d29935e2e283df6bf9fc0a8d664adc3d17c21b1d0faa61562b0882a45f0f0a */
 const GGFCSlump=(()=>{
  const defaults={enabled:true,startDate:'2026-10-20',recentGames:10,baselineGames:20,minimumBaselineGames:10,formTrigger:-2,performanceTrigger:75,persistenceRounds:4,interval:4,recoveryPerformance:85,recoveryRounds:3,slumpDrop:.20,severeDrop:.35,criticalDrop:.50,seasonCap:1.5,storyEnabled:false};
  Object.assign(defaults,{recoveryStartDate:'2026-10-27',recoveryPercent:25,severePerformance:70,criticalPerformance:60});
@@ -321,7 +321,15 @@ function matchSquadHalf(m){
 }
 function teamRecordTeamKey(value){return String(value||'').normalize('NFKC').replace(/\s/g,'').toUpperCase();}
 const APP_TEAM_RECORD_FIELDS=['sot','keyPass','defSuccess','saves'];
+let liveCounterTeamPlayerRecords=[];
 function teamRecordValuePresent(value){return (typeof value==='number'||typeof value==='string')&&String(value).trim()!==''&&Number.isFinite(Number(value))&&Number.isInteger(Number(value))&&Number(value)>=0;}
+function matchCounterGoalkeeperSource(m,team,player){
+  const designated=new Set();
+  verifiedKeeperEntries().filter(k=>String(k.id)===String(m.id)&&k.team===team&&normDate(k.date)===normDate(m.date)&&String(k.no)===String(m.no)&&String(k.round)===String(m.round)).forEach(k=>{const parsed=parseKeeperCell(k.text);if(!parsed.issues.length)parsed.rows.forEach(p=>designated.add(normalizePlayerMatchKey(p.player)));});
+  if(designated.size)return designated.has(normalizePlayerMatchKey(player))?'MATCH':'';
+  const pos=String(selectPlayerRoster(player,normDate(m.date).slice(0,4))?.pos||'').normalize('NFKC').trim().toUpperCase();
+  return normalizeAbilityPosition(pos)==='GR'||pos==='골키퍼'||pos==='GOALKEEPER'?'ROSTER':'';
+}
 function appTeamRecordKey(m,team,player){return JSON.stringify([verifiedFixtureKey(m),teamRecordTeamKey(team),normalizePlayerMatchKey(player)]);}
 function appTeamRecordBlocked(row,m,team,player){
   return row.date===normDate(m.date)&&String(row.no||'').trim()===String(m.no||'').trim()&&String(row.round||'').trim()===String(m.round||'').trim()&&normalizePlayerMatchKey(row.player)===normalizePlayerMatchKey(player)&&(!row.team||teamRecordTeamKey(row.team)===teamRecordTeamKey(team))&&(isLeagueFamilyComp(row.comp)?isLeagueFamilyComp(m.comp):compCompact(row.comp)===compCompact(m.comp));
@@ -365,9 +373,43 @@ function mergeAppTeamPlayerRecords(result){
   }
   return {...result,matched,issues};
 }
+function mergeLiveCounterTeamPlayerRecords(result){
+  if(!Array.isArray(liveCounterTeamPlayerRecords)||!liveCounterTeamPlayerRecords.length)return result;
+  const matched=result.matched.slice(),issues=result.issues.slice(),fixtures=new Map(),canon=soccerBeeCanonicalPlayerMap();
+  const appearance=(id,team,player)=>JSON.stringify([String(id),teamRecordTeamKey(team),normalizePlayerMatchKey(player)]);
+  const attendees=new Set(verifiedRecords().attendance.map(r=>appearance(r.id,r.team,r.player)));
+  const saves=new Set(verifiedRecords().saves.filter(r=>teamRecordValuePresent(r.saves)).map(r=>appearance(r.id,r.team,r.player)));
+  const positions=new Map(matched.map((r,i)=>[appearance(r.id,r.team,r.player),i])),seen=new Set();
+  for(const m of verifiedRecords().matches){const key=verifiedFixtureKey(m);if(!fixtures.has(key))fixtures.set(key,[]);fixtures.get(key).push(m);}
+  const repeated=new Set(),keys=new Set();for(const r of liveCounterTeamPlayerRecords||[]){if(!r)continue;const key=JSON.stringify([r.fixtureKey,teamRecordTeamKey(r.team),normalizePlayerMatchKey(r.player)]);if(keys.has(key))repeated.add(key);keys.add(key);}
+  for(const raw of liveCounterTeamPlayerRecords){
+    if(!raw||typeof raw!=='object')continue;
+    const key=JSON.stringify([raw.fixtureKey,teamRecordTeamKey(raw.team),normalizePlayerMatchKey(raw.player)]),candidates=fixtures.get(raw.fixtureKey)||[],m=candidates.length===1?candidates[0]:null;
+    const player=canon[normalizePlayerMatchKey(raw.player)],teams=m?[m.home,m.away].filter(t=>teamRecordTeamKey(t)===teamRecordTeamKey(raw.team)):[],team=teams.length===1?teams[0]:'';
+    const fail=reason=>issues.push({...raw,source:'COUNTER',reason});
+    if(repeated.has(key)){if(!seen.has(key))fail('공유 카운트 중복을 확인하세요');seen.add(key);continue;}
+    if(!m||!team||!player||isOwnGoalPlayer(player)||!attendees.has(appearance(m.id,team,player))||!playerEligibleOn(player,m.date)){fail('공유 카운트의 경기·출전 명단을 확인하세요');continue;}
+    if(result.issues.some(r=>r.source!=='COUNTER'&&appTeamRecordBlocked(r,m,team,player))){fail('원본 기록 충돌을 먼저 확인하세요');continue;}
+    const index=positions.get(appearance(m.id,team,player))??-1;
+    const current=index>=0?matched[index]:{date:normDate(m.date),comp:m.comp,half:matchHalfKey(m),round:m.round,no:m.no,inputTeam:team,team,player,id:m.id,attendanceConfirmed:true,sot:null,keyPass:null,defSuccess:null,saves:null};
+    const sharedValues=Object.fromEntries(APP_TEAM_RECORD_FIELDS.map(k=>[k,teamRecordValuePresent(current[k])?Number(current[k]):null])),row={...current,sharedValues,counterFields:[]};
+    for(const k of APP_TEAM_RECORD_FIELDS){
+      if(!Object.prototype.hasOwnProperty.call(raw.values||{},k))continue;
+      const value=raw.values[k],base=raw.baseValues?.[k];
+      if(typeof value!=='number'||!Number.isSafeInteger(value)||value<0){fail('공유 카운트 값을 확인하세요');continue;}
+      if(k==='saves'&&(!matchCounterGoalkeeperSource(m,team,player)||saves.has(appearance(m.id,team,player))))continue;
+      if(teamRecordValuePresent(current[k])&&!(current.appFields||[]).includes(k))continue;
+      if((teamRecordValuePresent(base)?Number(base):null)!==sharedValues[k]){fail('저장 후 DB 값이 변경된 공유 항목은 반영하지 않습니다');continue;}
+      row[k]=value;row.counterFields.push(k);
+    }
+    if(!row.counterFields.length)continue;
+    if(index>=0)matched[index]=row;else{positions.set(appearance(m.id,team,player),matched.length);matched.push(row);}
+  }
+  return {...result,matched,issues};
+}
 let teamPlayerRecordCache=null;
 function teamPlayerRecordLinks(){
-  const raw=DB.settings?.teamPlayerRecords||[],refs=[raw,verifiedRecords().matches,verifiedRecords().attendance,DB.roster,DB.settings?.teamSquads,DB.settings?.appTeamPlayerRecords];
+  const raw=DB.settings?.teamPlayerRecords||[],refs=[raw,verifiedRecords().matches,verifiedRecords().attendance,DB.roster,DB.settings?.teamSquads,DB.settings?.appTeamPlayerRecords,liveCounterTeamPlayerRecords];
   if(teamPlayerRecordCache&&refs.every((x,i)=>teamPlayerRecordCache.refs[i]===x)&&teamPlayerRecordCache.size===raw.length)return teamPlayerRecordCache;
   const canon=soccerBeeCanonicalPlayerMap(),matched=[],issues=[];
   const clean=v=>String(v||'').normalize('NFKC').replace(/\s/g,'').toUpperCase();
@@ -403,7 +445,7 @@ function teamPlayerRecordLinks(){
     if(rows.some(r=>values(r)!==values(rows[0])))rows.forEach(r=>issues.push({...r,reason:'동일 경기·팀·선수 기록의 값이 충돌합니다'}));
     else unique.push(rows[0]);
   }
-  return teamPlayerRecordCache=mergeAppTeamPlayerRecords({refs,size:raw.length,matched:unique,issues});
+  return teamPlayerRecordCache=mergeLiveCounterTeamPlayerRecords(mergeAppTeamPlayerRecords({refs,size:raw.length,matched:unique,issues}));
 }
 function playerSaveRows(){
   const saveKey=r=>JSON.stringify([String(r.id),r.team,normalizePlayerMatchKey(r.player)]),extra=teamPlayerRecordLinks().matched.filter(r=>r.saves!==null&&r.saves!==undefined),keys=new Set(extra.map(saveKey));
@@ -1864,9 +1906,9 @@ function auditRun(player,cutoff){
 self.onmessage=e=>{
  try{
   const m=e.data;
-  if(m.type==='init'){DB={settings:{}};auditEvents=[];auditDays=[];auditReport=null;auditCurrent=null;return;}
-  if(m.type==='value'){const root=m.settings?DB.settings:DB;root[m.key]=m.value;return;}
-  if(m.type==='rows'){const root=m.settings?DB.settings:DB;(root[m.key]||=([])).push(...m.rows);return;}
+  if(m.type==='init'){DB={settings:{}};liveCounterTeamPlayerRecords=[];auditEvents=[];auditDays=[];auditReport=null;auditCurrent=null;return;}
+  if(m.type==='value'){if(m.key==='liveCounterTeamPlayerRecords'){liveCounterTeamPlayerRecords=m.value;return;}const root=m.settings?DB.settings:DB;root[m.key]=m.value;return;}
+  if(m.type==='rows'){if(m.key==='liveCounterTeamPlayerRecords'){liveCounterTeamPlayerRecords.push(...m.rows);return;}const root=m.settings?DB.settings:DB;(root[m.key]||=([])).push(...m.rows);return;}
   if(m.type==='run'){
    auditEvents=[];auditDays=[];const start=performance.now();auditReport=auditRun(m.player,m.cutoff);
    const {events,result,issues,teamIssues,...meta}=auditReport;

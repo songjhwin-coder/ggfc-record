@@ -33,8 +33,8 @@ window.GGFCAbilityAudit=(()=>{
   if(!names.includes(player)){message('검색 결과에서 등록된 선수 이름을 정확히 선택해 주세요.');return;}
   if(typeof Worker==='undefined'){message('이 브라우저에서는 분리 분석을 지원하지 않습니다. 화면 지연을 피하기 위해 분석을 실행하지 않았습니다. 최신 Chrome 또는 Safari에서 이용해 주세요.');return;}
   stop();const run=token;report=null;page=0;root.querySelector('[data-result]').innerHTML='';root.querySelector('[data-run]').disabled=true;root.querySelector('[data-cancel]').hidden=false;root.querySelector('#aaSuggestions').innerHTML='';message('기록을 준비하고 있습니다…');
-  const began=performance.now(),sourceDB=DB;
-  const valid=()=>run===token&&allowed()&&sourceDB===DB;
+  const began=performance.now(),sourceDB=DB,sourceCounters=liveCounterTeamPlayerRecords;
+  const valid=()=>run===token&&allowed()&&sourceDB===DB&&sourceCounters===liveCounterTeamPlayerRecords;
   try{
    worker=new Worker(assets.worker,{name:'GGFC single-player ability audit'});
    const w=worker;
@@ -56,6 +56,7 @@ window.GGFCAbilityAudit=(()=>{
    // Only calculation data. Photos/logo bytes and UI settings never enter the worker.
    // Small batches yield between transfers, so touch/paint can continue.
    const items=['matches','attendance','goals','saves','fouls','moms','roster','soccerbee','specials'].map(key=>({key,value:sourceDB[key]||[],settings:false}));
+   items.push({key:'liveCounterTeamPlayerRecords',value:sourceCounters,settings:false});
    for(const key of ['ability','seasons','teamSquads','teamPlayerRecords','appTeamPlayerRecords','goalkeeperEntries'])items.push({key,value:sourceDB.settings?.[key]??(key==='ability'||key==='seasons'?{}:[]),settings:true});
    for(const item of items){
     if(!valid())return;

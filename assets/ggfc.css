@@ -4017,3 +4017,20 @@ body:not(.admin-mode) #v-interleague :is(.note,.head>p){display:none!important}
 .match-record-row-actions{flex-wrap:wrap}
 .match-record-row-actions button{padding:5px 5px;white-space:nowrap}
 .match-record-status{white-space:pre-line}
+
+/* V3.25.80: match the live mobile standings to neighboring Overview cards. */
+.ggfc-mobile #v-dash #exportTeamStandingSection .record-period-head .sec-t{font-size:16px;line-height:1.4}
+.ggfc-mobile #v-dash #exportTeamStandingSection .record-period-label{font-size:11px;line-height:1.5}
+.ggfc-mobile #v-dash #exportTeamStandingSection .record-round-range{font-size:11px}
+.ggfc-mobile #v-dash #exportTeamStandingSection .team-league-standing{min-width:720px}
+.ggfc-mobile #v-dash #exportTeamStandingSection .team-league-standing thead th{font-size:12px;padding:9px 6px}
+.ggfc-mobile #v-dash #exportTeamStandingSection .team-league-standing tbody td,.ggfc-mobile #v-dash #exportTeamStandingSection .team-league-standing tbody td.num{font-size:13px;line-height:1.45;padding:9px 6px}
+.ggfc-mobile #v-dash #exportTeamStandingSection .team-league-standing .team-chip{font-size:14px;gap:6px;font-weight:800}
+.ggfc-mobile #v-dash #exportTeamStandingSection .team-league-standing .team-logo-sm{width:32px;height:32px}
+.ggfc-mobile #v-dash #exportTeamStandingSection .team-league-standing th:first-child,.ggfc-mobile #v-dash #exportTeamStandingSection .team-league-standing .league-standing-cell{width:64px;min-width:64px}
+.ggfc-mobile #v-dash #exportTeamStandingSection .team-league-standing .league-standing-cell{padding:10px 6px!important}
+.ggfc-mobile #v-dash #exportTeamStandingSection .league-standing-emblem img,.ggfc-mobile #v-dash #exportTeamStandingSection .league-standing-fallback{width:48px;height:48px}
+.ggfc-mobile #v-dash #exportTeamStandingSection .league-standing-fallback{font-size:11px;padding:4px}
+.ggfc-mobile #v-dash #exportTeamStandingSection .league-standing-rank{width:24px;height:24px;font-size:13px}
+.ggfc-mobile #v-dash #exportTeamStandingSection .overview-leader .league-standing-rank{min-width:38px;height:24px;gap:3px}
+.ggfc-mobile #v-dash #exportTeamStandingSection .overview-rank-medal{width:18px;height:22px}

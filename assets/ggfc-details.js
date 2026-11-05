@@ -50,14 +50,10 @@ function matchDetailData(m){
       if(kind==='saves'){row.sv+=num(r.saves);if(teamRecordValuePresent(r.saves))row.saveRecorded=true;}
       if(kind==='moms')row.mom+=num(r.mom);
     }));
-    teamPlayerRecordLinks().matched.filter(r=>r.id===m.id&&r.team===team).forEach(r=>{const P=get(r.player);P.appFields=r.appFields||[];['sot','keyPass','defSuccess'].forEach(k=>{if(teamRecordValuePresent(r[k]))P[k]=num(P[k])+num(r[k]);});});
-    const designated=new Set();
-    verifiedKeeperEntries().filter(k=>String(k.id)===String(m.id)&&k.team===team&&normDate(k.date)===normDate(m.date)&&String(k.no)===String(m.no)&&String(k.round)===String(m.round)).forEach(k=>{const parsed=parseKeeperCell(k.text);if(!parsed.issues.length)parsed.rows.forEach(p=>designated.add(normalizePlayerMatchKey(p.player)));});
+    teamPlayerRecordLinks().matched.filter(r=>r.id===m.id&&r.team===team).forEach(r=>{const P=get(r.player);P.appFields=r.appFields||[];P.counterFields=r.counterFields||[];P.sharedRecordValues=r.sharedValues;['sot','keyPass','defSuccess'].forEach(k=>{if(teamRecordValuePresent(r[k]))P[k]=num(P[k])+num(r[k]);});});
     members.forEach(r=>{
-      const pos=String(selectPlayerRoster(r.player,normDate(m.date).slice(0,4))?.pos||'').normalize('NFKC').trim().toUpperCase();
-      r.keeper=designated.size?designated.has(normalizePlayerMatchKey(r.player)):normalizeAbilityPosition(pos)==='GR'||pos==='골키퍼'||pos==='GOALKEEPER';
-      r.keeperSource=r.keeper?(designated.size?'MATCH':'ROSTER'):'';
-      r.recordValues={sot:r.sot??null,keyPass:r.keyPass??null,defSuccess:r.defSuccess??null,saves:r.saveRecorded?r.sv:null};r.recordConflict=teamPlayerRecordLinks().issues.some(x=>appTeamRecordBlocked(x,m,team,r.player)&&x.source!=='APP');
+      r.keeperSource=matchCounterGoalkeeperSource(m,team,r.player);r.keeper=!!r.keeperSource;
+      r.recordValues={sot:r.sot??null,keyPass:r.keyPass??null,defSuccess:r.defSuccess??null,saves:r.saveRecorded?r.sv:null};r.sharedRecordValues=r.sharedRecordValues||{...r.recordValues};r.recordConflict=teamPlayerRecordLinks().issues.some(x=>appTeamRecordBlocked(x,m,team,r.player)&&x.source!=='COUNTER');
     });
     const rows=[...members.values()].sort((a,b)=>Number(a.ownGoal)-Number(b.ownGoal)||compareNamesKo(a.player,b.player));
     const totals=rows.reduce((sum,r)=>{

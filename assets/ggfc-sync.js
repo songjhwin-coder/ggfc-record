@@ -92,6 +92,7 @@ const GGFC = (() => {
     document.querySelectorAll('.member-admin').forEach(el=>el.hidden=!state.authorized||window.GGFC_MEMBER_PREVIEW===true);
     window.GGFCOperator?.refreshUI();
     window.GGFCAdminPassword?.refreshUI();
+    window.GGFCPublicCounters?.refreshUI();
     window.GGFCMatchRecords?.refreshPermissions();
   }
   function status(text){state.status=text;refreshUI();}
@@ -468,6 +469,7 @@ const GGFC = (() => {
     await connect();
 
   }
-  return {get editing(){return editLease||hasSettingsDraft()||!!window.GGFCThumbnail?.dirty||!!window.GGFCOperator?.pending;},get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving||state.busy>0;},canEdit,adminPasswordStatus,changeAdminPassword,get passwordChanging(){return passwordBusy;},normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,signIn,loginOrLogout,closeLogin,togglePassword};
+  function publicCounterContext(){return {ref:database?database.ref('ggfc/teamCounterRecords/v1'):null,revision:state.revision,ready:state.ready&&state.serverSeen&&state.connected&&!state.dirty&&!state.saving&&!state.conflict&&!state.error&&navigator.onLine!==false};}
+  return {publicCounterContext,get editing(){return editLease||hasSettingsDraft()||!!window.GGFCThumbnail?.dirty||!!window.GGFCOperator?.pending;},get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving||state.busy>0;},canEdit,adminPasswordStatus,changeAdminPassword,get passwordChanging(){return passwordBusy;},normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,signIn,loginOrLogout,closeLogin,togglePassword};
 })();
-window.GGFC_VERSION='3.25.79';
+window.GGFC_VERSION='3.25.80';

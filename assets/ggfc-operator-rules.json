@@ -156,6 +156,94 @@
         "$other": {
           ".validate": false
         }
+      },
+      "teamCounterRecords": {
+        "v1": {
+          ".read": true,
+          "$sourceRevision": {
+            "$matchIndex": {
+              "$attendanceIndex": {
+                ".write": "newData.exists()",
+                ".validate": "(newData.hasChildren(['sourceRevision', 'matchId', 'date', 'comp', 'round', 'no', 'home', 'away', 'team', 'player', 'values', 'baseValues', 'revision', 'savedAt'])) && ($sourceRevision.matches(/^[1-9][0-9]*$/)) && ($matchIndex.matches(/^(0|[1-9][0-9]*)$/)) && ($attendanceIndex.matches(/^(0|[1-9][0-9]*)$/)) && (newData.child('sourceRevision').val()+'' === $sourceRevision) && (newData.child('sourceRevision').val() === root.child('ggfc/v3/meta/revision').val()) && (root.child('ggfc/v3/records/matches').child($matchIndex).hasChildren(['id','date','comp','round','no','home','away'])) && (root.child('ggfc/v3/records/attendance').child($attendanceIndex).hasChildren(['id','team','player'])) && (root.child('ggfc/v3/records/attendance').child($attendanceIndex).child('id').val()+'' === root.child('ggfc/v3/records/matches').child($matchIndex).child('id').val()+'') && (newData.child('team').val() === newData.child('home').val() || newData.child('team').val() === newData.child('away').val()) && (newData.child('revision').isNumber()) && (newData.child('revision').val() === (data.exists() ? data.child('revision').val()+1 : 1)) && (newData.child('savedAt').isNumber()) && (newData.child('savedAt').val() <= now) && (newData.child('savedAt').val() >= now-300000) && (!data.exists() || newData.child('savedAt').val() >= data.child('savedAt').val()) && (newData.child('matchId').isString()) && (newData.child('matchId').val().length > 0) && (newData.child('matchId').val().length <= 200) && (newData.child('matchId').val() === root.child('ggfc/v3/records/matches').child($matchIndex).child('id').val()+'') && (newData.child('date').isString()) && (newData.child('date').val().length > 0) && (newData.child('date').val().length <= 200) && (newData.child('date').val() === root.child('ggfc/v3/records/matches').child($matchIndex).child('date').val()+'') && (newData.child('comp').isString()) && (newData.child('comp').val().length > 0) && (newData.child('comp').val().length <= 200) && (newData.child('comp').val() === root.child('ggfc/v3/records/matches').child($matchIndex).child('comp').val()+'') && (newData.child('round').isString()) && (newData.child('round').val().length > 0) && (newData.child('round').val().length <= 200) && (newData.child('round').val() === root.child('ggfc/v3/records/matches').child($matchIndex).child('round').val()+'') && (newData.child('no').isString()) && (newData.child('no').val().length > 0) && (newData.child('no').val().length <= 200) && (newData.child('no').val() === root.child('ggfc/v3/records/matches').child($matchIndex).child('no').val()+'') && (newData.child('home').isString()) && (newData.child('home').val().length > 0) && (newData.child('home').val().length <= 200) && (newData.child('home').val() === root.child('ggfc/v3/records/matches').child($matchIndex).child('home').val()+'') && (newData.child('away').isString()) && (newData.child('away').val().length > 0) && (newData.child('away').val().length <= 200) && (newData.child('away').val() === root.child('ggfc/v3/records/matches').child($matchIndex).child('away').val()+'') && (newData.child('team').isString()) && (newData.child('team').val().length > 0) && (newData.child('team').val().length <= 200) && (newData.child('team').val() === root.child('ggfc/v3/records/attendance').child($attendanceIndex).child('team').val()+'') && (newData.child('player').isString()) && (newData.child('player').val().length > 0) && (newData.child('player').val().length <= 200) && (newData.child('player').val() === root.child('ggfc/v3/records/attendance').child($attendanceIndex).child('player').val()+'') && (newData.child('values/sot').exists() === newData.child('baseValues/sot').exists()) && (!data.child('values/sot').exists() || newData.child('values/sot').exists()) && (newData.child('values/keyPass').exists() === newData.child('baseValues/keyPass').exists()) && (!data.child('values/keyPass').exists() || newData.child('values/keyPass').exists()) && (newData.child('values/defSuccess').exists() === newData.child('baseValues/defSuccess').exists()) && (!data.child('values/defSuccess').exists() || newData.child('values/defSuccess').exists()) && (newData.child('values/saves').exists() === newData.child('baseValues/saves').exists()) && (!data.child('values/saves').exists() || newData.child('values/saves').exists())",
+                "sourceRevision": {
+                  ".validate": "newData.isNumber() && newData.val() >= 1"
+                },
+                "matchId": {
+                  ".validate": true
+                },
+                "date": {
+                  ".validate": true
+                },
+                "comp": {
+                  ".validate": true
+                },
+                "round": {
+                  ".validate": true
+                },
+                "no": {
+                  ".validate": true
+                },
+                "home": {
+                  ".validate": true
+                },
+                "away": {
+                  ".validate": true
+                },
+                "team": {
+                  ".validate": true
+                },
+                "player": {
+                  ".validate": true
+                },
+                "values": {
+                  ".validate": "newData.hasChildren()",
+                  "sot": {
+                    ".validate": "newData.isString() && newData.val().matches(/^(0|[1-9][0-9]{0,3}|10000)$/)"
+                  },
+                  "keyPass": {
+                    ".validate": "newData.isString() && newData.val().matches(/^(0|[1-9][0-9]{0,3}|10000)$/)"
+                  },
+                  "defSuccess": {
+                    ".validate": "newData.isString() && newData.val().matches(/^(0|[1-9][0-9]{0,3}|10000)$/)"
+                  },
+                  "saves": {
+                    ".validate": "newData.isString() && newData.val().matches(/^(0|[1-9][0-9]{0,3}|10000)$/)"
+                  },
+                  "$other": {
+                    ".validate": false
+                  }
+                },
+                "baseValues": {
+                  ".validate": "newData.hasChildren()",
+                  "sot": {
+                    ".validate": "newData.isString() && (newData.val() === 'missing' || newData.val().matches(/^(0|[1-9][0-9]{0,15})$/))"
+                  },
+                  "keyPass": {
+                    ".validate": "newData.isString() && (newData.val() === 'missing' || newData.val().matches(/^(0|[1-9][0-9]{0,15})$/))"
+                  },
+                  "defSuccess": {
+                    ".validate": "newData.isString() && (newData.val() === 'missing' || newData.val().matches(/^(0|[1-9][0-9]{0,15})$/))"
+                  },
+                  "saves": {
+                    ".validate": "newData.isString() && (newData.val() === 'missing' || newData.val().matches(/^(0|[1-9][0-9]{0,15})$/))"
+                  },
+                  "$other": {
+                    ".validate": false
+                  }
+                },
+                "revision": {
+                  ".validate": true
+                },
+                "savedAt": {
+                  ".validate": true
+                },
+                "$other": {
+                  ".validate": false
+                }
+              }
+            }
+          }
+        }
       }
     }
   }
