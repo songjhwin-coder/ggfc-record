@@ -1,4 +1,4 @@
-/* Generated from current core + SLUMP; source SHA256 c1fc4de638e27879d031c9892095216a1d0aaaa8ccb235ca235b3d4a505102e9 */
+/* Generated from current core + SLUMP; source SHA256 574c06f7ef6bf574fc59efde80c8a49bff1e55ec6fec18597159a9e1d4a2f27c */
 const GGFCSlump=(()=>{
  const defaults={enabled:true,startDate:'2026-10-20',recentGames:10,baselineGames:20,minimumBaselineGames:10,formTrigger:-2,performanceTrigger:75,persistenceRounds:4,interval:4,recoveryPerformance:85,recoveryRounds:3,slumpDrop:.20,severeDrop:.35,criticalDrop:.50,seasonCap:1.5,storyEnabled:false};
  Object.assign(defaults,{recoveryStartDate:'2026-10-27',recoveryPercent:25,severePerformance:70,criticalPerformance:60});
@@ -320,9 +320,53 @@ function matchSquadHalf(m){
   return halves.length===2&&halves.every(Boolean)&&halves[0]===halves[1]?halves[0]:'';
 }
 function teamRecordTeamKey(value){return String(value||'').normalize('NFKC').replace(/\s/g,'').toUpperCase();}
+const APP_TEAM_RECORD_FIELDS=['sot','keyPass','defSuccess','saves'];
+function appTeamRecordKey(m,team,player){return JSON.stringify([verifiedFixtureKey(m),teamRecordTeamKey(team),normalizePlayerMatchKey(player)]);}
+function appTeamRecordBlocked(row,m,team,player){
+  return row.date===normDate(m.date)&&String(row.no||'').trim()===String(m.no||'').trim()&&String(row.round||'').trim()===String(m.round||'').trim()&&normalizePlayerMatchKey(row.player)===normalizePlayerMatchKey(player)&&(!row.team||teamRecordTeamKey(row.team)===teamRecordTeamKey(team))&&(isLeagueFamilyComp(row.comp)?isLeagueFamilyComp(m.comp):compCompact(row.comp)===compCompact(m.comp));
+}
+function mergeAppTeamPlayerRecords(result){
+  const stored=DB.settings?.appTeamPlayerRecords;
+  if(!Array.isArray(stored)||!stored.length)return result;
+  const matched=result.matched.slice(),issues=result.issues.slice(),fixtures=new Map(),canon=soccerBeeCanonicalPlayerMap(),groups=new Map();
+  const appearance=(id,team,player)=>JSON.stringify([String(id),teamRecordTeamKey(team),normalizePlayerMatchKey(player)]);
+  const attendees=new Set(verifiedRecords().attendance.map(r=>appearance(r.id,r.team,r.player)));
+  const saves=new Set(verifiedRecords().saves.filter(r=>r.saves!==null&&r.saves!==undefined).map(r=>appearance(r.id,r.team,r.player)));
+  const positions=new Map(matched.map((r,i)=>[appearance(r.id,r.team,r.player),i]));
+  for(const m of verifiedRecords().matches){const key=verifiedFixtureKey(m);if(!fixtures.has(key))fixtures.set(key,[]);fixtures.get(key).push(m);}
+  for(const row of stored){
+    if(!row||typeof row!=='object')continue;
+    const candidates=fixtures.get(row.fixtureKey)||[],m=candidates.length===1?candidates[0]:null;
+    const player=canon[normalizePlayerMatchKey(row.player)],team=m&&[m.home,m.away].find(t=>teamRecordTeamKey(t)===teamRecordTeamKey(row.team));
+    const fail=reason=>issues.push({...row,source:'APP',reason});
+    if(!m||!team||!player||isOwnGoalPlayer(player)){fail('앱 기록의 경기·팀·선수 연결을 확인하세요');continue;}
+    if(!attendees.has(appearance(m.id,team,player))||!playerEligibleOn(player,m.date)){fail('앱 기록의 출전 명단·참가 시작일을 확인하세요');continue;}
+    if(result.issues.some(r=>appTeamRecordBlocked(r,m,team,player))){fail('엑셀 기록 충돌을 먼저 확인하세요');continue;}
+    const values={};let invalid=false;
+    for(const key of APP_TEAM_RECORD_FIELDS){const v=row.values?.[key];if(v===undefined||v===null)continue;if(typeof v!=='number'||!Number.isSafeInteger(v)||v<0){invalid=true;break;}values[key]=v;}
+    if(invalid){fail('앱 카운트는 0 이상의 정수여야 합니다');continue;}
+    const key=appTeamRecordKey(m,team,player);if(!groups.has(key))groups.set(key,{m,team,player,rows:[]});groups.get(key).rows.push({row,values});
+  }
+  for(const {m,team,player,rows} of groups.values()){
+    const appValues={};let conflict=false;
+    for(const key of APP_TEAM_RECORD_FIELDS){const values=rows.map(r=>r.values[key]).filter(v=>v!==undefined);if(new Set(values).size>1)conflict=true;else if(values.length)appValues[key]=values[0];}
+    if(conflict){rows.forEach(({row})=>issues.push({...row,source:'APP',reason:'동일 경기·팀·선수의 앱 카운트 값이 충돌합니다'}));continue;}
+    const index=positions.get(appearance(m.id,team,player))??-1;
+    const current=index>=0?matched[index]:{date:normDate(m.date),comp:m.comp,half:matchHalfKey(m),round:m.round,no:m.no,inputTeam:team,team,player,id:m.id,attendanceConfirmed:true,sot:null,keyPass:null,defSuccess:null,saves:null};
+    const row={...current,appFields:[]};
+    for(const key of APP_TEAM_RECORD_FIELDS){
+      if(current[key]!==null&&current[key]!==undefined)continue;
+      if(key==='saves'&&saves.has(appearance(m.id,team,player)))continue;
+      if(appValues[key]!==undefined){row[key]=appValues[key];row.appFields.push(key);}
+    }
+    if(!row.appFields.length)continue;
+    if(index>=0)matched[index]=row;else matched.push(row);
+  }
+  return {...result,matched,issues};
+}
 let teamPlayerRecordCache=null;
 function teamPlayerRecordLinks(){
-  const raw=DB.settings?.teamPlayerRecords||[],refs=[raw,verifiedRecords().matches,verifiedRecords().attendance,DB.roster,DB.settings?.teamSquads];
+  const raw=DB.settings?.teamPlayerRecords||[],refs=[raw,verifiedRecords().matches,verifiedRecords().attendance,DB.roster,DB.settings?.teamSquads,DB.settings?.appTeamPlayerRecords];
   if(teamPlayerRecordCache&&refs.every((x,i)=>teamPlayerRecordCache.refs[i]===x)&&teamPlayerRecordCache.size===raw.length)return teamPlayerRecordCache;
   const canon=soccerBeeCanonicalPlayerMap(),matched=[],issues=[];
   const clean=v=>String(v||'').normalize('NFKC').replace(/\s/g,'').toUpperCase();
@@ -358,7 +402,7 @@ function teamPlayerRecordLinks(){
     if(rows.some(r=>values(r)!==values(rows[0])))rows.forEach(r=>issues.push({...r,reason:'동일 경기·팀·선수 기록의 값이 충돌합니다'}));
     else unique.push(rows[0]);
   }
-  return teamPlayerRecordCache={refs,size:raw.length,matched:unique,issues};
+  return teamPlayerRecordCache=mergeAppTeamPlayerRecords({refs,size:raw.length,matched:unique,issues});
 }
 function playerSaveRows(){
   const saveKey=r=>JSON.stringify([String(r.id),r.team,normalizePlayerMatchKey(r.player)]),extra=teamPlayerRecordLinks().matched.filter(r=>r.saves!==null&&r.saves!==undefined),keys=new Set(extra.map(saveKey));

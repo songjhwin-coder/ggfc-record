@@ -6,8 +6,8 @@ const GGFC = (() => {
   let database=null,auth=null,dataRef=null,readTimer=null,saveTimer=null,editLease=false;
   let started=false,connectionPromise=null,lastSnapshotText=null,cacheSavedAt=null,cacheWarning='';
   const CACHE_VERSION=2,CACHE_MAX_AGE=180*86400000;
-  const hasSettingsDraft=()=>!!((typeof GGFCPlayerPhotos!=='undefined'&&GGFCPlayerPhotos.dirty)||window.GGFCStartup?.dirty||(typeof squadAppearanceDirty!=='undefined'&&squadAppearanceDirty)||(typeof menuSettingsDirty!=='undefined'&&menuSettingsDirty)||(typeof careerFrameSettingsDirty!=='undefined'&&careerFrameSettingsDirty)||(typeof analysisStartSettingsDirty!=='undefined'&&analysisStartSettingsDirty)||(typeof cardDesignSettingsDirty!=='undefined'&&cardDesignSettingsDirty));
-  function discardSettingsDraft(){if(typeof GGFCPlayerPhotos!=='undefined')GGFCPlayerPhotos.discard();window.GGFCStartup?.discard();window.GGFCThumbnail?.discard();if(typeof squadAppearanceDirty!=='undefined'){squadAppearanceDirty=false;squadAppearanceDraft=null;}if(typeof menuSettingsDirty!=='undefined'){menuSettingsDirty=false;menuEditorDraft=null;}if(typeof cardDesignSettingsDirty!=='undefined')cardDesignSettingsDirty=false;if(typeof careerFrameSettingsDirty!=='undefined')careerFrameSettingsDirty=false;if(typeof analysisStartSettingsDirty!=='undefined')analysisStartSettingsDirty=false;}
+  const hasSettingsDraft=()=>!!((typeof GGFCPlayerPhotos!=='undefined'&&GGFCPlayerPhotos.dirty)||window.GGFCStartup?.dirty||window.GGFCMatchRecords?.dirty||(typeof squadAppearanceDirty!=='undefined'&&squadAppearanceDirty)||(typeof menuSettingsDirty!=='undefined'&&menuSettingsDirty)||(typeof careerFrameSettingsDirty!=='undefined'&&careerFrameSettingsDirty)||(typeof analysisStartSettingsDirty!=='undefined'&&analysisStartSettingsDirty)||(typeof cardDesignSettingsDirty!=='undefined'&&cardDesignSettingsDirty));
+  function discardSettingsDraft(){if(typeof GGFCPlayerPhotos!=='undefined')GGFCPlayerPhotos.discard();window.GGFCStartup?.discard();window.GGFCThumbnail?.discard();window.GGFCMatchRecords?.discard();if(typeof squadAppearanceDirty!=='undefined'){squadAppearanceDirty=false;squadAppearanceDraft=null;}if(typeof menuSettingsDirty!=='undefined'){menuSettingsDirty=false;menuEditorDraft=null;}if(typeof cardDesignSettingsDirty!=='undefined')cardDesignSettingsDirty=false;if(typeof careerFrameSettingsDirty!=='undefined')careerFrameSettingsDirty=false;if(typeof analysisStartSettingsDirty!=='undefined')analysisStartSettingsDirty=false;}
   const fields=['matches','attendance','goals','saves','fouls','moms','specials','roster','soccerbee'];
   const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
   const copy=v=>JSON.parse(JSON.stringify(v));
@@ -92,6 +92,7 @@ const GGFC = (() => {
     document.querySelectorAll('.member-admin').forEach(el=>el.hidden=!state.authorized||window.GGFC_MEMBER_PREVIEW===true);
     window.GGFCOperator?.refreshUI();
     window.GGFCAdminPassword?.refreshUI();
+    window.GGFCMatchRecords?.refreshPermissions();
   }
   function status(text){state.status=text;refreshUI();}
   function applySnapshot(raw,first=false,fromCache=false){
@@ -114,6 +115,7 @@ const GGFC = (() => {
     status(fromCache?'최근 기록 표시 중 · 최신 데이터 확인 중…':raw?'공유 기록 최신 상태'+(stamp?' · '+stamp:''):'등록된 공유 기록이 없습니다. 관리자에게 기록 등록을 요청해 주세요.');
     if(first&&typeof applyMenuStartup==='function')applyMenuStartup();
     renderAll();
+    window.GGFCMatchRecords?.onDatabaseChanged();
     try{performance.mark(fromCache?'ggfc-cache-ready':'ggfc-data-ready');}catch(e){}
     if(typeof playerCardHistoryState!=='undefined' && playerCardHistoryState && document.querySelector('#playerCardMask')?.classList.contains('on')){
       openPlayerCard(playerCardHistoryState.player,playerCardHistoryState.query);
@@ -468,4 +470,4 @@ const GGFC = (() => {
   }
   return {get editing(){return editLease||hasSettingsDraft()||!!window.GGFCThumbnail?.dirty||!!window.GGFCOperator?.pending;},get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving||state.busy>0;},canEdit,adminPasswordStatus,changeAdminPassword,get passwordChanging(){return passwordBusy;},normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,signIn,loginOrLogout,closeLogin,togglePassword};
 })();
-window.GGFC_VERSION='3.25.76';
+window.GGFC_VERSION='3.25.77';
