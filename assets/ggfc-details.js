@@ -51,7 +51,14 @@ function matchDetailData(m){
       if(kind==='moms')row.mom+=num(r.mom);
     }));
     teamPlayerRecordLinks().matched.filter(r=>r.id===m.id&&r.team===team).forEach(r=>{const P=get(r.player);P.appFields=r.appFields||[];['sot','keyPass','defSuccess'].forEach(k=>{if(teamRecordValuePresent(r[k]))P[k]=num(P[k])+num(r[k]);});});
-    members.forEach(r=>{r.recordValues={sot:r.sot??null,keyPass:r.keyPass??null,defSuccess:r.defSuccess??null,saves:r.saveRecorded?r.sv:null};r.recordConflict=teamPlayerRecordLinks().issues.some(x=>appTeamRecordBlocked(x,m,team,r.player)&&x.source!=='APP');});
+    const designated=new Set();
+    verifiedKeeperEntries().filter(k=>String(k.id)===String(m.id)&&k.team===team&&normDate(k.date)===normDate(m.date)&&String(k.no)===String(m.no)&&String(k.round)===String(m.round)).forEach(k=>{const parsed=parseKeeperCell(k.text);if(!parsed.issues.length)parsed.rows.forEach(p=>designated.add(normalizePlayerMatchKey(p.player)));});
+    members.forEach(r=>{
+      const pos=String(selectPlayerRoster(r.player,normDate(m.date).slice(0,4))?.pos||'').normalize('NFKC').trim().toUpperCase();
+      r.keeper=designated.size?designated.has(normalizePlayerMatchKey(r.player)):normalizeAbilityPosition(pos)==='GR'||pos==='골키퍼'||pos==='GOALKEEPER';
+      r.keeperSource=r.keeper?(designated.size?'MATCH':'ROSTER'):'';
+      r.recordValues={sot:r.sot??null,keyPass:r.keyPass??null,defSuccess:r.defSuccess??null,saves:r.saveRecorded?r.sv:null};r.recordConflict=teamPlayerRecordLinks().issues.some(x=>appTeamRecordBlocked(x,m,team,r.player)&&x.source!=='APP');
+    });
     const rows=[...members.values()].sort((a,b)=>Number(a.ownGoal)-Number(b.ownGoal)||compareNamesKo(a.player,b.player));
     const totals=rows.reduce((sum,r)=>{
       for(const key of ['g','a','f','sv','mom','sot','keyPass','defSuccess'])sum[key]=num(sum[key])+num(r[key]);
@@ -72,7 +79,7 @@ function detailMetricGrid(items){
 function detailPlayerTable(team,m){
   if(!team.rows.length)return '<div class="detail-empty">등록된 선수별 기록이 없습니다.</div>';
   return '<p class="detail-scroll-hint">표를 좌우로 밀면 모든 기록을 볼 수 있습니다.</p><div class="detail-table-wrap" tabindex="0" aria-label="'+esc(teamDisplayName(team.team))+' 선수별 경기 기록 표"><table class="detail-table"><caption class="detail-visually-hidden">'+esc(teamDisplayName(team.team))+' 선수별 경기 기록</caption><thead><tr><th scope="col">선수</th><th scope="col">출석</th><th scope="col">유효슛</th><th scope="col">키패스</th><th scope="col">수비성공</th><th scope="col">선방</th><th scope="col">득점</th><th scope="col">도움</th><th scope="col">개인파울</th><th scope="col">MOM</th><th scope="col">승점</th></tr></thead><tbody>'+team.rows.map(r=>
-    '<tr data-match-record-row="'+esc(appTeamRecordKey(m,team.team,r.player))+'" data-match-record-player="'+esc(r.player)+'" data-match-record-team="'+esc(team.team)+'"><th scope="row" class="'+(r.att?'squad-present':'squad-absent')+'">'+esc(r.player)+(r.role&&r.role!=='선수'?' <small>('+esc(r.role)+')</small>':'')+(window.GGFCMatchRecords?.rowActionsHtml(m,team.team,r)||'')+'</th><td>'+(r.ownGoal?'—':r.att?'<span class="detail-attended">출석</span>':'<span class="detail-missing">'+(r.squad?'미출석':'미등록')+'</span>')+'</td>'+['sot','keyPass','defSuccess','saves'].map(k=>'<td>'+(window.GGFCMatchRecords?.cellHtml(m,team.team,r,k)??esc(r.recordValues[k]??'—'))+'</td>').join('')+'<td>'+r.g+'</td><td>'+r.a+'</td><td>'+r.f+'</td><td>'+r.mom+'</td><td>'+(r.att&&!r.ownGoal?team.points:'—')+'</td></tr>'
+    '<tr data-match-record-row="'+esc(appTeamRecordKey(m,team.team,r.player))+'" data-match-record-player="'+esc(r.player)+'" data-match-record-team="'+esc(team.team)+'"><th scope="row" class="'+(r.att?'squad-present':'squad-absent')+'">'+esc(r.player)+(r.keeper?' <small class="match-keeper-badge" title="'+(r.keeperSource==='MATCH'?'경기 지정 골키퍼':'선수명단 골키퍼')+'">GK</small>':'')+(r.role&&r.role!=='선수'?' <small>('+esc(r.role)+')</small>':'')+(window.GGFCMatchRecords?.rowActionsHtml(m,team.team,r)||'')+'</th><td>'+(r.ownGoal?'—':r.att?'<span class="detail-attended">출석</span>':'<span class="detail-missing">'+(r.squad?'미출석':'미등록')+'</span>')+'</td>'+['sot','keyPass','defSuccess','saves'].map(k=>'<td>'+(window.GGFCMatchRecords?.cellHtml(m,team.team,r,k)??esc(r.recordValues[k]??'—'))+'</td>').join('')+'<td>'+r.g+'</td><td>'+r.a+'</td><td>'+r.f+'</td><td>'+r.mom+'</td><td>'+(r.att&&!r.ownGoal?team.points:'—')+'</td></tr>'
   ).join('')+'</tbody><tfoot><tr><th scope="row">합계</th><td>'+team.totals.att+'명</td><td>'+team.totals.sot+'</td><td>'+team.totals.keyPass+'</td><td>'+team.totals.defSuccess+'</td><td>'+team.totals.sv+'</td><td>'+team.totals.g+'</td><td>'+team.totals.a+'</td><td>'+team.totals.f+'</td><td>'+team.totals.mom+'</td><td>'+team.totals.att*team.points+'</td></tr></tfoot></table></div>';
 }
 function detailUnassignedHtml(items){

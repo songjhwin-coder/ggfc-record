@@ -4011,3 +4011,9 @@ body:not(.admin-mode) #v-interleague :is(.note,.head>p){display:none!important}
  .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-record-scroll .match-count-cell input{width:30px;height:38px;font-size:16px}
  .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-record-scroll .match-detail-navigation{gap:4px}
 }
+
+/* V3.25.79: goalkeeper indicators and local counter save actions. */
+.match-keeper-badge{display:inline-block;border:1px solid #aec4dd;border-radius:4px;padding:1px 3px;font-size:10px;color:#214d7c;background:#eaf2fa}
+.match-record-row-actions{flex-wrap:wrap}
+.match-record-row-actions button{padding:5px 5px;white-space:nowrap}
+.match-record-status{white-space:pre-line}

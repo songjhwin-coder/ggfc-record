@@ -6,7 +6,7 @@ const GGFC = (() => {
   let database=null,auth=null,dataRef=null,readTimer=null,saveTimer=null,editLease=false;
   let started=false,connectionPromise=null,lastSnapshotText=null,cacheSavedAt=null,cacheWarning='';
   const CACHE_VERSION=2,CACHE_MAX_AGE=180*86400000;
-  const hasSettingsDraft=()=>!!((typeof GGFCPlayerPhotos!=='undefined'&&GGFCPlayerPhotos.dirty)||window.GGFCStartup?.dirty||window.GGFCMatchRecords?.dirty||(typeof squadAppearanceDirty!=='undefined'&&squadAppearanceDirty)||(typeof menuSettingsDirty!=='undefined'&&menuSettingsDirty)||(typeof careerFrameSettingsDirty!=='undefined'&&careerFrameSettingsDirty)||(typeof analysisStartSettingsDirty!=='undefined'&&analysisStartSettingsDirty)||(typeof cardDesignSettingsDirty!=='undefined'&&cardDesignSettingsDirty));
+  const hasSettingsDraft=()=>!!((typeof GGFCPlayerPhotos!=='undefined'&&GGFCPlayerPhotos.dirty)||window.GGFCStartup?.dirty||window.GGFCMatchRecords?.cloudEditing||(typeof squadAppearanceDirty!=='undefined'&&squadAppearanceDirty)||(typeof menuSettingsDirty!=='undefined'&&menuSettingsDirty)||(typeof careerFrameSettingsDirty!=='undefined'&&careerFrameSettingsDirty)||(typeof analysisStartSettingsDirty!=='undefined'&&analysisStartSettingsDirty)||(typeof cardDesignSettingsDirty!=='undefined'&&cardDesignSettingsDirty));
   function discardSettingsDraft(){if(typeof GGFCPlayerPhotos!=='undefined')GGFCPlayerPhotos.discard();window.GGFCStartup?.discard();window.GGFCThumbnail?.discard();window.GGFCMatchRecords?.discard();if(typeof squadAppearanceDirty!=='undefined'){squadAppearanceDirty=false;squadAppearanceDraft=null;}if(typeof menuSettingsDirty!=='undefined'){menuSettingsDirty=false;menuEditorDraft=null;}if(typeof cardDesignSettingsDirty!=='undefined')cardDesignSettingsDirty=false;if(typeof careerFrameSettingsDirty!=='undefined')careerFrameSettingsDirty=false;if(typeof analysisStartSettingsDirty!=='undefined')analysisStartSettingsDirty=false;}
   const fields=['matches','attendance','goals','saves','fouls','moms','specials','roster','soccerbee'];
   const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
@@ -349,7 +349,7 @@ const GGFC = (() => {
         }
       };
     }
-    window.addEventListener('beforeunload',e=>{if(passwordBusy||state.dirty||state.saving||editLease||hasSettingsDraft()||window.GGFCThumbnail?.dirty||window.GGFCOperator?.pending){e.preventDefault();e.returnValue='';}});
+    window.addEventListener('beforeunload',e=>{if(passwordBusy||state.dirty||state.saving||editLease||hasSettingsDraft()||window.GGFCMatchRecords?.dirty||window.GGFCThumbnail?.dirty||window.GGFCOperator?.pending){e.preventDefault();e.returnValue='';}});
   }
   function cacheSnapshot(raw){
     const savedAt=Date.now();
@@ -470,4 +470,4 @@ const GGFC = (() => {
   }
   return {get editing(){return editLease||hasSettingsDraft()||!!window.GGFCThumbnail?.dirty||!!window.GGFCOperator?.pending;},get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving||state.busy>0;},canEdit,adminPasswordStatus,changeAdminPassword,get passwordChanging(){return passwordBusy;},normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,signIn,loginOrLogout,closeLogin,togglePassword};
 })();
-window.GGFC_VERSION='3.25.78';
+window.GGFC_VERSION='3.25.79';
