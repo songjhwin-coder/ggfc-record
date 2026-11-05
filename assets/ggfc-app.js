@@ -728,6 +728,7 @@ function applyTeamPlayerRecords(objs){
 function teamRecordTeamKey(value){return String(value||'').normalize('NFKC').replace(/\s/g,'').toUpperCase();}
 // App counters are stored independently; only missing Excel fields enter the existing record pipeline.
 const APP_TEAM_RECORD_FIELDS=['sot','keyPass','defSuccess','saves'];
+function teamRecordValuePresent(value){return (typeof value==='number'||typeof value==='string')&&String(value).trim()!==''&&Number.isFinite(Number(value))&&Number.isInteger(Number(value))&&Number(value)>=0;}
 function appTeamRecordKey(m,team,player){return JSON.stringify([verifiedFixtureKey(m),teamRecordTeamKey(team),normalizePlayerMatchKey(player)]);}
 function appTeamRecordBlocked(row,m,team,player){
   return row.date===normDate(m.date)&&String(row.no||'').trim()===String(m.no||'').trim()&&String(row.round||'').trim()===String(m.round||'').trim()&&normalizePlayerMatchKey(row.player)===normalizePlayerMatchKey(player)&&(!row.team||teamRecordTeamKey(row.team)===teamRecordTeamKey(team))&&(isLeagueFamilyComp(row.comp)?isLeagueFamilyComp(m.comp):compCompact(row.comp)===compCompact(m.comp));
@@ -738,7 +739,7 @@ function mergeAppTeamPlayerRecords(result){
   const matched=result.matched.slice(),issues=result.issues.slice(),fixtures=new Map(),canon=soccerBeeCanonicalPlayerMap(),groups=new Map();
   const appearance=(id,team,player)=>JSON.stringify([String(id),teamRecordTeamKey(team),normalizePlayerMatchKey(player)]);
   const attendees=new Set(verifiedRecords().attendance.map(r=>appearance(r.id,r.team,r.player)));
-  const saves=new Set(verifiedRecords().saves.filter(r=>r.saves!==null&&r.saves!==undefined).map(r=>appearance(r.id,r.team,r.player)));
+  const saves=new Set(verifiedRecords().saves.filter(r=>teamRecordValuePresent(r.saves)).map(r=>appearance(r.id,r.team,r.player)));
   const positions=new Map(matched.map((r,i)=>[appearance(r.id,r.team,r.player),i]));
   for(const m of verifiedRecords().matches){const key=verifiedFixtureKey(m);if(!fixtures.has(key))fixtures.set(key,[]);fixtures.get(key).push(m);}
   for(const row of stored){
@@ -762,7 +763,7 @@ function mergeAppTeamPlayerRecords(result){
     const current=index>=0?matched[index]:{date:normDate(m.date),comp:m.comp,half:matchHalfKey(m),round:m.round,no:m.no,inputTeam:team,team,player,id:m.id,attendanceConfirmed:true,sot:null,keyPass:null,defSuccess:null,saves:null};
     const row={...current,appFields:[]};
     for(const key of APP_TEAM_RECORD_FIELDS){
-      if(current[key]!==null&&current[key]!==undefined)continue;
+      if(teamRecordValuePresent(current[key]))continue;
       if(key==='saves'&&saves.has(appearance(m.id,team,player)))continue;
       if(appValues[key]!==undefined){row[key]=appValues[key];row.appFields.push(key);}
     }
@@ -7074,7 +7075,7 @@ function renderActiveView(v,options={}){
   mobilePageSwipe?.rendered(next);
 }
 // Analysis assets are requested only by an administrator opening this menu.
-const ABILITY_AUDIT_ASSETS={ui:'assets/ggfc-ability-audit.js?v=e8fc496361e73c8a',css:'assets/ggfc-ability-audit.css?v=19c81455534472fa',worker:'assets/ggfc-ability-audit-worker.js?v=4e707116111c658d'};
+const ABILITY_AUDIT_ASSETS={ui:'assets/ggfc-ability-audit.js?v=e8fc496361e73c8a',css:'assets/ggfc-ability-audit.css?v=19c81455534472fa',worker:'assets/ggfc-ability-audit-worker.js?v=841b880d0d52aa66'};
 let abilityAuditLoader=null;
 function renderAbilityAudit(){
  const root=document.getElementById('abilityAuditRoot');

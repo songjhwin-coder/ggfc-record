@@ -3990,3 +3990,24 @@ body:not(.admin-mode) #v-interleague :is(.note,.head>p){display:none!important}
 .match-record-status{display:block;margin-top:3px;max-width:140px;white-space:normal;overflow-wrap:anywhere;font-size:10px;color:#416484;font-weight:500;line-height:1.4}
 .detail-match-fullscreen .detail-table th:first-child{min-width:100px}
 @media(max-width:620px){.match-record-scroll{padding:12px max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));scrollbar-gutter:auto}.match-detail-navigation>span{font-size:10px}.match-count-cell button{width:32px;min-height:36px}.match-count-cell input{height:36px;font-size:16px}.match-record-row-actions button{min-height:36px}}
+
+/* V3.25.78: frozen player names and a side-by-side phone landscape workspace. */
+.ggfc-mobile .detail-match-fullscreen .detail-table{border-collapse:separate;border-spacing:0}
+.ggfc-mobile .detail-match-fullscreen .detail-table th:first-child{position:sticky;left:0;z-index:2;background:#fff}
+.ggfc-mobile .detail-match-fullscreen .detail-table thead th:first-child{z-index:3;background:#edf2f8}
+.ggfc-mobile .detail-match-fullscreen .detail-table tfoot th:first-child{background:#f0f5fb}
+@media(orientation:landscape) and (min-width:500px){
+ .ggfc-mobile .detail-match-fullscreen .ggfc-detail-body{flex-direction:row;align-items:stretch}
+ .ggfc-mobile .detail-match-fullscreen .match-video-dock{display:flex;flex-direction:column;justify-content:center;flex:0 0 66.6666667%;width:66.6666667%;height:100%;min-height:0;padding-left:env(safe-area-inset-left,0px)}
+ .ggfc-mobile .detail-match-fullscreen .match-video-dock .match-youtube-player{flex:1 1 0;width:100%;max-width:none;height:100%;max-height:none;min-height:0;margin:0}
+ .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-record-scroll{flex:0 0 33.3333333%;width:33.3333333%;height:100%;padding:8px max(8px,env(safe-area-inset-right,0px)) max(8px,env(safe-area-inset-bottom,0px)) 8px;border-left:1px solid #c8d6e5}
+ .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-record-scroll .detail-team-columns{grid-template-columns:minmax(0,1fr)}
+ .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-record-scroll .detail-scoreboard{grid-template-columns:minmax(0,1fr) minmax(68px,.75fr) minmax(0,1fr);gap:4px;padding:10px 4px}
+ .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-record-scroll .detail-score b{font-size:32px}
+ .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-record-scroll .detail-table th,.ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-record-scroll .detail-table td{padding:8px 3px;font-size:11px}
+ .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-record-scroll .detail-table th:first-child{min-width:76px;width:76px;max-width:100px;white-space:normal;overflow-wrap:anywhere}
+ .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-record-scroll .match-count-cell{gap:2px}
+ .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-record-scroll .match-count-cell button{width:28px;height:38px}
+ .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-record-scroll .match-count-cell input{width:30px;height:38px;font-size:16px}
+ .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-record-scroll .match-detail-navigation{gap:4px}
+}

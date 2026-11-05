@@ -6,7 +6,7 @@ window.GGFCMatchRecords=(()=>{
  const signedIn=()=>admin&&GGFC.authorized&&window.GGFC_MEMBER_PREVIEW!==true;
  const writable=()=>signedIn()&&GGFC.canEdit();
  const eligible=(m,r)=>r.att&&!r.ownGoal&&!r.recordConflict&&!!m.round&&!!m.no&&playerEligibleOn(r.player,m.date);
- const editable=(r,k)=>(r.appFields||[]).includes(k)||r.recordValues[k]===null||r.recordValues[k]===undefined;
+ const editable=(r,k)=>(r.appFields||[]).includes(k)||!teamRecordValuePresent(r.recordValues[k]);
  function context(key){
   if(ggfcDetailState?.kind!=='match')return null;
   const m=verifiedRecords().matches.find(x=>verifiedFixtureKey(x)===ggfcDetailState.fixtureKey);if(!m)return null;
@@ -25,9 +25,9 @@ window.GGFCMatchRecords=(()=>{
    const disabled=!writable()||saving.has(appTeamRecordKey(m,team,r.player));
    return '<div class="match-count-cell" data-match-count="'+k+'"><button type="button" data-match-count-step="-1" aria-label="'+esc(r.player+' '+fields[k])+' 1회 줄이기"'+(disabled?' disabled':'')+'>−</button><input type="number" min="0" step="1" inputmode="numeric" value="'+esc(displayedValue(m,team,r,k))+'" placeholder="—" aria-label="'+esc(r.player+' '+fields[k])+' 횟수"'+(disabled?' disabled':'')+'><button type="button" data-match-count-step="1" aria-label="'+esc(r.player+' '+fields[k])+' 1회 늘리기"'+(disabled?' disabled':'')+'>+</button></div><small class="match-record-source">'+(app?'앱 기록':'미기록')+'</small>';
   }
-  return '<span>'+esc(value??'—')+'</span>'+(value!==null&&value!==undefined?'<small class="match-record-source'+(app?' app':'')+'">'+(app?'앱 기록':'엑셀')+'</small>':r.recordConflict?'<small class="match-record-source">원본 확인</small>':'');
+  return '<span>'+esc(value??'—')+'</span>'+(teamRecordValuePresent(value)?'<small class="match-record-source'+(app?' app':'')+'">'+(app?'앱 기록':'DB')+'</small>':r.recordConflict?'<small class="match-record-source">원본 확인</small>':'');
  }
- function guideHtml(){return signedIn()?'<p class="match-count-guide">유효슛·키패스·수비성공·선방의 빈 항목을 보완할 수 있습니다. 횟수를 조절한 뒤 선수 이름 옆의 <b>저장</b>을 눌러주세요. 실제 0회는 0을 입력합니다. 엑셀의 0회와 기존 기록은 잠겨 있으며, 앱 보완 기록에는 기존 능력치 요율을 적용합니다.</p>':'';}
+ function permissionMarkerHtml(){return '<span hidden data-match-record-admin="'+String(signedIn())+'"></span>';}
  function rowElement(key){return [...document.querySelectorAll('[data-match-record-row]')].find(e=>e.dataset.matchRecordRow===key);}
  function updateRowState(key){
   const el=rowElement(key);if(!el)return;
@@ -51,7 +51,7 @@ window.GGFCMatchRecords=(()=>{
   if(!writable()||!eligible(c.m,c.row)){toast('관리자 인증·연결·출전 명단을 확인해 주세요.');return false;}
   const values={};
   for(const [k,raw] of Object.entries(d.values)){
-   if(!fields[k]||!editable(c.row,k)){toast('엑셀 기록이 변경되었습니다. 취소 후 현재 기록을 확인하세요.');return false;}
+   if(!fields[k]||!editable(c.row,k)){toast('DB 기록이 변경되었습니다. 취소 후 현재 기록을 확인하세요.');return false;}
    const v=raw.trim()===''?null:Number(raw);
    if(v===null||!Number.isSafeInteger(v)||v<0){toast(fields[k]+'는 0 이상의 정수로 입력하세요.');return false;}
    values[k]=v;
@@ -78,7 +78,7 @@ window.GGFCMatchRecords=(()=>{
  function cancel(key){if(saving.has(key))return;drafts.delete(key);statuses.delete(key);refreshMatchDetailRecords();GGFC.refreshUI();}
  function refreshPermissions(){
   if(!document.querySelector('#ggfcDetailDialog[open].detail-match-fullscreen'))return;
-  if(signedIn()!==!!document.querySelector('#ggfcDetailBody .match-count-guide'))refreshMatchDetailRecords();
+  if(String(signedIn())!==document.querySelector('#ggfcDetailBody [data-match-record-admin]')?.dataset.matchRecordAdmin)refreshMatchDetailRecords();
   for(const el of document.querySelectorAll('[data-match-record-row]')){
    const key=el.dataset.matchRecordRow;
    if(!GGFC.pending&&writable()&&statuses.has(key)&&!drafts.has(key)&&!saving.has(key))statuses.set(key,'공유 저장 완료');
@@ -100,5 +100,5 @@ window.GGFCMatchRecords=(()=>{
   const player=e.target.closest('.match-video-dock').querySelector('.match-youtube-player'),html=matchYoutubeIframeHtml(e.target.value);
   if(player&&html)player.outerHTML=html;
  });
- return {rowActionsHtml,cellHtml,guideHtml,saveRow,refreshPermissions,get dirty(){return drafts.size>0;},discard(){drafts.clear();statuses.clear();refreshMatchDetailRecords();},onDatabaseChanged(){refreshMatchDetailRecords();}};
+ return {rowActionsHtml,cellHtml,permissionMarkerHtml,saveRow,refreshPermissions,get dirty(){return drafts.size>0;},discard(){drafts.clear();statuses.clear();refreshMatchDetailRecords();},onDatabaseChanged(){refreshMatchDetailRecords();}};
 })();

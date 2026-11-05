@@ -1,4 +1,4 @@
-/* Generated from current core + SLUMP; source SHA256 574c06f7ef6bf574fc59efde80c8a49bff1e55ec6fec18597159a9e1d4a2f27c */
+/* Generated from current core + SLUMP; source SHA256 abdc7dfc6f7f281647e44d39bd3c55c28c8ca88a737792529ea7362a6b225f9c */
 const GGFCSlump=(()=>{
  const defaults={enabled:true,startDate:'2026-10-20',recentGames:10,baselineGames:20,minimumBaselineGames:10,formTrigger:-2,performanceTrigger:75,persistenceRounds:4,interval:4,recoveryPerformance:85,recoveryRounds:3,slumpDrop:.20,severeDrop:.35,criticalDrop:.50,seasonCap:1.5,storyEnabled:false};
  Object.assign(defaults,{recoveryStartDate:'2026-10-27',recoveryPercent:25,severePerformance:70,criticalPerformance:60});
@@ -321,6 +321,7 @@ function matchSquadHalf(m){
 }
 function teamRecordTeamKey(value){return String(value||'').normalize('NFKC').replace(/\s/g,'').toUpperCase();}
 const APP_TEAM_RECORD_FIELDS=['sot','keyPass','defSuccess','saves'];
+function teamRecordValuePresent(value){return (typeof value==='number'||typeof value==='string')&&String(value).trim()!==''&&Number.isFinite(Number(value))&&Number.isInteger(Number(value))&&Number(value)>=0;}
 function appTeamRecordKey(m,team,player){return JSON.stringify([verifiedFixtureKey(m),teamRecordTeamKey(team),normalizePlayerMatchKey(player)]);}
 function appTeamRecordBlocked(row,m,team,player){
   return row.date===normDate(m.date)&&String(row.no||'').trim()===String(m.no||'').trim()&&String(row.round||'').trim()===String(m.round||'').trim()&&normalizePlayerMatchKey(row.player)===normalizePlayerMatchKey(player)&&(!row.team||teamRecordTeamKey(row.team)===teamRecordTeamKey(team))&&(isLeagueFamilyComp(row.comp)?isLeagueFamilyComp(m.comp):compCompact(row.comp)===compCompact(m.comp));
@@ -331,7 +332,7 @@ function mergeAppTeamPlayerRecords(result){
   const matched=result.matched.slice(),issues=result.issues.slice(),fixtures=new Map(),canon=soccerBeeCanonicalPlayerMap(),groups=new Map();
   const appearance=(id,team,player)=>JSON.stringify([String(id),teamRecordTeamKey(team),normalizePlayerMatchKey(player)]);
   const attendees=new Set(verifiedRecords().attendance.map(r=>appearance(r.id,r.team,r.player)));
-  const saves=new Set(verifiedRecords().saves.filter(r=>r.saves!==null&&r.saves!==undefined).map(r=>appearance(r.id,r.team,r.player)));
+  const saves=new Set(verifiedRecords().saves.filter(r=>teamRecordValuePresent(r.saves)).map(r=>appearance(r.id,r.team,r.player)));
   const positions=new Map(matched.map((r,i)=>[appearance(r.id,r.team,r.player),i]));
   for(const m of verifiedRecords().matches){const key=verifiedFixtureKey(m);if(!fixtures.has(key))fixtures.set(key,[]);fixtures.get(key).push(m);}
   for(const row of stored){
@@ -355,7 +356,7 @@ function mergeAppTeamPlayerRecords(result){
     const current=index>=0?matched[index]:{date:normDate(m.date),comp:m.comp,half:matchHalfKey(m),round:m.round,no:m.no,inputTeam:team,team,player,id:m.id,attendanceConfirmed:true,sot:null,keyPass:null,defSuccess:null,saves:null};
     const row={...current,appFields:[]};
     for(const key of APP_TEAM_RECORD_FIELDS){
-      if(current[key]!==null&&current[key]!==undefined)continue;
+      if(teamRecordValuePresent(current[key]))continue;
       if(key==='saves'&&saves.has(appearance(m.id,team,player)))continue;
       if(appValues[key]!==undefined){row[key]=appValues[key];row.appFields.push(key);}
     }
