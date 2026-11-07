@@ -321,7 +321,7 @@ const GGFC = (() => {
   }
 
   function installGuards(){
-    const selectors='#v-thumbnail,#v-photos,#startupSettingsPanel,#squadAppearancePanel,#v-menus,#v-abilityguide,#v-data,#v-rep,#v-abilitycfg,#seasonPanel,#soccerbeeUpload,#soccerbeeClear,#abilitySystemEnabled,#logoFilepick,#filepick,#soccerbeeFilepick';
+    const selectors='#v-thumbnail,#v-photos,#v-cardsettings,#v-screensettings,#startupSettingsPanel,#squadAppearancePanel,#v-menus,#v-abilityguide,#v-data,#v-rep,#v-abilitycfg,#seasonPanel,#soccerbeeUpload,#soccerbeeClear,#abilitySystemEnabled,#logoFilepick,#filepick,#soccerbeeFilepick';
     for(const type of ['click','change','input'])document.addEventListener(type,e=>{
       // Preview is read-only; its own handler still requires an authenticated administrator.
       if(type==='click'&&e.target.closest?.('button[data-menu-preview]'))return;
@@ -431,7 +431,7 @@ const GGFC = (() => {
       if(editLease && document.querySelector('#v-abilitycfg')?.classList.contains('on')){
         draft.settings.ability={...draft.settings.ability,config:readAbilityConfigForm()};
       }
-      if(editLease && document.querySelector('#v-data')?.classList.contains('on')){
+      if(editLease && document.querySelector('#v-screensettings')?.classList.contains('on')){
         if(document.querySelector('#posterVenueInput'))draft.settings.posterVenue=document.querySelector('#posterVenueInput').value.trim();
         draft.settings.display={brandTitle:document.querySelector('#brandTitleInput').value.trim(),leagueA:document.querySelector('#leagueANameInput').value.trim(),leagueB:document.querySelector('#leagueBNameInput').value.trim()};
       }
@@ -475,4 +475,4 @@ const GGFC = (() => {
   }
   return {publicCounterContext,get editing(){return editLease||hasSettingsDraft()||!!window.GGFCThumbnail?.dirty||!!window.GGFCOperator?.pending;},get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving||state.busy>0;},canEdit,adminPasswordStatus,changeAdminPassword,get passwordChanging(){return passwordBusy;},normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,signIn,loginOrLogout,closeLogin,togglePassword};
 })();
-window.GGFC_VERSION='3.25.88';
+window.GGFC_VERSION='3.25.89';

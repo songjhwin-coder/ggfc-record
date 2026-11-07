@@ -109,4 +109,4 @@ const GGFCPlayerPhotos=(()=>{
  return {photo,get,key,render,discard,encode,get dirty(){return dirty||busy;},get draft(){return dirty?mergedSettings():null;}};
 })();
 function uploadedPlayerPhoto(name){return GGFCPlayerPhotos.photo(name);}
-function renderPlayerPhotoManager(){GGFCPlayerPhotos.render();}
+function renderPlayerPhotoManager(){GGFCPlayerPhotos.render();renderPlayerPhotoAudit();}

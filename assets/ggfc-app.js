@@ -6861,11 +6861,16 @@ function renderData(){
   $("#sheetSpec").innerHTML = tbl([{t:"시트명"},{t:"열 구성 (1행 헤더 고정)"},{t:"설명"}],
     TEMPLATE.map(t=>['<b>'+esc(t.name)+'</b>', '<code>'+esc(t.head)+'</code>', '<span class="muted">'+esc(t.desc)+'</span>']));
   ["#upAll","#clearBtn","#importJson","#sampleBtn"].forEach(s=>$(s).disabled=!admin);
-  renderDisplaySettings();
-  renderLogoManager();
-  window.GGFCStartup?.renderSettings();
+  syncAbilityAdminControls();
   renderRecordDataValidation();
-  renderPlayerPhotoAudit();
+}
+function renderCardSettings(){
+  if(!admin)return;
+  renderCareerFrameSettings();renderPlayerCardDesignSettings();renderAnalysisStartSettings();
+}
+function renderScreenSettings(){
+  if(!admin)return;
+  renderDisplaySettings();renderLogoManager();window.GGFCStartup?.renderSettings();
 }
 let activeView='dash';
 let memberPreviewActive=false,memberPreviewTarget='',memberPreviewRestoring=false;
@@ -6929,15 +6934,15 @@ function renderBest5(){
 
 /* V3.25.25 — menu publication settings; data authorization remains in Firebase. */
 const MEMBER_MENUS=[
- {id:'squad',label:'Team Squad'}, {id:'insights',label:'Record Stories'},
- {id:'dash',label:'Overview'}, {id:'interleague',label:'Interleague Stats'}, {id:'player',label:'Player Stats'},
- {id:'goalkeeper',label:'골레이로 랭킹'}, {id:'ability',label:'Player Ratings'},
- {id:'chem',label:'Player Analysis'}, {id:'best5',label:'Weekly Best 5'},
- {id:'maker',label:'Team Maker'}, {id:'alltime',label:'All-Time Records'},
- {id:'leadership',label:'역대 운영진'}, {id:'team',label:'Team Stats',defaultOpen:false}
+ {id:'squad',label:'팀 스쿼드'}, {id:'insights',label:'주간 레코드'},
+ {id:'dash',label:'주간 경기 결과'}, {id:'interleague',label:'인터리그 승률 현황'}, {id:'player',label:'선수 명단'},
+ {id:'goalkeeper',label:'골레이로 랭킹'}, {id:'ability',label:'선수 OVR 현황'},
+ {id:'chem',label:'베스트 듀오'}, {id:'best5',label:'주간 베스트 5'},
+ {id:'maker',label:'팀 메이커'}, {id:'alltime',label:'GG 역대 기록'},
+ {id:'leadership',label:'GG 역대 운영진'}, {id:'team',label:'팀 상태',defaultOpen:false}
 ];
 const ADMIN_MENUS=[
- {id:'menus',label:'메뉴 공개 관리'}, {id:'photos',label:'선수 사진 관리'}, {id:'abilityguide',label:'능력치 운영 안내'}, {id:'abilityaudit',label:'능력치 변동 분석'},
+ {id:'menus',label:'메뉴 공개 관리'}, {id:'photos',label:'선수 사진 관리'}, {id:'cardsettings',label:'선수 카드 설정'}, {id:'screensettings',label:'화면 설정'}, {id:'abilityguide',label:'능력치 운영 안내'}, {id:'abilityaudit',label:'능력치 변동 분석'},
  {id:'abilitycfg',label:'선수 능력치 설정'}, {id:'rep',label:'대표승점 설정'}, {id:'data',label:'데이터 관리'}, {id:'thumbnail',label:'유튜브 썸네일'}
 ];
 let menuEditorDraft=null,menuSettingsDirty=false;
@@ -6948,9 +6953,10 @@ function normalizedMenuOrder(raw,items){
  const known=items.map(m=>m.id),seen=new Set();
  return [...(Array.isArray(raw)?raw:[]),...known].filter(id=>known.includes(id)&&!seen.has(id)&&seen.add(id));
 }
+const LEGACY_MENU_LABELS={squad:['Team Squad'],insights:['Record Stories'],dash:['Overview'],interleague:['Interleague Stats'],player:['Player Stats'],ability:['Player Ratings'],chem:['Player Analysis'],best5:['Weekly Best 5'],maker:['Team Maker'],alltime:['All-Time Records'],leadership:['역대 운영진','Leadership History'],team:['Team Stats']};
 function navigationSettings(raw=DB.settings?.menuNavigation){
  raw=raw&&typeof raw==='object'?raw:{};const labels={};
- for(const m of [...MEMBER_MENUS,...ADMIN_MENUS]){const s=raw.labels?.[m.id];if(typeof s==='string'&&s.trim())labels[m.id]=s.trim().slice(0,32);}
+ for(const m of [...MEMBER_MENUS,...ADMIN_MENUS]){const s=raw.labels?.[m.id];if(typeof s==='string'&&s.trim()&&!LEGACY_MENU_LABELS[m.id]?.some(label=>label.toLowerCase()===s.trim().toLowerCase()))labels[m.id]=s.trim().slice(0,32);}
  return {order:normalizedMenuOrder(raw.order,MEMBER_MENUS),adminOrder:normalizedMenuOrder(raw.adminOrder,ADMIN_MENUS),labels,home:MEMBER_MENUS.some(m=>m.id===raw.home)?raw.home:'dash'};
 }
 function menuLabel(id,nav=navigationSettings()){id=canonicalMenu(id);return nav.labels[id]||[...MEMBER_MENUS,...ADMIN_MENUS].find(m=>m.id===id)?.label||'GGFC';}
@@ -7104,7 +7110,7 @@ function renderAbilityAudit(){
 }
 
 function renderMenuContent(next){
-  const renderers={thumbnail:()=>window.GGFCThumbnail?.render(),abilityaudit:renderAbilityAudit,photos:renderPlayerPhotoManager,interleague:renderInterleagueStats,menus:renderMenuManagement,closed:renderMenusClosed,goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide};
+  const renderers={thumbnail:()=>window.GGFCThumbnail?.render(),abilityaudit:renderAbilityAudit,photos:renderPlayerPhotoManager,cardsettings:renderCardSettings,screensettings:renderScreenSettings,interleague:renderInterleagueStats,menus:renderMenuManagement,closed:renderMenusClosed,goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide};
   return withRenderCalculationCache(renderers[next]);
 }
 // Recheck calculation inputs on every render, including edits made in place.
