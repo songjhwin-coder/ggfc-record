@@ -4,17 +4,19 @@ window.GGFCOperator=(()=>{
  const q=id=>document.getElementById(id),copy=v=>JSON.parse(JSON.stringify(v));
  let account=null,accountReady=false,template=null,templateReady=false,revision=0,connected=false,accountError='',templateError='',user=null,verified=false,opAuth=null,opDB=null,mainDB=null,accountRef=null,templateRef=null,working=false,saving=false,loginBusy=false,signature='',started=false,checking=false,checkPromise=null,messageText='',messageBad=false;
  const listeners={};
+ let operatorConnected=false,templateSavedAt=0;
  const isAdmin=()=>typeof admin!=='undefined'&&admin&&GGFC.authorized&&window.GGFC_MEMBER_PREVIEW!==true;
  const active=()=>window.GGFC_MEMBER_PREVIEW!==true&&verified&&!!user&&account?.enabled===true&&account.uid===user.uid&&account.email===user.email;
  const canUse=()=>isAdmin()||active();
- const canEdit=()=>canUse()&&connected&&templateReady&&!templateError&&!saving&&navigator.onLine!==false&&(isAdmin()?GGFC.canEdit():accountReady&&!accountError);
+ const canModify=()=>canUse()&&templateReady&&!templateError&&navigator.onLine!==false&&(isAdmin()?connected&&GGFC.canEdit():operatorConnected&&accountReady&&!accountError);
+ const canEdit=()=>canModify()&&!saving;
  const setupMessage='Firebase 운영진 권한 규칙이 없거나 접근이 거절되었습니다. 아래 ‘권한 규칙 안내’에 따라 게시한 뒤 ‘연결 다시 확인’을 누르세요.';
  const permissionError=e=>/permission|unauthorized/i.test(String(e?.code||'')+' '+String(e?.message||''));
  const connectionError=e=>permissionError(e)?setupMessage:e?.code==='ggfc/timeout'?'서버 응답이 늦습니다. 인터넷 연결을 확인한 뒤 연결 다시 확인을 누르세요.':'서버 연결을 확인한 뒤 연결 다시 확인을 누르세요.';
  function message(text,bad=false){messageText=text;messageBad=bad;const el=q('ytOperatorStatus');if(el){el.textContent=text;el.classList.toggle('is-error',bad);}}
  function notifyTemplate(){window.GGFCThumbnail?.sharedChanged();}
  function acceptAccount(value){const was=active();account=value;accountReady=true;accountError='';if(was&&!active()){if(!isAdmin())window.GGFCThumbnail?.discard();opAuth?.signOut().catch(()=>{});toast('운영진 비밀번호 또는 권한이 변경되어 로그아웃했습니다.');}}
- function acceptTemplate(value){const next=value?.template||null,nextRevision=Number(value?.revision)||0,changed=JSON.stringify(template)!==JSON.stringify(next)||revision!==nextRevision;template=next;revision=nextRevision;templateReady=true;templateError='';if(changed)notifyTemplate();}
+ function acceptTemplate(value){const next=value?.template||null,nextRevision=Number(value?.revision)||0;if(nextRevision<revision)return;const changed=JSON.stringify(template)!==JSON.stringify(next)||revision!==nextRevision;template=next;revision=nextRevision;templateSavedAt=Number(value?.savedAt)||0;templateReady=true;templateError='';if(changed)notifyTemplate();}
  function watch(kind,ref){
   if(listeners[kind])ref.off?.('value',listeners[kind]);
   const callback=snap=>{if(kind==='account')acceptAccount(snap.val());else acceptTemplate(snap.val());refreshUI();};listeners[kind]=callback;
@@ -35,14 +37,15 @@ window.GGFCOperator=(()=>{
   if(!started&&window.firebase?.apps?.length){start();return;}
   const op=active(),allowed=canUse(),btn=q('operatorLoginBtn');if(btn){btn.textContent=op?'운영진 로그아웃':'운영진 로그인';btn.hidden=isAdmin();}
   const badge=q('operatorModeBadge');if(badge)badge.hidden=!op||isAdmin();
-  const next=JSON.stringify([op,isAdmin(),allowed,accountReady,templateReady,connected,accountError,templateError,account?.uid,account?.enabled,working,saving,checking]);
+  const next=JSON.stringify([op,isAdmin(),allowed,accountReady,templateReady,connected,operatorConnected,accountError,templateError,account?.uid,account?.enabled,working,saving,checking]);
   const changed=next!==signature;signature=next;
   if(changed&&typeof syncMenuNavigation==='function'){
    syncMenuNavigation();if(typeof activeView!=='undefined'&&activeView==='thumbnail'&&!allowed){window.GGFCThumbnail?.discard();goTab(menuFallbackView());}
   }
   if(changed)window.GGFCThumbnail?.syncOverview();
   const panel=q('ytOperatorSettings');if(panel){panel.hidden=!isAdmin();if(isAdmin())renderSettings(panel);else for(const id of ['ytOperatorNewPassword','ytOperatorConfirmPassword'])if(q(id))q(id).value='';}
-  const notice=q('ytAccessNotice');if(notice){notice.hidden=!!(connected&&templateReady&&!templateError);notice.textContent=templateError||'썸네일 공유 서버에 연결하고 있습니다. 연결 후 설정을 저장할 수 있습니다.';}
+  const notice=q('ytAccessNotice');if(notice){notice.hidden=!!(templateReady&&!templateError&&(isAdmin()?connected:operatorConnected));notice.textContent=templateError||'썸네일 공유 서버에 연결하고 있습니다. 연결 후 설정을 저장할 수 있습니다.';}
+  window.GGFCThumbnail?.refreshSaveState();
  }
  async function onOperator(next){
   const was=active();user=next;verified=false;
@@ -55,6 +58,7 @@ window.GGFCOperator=(()=>{
    started=true;const primary=firebase.app();mainDB=primary.database();
    const secondary=firebase.apps.find(a=>a.name==='GGFCThumbnailOperator')||firebase.initializeApp(window.GGFC_CONFIG||{},'GGFCThumbnailOperator');opAuth=secondary.auth();opDB=secondary.database();opAuth.onIdTokenChanged(onOperator);
    mainDB.ref('.info/connected').on('value',snap=>{connected=snap.val()===true;refreshUI();});
+   opDB.ref('.info/connected').on('value',snap=>{operatorConnected=snap.val()===true;refreshUI();});
    accountRef=mainDB.ref('ggfc/thumbnailAccess');templateRef=mainDB.ref('ggfc/thumbnailTemplate');watch('account',accountRef);watch('template',templateRef);return true;
   }catch{started=false;accountError='운영진 서버 연결을 확인하세요.';templateError=accountError;return false;}
  }
@@ -82,7 +86,8 @@ window.GGFCOperator=(()=>{
    if(!accountReady||accountError)throw Error(accountError||'운영진 권한 연결을 확인하세요.');if(!account?.enabled||!account.email)throw Error('관리자가 운영진 비밀번호를 먼저 설정해야 합니다.');
    await opAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION);const result=await opAuth.signInWithEmailAndPassword(account.email,password);await onOperator(result.user);
    if(!active()){await opAuth.signOut();throw Error('권한을 확인하지 못했습니다. 관리자에게 운영진 설정을 확인해 주세요.');}
-   q('operatorLoginDialog').close();clearLogin();goTab('thumbnail');toast('운영진 로그인 · 썸네일 편집과 다운로드를 사용할 수 있습니다.');
+   await checkConnection();if(!templateReady||templateError)throw Error(templateError||'최신 썸네일 설정을 불러오지 못했습니다. 연결을 다시 확인하세요.');
+   q('operatorLoginDialog').close();clearLogin();goTab('thumbnail');toast('운영진 로그인 · 저장된 공통 썸네일 설정을 불러왔습니다.');
   }catch(e){const code=String(e.code||'');q('operatorLoginError').textContent=code.includes('too-many')?'로그인 시도가 많습니다. 잠시 후 다시 시도하세요.':code.includes('network')?'인터넷 연결을 확인하세요.':code.startsWith('auth/')?'운영진 비밀번호를 확인하세요.':e.message;}
   finally{loginBusy=false;q('operatorLoginOk').disabled=false;q('operatorLoginCancel').disabled=false;}
  }
@@ -130,7 +135,7 @@ window.GGFCOperator=(()=>{
   if(!canEdit())throw Error(templateError||'로그인과 썸네일 서버 연결을 확인하세요.');saving=true;refreshUI();
   try{const auth=isAdmin()?firebase.app().auth():opAuth,uid=auth.currentUser?.uid;if(!uid)throw Error('다시 로그인하세요.');const ref=(isAdmin()?mainDB:opDB).ref('ggfc/thumbnailTemplate');await ref.get();
    const result=await ref.transaction(current=>(Number(current?.revision)||0)!==expected?undefined:{template:copy(value),revision:expected+1,updatedBy:uid,savedAt:firebase.database.ServerValue.TIMESTAMP},undefined,false);
-   if(!result.committed)throw Error('다른 사용자가 썸네일을 저장했습니다. 미리보기 PNG를 보관한 뒤 저장값을 다시 불러와 편집하세요.');const v=result.snapshot.val();template=v.template;revision=Number(v.revision)||0;return revision;
+   if(!result.committed)throw Object.assign(Error('다른 사용자가 썸네일을 저장했습니다. 미리보기 PNG를 보관한 뒤 저장값을 다시 불러와 편집하세요.'),{code:'ggfc/template-conflict'});acceptTemplate(result.snapshot.val());return Number(result.snapshot.val()?.revision)||0;
   }catch(e){if(permissionError(e))throw Error(setupMessage);throw e;}finally{saving=false;refreshUI();}
  }
  q('operatorLoginBtn').onclick=()=>{if(active()){logout().catch(()=>toast('다시 시도하세요.'));return;}clearLogin();q('operatorLoginDialog').showModal();q('operatorPassword').focus();};
@@ -139,5 +144,5 @@ window.GGFCOperator=(()=>{
  window.addEventListener('online',()=>{refreshUI();if(started)checkConnection();});window.addEventListener('offline',refreshUI);
  window.addEventListener('pagehide',()=>{for(const id of ['ytOperatorNewPassword','ytOperatorConfirmPassword'])if(q(id))q(id).value='';});
  let attempts=0;const boot=()=>{if(start()||++attempts>=90)return;setTimeout(boot,500);};boot();refreshUI();
- return {start,refreshUI,renderSettings,saveTemplate,canUse,canEdit,logout,checkConnection,get active(){return active();},get template(){return template?copy(template):null;},get revision(){return revision;},get ready(){return templateReady;},get pending(){return saving||working;}};
+ return {start,refreshUI,renderSettings,saveTemplate,canUse,canEdit,canModify,logout,checkConnection,get active(){return active();},get template(){return template?copy(template):null;},get revision(){return revision;},get savedAt(){return templateSavedAt;},get ready(){return templateReady;},get pending(){return saving||working;}};
 })();

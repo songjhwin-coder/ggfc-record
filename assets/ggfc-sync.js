@@ -325,7 +325,7 @@ const GGFC = (() => {
     for(const type of ['click','change','input'])document.addEventListener(type,e=>{
       // Preview is read-only; its own handler still requires an authenticated administrator.
       if(type==='click'&&e.target.closest?.('button[data-menu-preview]'))return;
-      if(e.target.closest?.('#v-thumbnail')&&!e.target.closest?.('[data-operator-admin]')&&window.GGFCOperator?.canEdit())return;
+      if(e.target.closest?.('#v-thumbnail')&&!e.target.closest?.('[data-operator-admin]')&&(window.GGFCOperator?.canModify?.()||(e.target.closest?.('#ytReconnect')&&window.GGFCOperator?.canUse())))return;
       if(e.target.closest?.(selectors) && !canEdit()){
         e.preventDefault();e.stopImmediatePropagation();toast('관리자 인증과 서버 연결을 확인해 주세요.');
       } else if(type==='input' && state.authorized && e.target.id!=='repAdminYear' && e.target.closest?.('#v-rep,#v-abilitycfg,#seasonPanel,#displayNameManagerCard'))editLease=true;
@@ -475,4 +475,4 @@ const GGFC = (() => {
   }
   return {publicCounterContext,get editing(){return editLease||hasSettingsDraft()||!!window.GGFCThumbnail?.dirty||!!window.GGFCOperator?.pending;},get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving||state.busy>0;},canEdit,adminPasswordStatus,changeAdminPassword,get passwordChanging(){return passwordBusy;},normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,signIn,loginOrLogout,closeLogin,togglePassword};
 })();
-window.GGFC_VERSION='3.25.90';
+window.GGFC_VERSION='3.25.91';
