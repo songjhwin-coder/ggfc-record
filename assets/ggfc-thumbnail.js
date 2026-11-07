@@ -4,6 +4,7 @@ window.GGFCThumbnail=(()=>{
  const W=1280,H=720,MAX_LAYERS=32,MAX_BYTES=1200000;
  let draft=null,dirty=false,busy=false,selected='score',previewId='',model=null,drag=null,paintId=0,frame=0,uploadId=0,previewWarnings=[],draftRevision=0,batchBusy=false,batchCancelled=false,previewBusy=false;
  let autoTimer=null,editSerial=0,editGeneration=0,savingTemplate=false,saveTask=null,saveConflict=false,autoBlocked=false,saveFailure='',draftBase=null;
+ let exportRoundKey='',roundBusy=false,roundCancelled=false,roundMessage='',roundCache={source:null,groups:[]};
  const cache=new Map(),q=id=>document.getElementById(id),editable=()=>!!window.GGFCOperator?.canModify(),usable=()=>!!window.GGFCOperator?.canUse();
  const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),number=(n,f)=>Number.isFinite(Number(n))?Number(n):f;
  const copy=x=>JSON.parse(JSON.stringify(x));
@@ -59,6 +60,7 @@ window.GGFCThumbnail=(()=>{
   if(q('ytReload'))q('ytReload').disabled=busy||savingTemplate||!usable()||!GGFCOperator.ready;
   if(q('ytReconnect'))q('ytReconnect').disabled=busy||savingTemplate;
   if(dirty&&!autoTimer&&!savingTemplate&&!busy&&!drag&&!saveConflict&&!autoBlocked&&GGFCOperator.canShare())scheduleSave();
+  syncRoundControls();
  }
  function changed(){dirty=true;editSerial++;if(!saveConflict){autoBlocked=false;saveFailure='';}scheduleSave();GGFC.refreshUI();refreshSaveState();status(GGFCOperator.adminMode?'관리자 미리보기 변경 · 공유 저장하지 않습니다.':'변경 내용은 잠시 후 자동 공유 저장됩니다.');}
  function discard(){clearTimeout(autoTimer);autoTimer=null;editGeneration++;uploadId++;busy=false;draft=null;draftBase=null;dirty=false;drag=null;selected='score';paintId++;saveConflict=false;autoBlocked=false;saveFailure='';}
@@ -207,6 +209,7 @@ window.GGFCThumbnail=(()=>{
   const root=q('youtubeThumbnailEditor');if(!root||!usable())return;if(!dirty){draft=stored();draftBase=copy(draft);draftRevision=GGFCOperator.revision;}if(!draft)draft=defaults();const list=allMatches();if(!list.some(m=>String(m.id)===previewId))previewId=String(list[0]?.id||'');model=matchModel(getMatch(previewId));
   root.innerHTML=`<div class="yt-editor"><div class="yt-settings"><section class="card"><h3>배경과 추가 항목</h3><p id="ytEditPolicy"></p><p id="ytAccessNotice" class="yt-notice" hidden></p><label class="yt-setting-toggle"><input type="checkbox" id="ytEnabled"> 경기 결과 다운로드 버튼 표시</label><label>배경 이미지 등록<input id="ytBackgroundUpload" type="file" accept="image/png,image/jpeg,image/webp"></label><div class="yt-actions"><button type="button" class="btn" id="ytBackgroundClear">배경 사진 제거</button></div><label style="margin-top:10px">배경 사진 밝게<input id="ytWash" type="range" min="0" max="80" step="1"></label><div class="yt-actions"><button class="btn" type="button" id="ytAddText">문구 추가</button><label class="btn" style="margin:0;cursor:pointer">이미지 추가<input id="ytImageUpload" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden></label></div><p>등록한 배경 이미지만 사용하며 배경이 없으면 투명하게 저장됩니다.</p><p>PNG·JPG·WebP 장당 15MB 이하 · 자동 압축 · 전체 이미지 약 1.2MB 이내</p></section><section class="card"><h3>항목과 배치</h3><div id="ytLayers" class="yt-layer-list"></div><div id="ytEmptySelection" class="yt-empty-selection">항목을 선택하세요.</div><div id="ytInspector"><div id="ytSelectedLabel" class="yt-inspector-title"></div><label class="yt-setting-toggle"><input id="ytLayerVisible" type="checkbox"> 표시</label><label id="ytCustomTextWrap">추가 문구<textarea id="ytCustomText" maxlength="400"></textarea></label><div class="yt-props">${[['x','왼쪽 위치',0,W],['y','위쪽 위치',0,H],['w','너비',24,W],['h','높이',24,H]].map(([k,label,min,max])=>`<label>${label}<input id="ytProp-${k}" type="number" min="${min}" max="${max}" step="1"></label>`).join('')}</div><div class="yt-props" id="ytTextProps" style="margin-top:8px"><label>글자 크기<input id="ytProp-font" type="number" min="8" max="300" step="1"></label><label>글자 색<input id="ytProp-color" type="color"></label></div><div class="yt-actions yt-layer-order"><button type="button" class="btn" id="ytBackward">뒤로</button><button type="button" class="btn" id="ytForward">앞으로</button><button type="button" class="btn" id="ytDelete">추가 항목 삭제</button></div></div><button type="button" class="btn" id="ytLayoutReset">기본 항목 배치 복원</button><p>팀 로고와 감독·코치 사진은 각각 따로 이동·확대할 수 있습니다. 자동 항목은 경기기록을 사용합니다. 추가 문구·사진은 모든 경기 썸네일에 함께 적용됩니다.</p></section></div><div class="yt-workspace"><section class="card"><label class="yt-match-select">미리보기 경기<select id="ytPreviewMatch"></select></label><div id="ytStage" class="yt-stage" tabindex="0" role="group" aria-label="썸네일 배치 편집. 드래그 이동, 오른쪽 아래 손잡이로 크기 조절" data-no-menu-swipe><canvas id="ytCanvas" width="1280" height="720" aria-label="썸네일 미리보기"></canvas><div id="ytSelection" class="yt-selection" hidden><button type="button" class="yt-resize" data-yt-resize aria-label="선택 항목 크기 조절"></button></div></div><p>항목을 클릭해 선택한 뒤 드래그로 이동하고 모서리 손잡이로 크기를 조절하세요. 방향키로 이동 · Shift 10px · Alt 크기 조절</p><p id="ytWarnings" class="yt-notice" hidden></p><div class="yt-save-row"><div class="yt-actions"><button type="button" class="btn primary" id="ytSave">지금 공유 저장</button><button type="button" class="btn" id="ytReload">저장값 다시 불러오기</button><button type="button" class="btn" id="ytReconnect">공유 연결 확인·재시도</button></div><button type="button" class="btn" id="ytDownloadPreview">미리보기 PNG 저장</button></div><p id="ytSharedStatus" class="yt-shared-status" role="status" aria-live="polite"></p><p id="ytStatus" class="yt-status" role="status" aria-live="polite"></p><p>1280 × 720 PNG · 미리보기는 편집 중인 배치, 경기 결과 다운로드는 저장된 배치입니다.</p></section></div></div>`;
   const select=q('ytPreviewMatch');if(!list.length)select.add(new Option('등록 경기 없음 · 배치 예시',''));list.forEach(m=>select.add(new Option([m.date,m.no,m.round,teamDisplayName(m.home)+' '+num(m.hs)+':'+num(m.as)+' '+teamDisplayName(m.away)].filter(Boolean).join(' · '),String(m.id))));select.value=previewId;select.onchange=()=>{previewId=select.value;model=matchModel(getMatch(previewId));syncInspector();repaint();};
+  root.insertAdjacentHTML('afterbegin','<section class="card yt-round-export"><h3>라운드별 경기 썸네일 전체 저장</h3><p>공유 저장된 배경과 배치로 각 경기의 1280 × 720 PNG를 만들고 ZIP 한 개로 저장합니다. 편집 후에는 공유 저장 완료를 확인하세요.</p><div class="yt-round-controls"><label for="ytExportRound">라운드 선택<select id="ytExportRound"></select></label><div class="yt-actions"><button type="button" class="btn primary" id="ytRoundExport">선택 라운드 전체 저장 (ZIP)</button><button type="button" class="btn" id="ytRoundExportCancel" hidden>생성 취소</button></div></div><p id="ytRoundSummary"></p><p id="ytRoundStatus" role="status" aria-live="polite"></p></section>');
   q('ytEnabled').checked=draft.enabled;q('ytEnabled').onchange=e=>{if(!editable())return;draft.enabled=e.target.checked;changed();};q('ytWash').value=draft.wash*100;q('ytWash').oninput=e=>{if(!editable())return;draft.wash=Number(e.target.value)/100;changed();repaint();};
   q('ytBackgroundUpload').onchange=e=>upload(e,true);q('ytImageUpload').onchange=e=>upload(e,false);q('ytBackgroundClear').onclick=()=>{if(!editable()||busy)return;draft.background='';changed();repaint();};
   q('ytAddText').onclick=()=>{if(!editable()||busy)return;if(draft.layers.length>=MAX_LAYERS){status('항목은 '+MAX_LAYERS+'개까지 사용할 수 있습니다.',true);return;}const id='text_'+Date.now().toString(36)+'_'+draft.layers.length;draft.layers.push({id,kind:'text',label:'추가 문구 '+(draft.layers.filter(r=>r.kind==='text').length+1),text:'추가 문구',x:355,y:621,w:570,h:70,font:48,color:'#ffffff',visible:true});selected=id;changed();syncInspector();repaint();};
@@ -225,6 +228,63 @@ window.GGFCThumbnail=(()=>{
  async function downloadPreview(){if(!usable()||!draft||busy||previewBusy)return;previewBusy=true;q('ytDownloadPreview').disabled=true;status('PNG를 준비하고 있습니다…');try{const match=getMatch(previewId),r=await exportMatch(match,copy(draft));sendDownload(r.blob,(match?match.date+'_'+match.no+'_':'')+'썸네일_미리보기.png');status('미리보기 저장 완료'+(r.warnings.length?' · 일부 사진은 이름 표시로 대체했습니다.':''));}catch(e){status(e.message,true);}finally{previewBusy=false;if(q('ytDownloadPreview'))q('ytDownloadPreview').disabled=false;}}
  const safeName=name=>name.replace(/[<>:"/\\|?*\u0000-\u001f]/g,'_').slice(0,170);
  const matchFilename=match=>safeName([match.date,match.no,teamDisplayName(match.home)+'_vs_'+teamDisplayName(match.away),'썸네일.png'].filter(Boolean).join('_'));
+ function roundGroups(){
+  const source=verifiedRecords().matches;if(roundCache.source===source)return roundCache.groups;
+  const groups=new Map();
+  for(const m of uniqueRecordMatches(source).filter(m=>m.id)){
+   const date=normDate(m.date),year=date.slice(0,4),half=matchHalfKey(m)||'',family=isLeagueFamilyComp(m.comp)?'LEAGUE':compCompact(m.comp)||'기타',round=recordMatchRoundNumber(m);
+   const key=JSON.stringify([year,half,family,round>0?round:date]);
+   if(!groups.has(key))groups.set(key,{key,year,half,family,round,matches:[],dates:[]});
+   groups.get(key).matches.push(m);
+  }
+  const result=[...groups.values()];
+  for(const g of result){
+   g.matches.sort((a,b)=>normDate(a.date).localeCompare(normDate(b.date))||String(a.round||'').localeCompare(String(b.round||''),'ko',{numeric:true})||String(a.no||'').localeCompare(String(b.no||''),'ko',{numeric:true})||String(a.id).localeCompare(String(b.id),'ko',{numeric:true}));
+   g.dates=[...new Set(g.matches.map(m=>normDate(m.date)))].sort();
+   g.roundLabel=g.round>0?g.round+'R':'라운드 미등록';
+   g.label=[g.year+'년',g.half==='H1'?'상반기':g.half==='H2'?'하반기':'',g.family==='LEAGUE'?'리그':g.family,g.roundLabel].filter(Boolean).join(' · ');
+  }
+  result.sort((a,b)=>b.dates.at(-1).localeCompare(a.dates.at(-1))||b.year.localeCompare(a.year)||b.round-a.round||a.family.localeCompare(b.family,'ko'));
+  roundCache={source,groups:result};return result;
+ }
+ function syncRoundControls(){
+  const select=q('ytExportRound');if(!select)return;
+  const groups=roundGroups(),signature=JSON.stringify(groups.map(g=>[g.key,g.label,g.matches.length,g.dates]));
+  if(!roundBusy){
+   if(!groups.some(g=>g.key===exportRoundKey)){const next=groups.find(g=>g.matches.some(m=>String(m.id)===previewId))?.key||groups[0]?.key||'';if(next!==exportRoundKey)roundMessage='';exportRoundKey=next;}
+  }
+  if(select.dataset.rounds!==signature){select.dataset.rounds=signature;select.replaceChildren();if(!groups.length)select.add(new Option('등록된 경기 없음',''));for(const g of groups){const label=[g.year,g.half==='H1'?'상반기':g.half==='H2'?'하반기':'',g.family==='LEAGUE'?'':g.family,g.roundLabel].filter(Boolean).join(' · ');select.add(new Option(label+' ('+g.matches.length+'경기)',g.key));}}
+  select.value=exportRoundKey;
+  const group=groups.find(g=>g.key===exportRoundKey),saved=[1,2].includes(rawStored()?.version);
+  select.disabled=roundBusy||batchBusy||!usable();
+  const button=q('ytRoundExport');button.disabled=roundBusy||batchBusy||!usable()||!saved||!group?.matches.length;button.textContent=roundBusy?'라운드 이미지 생성 중…':group?group.matches.length+'경기 이미지 전체 저장 (ZIP)':'선택 라운드 전체 저장 (ZIP)';
+  q('ytRoundExportCancel').hidden=!roundBusy;
+  q('ytRoundSummary').textContent=!saved?'운영진 로그인에서 공통 썸네일 설정을 먼저 공유 저장하세요.':group?group.label+' · '+group.dates.join(', ')+' · 총 '+group.matches.length+'경기'+(group.matches.length!==12?' · 이 라운드에 등록된 경기 전체를 저장합니다.':' · 개별 PNG 12장'):'저장할 경기 결과가 없습니다.';
+  q('ytRoundStatus').textContent=roundMessage;
+  select.onchange=()=>{if(roundBusy||batchBusy)return;exportRoundKey=select.value;roundMessage='';syncRoundControls();};
+  button.onclick=downloadRound;q('ytRoundExportCancel').onclick=()=>{roundCancelled=true;setRoundStatus('현재 이미지 처리 후 취소합니다…');};
+ }
+ function setRoundStatus(text){roundMessage=text;const el=q('ytRoundStatus');if(el)el.textContent=text;}
+ async function downloadRound(){
+  if(roundBusy||batchBusy||!usable()||![1,2].includes(rawStored()?.version))return;
+  const group=roundGroups().find(g=>g.key===exportRoundKey);if(!group?.matches.length)return;
+  const template=copy(stored()),jobs=group.matches.map((m,i)=>({data:matchModel(m),name:String(i+1).padStart(2,'0')+'_'+matchFilename(m).replace(/\.png$/i,'').slice(0,150)+'.png'}));
+  roundBusy=true;roundCancelled=false;setRoundStatus(group.label+' · '+jobs.length+'경기 이미지 생성을 시작합니다.');syncRoundControls();syncOverview();
+  const files=[];let bytes=0,missing=0;
+  try{
+   for(let i=0;i<jobs.length;i++){
+    if(roundCancelled)throw Error('라운드 이미지 생성을 취소했습니다.');if(!usable())throw Error('운영진 또는 관리자 로그인을 확인하세요.');
+    setRoundStatus(group.label+' · 썸네일 생성 '+(i+1)+' / '+jobs.length);
+    const canvas=document.createElement('canvas'),result=await draw(canvas,template,jobs[i].data),blob=await png(canvas);
+    if(roundCancelled)throw Error('라운드 이미지 생성을 취소했습니다.');if(!usable())throw Error('로그인이 종료되어 이미지 생성을 중단했습니다.');
+    const data=new Uint8Array(await blob.arrayBuffer());bytes+=data.length;if(bytes>160*1024*1024)throw Error('전체 이미지가 160MB를 넘습니다. 경기별 저장을 사용하세요.');
+    files.push({name:jobs[i].name,data});if(result.warnings.length)missing++;await new Promise(resolve=>setTimeout(resolve,0));
+   }
+   if(roundCancelled||!usable())throw Error('라운드 이미지 생성을 중단했습니다.');
+   const stem=safeName('GGFC_썸네일_'+group.year+'_'+(group.half||'전체')+'_'+(group.family==='LEAGUE'?'리그':group.family)+'_'+group.roundLabel+'_'+files.length+'경기').slice(0,150);
+   sendDownload(pngArchive(files),stem+'.zip');setRoundStatus(files.length+'경기 PNG ZIP 다운로드 요청'+(missing?' · '+missing+'경기는 일부 사진 대체':''));
+  }catch(e){setRoundStatus(e.message);toast(e.message);}finally{roundBusy=false;syncRoundControls();syncOverview();}
+ }
  function visibleMatches(){const ids=[...new Set(Array.from(q('v-dash')?.querySelectorAll('.ground-match.fixture-match-card[data-match-detail-id]')||[],c=>c.dataset.matchDetailId))];return ids.map(getMatch).filter(Boolean);}
  // A thumbnail-specific UTF-8 ZIP keeps Korean PNG names readable without changing the existing XLSX ZIP writer.
  function pngArchive(files){const encoder=new TextEncoder(),parts=[],central=[];let offset=0,length=0;
@@ -233,7 +293,7 @@ window.GGFCThumbnail=(()=>{
  }
  function batchStatus(text){const el=q('ytBatchStatus');if(el)el.textContent=text;}
  async function downloadAll(){
-  if(batchBusy||!usable()||!configured())return;const matches=visibleMatches(),template=stored();if(!matches.length){toast('표시된 경기가 없습니다.');return;}
+  if(batchBusy||roundBusy||!usable()||!configured())return;const matches=visibleMatches(),template=stored();if(!matches.length){toast('표시된 경기가 없습니다.');return;}
   batchBusy=true;batchCancelled=false;syncOverview();const files=[],used=new Set();let bytes=0,missing=0;
   try{for(let i=0;i<matches.length;i++){
     if(batchCancelled)throw Error('취소했습니다.');if(!usable())throw Error('운영진 또는 관리자 로그인을 확인하세요.');
@@ -246,16 +306,17 @@ window.GGFCThumbnail=(()=>{
   }catch(e){batchStatus(e.message);toast(e.message);}finally{batchBusy=false;syncOverview();}
  }
  function syncOverview(){
+  syncRoundControls();
   const root=q('v-dash');if(!root)return;const on=configured()&&usable();
   if(!on){root.querySelectorAll('.yt-match-action,.yt-batch-action').forEach(e=>e.remove());if(batchBusy)batchCancelled=true;return;}
   const matches=visibleMatches(),heading=q('dashResultHeader')?.closest('.dashboard-block-title')||root.querySelector('.dashboard-main-head');
   let batch=q('ytBatchAction');if(!matches.length){batch?.remove();}else if(heading){
    if(!batch){batch=document.createElement('div');batch.id='ytBatchAction';batch.className='yt-batch-action';batch.setAttribute('data-export-ignore','');batch.innerHTML='<button type="button" class="btn" id="ytDownloadAll">표시된 경기 썸네일 전체 저장 (ZIP)</button><button type="button" class="btn" id="ytCancelAll" hidden>취소</button><span id="ytBatchStatus" role="status" aria-live="polite"></span>';heading.after(batch);q('ytDownloadAll').onclick=downloadAll;q('ytCancelAll').onclick=()=>{batchCancelled=true;batchStatus('현재 이미지 처리 후 취소합니다…');};}
-   q('ytDownloadAll').disabled=batchBusy;q('ytDownloadAll').dataset.count=String(matches.length);q('ytCancelAll').hidden=!batchBusy;
+   q('ytDownloadAll').disabled=batchBusy||roundBusy;q('ytDownloadAll').dataset.count=String(matches.length);q('ytCancelAll').hidden=!batchBusy;
   }
   root.querySelectorAll('.ground-match.fixture-match-card[data-match-detail-id]').forEach(card=>{const id=card.dataset.matchDetailId,previous=card.previousElementSibling;if(previous?.classList.contains('yt-match-action')&&previous.dataset.ytMatch===id)return;const bar=document.createElement('div');bar.className='yt-match-action';bar.dataset.ytMatch=id;bar.setAttribute('data-export-ignore','');const button=document.createElement('button');button.type='button';button.className='btn sm';button.textContent='썸네일 이미지 다운로드';button.setAttribute('aria-label',(card.getAttribute('aria-label')||'경기')+' 썸네일 이미지 다운로드');button.onclick=async e=>{e.preventDefault();e.stopPropagation();const match=getMatch(id);if(!match||!configured()||!usable()){toast('경기 기록과 운영진 또는 관리자 로그인을 확인하세요.');return;}button.disabled=true;button.textContent='썸네일 준비 중…';try{const r=await exportMatch(match);if(!usable())throw Error('다시 로그인해 주세요.');sendDownload(r.blob,matchFilename(match));toast(r.warnings.length?'썸네일 다운로드 요청 · 일부 사진은 이름 표시로 대체했습니다.':'썸네일 이미지 다운로드 요청');}catch(error){toast('썸네일 저장 실패: '+error.message);}finally{button.disabled=false;button.textContent='썸네일 이미지 다운로드';}};bar.append(button);card.before(bar);});
  }
  const overview=q('v-dash');if(overview){let queued=false;new MutationObserver(()=>{if(queued)return;queued=true;queueMicrotask(()=>{queued=false;syncOverview();});}).observe(overview,{childList:true,subtree:true});}
  syncOverview();if(typeof activeView!=='undefined'&&activeView==='thumbnail'&&usable())render();
- return {render,discard,normalize,defaults,syncOverview,sharedChanged,refreshSaveState,permissionChanged,saveTemplate,matchModel,exportMatch,downloadAll,get dirty(){return dirty||busy||savingTemplate;},get draft(){return draft?normalize(draft):null;}};
+ return {render,discard,normalize,defaults,syncOverview,sharedChanged,refreshSaveState,permissionChanged,saveTemplate,matchModel,exportMatch,downloadAll,downloadRound,roundGroups,get dirty(){return dirty||busy||savingTemplate;},get draft(){return draft?normalize(draft):null;}};
 })();
