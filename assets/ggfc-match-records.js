@@ -7,7 +7,7 @@ window.GGFCMatchRecords=(()=>{
  const eligible=(m,r)=>r.att&&!r.ownGoal&&!!m.round&&!!m.no&&playerEligibleOn(r.player,m.date);
  const metric=v=>teamRecordValuePresent(v)?Number(v):null;
  const base=(r,k)=>metric(r.sharedRecordValues?.[k]);
- const allowed=(r,k)=>k!=='saves'||r.keeper===true||metric(r.recordValues.saves)!==null;
+ const allowed=(r,k)=>k!=='saves'||r.saveAllowed===true;
  const storedKey=r=>JSON.stringify([r.fixtureKey,teamRecordTeamKey(r.team),normalizePlayerMatchKey(r.player)]);
  function readLocal(){try{const file=JSON.parse(localStorage.getItem(localKey)||'null');if(file?.version!==1||!Array.isArray(file.records))return;
   for(const row of file.records){if(!row||typeof row.fixtureKey!=='string'||typeof row.team!=='string'||typeof row.player!=='string')continue;const values={},baseValues={},seenValues={};let valid=true;
@@ -136,7 +136,7 @@ window.GGFCMatchRecords=(()=>{
   if(player&&html)player.outerHTML=html;
  });
  readLocal();
- return {canEdit:eligible,rowActionsHtml,cellHtml,playerEditorHtml,permissionMarkerHtml,saveRow,refreshPermissions,retryPending,get dirty(){return drafts.size>0;},get cloudEditing(){return false;},discard(){drafts.clear();statuses.clear();refreshMatchDetailRecords();},onPublicChanged(){reconcile();requestRecordRefresh();},onDatabaseChanged(){reconcile();requestRecordRefresh();retryPending();}};
+ return {canEdit:eligible,rowActionsHtml,cellHtml,playerEditorHtml,permissionMarkerHtml,saveRow,refreshPermissions,retryPending,get pendingCount(){return localRows.size;},get dirty(){return drafts.size>0;},get cloudEditing(){return false;},discard(){drafts.clear();statuses.clear();refreshMatchDetailRecords();},onPublicChanged(){reconcile();requestRecordRefresh();},onDatabaseChanged(){reconcile();requestRecordRefresh();retryPending();}};
 })();
 window.GGFCMatchRecords.onDatabaseChanged();
 window.addEventListener('pageshow',()=>{window.GGFCMatchRecords.refreshPermissions();window.GGFCMatchRecords.retryPending();});

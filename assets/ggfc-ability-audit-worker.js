@@ -1,4 +1,4 @@
-/* Generated from current core + SLUMP; source SHA256 404ba89fef43e1a00d35ed045388aa531d5f6ca0b34889d680026d05c67e4bcc */
+/* Generated from current core + SLUMP; source SHA256 30e999d1fdf36ebef6fbe5fde23debd47dfbab00ef15f953766ee2ad1effa0ac */
 const GGFCSlump=(()=>{
  const defaults={enabled:true,startDate:'2026-10-20',recentGames:10,baselineGames:20,minimumBaselineGames:10,formTrigger:-2,performanceTrigger:75,persistenceRounds:4,interval:4,recoveryPerformance:85,recoveryRounds:3,slumpDrop:.20,severeDrop:.35,criticalDrop:.50,seasonCap:1.5,storyEnabled:false};
  Object.assign(defaults,{recoveryStartDate:'2026-10-27',recoveryPercent:25,severePerformance:70,criticalPerformance:60});
@@ -203,10 +203,25 @@ function verifiedFixtureKey(m){
  const round=String(m.round||'').trim(),no=String(m.no||'').trim();
  return JSON.stringify([normDate(m.date),isLeagueFamilyComp(m.comp)?'LEAGUE':compCompact(m.comp),round,no,[String(m.home||'').trim(),String(m.away||'').trim()].sort(),round||no?'':String(m.id)]);
 }
+function recordToday(){return new Date(Date.now()+9*3600000).toISOString().slice(0,10);}
+function matchScore(value){
+ if(value===null||value===undefined||typeof value==='boolean'||String(value).trim()==='')return null;
+ const n=Number(value);return Number.isSafeInteger(n)&&n>=0?n:null;
+}
+function matchCompletionReason(m,today=recordToday()){
+ const date=normDate(m.date);
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date))||new Date(date).toISOString().slice(0,10)!==date)return '날짜 확인 필요';
+ if(!m.home||!m.away||m.home===m.away)return '대진 확인 필요';
+ if(date>today)return '예정 경기';
+ const scores=[m.hs,m.as],invalid=scores.some(v=>v!==null&&v!==undefined&&String(v).trim()!==''&&matchScore(v)===null);
+ if(invalid||scores.some(v=>matchScore(v)===null)&&forfeitTeamNames(m).filter(t=>t===m.home||t===m.away).length!==1)return '점수 미입력 또는 오류';
+ return '';
+}
 function verifiedRecords(){
  const fields=['matches','attendance','goals','saves','fouls','moms'],refs=fields.map(k=>DB[k]),sizes=refs.map(r=>r?.length||0);
- if(verifiedRecordCache&&verifiedRecordCache.db===DB&&refs.every((r,i)=>r===verifiedRecordCache.refs[i]&&sizes[i]===verifiedRecordCache.sizes[i]))return verifiedRecordCache;
- const out={db:DB,refs,sizes,issues:[],aliases:new Map(),matches:[],attendance:[],goals:[],saves:[],fouls:[],moms:[]},groups=new Map(),idKeys=new Map();
+ const today=recordToday();
+ if(verifiedRecordCache&&verifiedRecordCache.db===DB&&verifiedRecordCache.today===today&&refs.every((r,i)=>r===verifiedRecordCache.refs[i]&&sizes[i]===verifiedRecordCache.sizes[i]))return verifiedRecordCache;
+ const out={db:DB,refs,sizes,today,issues:[],pending:[],allMatches:[],allAttendance:[],allRecords:Object.fromEntries(fields.slice(1).map(k=>[k,[]])),allAliases:new Map(),aliases:new Map(),matches:[],attendance:[],goals:[],saves:[],fouls:[],moms:[]},groups=new Map(),idKeys=new Map();
  const text=v=>String(v??'').trim(),present=v=>v!==null&&v!==undefined&&text(v)!=='';
  for(const raw of DB.matches||[]){const m={...raw,id:text(raw.id)},key=verifiedFixtureKey(m);if(!idKeys.has(m.id))idKeys.set(m.id,new Set());idKeys.get(m.id).add(key);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(m);}
  const metrics={attendance:[],goals:['g','a'],saves:['saves'],fouls:['fouls'],moms:['mom']};
@@ -242,13 +257,17 @@ function verifiedRecords(){
   const teamsByPlayer=new Map();for(const r of pending.attendance){const k=normalizePlayerMatchKey(r.player);if(!teamsByPlayer.has(k))teamsByPlayer.set(k,new Set());teamsByPlayer.get(k).add(r.team);}
   if([...teamsByPlayer.values()].some(s=>s.size>1))reasons.push('같은 선수가 양 팀 출석에 중복 등록됨');
   if(reasons.length){out.issues.push({date:first.date,id:[...ids].join(', '),team:first.home+' / '+first.away,reason:[...new Set(reasons)].join(' · '),blocked:true});continue;}
+  out.allMatches.push(first);out.allAttendance.push(...pending.attendance);
+  for(const id of ids)out.allAliases.set(id,first.id);for(const f of fields.slice(1))out.allRecords[f].push(...pending[f]);
+  const reason=matchCompletionReason(first,today);
+  if(reason){out.pending.push({date:first.date,id:first.id,team:first.home+' / '+first.away,reason});continue;}
   out.matches.push(first);for(const id of ids)out.aliases.set(id,first.id);for(const f of fields.slice(1))out[f].push(...pending[f]);
  }
  return verifiedRecordCache=out;
 }
-function verifiedMatchId(id){return verifiedRecords().aliases.get(String(id))||'';}
-function verifiedKeeperEntries(){
- const seen=new Set();return (DB.settings?.goalkeeperEntries||[]).map(r=>({...r,id:verifiedMatchId(r.id)})).filter(r=>{if(!r.id)return false;const key=JSON.stringify([r.id,r.team,r.text]);if(seen.has(key))return false;seen.add(key);return true;});
+function verifiedKeeperEntries(includePending=false){
+ const aliases=includePending?verifiedRecords().allAliases:verifiedRecords().aliases;
+ const seen=new Set();return (DB.settings?.goalkeeperEntries||[]).map(r=>({...r,id:aliases.get(String(r.id))||''})).filter(r=>{if(!r.id)return false;const key=JSON.stringify([r.id,r.team,r.text]);if(seen.has(key))return false;seen.add(key);return true;});
 }
 const num = v => { const n = parseFloat(String(v??"").replace(/[^0-9.\-]/g,"")); return isNaN(n)?0:n; };
 const pct = (a,b) => b? Math.round(a/b*1000)/10 : 0;
@@ -327,8 +346,16 @@ function matchCounterGoalkeeperSource(m,team,player){
   const designated=new Set();
   verifiedKeeperEntries().filter(k=>String(k.id)===String(m.id)&&k.team===team&&normDate(k.date)===normDate(m.date)&&String(k.no)===String(m.no)&&String(k.round)===String(m.round)).forEach(k=>{const parsed=parseKeeperCell(k.text);if(!parsed.issues.length)parsed.rows.forEach(p=>designated.add(normalizePlayerMatchKey(p.player)));});
   if(designated.size)return designated.has(normalizePlayerMatchKey(player))?'MATCH':'';
-  const pos=String(selectPlayerRoster(player,normDate(m.date).slice(0,4))?.pos||'').normalize('NFKC').trim().toUpperCase();
+  const canonical=soccerBeeCanonicalPlayerMap()[normalizePlayerMatchKey(player)]||player;
+  const pos=String(selectPlayerRoster(canonical,normDate(m.date).slice(0,4))?.pos||'').normalize('NFKC').trim().toUpperCase();
   return normalizeAbilityPosition(pos)==='GR'||pos==='골키퍼'||pos==='GOALKEEPER'?'ROSTER':'';
+}
+function matchCounterSaveAllowed(m,team,player){
+ if(matchCounterGoalkeeperSource(m,team,player))return true;
+ const key=normalizePlayerMatchKey(player),teamKey=teamRecordTeamKey(team);
+ // Historical corrections require a trusted administrator-owned record, never a submitted baseValue.
+ if(verifiedRecords().saves.some(r=>r.id===m.id&&teamRecordTeamKey(r.team)===teamKey&&normalizePlayerMatchKey(r.player)===key&&teamRecordValuePresent(r.saves)))return true;
+ return (DB.settings?.appTeamPlayerRecords||[]).some(r=>r.fixtureKey===verifiedFixtureKey(m)&&teamRecordTeamKey(r.team)===teamKey&&normalizePlayerMatchKey(r.player)===key&&teamRecordValuePresent(r.values?.saves));
 }
 function appTeamRecordKey(m,team,player){return JSON.stringify([verifiedFixtureKey(m),teamRecordTeamKey(team),normalizePlayerMatchKey(player)]);}
 function mergeAppTeamPlayerRecords(result){
@@ -391,7 +418,7 @@ function mergeLiveCounterTeamPlayerRecords(result){
       if(!Object.prototype.hasOwnProperty.call(raw.values||{},k))continue;
       const value=raw.values[k],base=raw.baseValues?.[k];
       if(typeof value!=='number'||!Number.isSafeInteger(value)||value<0||value>10000){fail('공유 카운트 값을 확인하세요');continue;}
-      if(k==='saves'&&sharedValues.saves===null&&!teamRecordValuePresent(base)&&!matchCounterGoalkeeperSource(m,team,player))continue;
+      if(k==='saves'&&!matchCounterSaveAllowed(m,team,player)){fail('새 선방은 경기별 지정 또는 명단 골키퍼만 입력할 수 있습니다');continue;}
       row[k]=value;row.counterFields.push(k);
     }
     if(!row.counterFields.length)continue;
@@ -558,7 +585,7 @@ function forfeitTeamNames(m){
   return a;
 }
 function matchResult(m,team){
-  if(!m || (team!==m.home && team!==m.away)) return null;
+  if(!m || (team!==m.home && team!==m.away)||matchCompletionReason(m)) return null;
   const ff=forfeitTeamNames(m).filter(t=>t===m.home||t===m.away);
   if(ff.length===1) return ff[0]===team?"L":"W";
   return team===m.home?result(num(m.hs),num(m.as)):result(num(m.as),num(m.hs));

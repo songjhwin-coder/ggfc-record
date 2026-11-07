@@ -37,10 +37,29 @@ function verifiedFixtureKey(m){
  const round=String(m.round||'').trim(),no=String(m.no||'').trim();
  return JSON.stringify([normDate(m.date),isLeagueFamilyComp(m.comp)?'LEAGUE':compCompact(m.comp),round,no,[String(m.home||'').trim(),String(m.away||'').trim()].sort(),round||no?'':String(m.id)]);
 }
+function recordToday(){return new Date(Date.now()+9*3600000).toISOString().slice(0,10);}
+function matchScore(value){
+ if(value===null||value===undefined||typeof value==='boolean'||String(value).trim()==='')return null;
+ const n=Number(value);return Number.isSafeInteger(n)&&n>=0?n:null;
+}
+function readMatchScore(value,label='경기 점수'){
+ if(value===null||value===undefined||String(value).trim()==='')return null;
+ const score=matchScore(value);if(score===null)throw new Error(label+': 0 이상의 정수 또는 빈칸을 입력하세요.');return score;
+}
+function matchCompletionReason(m,today=recordToday()){
+ const date=normDate(m.date);
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date))||new Date(date).toISOString().slice(0,10)!==date)return '날짜 확인 필요';
+ if(!m.home||!m.away||m.home===m.away)return '대진 확인 필요';
+ if(date>today)return '예정 경기';
+ const scores=[m.hs,m.as],invalid=scores.some(v=>v!==null&&v!==undefined&&String(v).trim()!==''&&matchScore(v)===null);
+ if(invalid||scores.some(v=>matchScore(v)===null)&&forfeitTeamNames(m).filter(t=>t===m.home||t===m.away).length!==1)return '점수 미입력 또는 오류';
+ return '';
+}
 function verifiedRecords(){
  const fields=['matches','attendance','goals','saves','fouls','moms'],refs=fields.map(k=>DB[k]),sizes=refs.map(r=>r?.length||0);
- if(verifiedRecordCache&&verifiedRecordCache.db===DB&&refs.every((r,i)=>r===verifiedRecordCache.refs[i]&&sizes[i]===verifiedRecordCache.sizes[i]))return verifiedRecordCache;
- const out={db:DB,refs,sizes,issues:[],aliases:new Map(),matches:[],attendance:[],goals:[],saves:[],fouls:[],moms:[]},groups=new Map(),idKeys=new Map();
+ const today=recordToday();
+ if(verifiedRecordCache&&verifiedRecordCache.db===DB&&verifiedRecordCache.today===today&&refs.every((r,i)=>r===verifiedRecordCache.refs[i]&&sizes[i]===verifiedRecordCache.sizes[i]))return verifiedRecordCache;
+ const out={db:DB,refs,sizes,today,issues:[],pending:[],allMatches:[],allAttendance:[],allRecords:Object.fromEntries(fields.slice(1).map(k=>[k,[]])),allAliases:new Map(),aliases:new Map(),matches:[],attendance:[],goals:[],saves:[],fouls:[],moms:[]},groups=new Map(),idKeys=new Map();
  const text=v=>String(v??'').trim(),present=v=>v!==null&&v!==undefined&&text(v)!=='';
  for(const raw of DB.matches||[]){const m={...raw,id:text(raw.id)},key=verifiedFixtureKey(m);if(!idKeys.has(m.id))idKeys.set(m.id,new Set());idKeys.get(m.id).add(key);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(m);}
  const metrics={attendance:[],goals:['g','a'],saves:['saves'],fouls:['fouls'],moms:['mom']};
@@ -76,13 +95,18 @@ function verifiedRecords(){
   const teamsByPlayer=new Map();for(const r of pending.attendance){const k=normalizePlayerMatchKey(r.player);if(!teamsByPlayer.has(k))teamsByPlayer.set(k,new Set());teamsByPlayer.get(k).add(r.team);}
   if([...teamsByPlayer.values()].some(s=>s.size>1))reasons.push('같은 선수가 양 팀 출석에 중복 등록됨');
   if(reasons.length){out.issues.push({date:first.date,id:[...ids].join(', '),team:first.home+' / '+first.away,reason:[...new Set(reasons)].join(' · '),blocked:true});continue;}
+  out.allMatches.push(first);out.allAttendance.push(...pending.attendance);
+  for(const id of ids)out.allAliases.set(id,first.id);for(const f of fields.slice(1))out.allRecords[f].push(...pending[f]);
+  const reason=matchCompletionReason(first,today);
+  if(reason){out.pending.push({date:first.date,id:first.id,team:first.home+' / '+first.away,reason});continue;}
   out.matches.push(first);for(const id of ids)out.aliases.set(id,first.id);for(const f of fields.slice(1))out[f].push(...pending[f]);
  }
  return verifiedRecordCache=out;
 }
 function verifiedMatchId(id){return verifiedRecords().aliases.get(String(id))||'';}
-function verifiedKeeperEntries(){
- const seen=new Set();return (DB.settings?.goalkeeperEntries||[]).map(r=>({...r,id:verifiedMatchId(r.id)})).filter(r=>{if(!r.id)return false;const key=JSON.stringify([r.id,r.team,r.text]);if(seen.has(key))return false;seen.add(key);return true;});
+function verifiedKeeperEntries(includePending=false){
+ const aliases=includePending?verifiedRecords().allAliases:verifiedRecords().aliases;
+ const seen=new Set();return (DB.settings?.goalkeeperEntries||[]).map(r=>({...r,id:aliases.get(String(r.id))||''})).filter(r=>{if(!r.id)return false;const key=JSON.stringify([r.id,r.team,r.text]);if(seen.has(key))return false;seen.add(key);return true;});
 }
 function recordCalculationNotice(){
  const blocked=verifiedRecords().issues.filter(r=>r.blocked);let box=document.getElementById('recordCalculationNotice');
@@ -330,7 +354,7 @@ const SCHEMA = {
     sample:"M001,2026-03-07,정규리그,A특공대,풀파워,3,2,4,6\nM002,2026-03-07,정규리그,어우씨,D져스,1,1,3,3",
     map:o=>({ id:pick(o,"경기ID","ID","경기번호")||"", date:normDate(pick(o,"날짜","경기일","일자")),
       comp:pick(o,"대회","구분","리그")||"정규리그", home:pick(o,"홈팀","팀A","HOME"), away:pick(o,"원정팀","팀B","AWAY"),
-      hs:num(pick(o,"홈득점","홈점수")), as:num(pick(o,"원정득점","원정점수")),
+      hs:readMatchScore(pick(o,"홈득점","홈점수"),'홈득점'), as:readMatchScore(pick(o,"원정득점","원정점수"),'원정득점'),
       hf:num(pick(o,"홈파울")), af:num(pick(o,"원정파울")), ...matchYoutubeMetadata(o) }) },
   attendance:{ name:"출석 기록", head:"경기ID,팀,선수,감독",
     sample:"M001,A특공대,김철수,박감독\nM001,풀파워,이영호,정감독",
@@ -698,7 +722,7 @@ function matchMetadataIssues(list=verifiedRecords().matches,{requireSquads=false
   });
   return issues;
 }
-function assertMatchMetadata(list=verifiedRecords().matches,options){
+function assertMatchMetadata(list=verifiedRecords().allMatches,options){
   const issues=matchMetadataIssues(list,options);
   if(issues.length)throw new Error('팀스쿼드 분류 확인 '+issues.length+'건: '+issues.slice(0,5).map(x=>[x.date,x.team,x.reason].join(' ')).join(' / ')+(issues.length>5?' / 나머지는 원본 팀스쿼드를 확인하세요.':''));
 }
@@ -713,8 +737,20 @@ function matchCounterGoalkeeperSource(m,team,player){
   const designated=new Set();
   verifiedKeeperEntries().filter(k=>String(k.id)===String(m.id)&&k.team===team&&normDate(k.date)===normDate(m.date)&&String(k.no)===String(m.no)&&String(k.round)===String(m.round)).forEach(k=>{const parsed=parseKeeperCell(k.text);if(!parsed.issues.length)parsed.rows.forEach(p=>designated.add(normalizePlayerMatchKey(p.player)));});
   if(designated.size)return designated.has(normalizePlayerMatchKey(player))?'MATCH':'';
-  const pos=String(selectPlayerRoster(player,normDate(m.date).slice(0,4))?.pos||'').normalize('NFKC').trim().toUpperCase();
+  const canonical=soccerBeeCanonicalPlayerMap()[normalizePlayerMatchKey(player)]||player;
+  const pos=String(selectPlayerRoster(canonical,normDate(m.date).slice(0,4))?.pos||'').normalize('NFKC').trim().toUpperCase();
   return normalizeAbilityPosition(pos)==='GR'||pos==='골키퍼'||pos==='GOALKEEPER'?'ROSTER':'';
+}
+function matchCounterSaveAllowed(m,team,player){
+ if(matchCounterGoalkeeperSource(m,team,player))return true;
+ const key=normalizePlayerMatchKey(player),teamKey=teamRecordTeamKey(team);
+ // Historical corrections require a trusted administrator-owned record, never a submitted baseValue.
+ if(verifiedRecords().saves.some(r=>r.id===m.id&&teamRecordTeamKey(r.team)===teamKey&&normalizePlayerMatchKey(r.player)===key&&teamRecordValuePresent(r.saves)))return true;
+ return (DB.settings?.appTeamPlayerRecords||[]).some(r=>r.fixtureKey===verifiedFixtureKey(m)&&teamRecordTeamKey(r.team)===teamKey&&normalizePlayerMatchKey(r.player)===key&&teamRecordValuePresent(r.values?.saves));
+}
+function counterSavePermissions(){
+ const v=verifiedRecords(),byId=new Map(v.matches.map(m=>[String(m.id),m]));
+ return (DB.attendance||[]).map(a=>{const m=byId.get(v.aliases.get(String(a.id)));return !!m&&matchCounterSaveAllowed(m,a.team,a.player);});
 }
 function appTeamRecordKey(m,team,player){return JSON.stringify([verifiedFixtureKey(m),teamRecordTeamKey(team),normalizePlayerMatchKey(player)]);}
 function mergeAppTeamPlayerRecords(result){
@@ -777,7 +813,7 @@ function mergeLiveCounterTeamPlayerRecords(result){
       if(!Object.prototype.hasOwnProperty.call(raw.values||{},k))continue;
       const value=raw.values[k],base=raw.baseValues?.[k];
       if(typeof value!=='number'||!Number.isSafeInteger(value)||value<0||value>10000){fail('공유 카운트 값을 확인하세요');continue;}
-      if(k==='saves'&&sharedValues.saves===null&&!teamRecordValuePresent(base)&&!matchCounterGoalkeeperSource(m,team,player))continue;
+      if(k==='saves'&&!matchCounterSaveAllowed(m,team,player)){fail('새 선방은 경기별 지정 또는 명단 골키퍼만 입력할 수 있습니다');continue;}
       row[k]=value;row.counterFields.push(k);
     }
     if(!row.counterFields.length)continue;
@@ -932,7 +968,7 @@ function teamRecordAuditHtml(){
 }
 
 function applyUnified(objs){
-  const M=[], A=[], G=[], S=[], F=[], MM=[], K=[], idx={}, last={}, seenTeamRows=new Map();
+  const M=[], A=[], G=[], S=[], F=[], MM=[], K=[], idx={}, last={}, seenTeamRows=new Map(),claimedScores=new Map();
   objs.forEach(o=>{
     const g=(...k)=>pick(o,...k);
     const carry=(field,...keys)=>{ const v=String(g(...keys)||"").trim(); if(v){ last[field]=v; return v; } return last[field]||""; };
@@ -945,7 +981,7 @@ function applyUnified(objs){
     const team = String(g("\ud300","\uc18c\uc18d\ud300","\uc6b0\ub9ac\ud300")||"").trim();
     const opp  = String(g("\uc0c1\ub300\ud300","\uc0c1\ub300")||"").trim();
     if(!date || !team) return;
-    const gf=num(g("\ub4dd\uc810","\uc810\uc218","\ub4dd\uc810\uc218")), ga=num(g("\uc2e4\uc810","\uc0c1\ub300\ub4dd\uc810"));
+    const gf=readMatchScore(g("\ub4dd\uc810","\uc810\uc218","\ub4dd\uc810\uc218"),date+' '+team+' 득점'), ga=readMatchScore(g("\uc2e4\uc810","\uc0c1\ub300\ub4dd\uc810"),date+' '+team+' 실점');
     const extraHeader=Object.keys(o).find(k=>k.replace(/\s/g,'')==='추가파울');
     const extraRaw=extraHeader===undefined?null:String(o[extraHeader]??'').trim();
     if(extraRaw!==null&&extraRaw!==''&&(!Number.isInteger(Number(extraRaw))||Number(extraRaw)<0))throw new Error('추가 파울은 0 이상의 정수 또는 빈칸이어야 합니다: '+date+' '+team);
@@ -961,6 +997,7 @@ function applyUnified(objs){
     const teamKey=key+'#'+team,content=JSON.stringify([gf,ga,foul,extraFoul,pointDeduction,forfeit,...Object.entries(o).filter(([k])=>!['날짜','대회','반기','라운드','경기번호','득점자 열 검사'].includes(k)).sort(([a],[b])=>a.localeCompare(b))]);
     if(seenTeamRows.has(teamKey)){if(seenTeamRows.get(teamKey)===content)return;throw new Error('경기기록 중복 행의 값이 다릅니다: '+date+' '+roundV+' '+no+' '+team+'. 원본 두 행을 확인하세요.');}
     seenTeamRows.set(teamKey,content);
+    if(!claimedScores.has(key))claimedScores.set(key,new Map());claimedScores.get(key).set(team,{gf,ga});
     let m = idx[key];
     if(!m){
       m={ id:"M"+String(M.length+1).padStart(3,"0"), date, comp, no, half:halfV, round:roundV,
@@ -969,8 +1006,8 @@ function applyUnified(objs){
     } else if(m.home===team){
       m.hs=gf; m.hf=foul; if(groupV) m.homeGroup=groupV; if(opp) m.away=opp;
     } else if(m.away===team || !m.away || m.away===opp){
-      m.away=team; m.as=gf; m.af=foul; if(groupV) m.awayGroup=groupV;
-      if(!m.hs && ga) m.hs=ga;
+      m.away=team; if(gf!==null)m.as=gf; m.af=foul; if(groupV) m.awayGroup=groupV;
+      if(m.hs===null&&ga!==null)m.hs=ga;
       if(!m.home && opp) m.home=opp;
     } else {
       /* 동일 키에 다른 대진이 들어오면 별도 경기로 보존한다. */
@@ -1016,6 +1053,10 @@ function applyUnified(objs){
       if(ex) ex.mom+=s.g; else MM.push({ id:m.id, team, player:s.player, mom:s.g });
     });
   });
+  for(const [key,claims] of claimedScores){
+    const m=idx[key],home=claims.get(m.home),away=claims.get(m.away);
+    if(home&&away&&((home.gf!==null&&away.ga!==null&&home.gf!==away.ga)||(away.gf!==null&&home.ga!==null&&away.gf!==home.ga)))throw new Error('양 팀 득점·실점 불일치: '+m.date+' '+m.no+' / '+m.round+' '+m.home+' '+(home.gf??'미입력')+':'+(home.ga??'미입력')+' / '+m.away+' '+(away.gf??'미입력')+':'+(away.ga??'미입력')+'. 원본 양 팀 행을 확인하세요.');
+  }
   if(!M.length) throw new Error("\uc720\ud6a8\ud55c \uacbd\uae30 \ud589\uc774 \uc5c6\uc2b5\ub2c8\ub2e4 (\ub0a0\uc9dc\u00b7\ud300 \ud655\uc778)");
   DB.matches=M; DB.attendance=A; DB.goals=G; DB.saves=S; DB.fouls=F; DB.moms=MM;
   DB.settings=DB.settings||{};DB.settings.goalkeeperEntries=K;
@@ -1252,6 +1293,7 @@ function seasonLabel(){
   return seasonYear+"년 "+(half==="H1"?"상반기":half==="H2"?"하반기":"연간");
 }
 function matches(){ return verifiedRecords().matches.filter(m=> (comp==="ALL" || matchCompetition(m)===comp) && inSeason(m) ); }
+function scheduleMatches(){return verifiedRecords().allMatches.filter(m=>(comp==='ALL'||matchCompetition(m)===comp)&&inSeason(m));}
 function matchIds(){ return new Set(matches().map(m=>m.id)); }
 function latestMatchDate(){
   return verifiedRecords().matches.map(m=>normDate(m.date)).filter(Boolean).sort().pop()||"";
@@ -1325,7 +1367,7 @@ function markForfeitTeam(m,team){
 }
 function isForfeitTeam(m,team){ return forfeitTeamNames(m).includes(team); }
 function matchResult(m,team){
-  if(!m || (team!==m.home && team!==m.away)) return null;
+  if(!m || (team!==m.home && team!==m.away)||matchCompletionReason(m)) return null;
   const ff=forfeitTeamNames(m).filter(t=>t===m.home||t===m.away);
   if(ff.length===1) return ff[0]===team?"L":"W";
   return team===m.home?result(num(m.hs),num(m.as)):result(num(m.as),num(m.hs));
@@ -5638,6 +5680,8 @@ function renderDash(){
   if($("#dashSub")) $("#dashSub").textContent="경기결과 · 팀순위 · 개인순위 · 출석 · 상대전적";
 }
 function matchCard(m){
+  const pending=matchCompletionReason(m);
+  if(pending)return '<div class="match fixture-match-card"><div class="top"><span>'+esc(m.date)+'</span><span class="pill">'+esc(pending)+'</span></div><div>'+teamChip(m.home)+' <b>'+(matchScore(m.hs)??'—')+' : '+(matchScore(m.as)??'—')+'</b> '+teamChip(m.away)+'</div></div>';
   const homeSc=teamScorers(m,m.home,true), awaySc=teamScorers(m,m.away,true), fouls=matchTeamFouls(m);
   return '<div class="match fixture-match-card">'+
     '<div class="top"><span class="pill">'+esc(matchCompetition(m))+'</span>'+(m.round?'<span class="pill">'+esc(m.round)+'</span>':'')+(m.no?'<span class="pill">'+esc(m.no)+' 경기</span>':'')+(matchHalfKey(m)?'<span class="pill">'+halfLabel(matchHalfKey(m))+'</span>':'')+(forfeitText(m)?'<span class="pill l">'+esc(forfeitText(m))+'</span>':'')+'<span>'+esc(m.date||"")+'</span><span class="muted">파울 '+fouls.home+':'+fouls.away+'</span></div>'+
@@ -5658,7 +5702,7 @@ function renderCal(){
   const y=calRef.getFullYear(), mo=calRef.getMonth();
   $("#calMonth").textContent = y+"년 "+(mo+1)+"월";
   const first=new Date(y,mo,1), start=first.getDay(), days=new Date(y,mo+1,0).getDate();
-  const byDate={}; matches().forEach(m=>{ (byDate[m.date]||(byDate[m.date]=[])).push(m); });
+  const byDate={}; scheduleMatches().forEach(m=>{ (byDate[m.date]||(byDate[m.date]=[])).push(m); });
   let h = ["일","월","화","수","목","금","토"].map(d=>'<div class="wd">'+d+'</div>').join("");
   for(let i=0;i<start;i++) h+='<div class="day blank"></div>';
   for(let d=1;d<=days;d++){
@@ -5672,10 +5716,10 @@ function renderCal(){
   renderDay();
 }
 function renderDay(){
-  const list = selDay? matches().filter(m=>m.date===selDay) : [];
+  const list = selDay? scheduleMatches().filter(m=>m.date===selDay) : [];
   $("#dayTitle").textContent = selDay? selDay+" 경기 기록" : "경기 상세";
   if(!selDay){ $("#dayDetail").innerHTML='<div class="empty">달력에서 파란색으로 표시된 날짜를 선택하세요.</div>'; return; }
-  const att = verifiedRecords().attendance.filter(a=>list.some(m=>m.id===a.id));
+  const att = verifiedRecords().allAttendance.filter(a=>list.some(m=>m.id===a.id));
   const byTeam={};
   att.forEach(a=>{
     if(!a.team || !a.player) return;
@@ -6566,21 +6610,21 @@ function autoHalf(m){
 }
 function buildRecordXlsx(){
   if(verifiedRecords().issues.some(r=>r.blocked))throw new Error("충돌 경기를 먼저 수정해 주세요. 원본 보관은 JSON 백업을 사용하세요.");
-  assertMatchMetadata(matches(),{requireSquads:true});
+  assertMatchMetadata(scheduleMatches(),{requireSquads:true});
   const mrows=[];
-  matches().slice().sort((a,b)=>(a.date||"").localeCompare(b.date||"")).forEach(m=>{
+  scheduleMatches().slice().sort((a,b)=>(a.date||"").localeCompare(b.date||"")).forEach(m=>{
     [[m.home,m.away,m.hs,m.as,exportAdditionalFouls(m,m.home)],[m.away,m.home,m.as,m.hs,exportAdditionalFouls(m,m.away)]].forEach(([t,o,gf,ga,f])=>{
       if(!t) return;
-      const att = verifiedRecords().attendance.filter(a=>a.id===m.id && a.team===t);
+      const att = verifiedRecords().allAttendance.filter(a=>a.id===m.id && a.team===t);
       const coach = squadStaffAtMatch(m,t).directors.join(", ");
-      const sc = verifiedRecords().goals.filter(g=>g.id===m.id && g.team===t && g.g>0)
+      const sc = verifiedRecords().allRecords.goals.filter(g=>g.id===m.id && g.team===t && g.g>0)
         .map(g=>g.player+" "+g.g).join(", ");
-      const ac = verifiedRecords().goals.filter(g=>g.id===m.id && g.team===t && num(g.a)>0)
+      const ac = verifiedRecords().allRecords.goals.filter(g=>g.id===m.id && g.team===t && num(g.a)>0)
         .map(g=>g.player+" "+num(g.a)).join(", ");
-      const pf = (verifiedRecords().fouls||[]).filter(g=>g.id===m.id && g.team===t && num(g.fouls)>0)
+      const pf = verifiedRecords().allRecords.fouls.filter(g=>g.id===m.id && g.team===t && num(g.fouls)>0)
         .map(g=>g.player+" "+num(g.fouls)).join(", ");
-      const sv = verifiedKeeperEntries().filter(g=>g.id===m.id && g.team===t).map(g=>g.text).join(", ");
-      const mom = (verifiedRecords().moms||[]).filter(g=>g.id===m.id && g.team===t && num(g.mom)>0)
+      const sv = verifiedKeeperEntries(true).filter(g=>g.id===m.id && g.team===t).map(g=>g.text).join(", ");
+      const mom = verifiedRecords().allRecords.moms.filter(g=>g.id===m.id && g.team===t && num(g.mom)>0)
         .map(g=>g.player+(num(g.mom)>1?" "+num(g.mom):"")).join(", ");
       mrows.push(uniRow(m.date, m.comp, halfLabel(matchHalfKey(m)), m.round||"", m.no||"", t, coach, o, gf, ga, f, att.map(a=>a.player), sc, isForfeitTeam(m,t)?"몰수패":"", matchTeamGroup(m,t), ac||(m[t===m.home?'hAssistsRecorded':'aAssistsRecorded']===true?'0':''), pf, sv, mom, "", matchPointDeduction(m,t),matchYoutubeUrls(m).join("\n")));
     });
@@ -6712,6 +6756,8 @@ function renderRecordDataValidation(){
     esc(normDate(m.date)),esc([m.comp,m.round,m.no].filter(Boolean).join(' · ')),esc(m.home+' : '+m.away),num(m.hs)+' : '+num(m.as),homeGoals+' : '+awayGoals
   ]));
   const metadataIssues=matchMetadataIssues();
+  const pending=verifiedRecords().pending;
+  if(pending.length){summary.textContent+=' 예정·미완료 '+pending.length+'경기는 공식 집계에서 제외합니다.';details.style.display='';table.innerHTML+='<h4>예정·미완료 경기</h4>'+tbl([{t:'경기일'},{t:'경기 ID'},{t:'대진'},{t:'제외 사유'}],pending.map(r=>[esc(r.date),esc(r.id),esc(r.team),esc(r.reason)]));}
   if(metadataIssues.length){
     summary.textContent+=' 반기·그룹 분류 확인 '+metadataIssues.length+'건.';details.style.display='';
     table.innerHTML+='<h4>팀스쿼드 반기·그룹 확인</h4>'+tbl([{t:'경기일'},{t:'대회'},{t:'팀'},{t:'확인 내용'}],metadataIssues.map(x=>[esc(x.date),esc(x.comp),esc(x.team),esc(x.reason)]));
@@ -7040,7 +7086,7 @@ function renderActiveView(v,options={}){
   mobilePageSwipe?.rendered(next);
 }
 // Analysis assets are requested only by an administrator opening this menu.
-const ABILITY_AUDIT_ASSETS={ui:'assets/ggfc-ability-audit.js?v=06d9b641c7efa5e5',css:'assets/ggfc-ability-audit.css?v=19c81455534472fa',worker:'assets/ggfc-ability-audit-worker.js?v=b7547581343a1c7e'};
+const ABILITY_AUDIT_ASSETS={ui:'assets/ggfc-ability-audit.js?v=06d9b641c7efa5e5',css:'assets/ggfc-ability-audit.css?v=19c81455534472fa',worker:'assets/ggfc-ability-audit-worker.js?v=e6c8a016054217fc'};
 let abilityAuditLoader=null;
 function renderAbilityAudit(){
  const root=document.getElementById('abilityAuditRoot');
@@ -7066,7 +7112,7 @@ let menuAbilityCache=null;
 function menuAbilitySignature(){
  const settings=DB.settings||{};
  const roster=(DB.roster||[]).map(r=>{const {photo,photoCutout,...fields}=r;return [fields,!!String(photo||'').trim()];});
- return JSON.stringify([DB.matches,DB.attendance,DB.goals,DB.saves,DB.fouls,DB.moms,DB.specials,roster,DB.soccerbee,settings.seasons,settings.teamSquads,settings.appTeamPlayerRecords,liveCounterTeamPlayerRecords,settings.goalkeeperEntries,settings.ability,comp]);
+ return JSON.stringify([recordToday(),DB.matches,DB.attendance,DB.goals,DB.saves,DB.fouls,DB.moms,DB.specials,roster,DB.soccerbee,settings.seasons,settings.teamSquads,settings.appTeamPlayerRecords,liveCounterTeamPlayerRecords,settings.goalkeeperEntries,settings.ability,comp]);
 }
 function withRenderCalculationCache(render){
   if(renderCalculationCache)return render();

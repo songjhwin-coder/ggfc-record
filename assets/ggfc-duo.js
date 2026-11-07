@@ -40,7 +40,7 @@ const DUO_TYPES=[
 ];
 let duoCache=null,duoReturnFocus=null;
 function duoBuildContext(){
-  const list=uniqueRecordMatches(chemMatches()),signature=JSON.stringify([chemYear,comp,verifiedRecords().matches,verifiedRecords().attendance,verifiedRecords().goals,verifiedRecords().fouls,verifiedRecords().saves,DB.soccerbee,DB.roster,DB.settings]);
+  const list=uniqueRecordMatches(chemMatches()),signature=JSON.stringify([chemYear,comp,verifiedRecords().matches,verifiedRecords().attendance,verifiedRecords().goals,verifiedRecords().fouls,verifiedRecords().saves,verifiedRecords().moms,DB.soccerbee,DB.roster,DB.settings,liveCounterTeamPlayerRecords]);
   if(duoCache?.signature===signature)return duoCache;
   const measuredRecords=explicitPerformanceRows();
   const names=[...new Set(analysisAttendance(list).map(r=>String(r.player||'').trim()).filter(n=>n&&!isOwnGoalPlayer(n)))].sort(compareNamesKo),profiles=new Map(names.map(name=>[name,{name,parts:[],seasonProof:[]}]));

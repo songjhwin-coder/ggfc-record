@@ -52,7 +52,7 @@ function matchDetailData(m){
     }));
     teamPlayerRecordLinks().matched.filter(r=>r.id===m.id&&r.team===team).forEach(r=>{const P=get(r.player);P.appFields=r.appFields||[];P.counterFields=r.counterFields||[];P.sharedRecordValues=r.sharedValues;['sot','keyPass','defSuccess'].forEach(k=>{if(teamRecordValuePresent(r[k]))P[k]=num(P[k])+num(r[k]);});});
     members.forEach(r=>{
-      r.keeperSource=matchCounterGoalkeeperSource(m,team,r.player);r.keeper=!!r.keeperSource;
+      r.keeperSource=matchCounterGoalkeeperSource(m,team,r.player);r.keeper=!!r.keeperSource;r.saveAllowed=matchCounterSaveAllowed(m,team,r.player);
       r.recordValues={sot:r.sot??null,keyPass:r.keyPass??null,defSuccess:r.defSuccess??null,saves:r.saveRecorded?r.sv:null};r.sharedRecordValues=r.sharedRecordValues||{...r.recordValues};
     });
     const rows=[...members.values()].sort((a,b)=>Number(a.ownGoal)-Number(b.ownGoal)||compareNamesKo(a.player,b.player));

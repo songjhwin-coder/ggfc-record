@@ -11,11 +11,12 @@ function interleagueRangeMatch(m,state){
 }
 function interleagueModel(state=interleagueState){
  const today=new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'}),source=verifiedRecords(),valid=[],excluded=[];
- for(const m of source.matches){
+ for(const m of source.allMatches){
   if(!interleagueRangeMatch(m,state))continue;
   const date=normDate(m.date),hs=interleagueScore(m.hs),as=interleagueScore(m.as);
   const realDate=/^\d{4}-\d{2}-\d{2}$/.test(date)&&!Number.isNaN(Date.parse(date))&&new Date(date).toISOString().slice(0,10)===date;
-  if(!realDate||date>today||!m.home||!m.away||m.home===m.away||hs===null||as===null){excluded.push({m,reason:!realDate?'날짜 확인':date>today?'예정 경기':hs===null||as===null?'점수 미입력 또는 오류':'팀명 확인'});continue;}
+  const reason=matchCompletionReason(m,today);
+  if(reason){excluded.push({m,reason});continue;}
   valid.push(m);
  }
  const inter=[],classification=[],legacy=[];

@@ -165,7 +165,7 @@ function renderTeamMaker(){
  document.querySelector('#v-maker .head h2').textContent='Team Maker · '+(tmState.tab==='balance'?'자동 팀 편성':'전술 라인업');
  tmState.date=tmState.date||squadToday();
  const competitions=[...new Set(['정규리그',...squadRows().map(r=>isLeagueFamilyComp(r.comp)?'정규리그':r.comp).filter(Boolean)])];
- const signature=JSON.stringify([tmState.date,tmState.competition,DB.roster,verifiedRecords().matches,verifiedRecords().attendance,verifiedRecords().goals,verifiedRecords().saves,verifiedRecords().fouls,verifiedRecords().moms,DB.soccerbee,DB.settings]);
+ const signature=JSON.stringify([tmState.date,tmState.competition,DB.roster,verifiedRecords().matches,verifiedRecords().attendance,verifiedRecords().goals,verifiedRecords().saves,verifiedRecords().fouls,verifiedRecords().moms,DB.soccerbee,DB.settings,liveCounterTeamPlayerRecords]);
  if(signature!==tmState.signature){
   const previous=!!tmState.signature;tmState.pool=tmPool(tmState.date,tmState.competition);tmState.signature=signature;
   const ids=new Set([...tmState.pool,...tmState.guests].map(p=>p.id));tmState.selected=new Set([...tmState.selected].filter(id=>ids.has(id)));
