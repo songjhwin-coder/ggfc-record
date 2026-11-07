@@ -134,13 +134,32 @@ window.GGFCOperator=(()=>{
    const r=await accountRef.transaction(current=>!current||(Number(current.revision)||0)!==expected?undefined:{...current,enabled:false,revision:expected+1,changedAt:firebase.database.ServerValue.TIMESTAMP},undefined,false);if(!r.committed)throw Error('운영진 설정이 변경되었습니다. 다시 시도하세요.');acceptAccount(r.snapshot.val());
   }catch(e){failure=permissionError(e)?setupMessage:e.message;}finally{working=false;refreshUI();GGFC.refreshUI();message(failure||'운영진 로그인을 중지했습니다.',!!failure);}
  }
- async function saveTemplate(value,expected){
+ async function saveTemplate(value,expected,baseTemplate){
   if(!canEdit())throw Error(isAdmin()?'관리자 모드에서는 썸네일을 공유 저장할 수 없습니다. 관리자 로그아웃 후 운영진 로그인하세요.':templateError||'운영진 로그인과 썸네일 서버 연결을 확인하세요.');saving=true;refreshUI();
-  try{const uid=opAuth?.currentUser?.uid;if(!uid)throw Error('운영진으로 다시 로그인하세요.');const ref=opDB.ref('ggfc/thumbnailTemplate');await ref.get();
+  try{const uid=opAuth?.currentUser?.uid;if(!uid)throw Error('운영진으로 다시 로그인하세요.');const ref=opDB.ref('ggfc/thumbnailTemplate'),remote=(await timedRead(ref)).val();
    if(!canShare())throw Error('운영진 로그인 상태가 변경되어 공유 저장을 중단했습니다.');
-   const result=await ref.transaction(current=>!canShare()||(Number(current?.revision)||0)!==expected?undefined:{template:copy(value),revision:expected+1,updatedBy:uid,savedAt:firebase.database.ServerValue.TIMESTAMP},undefined,false);
-   if(!result.committed)throw Object.assign(Error('다른 사용자가 썸네일을 저장했습니다. 미리보기 PNG를 보관한 뒤 저장값을 다시 불러와 편집하세요.'),{code:'ggfc/template-conflict'});acceptTemplate(result.snapshot.val());return Number(result.snapshot.val()?.revision)||0;
-  }catch(e){if(permissionError(e))throw Error(setupMessage);throw e;}finally{saving=false;refreshUI();}
+   const same=(a,b)=>!!a&&!!b&&JSON.stringify(window.GGFCThumbnail.normalize(a))===JSON.stringify(window.GGFCThumbnail.normalize(b));
+   const remoteRevision=Number(remote?.revision)||0;
+   // Read and write use the operator app. A first transaction callback can still
+   // receive null from its local cache; returning undefined there aborts locally.
+   if(remoteRevision>=expected&&same(remote?.template,value)){acceptTemplate(remote);return remoteRevision;}
+   if(remoteRevision>expected){
+    if(!same(remote?.template,baseTemplate)){acceptTemplate(remote);throw Object.assign(Error('다른 기기에서 실제 썸네일 내용을 변경했습니다. 현재 배경과 편집은 유지됩니다. 저장값을 다시 불러온 뒤 편집하세요.'),{code:'ggfc/template-conflict'});}
+    expected=remoteRevision;
+   }
+   const result=await ref.transaction(current=>{
+    if(!canShare())return;
+    // A provisional value lets Firebase retry against the authoritative server
+    // value. Its hash check and the revision rule still protect concurrent edits.
+    if(current!==null&&current!==undefined&&(Number(current.revision)||0)!==expected)return;
+    return {template:copy(value),revision:expected+1,updatedBy:uid,savedAt:firebase.database.ServerValue.TIMESTAMP};
+   },undefined,false);
+   if(!result.committed){
+    if(!canShare())throw Error('운영진 로그인 상태가 변경되어 공유 저장을 중단했습니다.');
+    try{acceptTemplate((await timedRead(ref)).val());}catch{/* Keep the edit when the refresh also fails. */}
+    throw Object.assign(Error('다른 기기에서 실제 썸네일 내용을 변경했습니다. 현재 배경과 편집은 유지됩니다. 저장값을 다시 불러온 뒤 편집하세요.'),{code:'ggfc/template-conflict'});
+   }acceptTemplate(result.snapshot.val());return Number(result.snapshot.val()?.revision)||0;
+  }catch(e){if(permissionError(e))throw Error(setupMessage);if(e.code==='ggfc/timeout')throw Error('썸네일 서버 응답이 늦습니다. 현재 배경과 편집은 유지됩니다. 공유 연결 확인·재시도를 눌러 주세요.');throw e;}finally{saving=false;refreshUI();}
  }
  q('operatorLoginBtn').onclick=()=>{if(active()){logout().catch(()=>toast('다시 시도하세요.'));return;}clearLogin();q('operatorLoginDialog').showModal();q('operatorPassword').focus();};
  q('operatorLoginForm').onsubmit=e=>{e.preventDefault();login();};q('operatorLoginCancel').onclick=()=>{if(!loginBusy){q('operatorLoginDialog').close();clearLogin();}};

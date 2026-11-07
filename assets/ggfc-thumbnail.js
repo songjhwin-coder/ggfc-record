@@ -3,7 +3,7 @@ window.GGFCThumbnail=(()=>{
  'use strict';
  const W=1280,H=720,MAX_LAYERS=32,MAX_BYTES=1200000;
  let draft=null,dirty=false,busy=false,selected='score',previewId='',model=null,drag=null,paintId=0,frame=0,uploadId=0,previewWarnings=[],draftRevision=0,batchBusy=false,batchCancelled=false,previewBusy=false;
- let autoTimer=null,editSerial=0,editGeneration=0,savingTemplate=false,saveTask=null,saveConflict=false,autoBlocked=false,saveFailure='';
+ let autoTimer=null,editSerial=0,editGeneration=0,savingTemplate=false,saveTask=null,saveConflict=false,autoBlocked=false,saveFailure='',draftBase=null;
  const cache=new Map(),q=id=>document.getElementById(id),editable=()=>!!window.GGFCOperator?.canModify(),usable=()=>!!window.GGFCOperator?.canUse();
  const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),number=(n,f)=>Number.isFinite(Number(n))?Number(n):f;
  const copy=x=>JSON.parse(JSON.stringify(x));
@@ -55,14 +55,21 @@ window.GGFCThumbnail=(()=>{
   el.dataset.state=state;
   el.textContent=savingTemplate?'공유 저장 중 · 다른 컴퓨터 반영을 기다리고 있습니다.':saveConflict?'다른 기기의 변경과 충돌했습니다. 현재 편집은 유지됩니다. 저장값을 다시 불러온 뒤 편집하세요.':saveFailure?'공유 저장 실패 · 현재 편집은 유지됩니다. '+saveFailure:busy?'이미지를 처리하고 있습니다. 완료 후 자동 공유 저장합니다.':dirty?(editable()?'변경 내용 자동 공유 저장 대기 · 편집을 멈추면 저장합니다.':'미공유 변경 있음 · 연결과 로그인 확인 후 저장하세요.'):GGFCOperator.ready?(stamp?'공유 저장 완료 · '+stamp+' · 다른 컴퓨터에서도 이 설정을 불러옵니다.':'공유 연결 완료 · 변경하면 자동 저장합니다.'):'저장된 썸네일 설정을 불러오고 있습니다.';
   if(adminPreview&&!savingTemplate)el.textContent='관리자 모드 · 썸네일 공유 저장 안 함'+(dirty?' · 현재 미리보기 변경은 다른 컴퓨터에 반영되지 않습니다.':' · 운영진이 저장한 공통 설정을 확인할 수 있습니다.');
-  if(q('ytSave'))q('ytSave').disabled=busy||savingTemplate||saveConflict||!GGFCOperator.canEdit();
+  if(q('ytSave'))q('ytSave').disabled=busy||savingTemplate||!GGFCOperator.canEdit();
   if(q('ytReload'))q('ytReload').disabled=busy||savingTemplate||!usable()||!GGFCOperator.ready;
   if(q('ytReconnect'))q('ytReconnect').disabled=busy||savingTemplate;
   if(dirty&&!autoTimer&&!savingTemplate&&!busy&&!drag&&!saveConflict&&!autoBlocked&&GGFCOperator.canShare())scheduleSave();
  }
  function changed(){dirty=true;editSerial++;if(!saveConflict){autoBlocked=false;saveFailure='';}scheduleSave();GGFC.refreshUI();refreshSaveState();status(GGFCOperator.adminMode?'관리자 미리보기 변경 · 공유 저장하지 않습니다.':'변경 내용은 잠시 후 자동 공유 저장됩니다.');}
- function discard(){clearTimeout(autoTimer);autoTimer=null;editGeneration++;uploadId++;busy=false;draft=null;dirty=false;drag=null;selected='score';paintId++;saveConflict=false;autoBlocked=false;saveFailure='';}
+ function discard(){clearTimeout(autoTimer);autoTimer=null;editGeneration++;uploadId++;busy=false;draft=null;draftBase=null;dirty=false;drag=null;selected='score';paintId++;saveConflict=false;autoBlocked=false;saveFailure='';}
  function permissionChanged(){discard();if(typeof activeView!=='undefined'&&activeView==='thumbnail'&&usable())render();}
+ async function reloadTemplate(){
+  if(!usable()||busy||savingTemplate)return;
+  const generation=editGeneration;busy=true;clearTimeout(autoTimer);autoTimer=null;refreshSaveState();status('서버의 최신 썸네일 설정을 불러오고 있습니다.');
+  try{const result=await GGFCOperator.checkConnection();if(generation!==editGeneration)return;if(!result.template)throw Error('최신 공유 설정을 불러오지 못했습니다. 현재 편집은 유지됩니다.');discard();render();GGFC.refreshUI();}
+  catch(e){if(generation===editGeneration)status(e.message,true);}
+  finally{if(generation===editGeneration){busy=false;refreshSaveState();}}
+ }
  function allMatches(){return uniqueRecordMatches(verifiedRecords().matches).filter(m=>m.id).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(a.no).localeCompare(String(b.no),'ko',{numeric:true})||String(a.round).localeCompare(String(b.round),'ko',{numeric:true}));}
  const getMatch=id=>verifiedRecords().matches.find(m=>String(m.id)===String(id));
  function photoSources(name,year){const row=selectPlayerRoster(name,year),values=[typeof GGFCPlayerPhotos!=='undefined'?GGFCPlayerPhotos.photo(name):'',row?.photoCutout,row?.photo];return [...new Set(values.flatMap(src=>playerPhotoCandidates(src)))];}
@@ -172,15 +179,14 @@ window.GGFCThumbnail=(()=>{
  async function saveTemplate(){
   clearTimeout(autoTimer);autoTimer=null;if(saveTask)return saveTask;
   if(!GGFCOperator.canShare()){status(GGFCOperator.adminMode?'관리자 모드에서는 썸네일을 공유 저장하지 않습니다. 운영진 로그인하세요.':'운영진 로그인과 공유 연결을 확인하세요.',true);refreshSaveState();return false;}
-  if(saveConflict){refreshSaveState();return false;}
   if(!editable()){refreshSaveState();return false;}if(busy||drag){scheduleSave();return false;}
   const value=normalize(draft);if(totalBytes(value)>MAX_BYTES){status('전체 이미지 용량이 약 1.2MB를 넘습니다.',true);return false;}
   if(!dirty&&GGFCOperator.template){status('썸네일 설정 공유 저장 완료');refreshSaveState();return true;}
-  const serial=editSerial,generation=editGeneration,expected=draftRevision;savingTemplate=true;autoBlocked=false;saveFailure='';refreshSaveState();status('썸네일 설정 공유 저장 중…');
+  const serial=editSerial,generation=editGeneration,expected=draftRevision,baseline=draftBase?copy(draftBase):null;savingTemplate=true;autoBlocked=false;saveFailure='';refreshSaveState();status('썸네일 설정 공유 저장 중…');
   saveTask=(async()=>{
    try{
-    const nextRevision=await GGFCOperator.saveTemplate(value,expected);if(generation!==editGeneration)return false;
-    draftRevision=nextRevision;
+    const nextRevision=await GGFCOperator.saveTemplate(value,expected,baseline);if(generation!==editGeneration)return false;
+    draftRevision=nextRevision;draftBase=copy(value);saveConflict=false;
     if(serial===editSerial){draft=copy(value);dirty=false;}
     if(dirty&&GGFCOperator.revision!==draftRevision){saveConflict=true;autoBlocked=true;}
     syncOverview();status(dirty?'공유 저장 완료 · 이어서 입력한 변경도 자동 저장합니다.':'썸네일 설정 공유 저장 완료');return true;
@@ -190,11 +196,15 @@ window.GGFCThumbnail=(()=>{
  }
  function sharedChanged(){
   syncOverview();if(savingTemplate)return;
-  if(dirty||busy){if(draftRevision!==GGFCOperator.revision){saveConflict=true;autoBlocked=true;clearTimeout(autoTimer);autoTimer=null;status('다른 사용자가 썸네일을 변경했습니다. 현재 편집은 유지됩니다. 저장값을 다시 불러와 편집하세요.',true);}refreshSaveState();return;}
+  if(dirty||busy){if(draftRevision!==GGFCOperator.revision){
+   const latest=stored();
+   if(draftBase&&JSON.stringify(latest)===JSON.stringify(draftBase)){draftRevision=GGFCOperator.revision;saveConflict=false;autoBlocked=false;saveFailure='';}
+   else{saveConflict=true;autoBlocked=true;clearTimeout(autoTimer);autoTimer=null;status('다른 기기에서 실제 썸네일 내용을 변경했습니다. 현재 배경과 편집은 유지됩니다. 저장값을 다시 불러온 뒤 편집하세요.',true);}
+  }refreshSaveState();return;}
   if(typeof activeView!=='undefined'&&activeView==='thumbnail'&&usable())render();
  }
  function render(){
-  const root=q('youtubeThumbnailEditor');if(!root||!usable())return;if(!dirty){draft=stored();draftRevision=GGFCOperator.revision;}if(!draft)draft=defaults();const list=allMatches();if(!list.some(m=>String(m.id)===previewId))previewId=String(list[0]?.id||'');model=matchModel(getMatch(previewId));
+  const root=q('youtubeThumbnailEditor');if(!root||!usable())return;if(!dirty){draft=stored();draftBase=copy(draft);draftRevision=GGFCOperator.revision;}if(!draft)draft=defaults();const list=allMatches();if(!list.some(m=>String(m.id)===previewId))previewId=String(list[0]?.id||'');model=matchModel(getMatch(previewId));
   root.innerHTML=`<div class="yt-editor"><div class="yt-settings"><section class="card"><h3>배경과 추가 항목</h3><p id="ytEditPolicy"></p><p id="ytAccessNotice" class="yt-notice" hidden></p><label class="yt-setting-toggle"><input type="checkbox" id="ytEnabled"> 경기 결과 다운로드 버튼 표시</label><label>배경 이미지 등록<input id="ytBackgroundUpload" type="file" accept="image/png,image/jpeg,image/webp"></label><div class="yt-actions"><button type="button" class="btn" id="ytBackgroundClear">배경 사진 제거</button></div><label style="margin-top:10px">배경 사진 밝게<input id="ytWash" type="range" min="0" max="80" step="1"></label><div class="yt-actions"><button class="btn" type="button" id="ytAddText">문구 추가</button><label class="btn" style="margin:0;cursor:pointer">이미지 추가<input id="ytImageUpload" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden></label></div><p>등록한 배경 이미지만 사용하며 배경이 없으면 투명하게 저장됩니다.</p><p>PNG·JPG·WebP 장당 15MB 이하 · 자동 압축 · 전체 이미지 약 1.2MB 이내</p></section><section class="card"><h3>항목과 배치</h3><div id="ytLayers" class="yt-layer-list"></div><div id="ytEmptySelection" class="yt-empty-selection">항목을 선택하세요.</div><div id="ytInspector"><div id="ytSelectedLabel" class="yt-inspector-title"></div><label class="yt-setting-toggle"><input id="ytLayerVisible" type="checkbox"> 표시</label><label id="ytCustomTextWrap">추가 문구<textarea id="ytCustomText" maxlength="400"></textarea></label><div class="yt-props">${[['x','왼쪽 위치',0,W],['y','위쪽 위치',0,H],['w','너비',24,W],['h','높이',24,H]].map(([k,label,min,max])=>`<label>${label}<input id="ytProp-${k}" type="number" min="${min}" max="${max}" step="1"></label>`).join('')}</div><div class="yt-props" id="ytTextProps" style="margin-top:8px"><label>글자 크기<input id="ytProp-font" type="number" min="8" max="300" step="1"></label><label>글자 색<input id="ytProp-color" type="color"></label></div><div class="yt-actions yt-layer-order"><button type="button" class="btn" id="ytBackward">뒤로</button><button type="button" class="btn" id="ytForward">앞으로</button><button type="button" class="btn" id="ytDelete">추가 항목 삭제</button></div></div><button type="button" class="btn" id="ytLayoutReset">기본 항목 배치 복원</button><p>팀 로고와 감독·코치 사진은 각각 따로 이동·확대할 수 있습니다. 자동 항목은 경기기록을 사용합니다. 추가 문구·사진은 모든 경기 썸네일에 함께 적용됩니다.</p></section></div><div class="yt-workspace"><section class="card"><label class="yt-match-select">미리보기 경기<select id="ytPreviewMatch"></select></label><div id="ytStage" class="yt-stage" tabindex="0" role="group" aria-label="썸네일 배치 편집. 드래그 이동, 오른쪽 아래 손잡이로 크기 조절" data-no-menu-swipe><canvas id="ytCanvas" width="1280" height="720" aria-label="썸네일 미리보기"></canvas><div id="ytSelection" class="yt-selection" hidden><button type="button" class="yt-resize" data-yt-resize aria-label="선택 항목 크기 조절"></button></div></div><p>항목을 클릭해 선택한 뒤 드래그로 이동하고 모서리 손잡이로 크기를 조절하세요. 방향키로 이동 · Shift 10px · Alt 크기 조절</p><p id="ytWarnings" class="yt-notice" hidden></p><div class="yt-save-row"><div class="yt-actions"><button type="button" class="btn primary" id="ytSave">지금 공유 저장</button><button type="button" class="btn" id="ytReload">저장값 다시 불러오기</button><button type="button" class="btn" id="ytReconnect">공유 연결 확인·재시도</button></div><button type="button" class="btn" id="ytDownloadPreview">미리보기 PNG 저장</button></div><p id="ytSharedStatus" class="yt-shared-status" role="status" aria-live="polite"></p><p id="ytStatus" class="yt-status" role="status" aria-live="polite"></p><p>1280 × 720 PNG · 미리보기는 편집 중인 배치, 경기 결과 다운로드는 저장된 배치입니다.</p></section></div></div>`;
   const select=q('ytPreviewMatch');if(!list.length)select.add(new Option('등록 경기 없음 · 배치 예시',''));list.forEach(m=>select.add(new Option([m.date,m.no,m.round,teamDisplayName(m.home)+' '+num(m.hs)+':'+num(m.as)+' '+teamDisplayName(m.away)].filter(Boolean).join(' · '),String(m.id))));select.value=previewId;select.onchange=()=>{previewId=select.value;model=matchModel(getMatch(previewId));syncInspector();repaint();};
   q('ytEnabled').checked=draft.enabled;q('ytEnabled').onchange=e=>{if(!editable())return;draft.enabled=e.target.checked;changed();};q('ytWash').value=draft.wash*100;q('ytWash').oninput=e=>{if(!editable())return;draft.wash=Number(e.target.value)/100;changed();repaint();};
@@ -205,7 +215,7 @@ window.GGFCThumbnail=(()=>{
   for(const [id,step] of [['ytBackward',-1],['ytForward',1]])q(id).onclick=()=>{if(!editable()||busy)return;const i=draft.layers.findIndex(r=>r.id===selected),j=clamp(i+step,0,draft.layers.length-1);if(i<0||i===j)return;[draft.layers[i],draft.layers[j]]=[draft.layers[j],draft.layers[i]];changed();syncInspector();repaint();};
   q('ytDelete').onclick=()=>{if(!editable()||busy||!['image','text'].includes(currentLayer()?.kind))return;draft.layers=draft.layers.filter(r=>r.id!==selected);selected=draft.layers.at(-1)?.id||'';changed();syncInspector();repaint();};
   q('ytLayoutReset').onclick=()=>{if(!editable()||busy)return;draft.layers=[...defaults().layers,...draft.layers.filter(r=>['text','image'].includes(r.kind))].slice(0,MAX_LAYERS);selected='score';changed();syncInspector();repaint();};
-  GGFCOperator.renderSettings(q('ytOperatorSettings'));GGFCOperator.refreshUI();q('ytSave').onclick=()=>saveTemplate();q('ytReconnect').onclick=async()=>{if(!usable()||savingTemplate)return;const result=await GGFCOperator.checkConnection();if(result.template){autoBlocked=false;saveFailure='';if(dirty&&!saveConflict)await saveTemplate();}refreshSaveState();};q('ytReload').onclick=()=>{if(!usable()||busy||savingTemplate||!GGFCOperator.ready)return;discard();render();GGFC.refreshUI();};q('ytDownloadPreview').onclick=()=>downloadPreview();bindStage();syncInspector();repaint();refreshSaveState();status(GGFCOperator.adminMode?'관리자 미리보기 · 썸네일 공유 저장은 운영진 로그인 전용입니다.':dirty?'자동 공유 저장 대기':'저장된 공통 배치 · 변경하면 자동 공유 저장합니다.');
+  GGFCOperator.renderSettings(q('ytOperatorSettings'));GGFCOperator.refreshUI();q('ytSave').onclick=()=>saveTemplate();q('ytReconnect').onclick=async()=>{if(!usable()||savingTemplate)return;const result=await GGFCOperator.checkConnection();if(result.template){autoBlocked=false;saveFailure='';if(dirty)await saveTemplate();}refreshSaveState();};q('ytReload').onclick=()=>reloadTemplate();q('ytDownloadPreview').onclick=()=>downloadPreview();bindStage();syncInspector();repaint();refreshSaveState();status(GGFCOperator.adminMode?'관리자 미리보기 · 썸네일 공유 저장은 운영진 로그인 전용입니다.':dirty?'자동 공유 저장 대기':'저장된 공통 배치 · 변경하면 자동 공유 저장합니다.');
  }
  async function png(canvas){return new Promise((resolve,reject)=>{try{canvas.toBlob(blob=>blob?resolve(blob):reject(Error('이미지 저장에 실패했습니다.')),'image/png');}catch(e){reject(e);}});}
  function sendDownload(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name.replace(/[<>:"/\\|?*\u0000-\u001f]/g,'_').slice(0,170);document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),20000);}
