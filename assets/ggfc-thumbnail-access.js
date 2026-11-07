@@ -4,12 +4,13 @@ window.GGFCOperator=(()=>{
  const q=id=>document.getElementById(id),copy=v=>JSON.parse(JSON.stringify(v));
  let account=null,accountReady=false,template=null,templateReady=false,revision=0,connected=false,accountError='',templateError='',user=null,verified=false,opAuth=null,opDB=null,mainDB=null,accountRef=null,templateRef=null,working=false,saving=false,loginBusy=false,signature='',started=false,checking=false,checkPromise=null,messageText='',messageBad=false;
  const listeners={};
- let operatorConnected=false,templateSavedAt=0;
+ let operatorConnected=false,templateSavedAt=0,lastAdminMode=null;
  const isAdmin=()=>typeof admin!=='undefined'&&admin&&GGFC.authorized&&window.GGFC_MEMBER_PREVIEW!==true;
  const active=()=>window.GGFC_MEMBER_PREVIEW!==true&&verified&&!!user&&account?.enabled===true&&account.uid===user.uid&&account.email===user.email;
  const canUse=()=>isAdmin()||active();
  const canModify=()=>canUse()&&templateReady&&!templateError&&navigator.onLine!==false&&(isAdmin()?connected&&GGFC.canEdit():operatorConnected&&accountReady&&!accountError);
- const canEdit=()=>canModify()&&!saving;
+ const canShare=()=>!isAdmin()&&active()&&operatorConnected&&templateReady&&!templateError&&accountReady&&!accountError&&navigator.onLine!==false;
+ const canEdit=()=>canShare()&&!saving;
  const setupMessage='Firebase 운영진 권한 규칙이 없거나 접근이 거절되었습니다. 아래 ‘권한 규칙 안내’에 따라 게시한 뒤 ‘연결 다시 확인’을 누르세요.';
  const permissionError=e=>/permission|unauthorized/i.test(String(e?.code||'')+' '+String(e?.message||''));
  const connectionError=e=>permissionError(e)?setupMessage:e?.code==='ggfc/timeout'?'서버 응답이 늦습니다. 인터넷 연결을 확인한 뒤 연결 다시 확인을 누르세요.':'서버 연결을 확인한 뒤 연결 다시 확인을 누르세요.';
@@ -39,6 +40,8 @@ window.GGFCOperator=(()=>{
   const badge=q('operatorModeBadge');if(badge)badge.hidden=!op||isAdmin();
   const next=JSON.stringify([op,isAdmin(),allowed,accountReady,templateReady,connected,operatorConnected,accountError,templateError,account?.uid,account?.enabled,working,saving,checking]);
   const changed=next!==signature;signature=next;
+  const adminMode=isAdmin(),roleChanged=lastAdminMode!==null&&lastAdminMode!==adminMode;lastAdminMode=adminMode;
+  if(roleChanged)window.GGFCThumbnail?.permissionChanged();
   if(changed&&typeof syncMenuNavigation==='function'){
    syncMenuNavigation();if(typeof activeView!=='undefined'&&activeView==='thumbnail'&&!allowed){window.GGFCThumbnail?.discard();goTab(menuFallbackView());}
   }
@@ -132,9 +135,10 @@ window.GGFCOperator=(()=>{
   }catch(e){failure=permissionError(e)?setupMessage:e.message;}finally{working=false;refreshUI();GGFC.refreshUI();message(failure||'운영진 로그인을 중지했습니다.',!!failure);}
  }
  async function saveTemplate(value,expected){
-  if(!canEdit())throw Error(templateError||'로그인과 썸네일 서버 연결을 확인하세요.');saving=true;refreshUI();
-  try{const auth=isAdmin()?firebase.app().auth():opAuth,uid=auth.currentUser?.uid;if(!uid)throw Error('다시 로그인하세요.');const ref=(isAdmin()?mainDB:opDB).ref('ggfc/thumbnailTemplate');await ref.get();
-   const result=await ref.transaction(current=>(Number(current?.revision)||0)!==expected?undefined:{template:copy(value),revision:expected+1,updatedBy:uid,savedAt:firebase.database.ServerValue.TIMESTAMP},undefined,false);
+  if(!canEdit())throw Error(isAdmin()?'관리자 모드에서는 썸네일을 공유 저장할 수 없습니다. 관리자 로그아웃 후 운영진 로그인하세요.':templateError||'운영진 로그인과 썸네일 서버 연결을 확인하세요.');saving=true;refreshUI();
+  try{const uid=opAuth?.currentUser?.uid;if(!uid)throw Error('운영진으로 다시 로그인하세요.');const ref=opDB.ref('ggfc/thumbnailTemplate');await ref.get();
+   if(!canShare())throw Error('운영진 로그인 상태가 변경되어 공유 저장을 중단했습니다.');
+   const result=await ref.transaction(current=>!canShare()||(Number(current?.revision)||0)!==expected?undefined:{template:copy(value),revision:expected+1,updatedBy:uid,savedAt:firebase.database.ServerValue.TIMESTAMP},undefined,false);
    if(!result.committed)throw Object.assign(Error('다른 사용자가 썸네일을 저장했습니다. 미리보기 PNG를 보관한 뒤 저장값을 다시 불러와 편집하세요.'),{code:'ggfc/template-conflict'});acceptTemplate(result.snapshot.val());return Number(result.snapshot.val()?.revision)||0;
   }catch(e){if(permissionError(e))throw Error(setupMessage);throw e;}finally{saving=false;refreshUI();}
  }
@@ -144,5 +148,5 @@ window.GGFCOperator=(()=>{
  window.addEventListener('online',()=>{refreshUI();if(started)checkConnection();});window.addEventListener('offline',refreshUI);
  window.addEventListener('pagehide',()=>{for(const id of ['ytOperatorNewPassword','ytOperatorConfirmPassword'])if(q(id))q(id).value='';});
  let attempts=0;const boot=()=>{if(start()||++attempts>=90)return;setTimeout(boot,500);};boot();refreshUI();
- return {start,refreshUI,renderSettings,saveTemplate,canUse,canEdit,canModify,logout,checkConnection,get active(){return active();},get template(){return template?copy(template):null;},get revision(){return revision;},get savedAt(){return templateSavedAt;},get ready(){return templateReady;},get pending(){return saving||working;}};
+ return {start,refreshUI,renderSettings,saveTemplate,canUse,canEdit,canModify,canShare,logout,checkConnection,get adminMode(){return isAdmin();},get active(){return active();},get template(){return template?copy(template):null;},get revision(){return revision;},get savedAt(){return templateSavedAt;},get ready(){return templateReady;},get pending(){return saving||working;}};
 })();

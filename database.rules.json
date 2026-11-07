@@ -73,7 +73,7 @@
       },
       "thumbnailTemplate": {
         ".read": true,
-        ".write": "((auth != null && auth.token.email === 'ggfc-admin@example.com' && auth.token.firebase.sign_in_provider === 'password') || (auth != null && auth.token.firebase.sign_in_provider === 'password' && root.child('ggfc/thumbnailAccess/enabled').val() === true && root.child('ggfc/thumbnailAccess/uid').val() === auth.uid && root.child('ggfc/thumbnailAccess/email').val() === auth.token.email)) && newData.exists()",
+        ".write": "auth != null && auth.token.firebase.sign_in_provider === 'password' && root.child('ggfc/thumbnailAccess/enabled').val() === true && root.child('ggfc/thumbnailAccess/uid').val() === auth.uid && root.child('ggfc/thumbnailAccess/email').val() === auth.token.email && newData.exists()",
         ".validate": "newData.hasChildren(['template','revision','updatedBy','savedAt']) && newData.child('updatedBy').val() === auth.uid && newData.child('revision').val() === (data.child('revision').isNumber() ? data.child('revision').val()+1 : 1)",
         "revision": {
           ".validate": "newData.isNumber()"
