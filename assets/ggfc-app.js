@@ -748,10 +748,6 @@ function matchCounterSaveAllowed(m,team,player){
  if(verifiedRecords().saves.some(r=>r.id===m.id&&teamRecordTeamKey(r.team)===teamKey&&normalizePlayerMatchKey(r.player)===key&&teamRecordValuePresent(r.saves)))return true;
  return (DB.settings?.appTeamPlayerRecords||[]).some(r=>r.fixtureKey===verifiedFixtureKey(m)&&teamRecordTeamKey(r.team)===teamKey&&normalizePlayerMatchKey(r.player)===key&&teamRecordValuePresent(r.values?.saves));
 }
-function counterSavePermissions(){
- const v=verifiedRecords(),byId=new Map(v.matches.map(m=>[String(m.id),m]));
- return (DB.attendance||[]).map(a=>{const m=byId.get(v.aliases.get(String(a.id)));return !!m&&matchCounterSaveAllowed(m,a.team,a.player);});
-}
 function appTeamRecordKey(m,team,player){return JSON.stringify([verifiedFixtureKey(m),teamRecordTeamKey(team),normalizePlayerMatchKey(player)]);}
 function mergeAppTeamPlayerRecords(result){
   const stored=DB.settings?.appTeamPlayerRecords;
@@ -4161,6 +4157,10 @@ function fixtureScoreRow(m,homeSc,awaySc,variant){
     '<div class="fixture-team-copy away"><div class="fixture-team-name">'+esc(teamDisplayName(m.away))+'</div><div class="fixture-team-scorers'+(awaySc?'':' none')+'">'+(awaySc||'득점자 없음')+'</div></div>'+
   '</div>';
 }
+function matchVideoBadgeHtml(m){
+  const available=matchYoutubeUrls(m).length>0,label=available?'유튜브 경기 영상 보기':'등록된 유튜브 영상 없음';
+  return '<button type="button" class="match-video-badge '+(available?'has-video':'no-video')+'" data-match-video-badge data-export-ignore data-html2canvas-ignore="true" aria-label="'+label+'" title="'+label+'"'+(available?'':' disabled aria-disabled="true"')+'><svg viewBox="0 0 24 18" aria-hidden="true" focusable="false"><rect x="1" y="1" width="22" height="16" rx="4" fill="currentColor"/><path d="m10 5 6 4-6 4z" fill="#fff"/></svg></button>';
+}
 function groundMatchCard(m){
   const homeSc=teamScorers(m,m.home,true), awaySc=teamScorers(m,m.away,true);
   const meta=[];
@@ -4170,6 +4170,7 @@ function groundMatchCard(m){
   if(fouls.home+fouls.away>0) meta.push("파울 "+fouls.home+":"+fouls.away);
   if(forfeitText(m)) meta.push(esc(forfeitText(m)));
   return '<div class="ground-match fixture-match-card match-detail-card"'+matchDetailAttrs(m)+'>'+
+    matchVideoBadgeHtml(m)+
     '<div class="ground-match-meta">'+(meta.length?meta.map(x=>'<span>'+x+'</span>').join('<span>·</span>'):'<span>&nbsp;</span>')+'</div>'+
     fixtureScoreRow(m,homeSc,awaySc,'ground-fixture')+
     '</div>';

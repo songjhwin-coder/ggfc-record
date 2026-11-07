@@ -81,9 +81,6 @@ window.GGFCPublicCounters=(()=>{
   if(!c.ready||!loaded)return {ok:false,message:error?'공유 대기 · Firebase 카운트 규칙 확인':'기기 저장 · 연결 후 공유 대기'};
   if(active.has(key))return {ok:false,message:'공유 응답 대기 중'};
   const source=sourceFor(c.records,m,team,player);if(!source)return {ok:false,message:'출석 DB가 변경됨 · 다시 확인'};
-  if(own(values,'saves')&&source.a.counterSaveAllowed!==true){
-   writeError='선방 저장 권한 미동기화 · 관리자 데이터 관리에서 선방 권한 동기화';refreshPanel();return {ok:false,message:'기기 저장 · 관리자 선방 권한 동기화 필요'};
-  }
   const raw=source.m,path=[c.revision,source.mi,source.ai].join('/'),ref=c.ref.child(path);
   const row={sourceRevision:c.revision,matchId:String(raw.id),date:String(raw.date),comp:String(raw.comp),round:String(raw.round),no:String(raw.no),home:String(raw.home),away:String(raw.away),team:String(source.a.team),player:String(source.a.player)};
   const task=(async()=>{
@@ -121,7 +118,7 @@ window.GGFCPublicCounters=(()=>{
      const next=JSON.parse(JSON.stringify(tree));next[c.revision]??={};next[c.revision][source.mi]??={};next[c.revision][source.mi][source.ai]=accepted;accept(next);
     }
     writeError='';lastSharedAt=Date.now();refreshPanel();return {ok:true};
-   }catch(e){writeError=String(e.code||e.message||'연결 오류');console.warn('GGFC 공유 카운트 저장 실패',writeError);refreshPanel();return {ok:false,message:/permission/i.test(writeError)?'기기 저장 · Firebase 카운트 규칙·선방 권한 확인':'기기 저장 · 공유 실패, 다시 저장하세요'};}
+   }catch(e){writeError=String(e.code||e.message||'연결 오류');console.warn('GGFC 공유 카운트 저장 실패',writeError);refreshPanel();return {ok:false,message:/permission/i.test(writeError)?'기기 저장 · Firebase 카운트 규칙 게시 확인':'기기 저장 · 공유 실패, 다시 저장하세요'};}
    finally{active.delete(key);}
   })();active.set(key,task);
   let timer;try{return await Promise.race([task,new Promise(resolve=>timer=setTimeout(()=>resolve({ok:false,message:'기기 저장 · 공유 응답 대기 중'}),12000))]);}finally{clearTimeout(timer);}
@@ -129,13 +126,8 @@ window.GGFCPublicCounters=(()=>{
  function refreshPanel(){
   const el=document.getElementById('publicCounterStatus');if(!el)return;
   const pending=window.GGFCMatchRecords?.pendingCount||0;
-  el.textContent=(error?'공유 읽기 실패 · 규칙·연결 확인':writeError?'공유 저장 실패 · '+(/permission/i.test(writeError)?'Firebase 규칙·선방 권한 확인':writeError):loaded?'공유 읽기 연결 · '+entries.size+'건':'공유 카운트 연결 대기')+(pending?' · 이 기기 전송 대기 '+pending+'명':'')+(lastSharedAt?' · 최근 저장 성공 '+new Date(lastSharedAt).toLocaleTimeString('ko-KR'):'')+(context().ready?'':' · 오프라인 또는 DB 동기화 중');
-  const button=document.getElementById('publicCounterPermissions');if(button)button.disabled=!admin||!GGFC.canEdit()||GGFC.pending;
+  el.textContent=(error?'공유 읽기 실패 · 규칙·연결 확인':writeError?'공유 저장 실패 · '+(/permission/i.test(writeError)?'Firebase 규칙·연결 확인':writeError):loaded?'공유 읽기 연결 · '+entries.size+'건':'공유 카운트 연결 대기')+(pending?' · 이 기기 전송 대기 '+pending+'명':'')+(lastSharedAt?' · 최근 저장 성공 '+new Date(lastSharedAt).toLocaleTimeString('ko-KR'):'')+(context().ready?'':' · 오프라인 또는 DB 동기화 중');
  }
- document.getElementById('publicCounterPermissions')?.addEventListener('click',async()=>{
-  const el=document.getElementById('publicCounterPermissionStatus');el.textContent='선방 권한을 공유 DB에 저장하고 있습니다…';
-  try{const ok=await GGFC.syncCounterPermissions();el.textContent=ok?'선방 권한 동기화 완료 · 공유 저장을 다시 누르세요.':'동기화 실패 · 관리자 연결과 상단 공유 저장 상태를 확인하세요.';if(ok)window.GGFCMatchRecords?.retryPending();}catch(e){el.textContent='선방 권한 동기화 실패 · '+e.message;}
- });
  function backup(){const blob=new Blob([JSON.stringify({version:1,path:'ggfc/teamCounterRecords/v1',records:tree},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='GGFC_공유카운트_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
  document.getElementById('publicCounterBackup')?.addEventListener('click',backup);
  document.getElementById('publicCounterRetry')?.addEventListener('click',()=>{const c=context();if(error){channel=null;refreshUI();}if(c.ref)c.ref.get().then(s=>{accept(s.val());window.GGFCMatchRecords?.retryPending();}).catch(e=>{error=String(e.code||'접근 오류');refreshPanel();});});

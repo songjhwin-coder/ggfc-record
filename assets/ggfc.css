@@ -1110,6 +1110,16 @@ code{border-radius:5px;background:#eee7f0}
 
 /* EPL 경기목록형: 팀명 - 로고 - 스코어 - 로고 - 팀명 */
 .fixture-match-card{overflow:hidden}
+.ground-match.fixture-match-card{position:relative}
+.ground-match.fixture-match-card .ground-match-meta{padding-right:34px}
+.summary-poster .ground-match.fixture-match-card .ground-match-meta{padding-right:0}
+.match-video-badge{position:absolute;top:4px;right:6px;z-index:1;display:grid;place-items:center;width:24px;height:24px;min-width:24px;padding:3px;border:0;border-radius:5px;background:transparent;box-shadow:none;line-height:1;cursor:pointer}
+.match-video-badge svg{display:block;width:18px;height:14px}
+.match-video-badge.has-video{color:#e52128}
+.match-video-badge.has-video:hover{background:#e521280d}
+.match-video-badge.has-video:focus-visible{outline:2px solid #e52128;outline-offset:1px}
+.match-video-badge.no-video:disabled{color:#9aa1ab;background:transparent;opacity:1;cursor:default}
+.summary-poster .match-video-badge{display:none}
 .fixture-score-row{
   display:grid;
   grid-template-columns:minmax(120px,1fr) 64px minmax(96px,auto) 64px minmax(120px,1fr);

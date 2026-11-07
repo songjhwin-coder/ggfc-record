@@ -61,8 +61,6 @@ const GGFC = (() => {
   }
   function split(data,revision,uid,timestamp){
     const clean=normalizeDB(data),records={},players={};
-    const permits=typeof counterSavePermissions==='function'&&data===DB?withRenderCalculationCache(counterSavePermissions):[];
-    clean.attendance=clean.attendance.map((r,i)=>({...r,counterSaveAllowed:permits[i]===true}));
     fields.forEach(k=>(['roster','soccerbee'].includes(k)?players:records)[k]=clean[k]);
     const encoded=transformKeys({records,players,settings:clean.settings});
     // The reserved Firebase .sv sentinel must reach the SDK unchanged.
@@ -475,10 +473,6 @@ const GGFC = (() => {
     const records=Number(state.latest?.meta?.revision)===state.revision?state.latest?.records:null;
     return {ref:database?database.ref('ggfc/teamCounterRecords/v1'):null,revision:state.revision,records,ready:!!records&&state.ready&&state.serverSeen&&state.connected&&!state.dirty&&!state.saving&&!state.conflict&&!state.error&&navigator.onLine!==false};
   }
-  async function syncCounterPermissions(){
-    if(!canEdit()||state.dirty||state.saving||state.busy||editLease||hasSettingsDraft()){toast('관리자 로그인·연결 및 미저장 설정을 확인하세요.');return false;}
-    markChanged();return await flush();
-  }
-  return {publicCounterContext,syncCounterPermissions,get editing(){return editLease||hasSettingsDraft()||!!window.GGFCThumbnail?.dirty||!!window.GGFCOperator?.pending;},get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving||state.busy>0;},canEdit,adminPasswordStatus,changeAdminPassword,get passwordChanging(){return passwordBusy;},normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,signIn,loginOrLogout,closeLogin,togglePassword};
+  return {publicCounterContext,get editing(){return editLease||hasSettingsDraft()||!!window.GGFCThumbnail?.dirty||!!window.GGFCOperator?.pending;},get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving||state.busy>0;},canEdit,adminPasswordStatus,changeAdminPassword,get passwordChanging(){return passwordBusy;},normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,signIn,loginOrLogout,closeLogin,togglePassword};
 })();
-window.GGFC_VERSION='3.25.85';
+window.GGFC_VERSION='3.25.86';

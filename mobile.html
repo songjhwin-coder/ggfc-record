@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <script defer src="assets/ggfc-browser-handoff.js?v=9aa37103839739b5"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>GGFC 모바일 기록센터 · 3.25.85</title>
-<link rel="stylesheet" href="assets/ggfc.css?v=f49944385c183bba">
+<title>GGFC 모바일 기록센터 · 3.25.86</title>
+<link rel="stylesheet" href="assets/ggfc.css?v=72e0e2bb6d82b303">
 <link rel="stylesheet" href="assets/ggfc-startup.css?v=026c02cbc9a0bd71">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="mobile-web-app-capable" content="yes">
@@ -70,7 +70,7 @@
     <a class="sidebar-community-link" href="https://cafe.naver.com/ggfcc" target="_blank" rel="noopener noreferrer" title="GGFC 네이버 카페 · 새 창" aria-label="GGFC 네이버 카페 새 창 열기"><span class="community-disc community-cafe"><img src="assets/ggfc-naver-cafe.png" alt="" width="64" height="64"></span></a>
   </div>
   <div class="pwa-menu-actions"><a class="btn sm pwa-guide-link" href="install.html">앱 설치 안내</a><button class="btn sm" id="pwaInstall" hidden>GGFC를 앱으로 설치</button><button class="btn sm" id="pwaCheck">앱 업데이트 확인</button><button class="btn sm" id="lockBtn" type="button">관리자 로그인</button><button class="btn sm" id="operatorLoginBtn" type="button">운영진 로그인</button><span id="operatorModeBadge" class="badge open" hidden>운영진 · 썸네일 전용</span><span class="badge locked" id="lockBadge">🔒 열람 모드</span><p id="pwaStatus" role="status" aria-live="polite"></p></div>
-  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.25.85 · 기록센터</span></footer>
+  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.25.86 · 기록센터</span></footer>
 </aside>
 <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" tabindex="-1" aria-label="메뉴 닫기" hidden></button>
 
@@ -495,11 +495,11 @@
 
     <div class="grid g2 ability-rule-grid" id="abilityRulePanels" data-ability-admin hidden style="margin-bottom:16px">
       <div class="card">
-        <div class="sec-t">경기기록 → 성장·감점·FORM · V3.25.85</div>
+        <div class="sec-t">경기기록 → 성장·감점·FORM · V3.25.86</div>
         <div id="abilityGrowthRules"></div>
       </div>
       <div class="card">
-        <div class="sec-t">SoccerBee → 축별 초기값·재측정 · V3.25.85</div>
+        <div class="sec-t">SoccerBee → 축별 초기값·재측정 · V3.25.86</div>
         <div id="abilitySoccerbeeRules"></div>
       </div>
     </div>
@@ -708,7 +708,7 @@
     <div class="callout" style="margin-bottom:16px" id="dataNotice">
       <span>ℹ️</span><span>관리자 계정에서 변경한 기록과 설정은 공유 서버에 저장됩니다. 상단의 “공유 저장 완료”를 확인한 뒤 닫아 주세요. 회원 화면에는 자동으로 반영됩니다.</span>
     </div>
-    <section class="card member-admin" style="margin-bottom:16px"><div class="sec-t">공유 카운트 연결</div><p id="publicCounterStatus" class="note" role="status">연결 확인 중…</p><p class="note">경기 상세에서 회원이 공유 저장한 카운트가 모든 기기의 기록과 능력치에 반영됩니다. 엑셀 팀별 기록지 없이 운영할 수 있습니다. 최초 적용 시 Firebase 규칙을 게시하세요. 미전송 기록은 기기에 보관하며 공유 완료 전까지 능력치에 넣지 않습니다.</p><div class="yt-actions"><button type="button" class="btn" id="publicCounterRetry">공유 연결 다시 확인</button><a class="btn" href="assets/ggfc-counter-rules.json" download="GGFC_V3.25.85_전체_권한규칙.json">공유 카운트 권한 규칙</a><button type="button" class="btn" id="publicCounterPermissions">선방 권한 동기화</button><button type="button" class="btn" id="publicCounterBackup">공유 카운트 별도 백업</button></div><p id="publicCounterPermissionStatus" class="note" role="status">V3.25.85 최초 적용 시 관리자 로그인 후 선방 권한 동기화를 한 번 실행하세요. 이후 원본 DB 저장 시 자동 갱신됩니다.</p><p class="note">기존 전체 JSON 백업에는 별도 공유 카운트가 포함되지 않습니다. 이 버튼으로 함께 보관하세요. 공개 카운트만 로그인 없이 저장하며 원본 DB·관리자 설정·썸네일 권한은 기존대로 유지합니다.</p></section>
+    <section class="card member-admin" style="margin-bottom:16px"><div class="sec-t">공유 카운트 연결</div><p id="publicCounterStatus" class="note" role="status">연결 확인 중…</p><p class="note">경기 상세에서 회원이 공유 저장한 카운트가 모든 기기의 기록과 능력치에 반영됩니다. 엑셀 팀별 기록지 없이 운영할 수 있습니다. 최초 적용 시 Firebase 규칙을 게시하세요. 미전송 기록은 기기에 보관하며 공유 완료 전까지 능력치에 넣지 않습니다.</p><div class="yt-actions"><button type="button" class="btn" id="publicCounterRetry">공유 연결 다시 확인</button><a class="btn" href="assets/ggfc-counter-rules.json" download="GGFC_V3.25.86_전체_권한규칙.json">공유 카운트 권한 규칙</a><button type="button" class="btn" id="publicCounterBackup">공유 카운트 별도 백업</button></div><p class="note">기존 전체 JSON 백업에는 별도 공유 카운트가 포함되지 않습니다. 이 버튼으로 함께 보관하세요. 공개 카운트만 로그인 없이 저장하며 원본 DB·관리자 설정·썸네일 권한은 기존대로 유지합니다.</p></section>
     <section class="card admin-password-settings" id="adminPasswordSettings" style="margin-bottom:16px" hidden><div class="sec-t">관리자 비밀번호 변경</div><p class="note">현재 비밀번호를 확인한 후 새 비밀번호로 변경합니다. 운영진 비밀번호와 별도로 적용되며 경기 기록은 변경하지 않습니다.</p><button type="button" class="btn" id="adminPasswordOpen">관리자 비밀번호 변경</button><p id="adminPasswordPanelStatus" class="note" role="status" aria-live="polite"></p></section>
     <div class="drop" style="margin-bottom:16px">
       <h4>📗 GGFC 통합 기록지 — 엑셀 1개 파일</h4>
@@ -834,7 +834,7 @@
     </div>
   </section>
   <footer class="page-status-footer" aria-label="프로그램 버전 및 공유 기록 상태">
-  <div class="release-version" aria-label="현재 프로그램 버전">GGFC · V3.25.85</div>
+  <div class="release-version" aria-label="현재 프로그램 버전">GGFC · V3.25.86</div>
   <section class="cloud-status" id="cloudStatus" role="status" aria-live="polite"><span id="cloudStatusText">공유 기록을 확인하고 있습니다…</span>
     <div class="cloud-actions"><button id="cloudRetry" class="btn sm" hidden>공유 저장 재시도</button><button id="cloudDownload" class="btn sm" hidden>미저장 내용 내려받기</button><button id="cloudReload" class="btn sm" hidden>서버 기록 다시 받기</button></div>
   </section>
@@ -1037,9 +1037,9 @@
 <input type="file" id="soccerbeeFilepick" accept=".xlsx" hidden>
 
 <script defer src="firebase-config.js"></script>
-<script defer src="assets/ggfc-sync.js?v=a3f9ad2d17484e62"></script>
+<script defer src="assets/ggfc-sync.js?v=7edc29c8d360c910"></script>
 <script defer src="assets/ggfc-mobile.js?v=a20118d448653e75"></script>
-<script defer src="assets/ggfc-details.js?v=dd9cdf0d4e10bd90"></script>
+<script defer src="assets/ggfc-details.js?v=d54990a34734c13e"></script>
 <script defer src="assets/ggfc-squad.js?v=f8751dcc7f0973f2"></script>
 <script defer src="assets/ggfc-card-design.js?v=3.25.31"></script>
 <script defer src="assets/ggfc-alltime.js?v=898aa7b903e24445"></script>
@@ -1047,8 +1047,8 @@
 <script defer src="assets/ggfc-slump.js?v=143871985b3a6ab3"></script>
 <script defer src="assets/ggfc-interleague.js?v=8016366f6e0ed021"></script>
 <script defer src="assets/ggfc-player-photos.js?v=eb60fa7fd5b16b5f"></script>
-<script defer src="assets/ggfc-app.js?v=c2c346e8ae301968"></script>
-<script defer src="assets/ggfc-public-counters.js?v=1d4c377ddc9afbd4"></script>
+<script defer src="assets/ggfc-app.js?v=680ee7fb27adc39d"></script>
+<script defer src="assets/ggfc-public-counters.js?v=245a191ea7defada"></script>
 <script defer src="assets/ggfc-match-records.js?v=3f771440659c23bd"></script>
 <script defer src="assets/ggfc-player-table.js?v=d934ac3bb32d0d59"></script>
 <script defer src="assets/ggfc-admin-password.js?v=89e60e87013241cf"></script>

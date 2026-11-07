@@ -466,6 +466,8 @@ document.addEventListener('click',e=>{
   if(e.target.closest('[data-match-back]')){closeGGFCDetail();return;}
   const player=e.target.closest('[data-match-player-edit],[data-match-player-list]');
   if(player){selectMatchPlayer(player);return;}
+  const videoBadge=e.target.closest('[data-match-video-badge]');
+  if(videoBadge?.disabled){e.preventDefault();return;}
   const match=e.target.closest('[data-match-detail-id]');
   if(match){e.preventDefault();openMatchDetail(match.dataset.matchDetailId,match);return;}
   if(e.target.closest('#chemCompareOpen')){openPlayerComparison(chemSel,chemOther,document.querySelector('#chemCompareOpen'));return;}
