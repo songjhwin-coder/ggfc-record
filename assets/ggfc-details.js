@@ -75,15 +75,15 @@ function detailMetricGrid(items){
 function matchRecordRowAttrs(m,team,r){
   return ' data-match-record-row="'+esc(appTeamRecordKey(m,team,r.player))+'" data-match-record-player="'+esc(r.player)+'" data-match-record-team="'+esc(team)+'"';
 }
-function detailPlayerTable(team,m,mobile){
+function detailPlayerTable(team,m){
   if(!team.rows.length)return '<div class="detail-empty">등록된 선수별 기록이 없습니다.</div>';
   const records=window.GGFCMatchRecords;
-  const hint=mobile?'선수 이름을 눌러 기록을 수정하세요. 표는 좌우로 밀어 볼 수 있습니다.':'표를 좌우로 밀면 모든 기록을 볼 수 있습니다.';
+  const hint='선수 이름을 선택해 기록을 수정하세요. 표는 좌우로 스크롤해 볼 수 있습니다.';
   return '<p class="detail-scroll-hint">'+hint+'</p><div class="detail-table-wrap" tabindex="0" aria-label="'+esc(teamDisplayName(team.team))+' 선수별 경기 기록 표"><table class="detail-table"><caption class="detail-visually-hidden">'+esc(teamDisplayName(team.team))+' 선수별 경기 기록</caption><thead><tr><th scope="col">선수</th><th scope="col">출석</th><th scope="col">유효슛</th><th scope="col">키패스</th><th scope="col">수비성공</th><th scope="col">선방</th><th scope="col">득점</th><th scope="col">도움</th><th scope="col">개인파울</th><th scope="col">MOM</th><th scope="col">승점</th></tr></thead><tbody>'+team.rows.map(r=>{
-    const name=mobile&&records?.canEdit(m,r)
+    const name=records?.canEdit(m,r)
       ? '<button type="button" class="match-player-edit-trigger" data-match-player-edit="'+esc(appTeamRecordKey(m,team.team,r.player))+'" aria-label="'+esc(r.player)+' 기록 수정">'+esc(r.player)+'</button>'
       : esc(r.player);
-    return '<tr'+matchRecordRowAttrs(m,team.team,r)+'><th scope="row" class="'+(r.att?'squad-present':'squad-absent')+'">'+name+(r.keeper?' <small class="match-keeper-badge" title="'+(r.keeperSource==='MATCH'?'경기 지정 골키퍼':'선수명단 골키퍼')+'">GK</small>':'')+(r.role&&r.role!=='선수'?' <small>('+esc(r.role)+')</small>':'')+(mobile?'':records?.rowActionsHtml(m,team.team,r)||'')+'</th><td>'+(r.ownGoal?'—':r.att?'<span class="detail-attended">출석</span>':'<span class="detail-missing">'+(r.squad?'미출석':'미등록')+'</span>')+'</td>'+['sot','keyPass','defSuccess','saves'].map(k=>'<td>'+(records?.cellHtml(m,team.team,r,k,!mobile)??esc(r.recordValues[k]??'—'))+'</td>').join('')+'<td>'+r.g+'</td><td>'+r.a+'</td><td>'+r.f+'</td><td>'+r.mom+'</td><td>'+(r.att&&!r.ownGoal?team.points:'—')+'</td></tr>';
+    return '<tr'+matchRecordRowAttrs(m,team.team,r)+'><th scope="row" class="'+(r.att?'squad-present':'squad-absent')+'">'+name+(r.keeper?' <small class="match-keeper-badge" title="'+(r.keeperSource==='MATCH'?'경기 지정 골키퍼':'선수명단 골키퍼')+'">GK</small>':'')+(r.role&&r.role!=='선수'?' <small>('+esc(r.role)+')</small>':'')+'</th><td>'+(r.ownGoal?'—':r.att?'<span class="detail-attended">출석</span>':'<span class="detail-missing">'+(r.squad?'미출석':'미등록')+'</span>')+'</td>'+['sot','keyPass','defSuccess','saves'].map(k=>'<td>'+(records?.cellHtml(m,team.team,r,k,false)??esc(r.recordValues[k]??'—'))+'</td>').join('')+'<td>'+r.g+'</td><td>'+r.a+'</td><td>'+r.f+'</td><td>'+r.mom+'</td><td>'+(r.att&&!r.ownGoal?team.points:'—')+'</td></tr>';
   }).join('')+'</tbody><tfoot><tr><th scope="row">합계</th><td>'+team.totals.att+'명</td><td>'+team.totals.sot+'</td><td>'+team.totals.keyPass+'</td><td>'+team.totals.defSuccess+'</td><td>'+team.totals.sv+'</td><td>'+team.totals.g+'</td><td>'+team.totals.a+'</td><td>'+team.totals.f+'</td><td>'+team.totals.mom+'</td><td>'+team.totals.att*team.points+'</td></tr></tfoot></table></div>';
 }
 function detailUnassignedHtml(items){
@@ -127,28 +127,29 @@ function matchDetailHtml(data){
   return video+divider+'<div class="match-record-scroll" id="matchRecordScroll" tabindex="0" aria-label="경기 결과와 선수별 기록">'+matchDetailRecordsHtml(data)+'</div>';
 }
 function matchDetailRecordsHtml(data,playerKey){
-  const mobile=document.documentElement.classList.contains('ggfc-mobile');
-  if(mobile&&playerKey){
+  let editor='';
+  if(playerKey){
     for(const team of data.teams){
       const row=team.rows.find(r=>appTeamRecordKey(data.match,team.team,r.player)===playerKey);
       if(row){
-        const editor=window.GGFCMatchRecords?.playerEditorHtml(data.match,team.team,row);
-        if(editor)return editor;
+        editor=window.GGFCMatchRecords?.playerEditorHtml(data.match,team.team,row)||'';
         break;
       }
     }
   }
+  if(editor&&document.documentElement.classList.contains('ggfc-mobile'))return editor;
   const m=data.match,round=recordMatchRoundNumber(m),ground=matchGround(m);
   const meta=[normDate(m.date),matchCompetition(m),halfLabel(matchHalfKey(m)),round?round+'R':'',m.round,m.no,ground?ground+'구장':''].filter(Boolean);
-  return '<div class="match-detail-summary"><div class="match-detail-navigation"><button type="button" class="match-detail-back" data-match-back>← 경기 목록으로</button><span>PC에서는 ESC · 휴대폰에서는 뒤로가기로 닫기</span></div><div class="detail-match-meta">'+meta.map(v=>'<span>'+esc(v)+'</span>').join('')+'</div>'+
+  const summary='<div class="match-detail-summary"><div class="match-detail-navigation"><button type="button" class="match-detail-back" data-match-back>← 경기 목록으로</button><span>PC에서는 ESC · 휴대폰에서는 뒤로가기로 닫기</span></div><div class="detail-match-meta">'+meta.map(v=>'<span>'+esc(v)+'</span>').join('')+'</div>'+
     '<div class="detail-scoreboard">'+data.teams.map((t,i)=>
       (i===1?'<div class="detail-score"><b>'+num(m.hs)+' <span>:</span> '+num(m.as)+'</b>'+fixtureMomHtml(m)+'</div>':'')+
       '<div class="detail-score-team">'+fixtureLogoHtml(t.team)+'<strong>'+esc(teamDisplayName(t.team))+'</strong><span>'+detailResultLabel(t.result)+' · 승점 '+t.points+(t.group?' · '+esc(leagueGroupLabel(t.group)):'')+'</span></div>'
-    ).join('')+'</div>'+matchYoutubeButtonsHtml(m,false)+(window.GGFCMatchRecords?.permissionMarkerHtml()||'')+(forfeitText(m)?'<p class="detail-notice">'+esc(forfeitText(m))+' · 승패와 승점은 몰수패 판정을 적용합니다.</p>':'')+'</div>'+
-    '<div class="match-player-records" tabindex="0" aria-label="양 팀 선수별 경기 기록">'+
+    ).join('')+'</div>'+matchYoutubeButtonsHtml(m,false)+(window.GGFCMatchRecords?.permissionMarkerHtml()||'')+(forfeitText(m)?'<p class="detail-notice">'+esc(forfeitText(m))+' · 승패와 승점은 몰수패 판정을 적용합니다.</p>':'')+'</div>';
+  if(editor)return summary+'<div class="match-player-records" tabindex="0" aria-label="선수별 경기 기록 수정">'+editor+'</div>';
+  return summary+'<div class="match-player-records" tabindex="0" aria-label="양 팀 선수별 경기 기록">'+
     '<div class="detail-team-columns">'+data.teams.map(t=>'<section class="detail-section"><h3>'+teamChip(t.team)+'</h3><p class="detail-note">감독: '+esc(t.coaches.join(', ')||'미등록')+' · 코치: '+esc(t.assistants.join(', ')||'미등록')+(t.squadDate?' · '+esc(t.squadDate)+' 스쿼드 기준':' · 해당 경기일 이전 팀스쿼드 없음')+'</p>'+detailMetricGrid([
       ['팀 득점',t.score],['도움',t.totals.a],['적용 팀파울',t.fouls],['개인파울 합계',t.totals.f],['선방',t.totals.sv],['MOM',t.totals.mom]
-    ])+'<p class="detail-foul-note">팀파울 = 개인파울 + 추가 파울 · 추가 파울 '+t.rawFouls+'</p>'+detailPlayerTable(t,m,mobile)+(t.totals.ownGoal?'<p class="detail-note">자책골·베네핏 표기 '+t.totals.ownGoal+'골은 등록된 팀의 득점 기록에 포함됩니다.</p>':'')+
+    ])+'<p class="detail-foul-note">팀파울 = 개인파울 + 추가 파울 · 추가 파울 '+t.rawFouls+'</p>'+detailPlayerTable(t,m)+(t.totals.ownGoal?'<p class="detail-note">자책골·베네핏 표기 '+t.totals.ownGoal+'골은 등록된 팀의 득점 기록에 포함됩니다.</p>':'')+
     (t.totals.g!==t.score?'<p class="detail-notice">팀 점수 '+t.score+'골 / 등록 득점자 합계 '+t.totals.g+'골</p>':'')+'</section>').join('')+'</div>'+
     '<p class="detail-note">출석은 해당 경기의 출석 명단 기준입니다. 기록만 있고 출석이 미등록인 선수도 표시하며, 경기승점은 출석이 등록된 선수에게만 반영합니다.</p>'+detailUnassignedHtml(data.unassigned)+(m.memo||m.note?'<section class="detail-section"><h3>비고</h3><p class="detail-note detail-prewrap">'+esc([m.memo,m.note].filter(Boolean).join('\n'))+'</p></section>':'')+'</div>';
 }
@@ -230,7 +231,7 @@ function refreshMatchDetailRecords(offsets){
 }
 function selectMatchPlayer(button){
   const panel=button.closest('.match-record-scroll'),state=ggfcDetailState;
-  if(!panel||state?.kind!=='match'||!document.documentElement.classList.contains('ggfc-mobile'))return;
+  if(!panel||state?.kind!=='match')return;
   if(button.hasAttribute('data-match-player-edit')){
     state.playerListScroll=matchRecordScrollOffsets(panel);
     state.playerEditKey=button.dataset.matchPlayerEdit;
