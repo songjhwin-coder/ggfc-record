@@ -4017,6 +4017,9 @@ body:not(.admin-mode) #v-interleague :is(.note,.head>p){display:none!important}
 .match-count-cell button:disabled,.match-count-cell input:disabled{opacity:.5;cursor:default}
 .match-record-source{display:block;margin:3px 0 0;color:#687b92;font-size:10px;font-weight:500;line-height:1.3}
 .match-record-source.app{color:#2867a1}
+.match-zero-hint{display:block;margin-top:4px;color:#52708e;font-size:10px;font-weight:500;line-height:1.4;white-space:normal}
+.match-zero-hint[hidden]{display:none}
+.match-zero-guide{margin:8px 0 12px;padding:9px 11px;border:1px solid #d2e0ed;border-radius:7px;background:#f1f6fb;color:#36536f;font-size:12px;line-height:1.6;overflow-wrap:anywhere}
 .match-record-row-actions{display:flex;gap:5px;margin-top:6px}
 .match-record-row-actions button{border:1px solid #234d7c;border-radius:5px;padding:5px 8px;min-height:30px;background:#173d68;color:#fff;font:inherit;font-size:11px;cursor:pointer}
 .match-record-row-actions button:disabled{opacity:.4;cursor:default}

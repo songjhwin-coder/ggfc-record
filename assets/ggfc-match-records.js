@@ -8,14 +8,19 @@ window.GGFCMatchRecords=(()=>{
  const metric=v=>teamRecordValuePresent(v)?Number(v):null;
  const base=(r,k)=>metric(r.sharedRecordValues?.[k]);
  const allowed=(r,k)=>k!=='saves'||r.saveAllowed===true;
+ const defaulted=(local,k)=>local?.defaultFields?.includes(k)&&local.values[k]===0;
+ const pendingValue=(local,r,k)=>defaulted(local,k)&&metric(r.recordValues[k])!==null?r.recordValues[k]:local.values[k];
+ const hasMissing=r=>Object.keys(fields).some(k=>allowed(r,k)&&metric(r.recordValues[k])===null);
+ function zerosToConfirm(key,r){const draft=drafts.get(key),local=localRows.get(key);return Object.keys(fields).filter(k=>allowed(r,k)&&metric(r.recordValues[k])===null&&!own(draft?.values||{},k)&&(!own(local?.values||{},k)||defaulted(local,k)));}
  const storedKey=r=>JSON.stringify([r.fixtureKey,teamRecordTeamKey(r.team),normalizePlayerMatchKey(r.player)]);
  function readLocal(){try{const file=JSON.parse(localStorage.getItem(localKey)||'null');if(file?.version!==1||!Array.isArray(file.records))return;
   for(const row of file.records){if(!row||typeof row.fixtureKey!=='string'||typeof row.team!=='string'||typeof row.player!=='string')continue;const values={},baseValues={},seenValues={};let valid=true;
    for(const k of Object.keys(fields)){if(!own(row.values||{},k))continue;const v=row.values[k];if(typeof v!=='number'||!Number.isSafeInteger(v)||v<0||v>10000){valid=false;break;}values[k]=v;baseValues[k]=metric(row.baseValues?.[k]);if(own(row.seenValues||{},k))seenValues[k]=metric(row.seenValues[k]);}
-   if(valid&&Object.keys(values).length)localRows.set(storedKey(row),{...row,values,baseValues,seenValues,shareStamp:typeof row.shareStamp==='string'?row.shareStamp:null});
+   const defaultFields=Array.isArray(row.defaultFields)?row.defaultFields.filter(k=>own(values,k)&&values[k]===0):[];
+   if(valid&&Object.keys(values).length)localRows.set(storedKey(row),{...row,values,baseValues,seenValues,defaultFields,shareStamp:typeof row.shareStamp==='string'?row.shareStamp:null});
   }}catch(e){/* Damaged local data never replaces shared DB. */}}
  function writeLocal(next){try{if(next.size)localStorage.setItem(localKey,JSON.stringify({version:1,records:[...next.values()]}));else localStorage.removeItem(localKey);localRows.clear();next.forEach((v,k)=>localRows.set(k,v));return true;}catch(e){return false;}}
- function context(key){let id;try{id=JSON.parse(key);}catch(e){return null;}const m=verifiedRecords().matches.find(x=>verifiedFixtureKey(x)===id[0]);if(!m)return null;for(const team of matchDetailData(m).teams)for(const row of team.rows)if(appTeamRecordKey(m,team.team,row.player)===key)return {m,team:team.team,row};return null;}
+ function context(key,cache){if(cache?.has(key))return cache.get(key);let id;try{id=JSON.parse(key);}catch(e){return null;}const m=verifiedRecords().matches.find(x=>verifiedFixtureKey(x)===id[0]);if(!m)return null;let found=null;for(const team of matchDetailData(m).teams)for(const row of team.rows){const rowKey=appTeamRecordKey(m,team.team,row.player),value={m,team:team.team,row};cache?.set(rowKey,value);if(rowKey===key)found=value;}return found;}
  function statusFor(key){
   const review=conflicts.get(key);
   if(review&&!saving.has(key)){
@@ -26,15 +31,18 @@ window.GGFCMatchRecords=(()=>{
   return statuses.get(key)||(drafts.has(key)?'미저장':localRows.has(key)?'기기 저장 · 공유 대기':'');
  }
  function saveLabel(key){return saving.has(key)?'저장 중…':conflicts.has(key)?'내 값 저장':'공유 저장';}
- function displayedValue(m,team,r,k){const key=appTeamRecordKey(m,team,r.player),d=drafts.get(key),local=localRows.get(key);return d&&own(d.values,k)?d.values[k]:local&&own(local.values,k)?local.values[k]:r.recordValues[k]??'';}
+ function displayedValue(m,team,r,k){const key=appTeamRecordKey(m,team,r.player),d=drafts.get(key),local=localRows.get(key);return d&&own(d.values,k)?d.values[k]:local&&own(local.values,k)?pendingValue(local,r,k):r.recordValues[k]??0;}
+ function sourceText(key,r,k){const local=localRows.get(key);return own(drafts.get(key)?.values||{},k)?'미저장':local&&own(local.values,k)&&!(defaulted(local,k)&&metric(r.recordValues[k])!==null)?'공유 대기':(r.counterFields||[]).includes(k)?'공유 기록 · 확정':(r.appFields||[]).includes(k)?'앱 기록 · 확정':metric(r.recordValues[k])!==null?'DB · 확정':'미확정';}
  function rowActionsHtml(m,team,r){if(!eligible(m,r))return '';const key=appTeamRecordKey(m,team,r.player),dirty=drafts.has(key),busy=saving.has(key),pending=localRows.has(key);
-  return '<div class="match-record-row-actions"><button type="button" data-match-record-save'+(busy||!dirty&&!pending?' disabled':'')+'>'+saveLabel(key)+'</button><button type="button" data-match-record-cancel'+(!dirty?' hidden':'')+(busy?' disabled':'')+'>취소</button><button type="button" data-match-record-clear-local'+(!pending?' hidden':'')+(busy?' disabled':'')+'>기기 초기화</button></div><span class="match-record-status" role="status">'+esc(statusFor(key))+'</span>';}
+  const zeros=zerosToConfirm(key,r);
+  return '<div class="match-record-row-actions"><button type="button" data-match-record-save'+(busy||!dirty&&!pending&&!hasMissing(r)?' disabled':'')+'>'+saveLabel(key)+'</button><button type="button" data-match-record-cancel'+(!dirty?' hidden':'')+(busy?' disabled':'')+'>취소</button><button type="button" data-match-record-clear-local'+(!pending?' hidden':'')+(busy?' disabled':'')+'>기기 초기화</button></div><small class="match-zero-hint" data-match-zero-hint'+(zeros.length?'':' hidden')+'>미확정 '+zeros.length+'항목도 0회로 함께 확정</small><span class="match-record-status" role="status">'+esc(statusFor(key))+'</span>';}
  function cellHtml(m,team,r,k,editable=true){const value=r.recordValues[k],shared=(r.counterFields||[]).includes(k),app=(r.appFields||[]).includes(k);
   if(editable&&eligible(m,r)&&allowed(r,k)){const key=appTeamRecordKey(m,team,r.player),disabled=saving.has(key),local=localRows.get(key);
-   const source=local&&own(local.values,k)?'공유 대기':shared?'공유 기록':app?'앱 기록':teamRecordValuePresent(value)?'DB':'미기록';
+   const source=sourceText(key,r,k);
    const sharedValue=window.GGFCPublicCounters?.latest(key)?.values[k]??'';
    return '<div class="match-count-cell" data-match-count="'+k+'"><button type="button" data-match-count-step="-1" aria-label="'+esc(r.player+' '+fields[k])+' 1회 줄이기"'+(disabled?' disabled':'')+'>−</button><input type="number" min="0" max="10000" step="1" inputmode="numeric" data-shared-value="'+esc(sharedValue)+'" value="'+esc(displayedValue(m,team,r,k))+'" placeholder="—" aria-label="'+esc(r.player+' '+fields[k])+' 횟수"'+(disabled?' disabled':'')+'><button type="button" data-match-count-step="1" aria-label="'+esc(r.player+' '+fields[k])+' 1회 늘리기"'+(disabled?' disabled':'')+'>+</button></div><small class="match-record-source">'+source+'</small>';
-  }return '<span>'+esc(value??'—')+'</span>'+(teamRecordValuePresent(value)?'<small class="match-record-source'+(app||shared?' app':'')+'">'+(shared?'공유 기록':app?'앱 기록':'DB')+'</small>':k==='saves'&&!r.keeper?'<small class="match-record-source">골키퍼만</small>':'');}
+  }if(eligible(m,r)&&allowed(r,k)){const key=appTeamRecordKey(m,team,r.player);return '<span>'+esc(displayedValue(m,team,r,k))+'</span><small class="match-record-source">'+sourceText(key,r,k)+'</small>';}
+  return '<span>'+esc(value??'—')+'</span>'+(teamRecordValuePresent(value)?'<small class="match-record-source'+(app||shared?' app':'')+'">'+(shared?'공유 기록':app?'앱 기록':'DB')+'</small>':k==='saves'&&!r.keeper?'<small class="match-record-source">골키퍼만</small>':'');}
  function playerEditorHtml(m,team,r){
   if(!eligible(m,r))return '';
   const metrics=Object.entries(fields).map(([key,label])=>
@@ -43,22 +51,22 @@ window.GGFCMatchRecords=(()=>{
   return '<section class="match-player-editor" tabindex="-1" aria-labelledby="matchPlayerEditorTitle"'+matchRecordRowAttrs(m,team,r)+'>'+
    '<header><button type="button" class="match-detail-back" data-match-player-list>← 선수 목록</button>'+
    '<div><p class="match-player-editor-team">'+esc(teamDisplayName(team))+'</p><h3 id="matchPlayerEditorTitle">'+esc(r.player)+' 기록 수정</h3></div></header>'+
-   '<dl>'+metrics+'</dl>'+rowActionsHtml(m,team,r)+'</section>';
+   '<p class="match-zero-guide">미기록은 0부터 시작합니다. 이 선수의 모든 항목을 확인한 뒤 공유 저장하세요. 미확정 항목도 0회로 함께 확정됩니다.</p><dl>'+metrics+'</dl>'+rowActionsHtml(m,team,r)+'</section>';
  }
  function permissionMarkerHtml(){return '<span hidden data-match-record-admin="'+String(signedIn())+'"></span>';}
- function updateRowState(key){const el=[...document.querySelectorAll('[data-match-record-row]')].find(e=>e.dataset.matchRecordRow===key);if(!el)return;const busy=saving.has(key),dirty=drafts.has(key),save=el.querySelector('[data-match-record-save]'),cancel=el.querySelector('[data-match-record-cancel]');if(save){save.disabled=busy||!dirty&&!localRows.has(key);save.textContent=saveLabel(key);}if(cancel){cancel.hidden=!dirty;cancel.disabled=busy;}const status=el.querySelector('.match-record-status');if(status)status.textContent=statusFor(key);el.querySelectorAll('.match-count-cell button,.match-count-cell input').forEach(e=>e.disabled=busy);}
+ function updateRowState(key,c=context(key)){const el=[...document.querySelectorAll('[data-match-record-row]')].find(e=>e.dataset.matchRecordRow===key);if(!el||!c)return;const busy=saving.has(key),dirty=drafts.has(key),save=el.querySelector('[data-match-record-save]'),cancel=el.querySelector('[data-match-record-cancel]');if(save){save.disabled=busy||!dirty&&!localRows.has(key)&&!hasMissing(c.row);save.textContent=saveLabel(key);}if(cancel){cancel.hidden=!dirty;cancel.disabled=busy;}const status=el.querySelector('.match-record-status');if(status)status.textContent=statusFor(key);const hint=el.querySelector('[data-match-zero-hint]'),zeros=zerosToConfirm(key,c.row);if(hint){hint.hidden=!zeros.length;hint.textContent='미확정 '+zeros.length+'항목도 0회로 함께 확정';}el.querySelectorAll('.match-count-cell').forEach(cell=>{const field=cell.dataset.matchCount;cell.querySelectorAll('button,input').forEach(e=>e.disabled=busy);const note=cell.nextElementSibling;if(note?.classList.contains('match-record-source'))note.textContent=sourceText(key,c.row,field);const local=localRows.get(key);if(defaulted(local,field)&&metric(c.row.recordValues[field])!==null&&!own(drafts.get(key)?.values||{},field))cell.querySelector('input').value=c.row.recordValues[field];});}
  function change(input,value){
   const key=input.closest('[data-match-record-row]')?.dataset.matchRecordRow;
   const field=input.closest('[data-match-count]')?.dataset.matchCount,c=context(key);
   if(!c||!own(fields,field)||!eligible(c.m,c.row)||!allowed(c.row,field)||saving.has(key))return false;
   const local=localRows.get(key),draft=drafts.get(key)||{values:{},seenValues:{}};
-  const baseline=local&&own(local.values,field)?local.values[field]:c.row.recordValues[field]??'';
+  const baseline=local&&own(local.values,field)?pendingValue(local,c.row,field):c.row.recordValues[field]??'';
   if(String(value)===String(baseline)){
    delete draft.values[field];delete draft.seenValues[field];
   }else{
    draft.values[field]=String(value);
    // Keep the first observed value for each field across remote changes and offline retries.
-   if(!own(draft.seenValues,field)&&!(local&&own(local.values,field)))draft.seenValues[field]=input.dataset.sharedValue===''?null:Number(input.dataset.sharedValue);
+   if(!own(draft.seenValues,field)&&!(local&&own(local.values,field)&&!defaulted(local,field)))draft.seenValues[field]=input.dataset.sharedValue===''?null:Number(input.dataset.sharedValue);
   }
   if(Object.keys(draft.values).length)drafts.set(key,draft);else drafts.delete(key);
   input.value=value;statuses.delete(key);updateRowState(key);GGFC.refreshUI();return true;
@@ -73,16 +81,19 @@ window.GGFCMatchRecords=(()=>{
  async function publishLocal(key){
   const local=localRows.get(key),c=context(key);
   if(!local||!c||saving.has(key)||conflicts.has(key))return false;
-  if(!eligible(c.m,c.row)||Object.keys(local.values).some(k=>!allowed(c.row,k))){
+  const values={...local.values},defaultFields=(local.defaultFields||[]).filter(k=>values[k]===0);
+  for(const k of defaultFields)if(!allowed(c.row,k)||base(c.row,k)!==null)delete values[k];
+  const defaults=defaultFields.filter(k=>own(values,k));
+  if(!eligible(c.m,c.row)||Object.keys(values).some(k=>!allowed(c.row,k))){
    statuses.set(key,'출전 명단 또는 골키퍼 지정 확인 필요');updateRowState(key);return false;
   }
   if(!window.GGFCPublicCounters){statuses.set(key,'기기 저장 · 공유 연결 준비 중');return false;}
   saving.add(key);statuses.set(key,'기기 저장 · 공유 중…');updateRowState(key);
   try{
-   const result=await GGFCPublicCounters.publish(key,c.m,c.team,c.row.player,local.values,local.baseValues,local.seenValues,local.shareStamp);
+   const result=Object.keys(values).length?await GGFCPublicCounters.publish(key,c.m,c.team,c.row.player,values,local.baseValues,local.seenValues,local.shareStamp,defaults):{ok:true,preserved:true};
    if(result.ok){
     const next=new Map(localRows);next.delete(key);
-    statuses.set(key,writeLocal(next)?'공유 반영 완료':'공유 완료 · 기기 대기 기록 정리 필요');
+    statuses.set(key,writeLocal(next)?result.preserved?'기존 확정 기록 유지':'공유 반영 완료':'공유 완료 · 기기 대기 기록 정리 필요');
    }else if(result.conflicts)conflicts.set(key,result.conflicts);
    else statuses.set(key,result.message);
    return result.ok;
@@ -90,18 +101,20 @@ window.GGFCMatchRecords=(()=>{
  }
  async function saveRow(key){
   const local=localRows.get(key),draft=drafts.get(key),c=context(key);
-  if((!draft&&!local)||!c||saving.has(key))return false;
+  if(!c||saving.has(key)||!draft&&!local&&!hasMissing(c.row))return false;
   if(!eligible(c.m,c.row)){toast('출전 명단을 확인해 주세요.');return false;}
-  const values={},baseValues={...local?.baseValues};
+  const values={},baseValues={...local?.baseValues},defaultFields=new Set((local?.defaultFields||[]).filter(k=>!own(draft?.values||{},k))),seenValues={...local?.seenValues,...draft?.seenValues,...conflicts.get(key)};
   for(const [field,raw] of Object.entries({...local?.values,...draft?.values})){
+   if(defaultFields.has(field)&&(!allowed(c.row,field)||base(c.row,field)!==null)){defaultFields.delete(field);continue;}
    if(!allowed(c.row,field)){toast('새 선방 기록은 골키퍼에게만 입력할 수 있습니다.');return false;}
    const value=String(raw).trim()===''?null:Number(raw);
    if(value===null||!Number.isSafeInteger(value)||value<0||value>10000){toast(fields[field]+'는 0~10000의 정수로 입력하세요.');return false;}
    values[field]=value;
    baseValues[field]=base(c.row,field)??baseValues[field]??null;
   }
-  const seenValues={...local?.seenValues,...draft?.seenValues,...conflicts.get(key)};
-  const record={fixtureKey:verifiedFixtureKey(c.m),team:c.team,player:c.row.player,values,baseValues,seenValues,shareStamp:local?.shareStamp??null};
+  for(const field of Object.keys(fields))if(allowed(c.row,field)&&metric(c.row.recordValues[field])===null&&!own(values,field)){values[field]=0;baseValues[field]=null;seenValues[field]=null;defaultFields.add(field);}
+  if(!Object.keys(values).length)return false;
+  const record={fixtureKey:verifiedFixtureKey(c.m),team:c.team,player:c.row.player,values,baseValues,seenValues,defaultFields:[...defaultFields],shareStamp:local?.shareStamp??null};
   const next=new Map(localRows);next.set(key,record);
   if(!writeLocal(next)){statuses.set(key,'기기 저장 실패 · 입력은 유지됩니다');updateRowState(key);toast('기기 저장 공간을 확인하세요. 입력한 카운트는 현재 화면에 유지됩니다.');return false;}
   drafts.delete(key);conflicts.delete(key);statuses.set(key,'기기 저장 · 공유 대기');
@@ -109,9 +122,9 @@ window.GGFCMatchRecords=(()=>{
  }
  function cancel(key){if(saving.has(key))return;drafts.delete(key);statuses.delete(key);refreshMatchDetailRecords();GGFC.refreshUI();}
  function clearLocal(key){if(saving.has(key))return;const next=new Map(localRows);next.delete(key);if(!writeLocal(next)){toast('기기 저장 상태를 확인하세요.');return;}drafts.delete(key);statuses.delete(key);conflicts.delete(key);refreshMatchDetailRecords();}
- function reconcile(){for(const [key,local] of localRows){if(drafts.has(key)||saving.has(key))continue;const shared=window.GGFCPublicCounters?.latest(key);if(!window.GGFCPublicCounters?.sameValues(shared,local.values))continue;const next=new Map(localRows);next.delete(key);if(writeLocal(next)){conflicts.delete(key);statuses.set(key,'공유 반영 완료');}}}
+ function reconcile(){for(const [key,local] of localRows){if(drafts.has(key)||saving.has(key))continue;const shared=window.GGFCPublicCounters?.latest(key);if(!window.GGFCPublicCounters?.sameValues(shared,local.values,local.defaultFields))continue;const next=new Map(localRows);next.delete(key);if(writeLocal(next)){conflicts.delete(key);statuses.set(key,'공유 반영 완료');}}}
  async function retryPending(){if(!window.GGFCPublicCounters?.ready)return;for(const key of [...localRows.keys()])if(!drafts.has(key))await publishLocal(key);}
- function refreshPermissions(){for(const el of document.querySelectorAll('[data-match-record-row]'))updateRowState(el.dataset.matchRecordRow);}
+ function refreshPermissions(){const cache=new Map();for(const el of document.querySelectorAll('[data-match-record-row]'))updateRowState(el.dataset.matchRecordRow,context(el.dataset.matchRecordRow,cache));}
  document.addEventListener('pointerdown',e=>{if(e.target.closest('#matchRecordScroll'))pressedPointer=e.pointerId;},true);
  function releasePress(e){if(e.pointerId===pressedPointer){pressedPointer=null;setTimeout(flushRecordRefresh,0);}}
  document.addEventListener('pointerup',releasePress,true);

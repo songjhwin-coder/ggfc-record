@@ -19,7 +19,9 @@ window.GGFCPublicCounters=(()=>{
    values[k]=Number(v);baseValues[k]=base==='missing'?null:Number(base);
   }
   if(!Object.keys(values).length||Object.keys(raw.baseValues||{}).some(k=>!own(values,k)))return null;
-  return {...raw,fixtureKey:verifiedFixtureKey({...raw,id:raw.matchId}),values,baseValues,path:path.join('/')};
+  const zeroDefaults={};
+  if(raw.zeroDefaults!==undefined){if(!raw.zeroDefaults||typeof raw.zeroDefaults!=='object'||Array.isArray(raw.zeroDefaults))return null;for(const [k,v]of Object.entries(raw.zeroDefaults)){if(!fields.includes(k)||v!==true||values[k]!==0)return null;zeroDefaults[k]=true;}}
+  return {...raw,fixtureKey:verifiedFixtureKey({...raw,id:raw.matchId}),values,baseValues,zeroDefaults,path:path.join('/')};
  }
  function notify(){
   if(scheduled)return;scheduled=true;
@@ -71,8 +73,9 @@ window.GGFCPublicCounters=(()=>{
   }
   return null;
  }
- function sameValues(row,values){return !!row&&Object.entries(values).every(([k,v])=>row.values[k]===v);}
- async function publish(key,m,team,player,values,bases,observed,legacyStamp){
+ function sameValues(row,values,defaultFields=[]){const defaults=new Set(defaultFields||[]);return !!row&&Object.entries(values).every(([k,v])=>defaults.has(k)&&v===0?own(row.values,k):row.values[k]===v);}
+ async function publish(key,m,team,player,values,bases,observed,legacyStamp,defaultFields=[]){
+  const defaults=new Set((defaultFields||[]).filter(k=>fields.includes(k)&&values[k]===0));
   const c=context();
   if(c.ready&&!loaded){
    try{const snapshot=await c.ref.get();if(error){channel=null;refreshUI();}accept(snapshot.val());}
@@ -92,18 +95,25 @@ window.GGFCPublicCounters=(()=>{
      // SDK retries use the server's current leaf. For a new DB revision, carry forward the prior leaf's fields.
      const latest=value?normalize(value,path.split('/')):entries.get(key);
      if(value&&!latest)return;
+     const targets={...values},zeroDefaults={...latest?.zeroDefaults};
      for(const [field,target] of Object.entries(values)){
       const shared=latest?.values[field]??null;
-      const unchanged=own(observed,field)?observed[field]===shared:(legacyStamp??'')===stamp(latest);
+      if(defaults.has(field)){if(shared!==null)targets[field]=shared;else zeroDefaults[field]=true;continue;}
+      // A peer's fill-only zero is not an edit to this field. Direct counts can replace it;
+      // explicit zero edits and competing positive counts still require conflict review.
+      const unchanged=(own(observed,field)?observed[field]===shared:(legacyStamp??'')===stamp(latest))||(observed?.[field]===null&&shared===0&&latest?.zeroDefaults?.[field]===true);
       if(shared!==target&&!unchanged)conflicts[field]=shared;
+      delete zeroDefaults[field];
      }
      if(Object.keys(conflicts).length)return;
-     if(sameValues(latest,values)){alreadySaved=true;return;}
-     const mergedValues={...latest?.values,...values},mergedBases={...latest?.baseValues};
-     for(const field of Object.keys(values))mergedBases[field]=bases[field]??mergedBases[field]??null;
+     const sameDefaults=Object.keys(zeroDefaults).sort().join('|')===Object.keys(latest?.zeroDefaults||{}).sort().join('|');
+     if(sameValues(latest,targets)&&sameDefaults){alreadySaved=true;return;}
+     const mergedValues={...latest?.values,...targets},mergedBases={...latest?.baseValues};
+     for(const field of Object.keys(targets))if(!defaults.has(field)||!own(latest?.values||{},field))mergedBases[field]=bases[field]??mergedBases[field]??null;
      return {...row,
       values:Object.fromEntries(Object.entries(mergedValues).map(([k,v])=>[k,String(v)])),
       baseValues:Object.fromEntries(Object.keys(mergedValues).map(k=>[k,mergedBases[k]==null?'missing':String(mergedBases[k])])),
+      ...(Object.keys(zeroDefaults).length?{zeroDefaults}:{}),
       revision:(Number(value?.revision)||0)+1,savedAt:firebase.database.ServerValue.TIMESTAMP
      };
     },undefined,false);
