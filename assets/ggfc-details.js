@@ -72,11 +72,19 @@ function matchDetailData(m){
 function detailMetricGrid(items){
   return '<dl class="detail-metrics">'+items.map(([label,value])=>'<div><dt>'+esc(label)+'</dt><dd>'+esc(value)+'</dd></div>').join('')+'</dl>';
 }
-function detailPlayerTable(team,m){
+function matchRecordRowAttrs(m,team,r){
+  return ' data-match-record-row="'+esc(appTeamRecordKey(m,team,r.player))+'" data-match-record-player="'+esc(r.player)+'" data-match-record-team="'+esc(team)+'"';
+}
+function detailPlayerTable(team,m,mobile){
   if(!team.rows.length)return '<div class="detail-empty">등록된 선수별 기록이 없습니다.</div>';
-  return '<p class="detail-scroll-hint">표를 좌우로 밀면 모든 기록을 볼 수 있습니다.</p><div class="detail-table-wrap" tabindex="0" aria-label="'+esc(teamDisplayName(team.team))+' 선수별 경기 기록 표"><table class="detail-table"><caption class="detail-visually-hidden">'+esc(teamDisplayName(team.team))+' 선수별 경기 기록</caption><thead><tr><th scope="col">선수</th><th scope="col">출석</th><th scope="col">유효슛</th><th scope="col">키패스</th><th scope="col">수비성공</th><th scope="col">선방</th><th scope="col">득점</th><th scope="col">도움</th><th scope="col">개인파울</th><th scope="col">MOM</th><th scope="col">승점</th></tr></thead><tbody>'+team.rows.map(r=>
-    '<tr data-match-record-row="'+esc(appTeamRecordKey(m,team.team,r.player))+'" data-match-record-player="'+esc(r.player)+'" data-match-record-team="'+esc(team.team)+'"><th scope="row" class="'+(r.att?'squad-present':'squad-absent')+'">'+esc(r.player)+(r.keeper?' <small class="match-keeper-badge" title="'+(r.keeperSource==='MATCH'?'경기 지정 골키퍼':'선수명단 골키퍼')+'">GK</small>':'')+(r.role&&r.role!=='선수'?' <small>('+esc(r.role)+')</small>':'')+(window.GGFCMatchRecords?.rowActionsHtml(m,team.team,r)||'')+'</th><td>'+(r.ownGoal?'—':r.att?'<span class="detail-attended">출석</span>':'<span class="detail-missing">'+(r.squad?'미출석':'미등록')+'</span>')+'</td>'+['sot','keyPass','defSuccess','saves'].map(k=>'<td>'+(window.GGFCMatchRecords?.cellHtml(m,team.team,r,k)??esc(r.recordValues[k]??'—'))+'</td>').join('')+'<td>'+r.g+'</td><td>'+r.a+'</td><td>'+r.f+'</td><td>'+r.mom+'</td><td>'+(r.att&&!r.ownGoal?team.points:'—')+'</td></tr>'
-  ).join('')+'</tbody><tfoot><tr><th scope="row">합계</th><td>'+team.totals.att+'명</td><td>'+team.totals.sot+'</td><td>'+team.totals.keyPass+'</td><td>'+team.totals.defSuccess+'</td><td>'+team.totals.sv+'</td><td>'+team.totals.g+'</td><td>'+team.totals.a+'</td><td>'+team.totals.f+'</td><td>'+team.totals.mom+'</td><td>'+team.totals.att*team.points+'</td></tr></tfoot></table></div>';
+  const records=window.GGFCMatchRecords;
+  const hint=mobile?'선수 이름을 눌러 기록을 수정하세요. 표는 좌우로 밀어 볼 수 있습니다.':'표를 좌우로 밀면 모든 기록을 볼 수 있습니다.';
+  return '<p class="detail-scroll-hint">'+hint+'</p><div class="detail-table-wrap" tabindex="0" aria-label="'+esc(teamDisplayName(team.team))+' 선수별 경기 기록 표"><table class="detail-table"><caption class="detail-visually-hidden">'+esc(teamDisplayName(team.team))+' 선수별 경기 기록</caption><thead><tr><th scope="col">선수</th><th scope="col">출석</th><th scope="col">유효슛</th><th scope="col">키패스</th><th scope="col">수비성공</th><th scope="col">선방</th><th scope="col">득점</th><th scope="col">도움</th><th scope="col">개인파울</th><th scope="col">MOM</th><th scope="col">승점</th></tr></thead><tbody>'+team.rows.map(r=>{
+    const name=mobile&&records?.canEdit(m,r)
+      ? '<button type="button" class="match-player-edit-trigger" data-match-player-edit="'+esc(appTeamRecordKey(m,team.team,r.player))+'" aria-label="'+esc(r.player)+' 기록 수정">'+esc(r.player)+'</button>'
+      : esc(r.player);
+    return '<tr'+matchRecordRowAttrs(m,team.team,r)+'><th scope="row" class="'+(r.att?'squad-present':'squad-absent')+'">'+name+(r.keeper?' <small class="match-keeper-badge" title="'+(r.keeperSource==='MATCH'?'경기 지정 골키퍼':'선수명단 골키퍼')+'">GK</small>':'')+(r.role&&r.role!=='선수'?' <small>('+esc(r.role)+')</small>':'')+(mobile?'':records?.rowActionsHtml(m,team.team,r)||'')+'</th><td>'+(r.ownGoal?'—':r.att?'<span class="detail-attended">출석</span>':'<span class="detail-missing">'+(r.squad?'미출석':'미등록')+'</span>')+'</td>'+['sot','keyPass','defSuccess','saves'].map(k=>'<td>'+(records?.cellHtml(m,team.team,r,k,!mobile)??esc(r.recordValues[k]??'—'))+'</td>').join('')+'<td>'+r.g+'</td><td>'+r.a+'</td><td>'+r.f+'</td><td>'+r.mom+'</td><td>'+(r.att&&!r.ownGoal?team.points:'—')+'</td></tr>';
+  }).join('')+'</tbody><tfoot><tr><th scope="row">합계</th><td>'+team.totals.att+'명</td><td>'+team.totals.sot+'</td><td>'+team.totals.keyPass+'</td><td>'+team.totals.defSuccess+'</td><td>'+team.totals.sv+'</td><td>'+team.totals.g+'</td><td>'+team.totals.a+'</td><td>'+team.totals.f+'</td><td>'+team.totals.mom+'</td><td>'+team.totals.att*team.points+'</td></tr></tfoot></table></div>';
 }
 function detailUnassignedHtml(items){
   if(!items.length)return '';
@@ -114,9 +122,22 @@ function stopMatchYoutubePlayers(){
   document.querySelectorAll('#ggfcDetailBody .match-youtube-frame').forEach(frame=>frame.remove());
 }
 function matchDetailHtml(data){
-  return matchVideoDockHtml(data.match)+'<div class="match-record-scroll" tabindex="0" aria-label="경기 결과와 선수별 기록">'+matchDetailRecordsHtml(data)+'</div>';
+  const video=matchVideoDockHtml(data.match);
+  const divider=video?'<div class="match-split-handle" role="separator" tabindex="0" aria-label="영상과 경기 기록 너비 조절" aria-orientation="vertical" aria-controls="matchRecordScroll" title="좌우로 드래그하여 너비 조절"><span aria-hidden="true">↔</span></div>':'';
+  return video+divider+'<div class="match-record-scroll" id="matchRecordScroll" tabindex="0" aria-label="경기 결과와 선수별 기록">'+matchDetailRecordsHtml(data)+'</div>';
 }
-function matchDetailRecordsHtml(data){
+function matchDetailRecordsHtml(data,playerKey){
+  const mobile=document.documentElement.classList.contains('ggfc-mobile');
+  if(mobile&&playerKey){
+    for(const team of data.teams){
+      const row=team.rows.find(r=>appTeamRecordKey(data.match,team.team,r.player)===playerKey);
+      if(row){
+        const editor=window.GGFCMatchRecords?.playerEditorHtml(data.match,team.team,row);
+        if(editor)return editor;
+        break;
+      }
+    }
+  }
   const m=data.match,round=recordMatchRoundNumber(m),ground=matchGround(m);
   const meta=[normDate(m.date),matchCompetition(m),halfLabel(matchHalfKey(m)),round?round+'R':'',m.round,m.no,ground?ground+'구장':''].filter(Boolean);
   return '<div class="match-detail-summary"><div class="match-detail-navigation"><button type="button" class="match-detail-back" data-match-back>← 경기 목록으로</button><span>PC에서는 ESC · 휴대폰에서는 뒤로가기로 닫기</span></div><div class="detail-match-meta">'+meta.map(v=>'<span>'+esc(v)+'</span>').join('')+'</div>'+
@@ -127,7 +148,7 @@ function matchDetailRecordsHtml(data){
     '<div class="match-player-records" tabindex="0" aria-label="양 팀 선수별 경기 기록">'+
     '<div class="detail-team-columns">'+data.teams.map(t=>'<section class="detail-section"><h3>'+teamChip(t.team)+'</h3><p class="detail-note">감독: '+esc(t.coaches.join(', ')||'미등록')+' · 코치: '+esc(t.assistants.join(', ')||'미등록')+(t.squadDate?' · '+esc(t.squadDate)+' 스쿼드 기준':' · 해당 경기일 이전 팀스쿼드 없음')+'</p>'+detailMetricGrid([
       ['팀 득점',t.score],['도움',t.totals.a],['적용 팀파울',t.fouls],['개인파울 합계',t.totals.f],['선방',t.totals.sv],['MOM',t.totals.mom]
-    ])+'<p class="detail-foul-note">팀파울 = 개인파울 + 추가 파울 · 추가 파울 '+t.rawFouls+'</p>'+detailPlayerTable(t,m)+(t.totals.ownGoal?'<p class="detail-note">자책골·베네핏 표기 '+t.totals.ownGoal+'골은 등록된 팀의 득점 기록에 포함됩니다.</p>':'')+
+    ])+'<p class="detail-foul-note">팀파울 = 개인파울 + 추가 파울 · 추가 파울 '+t.rawFouls+'</p>'+detailPlayerTable(t,m,mobile)+(t.totals.ownGoal?'<p class="detail-note">자책골·베네핏 표기 '+t.totals.ownGoal+'골은 등록된 팀의 득점 기록에 포함됩니다.</p>':'')+
     (t.totals.g!==t.score?'<p class="detail-notice">팀 점수 '+t.score+'골 / 등록 득점자 합계 '+t.totals.g+'골</p>':'')+'</section>').join('')+'</div>'+
     '<p class="detail-note">출석은 해당 경기의 출석 명단 기준입니다. 기록만 있고 출석이 미등록인 선수도 표시하며, 경기승점은 출석이 등록된 선수에게만 반영합니다.</p>'+detailUnassignedHtml(data.unassigned)+(m.memo||m.note?'<section class="detail-section"><h3>비고</h3><p class="detail-note detail-prewrap">'+esc([m.memo,m.note].filter(Boolean).join('\n'))+'</p></section>':'')+'</div>';
 }
@@ -140,11 +161,16 @@ function detailMotionEnabled(){return !matchMedia('(prefers-reduced-motion: redu
 function syncGGFCDetailViewport(){
   const dialog=document.getElementById('ggfcDetailDialog');if(!dialog?.open)return;
   dialog.style.setProperty('--ggfc-detail-viewport',Math.round(window.visualViewport?.height||innerHeight)+'px');
+  const handle=dialog.querySelector('.match-split-handle');
+  const bounds=handle&&matchSplitBounds(handle);
+  if(matchSplitDrag&&bounds?.available!==matchSplitDrag.bounds.available)finishMatchSplitDrag();
+  if(bounds)setMatchSplitAria(handle,bounds,bounds.ratio);
 }
 window.addEventListener('resize',syncGGFCDetailViewport,{passive:true});
 window.visualViewport?.addEventListener('resize',syncGGFCDetailViewport,{passive:true});
 function showGGFCDetail(kind,title,html,trigger){
   const dialog=document.querySelector('#ggfcDetailDialog'),wasOpen=dialog.open;
+  finishMatchSplitDrag();
   clearTimeout(ggfcDetailCloseTimer);ggfcDetailCloseTimer=0;
   dialog.classList.remove('detail-leaving','detail-entering');
   if(!wasOpen)ggfcDetailState={kind,trigger:trigger||document.activeElement,overflow:document.body.style.overflow};
@@ -173,6 +199,7 @@ function finishGGFCDetailClose(){
 function closeGGFCDetail(){
   const dialog=document.querySelector('#ggfcDetailDialog');
   if(!dialog.open||dialog.classList.contains('detail-leaving'))return;
+  finishMatchSplitDrag();
   stopMatchYoutubePlayers();
   if(!detailMotionEnabled()){finishGGFCDetailClose();return;}
   dialog.classList.remove('detail-entering');dialog.classList.add('detail-leaving');
@@ -183,16 +210,74 @@ function closeGGFCDetail(){
 function openMatchDetail(id,trigger){
   const key=detailMatchKey(id),m=(verifiedRecords().matches||[]).find(x=>key&&detailMatchKey(x.id)===key);
   if(!m){toast('해당 경기 기록을 찾을 수 없습니다.');return false;}
-  showGGFCDetail('match','경기 상세기록',matchDetailHtml(matchDetailData(m)),trigger);ggfcDetailState.matchId=m.id;ggfcDetailState.fixtureKey=verifiedFixtureKey(m);return true;
+  showGGFCDetail('match','경기 상세기록',matchDetailHtml(matchDetailData(m)),trigger);
+  Object.assign(ggfcDetailState,{matchId:m.id,fixtureKey:verifiedFixtureKey(m),playerEditKey:'',playerListScroll:null});
+  return true;
 }
-function refreshMatchDetailRecords(){
+function matchRecordScrollAreas(panel){
+  return [panel,...panel.querySelectorAll('.match-detail-summary,.match-player-records,.detail-table-wrap')];
+}
+function matchRecordScrollOffsets(panel){
+  return matchRecordScrollAreas(panel).map(e=>[e.scrollLeft,e.scrollTop]);
+}
+function refreshMatchDetailRecords(offsets){
   if(ggfcDetailState?.kind!=='match')return;
   const m=verifiedRecords().matches.find(m=>verifiedFixtureKey(m)===ggfcDetailState.fixtureKey),panel=document.querySelector('#ggfcDetailBody .match-record-scroll');
   if(!panel)return;if(!m){closeGGFCDetail();return;}
-  const scrollAreas=()=>[panel,...panel.querySelectorAll('.match-detail-summary,.match-player-records,.detail-table-wrap')];
-  const offsets=scrollAreas().map(e=>[e.scrollLeft,e.scrollTop]);
-  panel.innerHTML=matchDetailRecordsHtml(matchDetailData(m));
-  scrollAreas().forEach((e,i)=>{if(offsets[i])[e.scrollLeft,e.scrollTop]=offsets[i];});
+  if(offsets===undefined)offsets=matchRecordScrollOffsets(panel);
+  panel.innerHTML=matchDetailRecordsHtml(matchDetailData(m),ggfcDetailState.playerEditKey);
+  matchRecordScrollAreas(panel).forEach((e,i)=>{[e.scrollLeft,e.scrollTop]=offsets?.[i]||[0,0];});
+}
+function selectMatchPlayer(button){
+  const panel=button.closest('.match-record-scroll'),state=ggfcDetailState;
+  if(!panel||state?.kind!=='match'||!document.documentElement.classList.contains('ggfc-mobile'))return;
+  if(button.hasAttribute('data-match-player-edit')){
+    state.playerListScroll=matchRecordScrollOffsets(panel);
+    state.playerEditKey=button.dataset.matchPlayerEdit;
+    refreshMatchDetailRecords(null);
+    panel.querySelector('.match-player-editor')?.focus({preventScroll:true});
+  }else{
+    const playerKey=state.playerEditKey,offsets=state.playerListScroll;
+    state.playerEditKey='';state.playerListScroll=null;
+    refreshMatchDetailRecords(offsets);
+    const trigger=[...panel.querySelectorAll('[data-match-player-edit]')].find(el=>el.dataset.matchPlayerEdit===playerKey);
+    trigger?.focus({preventScroll:true});
+  }
+}
+matchMedia('(max-width: 820px)').addEventListener('change',()=>requestAnimationFrame(()=>{
+  refreshMatchDetailRecords();
+  syncGGFCDetailViewport();
+}));
+
+let matchSplitDrag=null;
+function matchSplitBounds(handle){
+  if(!handle.offsetWidth)return null;
+  const body=handle.parentElement,available=body.clientWidth-handle.offsetWidth;
+  if(available<=0)return null;
+  const styles=getComputedStyle(body);
+  return {
+    available,
+    ratio:handle.previousElementSibling.offsetWidth/available,
+    min:parseFloat(styles.getPropertyValue('--match-split-min-video'))/available,
+    max:1-parseFloat(styles.getPropertyValue('--match-split-min-records'))/available
+  };
+}
+function setMatchSplitAria(handle,bounds,ratio){
+  handle.setAttribute('aria-valuemin',Math.round(bounds.min*100));
+  handle.setAttribute('aria-valuemax',Math.round(bounds.max*100));
+  handle.setAttribute('aria-valuenow',Math.round(ratio*100));
+}
+function resizeMatchSplit(handle,bounds,ratio){
+  const next=Math.max(bounds.min,Math.min(bounds.max,ratio));
+  handle.parentElement.style.setProperty('--match-split-ratio',next);
+  setMatchSplitAria(handle,bounds,next);
+}
+function finishMatchSplitDrag(event){
+  if(!matchSplitDrag||(event&&event.pointerId!==matchSplitDrag.id))return;
+  const {handle,id}=matchSplitDrag;
+  matchSplitDrag=null;
+  handle.parentElement?.classList.remove('match-split-dragging');
+  if(handle.hasPointerCapture(id))handle.releasePointerCapture(id);
 }
 function rememberMatchDetailNavigation(){
   if(matchDetailNavigation||matchDetailPendingBack)return;
@@ -378,6 +463,8 @@ function applyPlayerComparison(swap=false){
 
 document.addEventListener('click',e=>{
   if(e.target.closest('[data-match-back]')){closeGGFCDetail();return;}
+  const player=e.target.closest('[data-match-player-edit],[data-match-player-list]');
+  if(player){selectMatchPlayer(player);return;}
   const match=e.target.closest('[data-match-detail-id]');
   if(match){e.preventDefault();openMatchDetail(match.dataset.matchDetailId,match);return;}
   if(e.target.closest('#chemCompareOpen')){openPlayerComparison(chemSel,chemOther,document.querySelector('#chemCompareOpen'));return;}
@@ -394,6 +481,31 @@ document.addEventListener('keydown',e=>{
   if(card&&e.target===card){e.preventDefault();openMatchDetail(card.dataset.matchDetailId,card);}
 });
 const ggfcDetailDialog=document.querySelector('#ggfcDetailDialog');
+const ggfcDetailBody=document.querySelector('#ggfcDetailBody');
+ggfcDetailBody.addEventListener('pointerdown',e=>{
+  const handle=e.target.closest('.match-split-handle');
+  if(!handle||matchSplitDrag||!e.isPrimary||e.button!==0)return;
+  const bounds=matchSplitBounds(handle);
+  if(!bounds)return;
+  handle.setPointerCapture(e.pointerId);
+  matchSplitDrag={handle,id:e.pointerId,startX:e.clientX,bounds};
+  ggfcDetailBody.classList.add('match-split-dragging');
+  e.preventDefault();
+});
+ggfcDetailBody.addEventListener('pointermove',e=>{
+  const drag=matchSplitDrag;
+  if(drag?.id!==e.pointerId)return;
+  resizeMatchSplit(drag.handle,drag.bounds,drag.bounds.ratio+(e.clientX-drag.startX)/drag.bounds.available);
+});
+for(const event of ['pointerup','pointercancel','lostpointercapture'])ggfcDetailBody.addEventListener(event,finishMatchSplitDrag);
+ggfcDetailBody.addEventListener('keydown',e=>{
+  if(!e.target.matches('.match-split-handle')||!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
+  const bounds=matchSplitBounds(e.target);
+  if(!bounds)return;
+  const next=e.key==='Home'?bounds.min:e.key==='End'?bounds.max:bounds.ratio+(e.key==='ArrowLeft'?-.05:.05);
+  e.preventDefault();
+  resizeMatchSplit(e.target,bounds,next);
+});
 ggfcDetailDialog.addEventListener('cancel',e=>{e.preventDefault();closeGGFCDetail();});
 ggfcDetailDialog.addEventListener('animationend',e=>{
   if(e.target!==ggfcDetailDialog)return;
@@ -406,6 +518,7 @@ ggfcDetailDialog.addEventListener('click',e=>{
   if(e.clientX<bounds.left||e.clientX>bounds.right||e.clientY<bounds.top||e.clientY>bounds.bottom)closeGGFCDetail();
 });
 function restoreGGFCDetailState(){
+  finishMatchSplitDrag();
   stopMatchYoutubePlayers();
   clearTimeout(ggfcDetailCloseTimer);ggfcDetailCloseTimer=0;
   ggfcDetailDialog.classList.remove('detail-entering','detail-leaving');
