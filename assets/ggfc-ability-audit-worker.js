@@ -1,4 +1,4 @@
-/* Generated from current core + SLUMP; source SHA256 0f85f6f48a6217029a247f37865a5b545501687579b1fb606bec428d8f40df83 */
+/* Generated from current core + SLUMP; source SHA256 404ba89fef43e1a00d35ed045388aa531d5f6ca0b34889d680026d05c67e4bcc */
 const GGFCSlump=(()=>{
  const defaults={enabled:true,startDate:'2026-10-20',recentGames:10,baselineGames:20,minimumBaselineGames:10,formTrigger:-2,performanceTrigger:75,persistenceRounds:4,interval:4,recoveryPerformance:85,recoveryRounds:3,slumpDrop:.20,severeDrop:.35,criticalDrop:.50,seasonCap:1.5,storyEnabled:false};
  Object.assign(defaults,{recoveryStartDate:'2026-10-27',recoveryPercent:25,severePerformance:70,criticalPerformance:60});
@@ -331,16 +331,12 @@ function matchCounterGoalkeeperSource(m,team,player){
   return normalizeAbilityPosition(pos)==='GR'||pos==='골키퍼'||pos==='GOALKEEPER'?'ROSTER':'';
 }
 function appTeamRecordKey(m,team,player){return JSON.stringify([verifiedFixtureKey(m),teamRecordTeamKey(team),normalizePlayerMatchKey(player)]);}
-function appTeamRecordBlocked(row,m,team,player){
-  return row.date===normDate(m.date)&&String(row.no||'').trim()===String(m.no||'').trim()&&String(row.round||'').trim()===String(m.round||'').trim()&&normalizePlayerMatchKey(row.player)===normalizePlayerMatchKey(player)&&(!row.team||teamRecordTeamKey(row.team)===teamRecordTeamKey(team))&&(isLeagueFamilyComp(row.comp)?isLeagueFamilyComp(m.comp):compCompact(row.comp)===compCompact(m.comp));
-}
 function mergeAppTeamPlayerRecords(result){
   const stored=DB.settings?.appTeamPlayerRecords;
   if(!Array.isArray(stored)||!stored.length)return result;
   const matched=result.matched.slice(),issues=result.issues.slice(),fixtures=new Map(),canon=soccerBeeCanonicalPlayerMap(),groups=new Map();
   const appearance=(id,team,player)=>JSON.stringify([String(id),teamRecordTeamKey(team),normalizePlayerMatchKey(player)]);
   const attendees=new Set(verifiedRecords().attendance.map(r=>appearance(r.id,r.team,r.player)));
-  const saves=new Set(verifiedRecords().saves.filter(r=>teamRecordValuePresent(r.saves)).map(r=>appearance(r.id,r.team,r.player)));
   const positions=new Map(matched.map((r,i)=>[appearance(r.id,r.team,r.player),i]));
   for(const m of verifiedRecords().matches){const key=verifiedFixtureKey(m);if(!fixtures.has(key))fixtures.set(key,[]);fixtures.get(key).push(m);}
   for(const row of stored){
@@ -350,7 +346,6 @@ function mergeAppTeamPlayerRecords(result){
     const fail=reason=>issues.push({...row,source:'APP',reason});
     if(!m||!team||!player||isOwnGoalPlayer(player)){fail('앱 기록의 경기·팀·선수 연결을 확인하세요');continue;}
     if(!attendees.has(appearance(m.id,team,player))||!playerEligibleOn(player,m.date)){fail('앱 기록의 출전 명단·참가 시작일을 확인하세요');continue;}
-    if(result.issues.some(r=>appTeamRecordBlocked(r,m,team,player))){fail('엑셀 기록 충돌을 먼저 확인하세요');continue;}
     const values={};let invalid=false;
     for(const key of APP_TEAM_RECORD_FIELDS){const v=row.values?.[key];if(v===undefined||v===null)continue;if(typeof v!=='number'||!Number.isSafeInteger(v)||v<0){invalid=true;break;}values[key]=v;}
     if(invalid){fail('앱 카운트는 0 이상의 정수여야 합니다');continue;}
@@ -365,7 +360,6 @@ function mergeAppTeamPlayerRecords(result){
     const row={...current,appFields:[]};
     for(const key of APP_TEAM_RECORD_FIELDS){
       if(teamRecordValuePresent(current[key]))continue;
-      if(key==='saves'&&saves.has(appearance(m.id,team,player)))continue;
       if(appValues[key]!==undefined){row[key]=appValues[key];row.appFields.push(key);}
     }
     if(!row.appFields.length)continue;
@@ -389,7 +383,6 @@ function mergeLiveCounterTeamPlayerRecords(result){
     const fail=reason=>issues.push({...raw,source:'COUNTER',reason});
     if(repeated.has(key)){if(!seen.has(key))fail('공유 카운트 중복을 확인하세요');seen.add(key);continue;}
     if(!m||!team||!player||isOwnGoalPlayer(player)||!attendees.has(appearance(m.id,team,player))||!playerEligibleOn(player,m.date)){fail('공유 카운트의 경기·출전 명단을 확인하세요');continue;}
-    if(result.issues.some(r=>r.source!=='COUNTER'&&appTeamRecordBlocked(r,m,team,player))){fail('원본 기록 충돌을 먼저 확인하세요');continue;}
     const appearanceKey=appearance(m.id,team,player),index=positions.get(appearanceKey)??-1;
     const current=index>=0?matched[index]:{date:normDate(m.date),comp:m.comp,half:matchHalfKey(m),round:m.round,no:m.no,inputTeam:team,team,player,id:m.id,attendanceConfirmed:true,sot:null,keyPass:null,defSuccess:null,saves:null};
     const sharedValues=Object.fromEntries(APP_TEAM_RECORD_FIELDS.map(k=>[k,teamRecordValuePresent(current[k])?Number(current[k]):null])),row={...current,sharedValues,counterFields:[]};
@@ -398,8 +391,7 @@ function mergeLiveCounterTeamPlayerRecords(result){
       if(!Object.prototype.hasOwnProperty.call(raw.values||{},k))continue;
       const value=raw.values[k],base=raw.baseValues?.[k];
       if(typeof value!=='number'||!Number.isSafeInteger(value)||value<0||value>10000){fail('공유 카운트 값을 확인하세요');continue;}
-      if(k==='saves'&&sharedValues.saves===null&&!matchCounterGoalkeeperSource(m,team,player))continue;
-      if((teamRecordValuePresent(base)?Number(base):null)!==sharedValues[k]){fail('저장 후 DB 값이 변경된 공유 항목은 반영하지 않습니다');continue;}
+      if(k==='saves'&&sharedValues.saves===null&&!teamRecordValuePresent(base)&&!matchCounterGoalkeeperSource(m,team,player))continue;
       row[k]=value;row.counterFields.push(k);
     }
     if(!row.counterFields.length)continue;
@@ -409,43 +401,10 @@ function mergeLiveCounterTeamPlayerRecords(result){
 }
 let teamPlayerRecordCache=null;
 function teamPlayerRecordLinks(){
-  const raw=DB.settings?.teamPlayerRecords||[],refs=[raw,verifiedRecords().matches,verifiedRecords().attendance,DB.roster,DB.settings?.teamSquads,DB.settings?.appTeamPlayerRecords,liveCounterTeamPlayerRecords];
-  if(teamPlayerRecordCache&&refs.every((x,i)=>teamPlayerRecordCache.refs[i]===x)&&teamPlayerRecordCache.size===raw.length)return teamPlayerRecordCache;
-  const canon=soccerBeeCanonicalPlayerMap(),matched=[],issues=[];
-  const clean=v=>String(v||'').normalize('NFKC').replace(/\s/g,'').toUpperCase();
-  const attendees=new Map();
-  for(const a of verifiedRecords().attendance||[]){const k=String(a.id)+'|'+normalizePlayerMatchKey(a.player);if(!attendees.has(k))attendees.set(k,new Set());attendees.get(k).add(a.team);}
-  for(const row of raw){
-    const player=canon[normalizePlayerMatchKey(row.player)];let reason='';
-    const fixtures=(verifiedRecords().matches||[]).filter(m=>normDate(m.date)===row.date&&clean(m.no)===clean(row.no)&&clean(m.round)===clean(row.round)&&(isLeagueFamilyComp(row.comp)?isLeagueFamilyComp(m.comp):compCompact(row.comp)===compCompact(m.comp)));
-    if(!player||isOwnGoalPlayer(player))reason='선수명단·경기기록에서 선수 확인 불가';
-    else if(!fixtures.length)reason='일치 경기 없음: 날짜·라운드·경기번호 확인';
-    const found=fixtures.flatMap(m=>[...(attendees.get(String(m.id)+'|'+normalizePlayerMatchKey(player))||[])].filter(t=>t===m.home||t===m.away).map(team=>({m,team})));
-    const specified=teamRecordTeamKey(row.team);
-    let linked=specified?found.filter(x=>teamRecordTeamKey(x.team)===specified):found;
-    let attendanceConfirmed=true;
-    if(!reason&&!found.length&&!linked.length&&specified&&['sot','keyPass','defSuccess','saves'].some(k=>num(row[k])>0)){
-      const candidates=fixtures.flatMap(m=>[m.home,m.away].filter(team=>teamRecordTeamKey(team)===specified).map(team=>({m,team})));
-      if(candidates.length===1){const hit=candidates[0],assigned=squadPlayerTeams(hit.m,player);
-        if(!assigned.length||assigned.includes(hit.team)){linked=candidates;attendanceConfirmed=false;}
-      }
-    }
-    if(!reason&&specified&&!fixtures.some(m=>[m.home,m.away].some(t=>teamRecordTeamKey(t)===specified)))reason='입력 팀명이 해당 경기의 팀과 다릅니다';
-    if(!reason&&linked.length!==1)reason=linked.length?'경기·팀 연결이 여러 건입니다':specified?'입력 팀의 선수1~15에 출전 기록 없음':'해당 경기의 선수1~15에 출전 기록 없음';
-    if(!reason&&!playerEligibleOn(player,row.date))reason='선수 참가 시작일 이전 기록';
-    if(reason){issues.push({...row,reason});continue;}
-    matched.push({...row,player,attendanceConfirmed,id:linked[0].m.id,inputTeam:row.team||'',team:linked[0].team});
-  }
-  // Legacy and named-team rows may resolve to the same appearance. Never double count.
-  const groups=new Map();
-  matched.forEach(r=>{const k=JSON.stringify([r.id,r.team,r.player]);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(r);});
-  const unique=[];
-  for(const rows of groups.values()){
-    const values=r=>JSON.stringify(['sot','keyPass','defSuccess','saves'].map(k=>r[k]??null));
-    if(rows.some(r=>values(r)!==values(rows[0])))rows.forEach(r=>issues.push({...r,reason:'동일 경기·팀·선수 기록의 값이 충돌합니다'}));
-    else unique.push(rows[0]);
-  }
-  return teamPlayerRecordCache=mergeLiveCounterTeamPlayerRecords(mergeAppTeamPlayerRecords({refs,size:raw.length,matched:unique,issues}));
+  const refs=[verifiedRecords(),DB.roster,DB.settings?.teamSquads,DB.settings?.goalkeeperEntries,DB.settings?.appTeamPlayerRecords,liveCounterTeamPlayerRecords];
+  if(teamPlayerRecordCache&&refs.every((x,i)=>teamPlayerRecordCache.refs[i]===x))return teamPlayerRecordCache;
+  const previousAppRecords=mergeAppTeamPlayerRecords({refs,matched:[],issues:[]});
+  return teamPlayerRecordCache=mergeLiveCounterTeamPlayerRecords(previousAppRecords);
 }
 function playerSaveRows(){
   const saveKey=r=>JSON.stringify([String(r.id),r.team,normalizePlayerMatchKey(r.player)]),extra=teamPlayerRecordLinks().matched.filter(r=>r.saves!==null&&r.saves!==undefined),keys=new Set(extra.map(saveKey));

@@ -53,7 +53,7 @@ function matchDetailData(m){
     teamPlayerRecordLinks().matched.filter(r=>r.id===m.id&&r.team===team).forEach(r=>{const P=get(r.player);P.appFields=r.appFields||[];P.counterFields=r.counterFields||[];P.sharedRecordValues=r.sharedValues;['sot','keyPass','defSuccess'].forEach(k=>{if(teamRecordValuePresent(r[k]))P[k]=num(P[k])+num(r[k]);});});
     members.forEach(r=>{
       r.keeperSource=matchCounterGoalkeeperSource(m,team,r.player);r.keeper=!!r.keeperSource;
-      r.recordValues={sot:r.sot??null,keyPass:r.keyPass??null,defSuccess:r.defSuccess??null,saves:r.saveRecorded?r.sv:null};r.sharedRecordValues=r.sharedRecordValues||{...r.recordValues};r.recordConflict=teamPlayerRecordLinks().issues.some(x=>appTeamRecordBlocked(x,m,team,r.player)&&x.source!=='COUNTER');
+      r.recordValues={sot:r.sot??null,keyPass:r.keyPass??null,defSuccess:r.defSuccess??null,saves:r.saveRecorded?r.sv:null};r.sharedRecordValues=r.sharedRecordValues||{...r.recordValues};
     });
     const rows=[...members.values()].sort((a,b)=>Number(a.ownGoal)-Number(b.ownGoal)||compareNamesKo(a.player,b.player));
     const totals=rows.reduce((sum,r)=>{
@@ -76,15 +76,16 @@ function matchRecordRowAttrs(m,team,r){
   return ' data-match-record-row="'+esc(appTeamRecordKey(m,team,r.player))+'" data-match-record-player="'+esc(r.player)+'" data-match-record-team="'+esc(team)+'"';
 }
 function detailPlayerTable(team,m,mobile){
-  if(!team.rows.length)return '<div class="detail-empty">등록된 선수별 기록이 없습니다.</div>';
+  const players=team.rows.filter(r=>r.att&&!r.ownGoal);
+  if(!players.length)return '<div class="detail-empty">이 경기에 출석한 선수가 없습니다.</div>';
   const records=window.GGFCMatchRecords;
   const hint=mobile?'선수 이름을 눌러 기록을 수정하세요. 표는 좌우로 밀어 볼 수 있습니다.':'표를 좌우로 밀면 모든 기록을 볼 수 있습니다.';
-  return '<p class="detail-scroll-hint">'+hint+'</p><div class="detail-table-wrap" tabindex="0" aria-label="'+esc(teamDisplayName(team.team))+' 선수별 경기 기록 표"><table class="detail-table"><caption class="detail-visually-hidden">'+esc(teamDisplayName(team.team))+' 선수별 경기 기록</caption><thead><tr><th scope="col">선수</th><th scope="col">출석</th><th scope="col">유효슛</th><th scope="col">키패스</th><th scope="col">수비성공</th><th scope="col">선방</th><th scope="col">득점</th><th scope="col">도움</th><th scope="col">개인파울</th><th scope="col">MOM</th><th scope="col">승점</th></tr></thead><tbody>'+team.rows.map(r=>{
+  return '<p class="detail-scroll-hint">'+hint+'</p><div class="detail-table-wrap" tabindex="0" aria-label="'+esc(teamDisplayName(team.team))+' 선수별 경기 기록 표"><table class="detail-table"><caption class="detail-visually-hidden">'+esc(teamDisplayName(team.team))+' 선수별 경기 기록</caption><thead><tr><th scope="col">선수</th><th scope="col">유효슛</th><th scope="col">키패스</th><th scope="col">수비성공</th><th scope="col">선방</th><th scope="col">득점</th><th scope="col">도움</th><th scope="col">개인파울</th><th scope="col">MOM</th><th scope="col">승점</th></tr></thead><tbody>'+players.map(r=>{
     const name=mobile&&records?.canEdit(m,r)
       ? '<button type="button" class="match-player-edit-trigger" data-match-player-edit="'+esc(appTeamRecordKey(m,team.team,r.player))+'" aria-label="'+esc(r.player)+' 기록 수정">'+esc(r.player)+'</button>'
       : esc(r.player);
-    return '<tr'+matchRecordRowAttrs(m,team.team,r)+'><th scope="row" class="'+(r.att?'squad-present':'squad-absent')+'">'+name+(r.keeper?' <small class="match-keeper-badge" title="'+(r.keeperSource==='MATCH'?'경기 지정 골키퍼':'선수명단 골키퍼')+'">GK</small>':'')+(r.role&&r.role!=='선수'?' <small>('+esc(r.role)+')</small>':'')+(mobile?'':records?.rowActionsHtml(m,team.team,r)||'')+'</th><td>'+(r.ownGoal?'—':r.att?'<span class="detail-attended">출석</span>':'<span class="detail-missing">'+(r.squad?'미출석':'미등록')+'</span>')+'</td>'+['sot','keyPass','defSuccess','saves'].map(k=>'<td>'+(records?.cellHtml(m,team.team,r,k,!mobile)??esc(r.recordValues[k]??'—'))+'</td>').join('')+'<td>'+r.g+'</td><td>'+r.a+'</td><td>'+r.f+'</td><td>'+r.mom+'</td><td>'+(r.att&&!r.ownGoal?team.points:'—')+'</td></tr>';
-  }).join('')+'</tbody><tfoot><tr><th scope="row">합계</th><td>'+team.totals.att+'명</td><td>'+team.totals.sot+'</td><td>'+team.totals.keyPass+'</td><td>'+team.totals.defSuccess+'</td><td>'+team.totals.sv+'</td><td>'+team.totals.g+'</td><td>'+team.totals.a+'</td><td>'+team.totals.f+'</td><td>'+team.totals.mom+'</td><td>'+team.totals.att*team.points+'</td></tr></tfoot></table></div>';
+    return '<tr'+matchRecordRowAttrs(m,team.team,r)+'><th scope="row" class="squad-present">'+name+(r.keeper?' <small class="match-keeper-badge" title="'+(r.keeperSource==='MATCH'?'경기 지정 골키퍼':'선수명단 골키퍼')+'">GK</small>':'')+(r.role&&r.role!=='선수'?' <small>('+esc(r.role)+')</small>':'')+(mobile?'':records?.rowActionsHtml(m,team.team,r)||'')+'</th>'+['sot','keyPass','defSuccess','saves'].map(k=>'<td>'+(records?.cellHtml(m,team.team,r,k,!mobile)??esc(r.recordValues[k]??'—'))+'</td>').join('')+'<td>'+r.g+'</td><td>'+r.a+'</td><td>'+r.f+'</td><td>'+r.mom+'</td><td>'+team.points+'</td></tr>';
+  }).join('')+'</tbody><tfoot><tr><th scope="row">합계</th>'+['sot','keyPass','defSuccess','sv','g','a','f','mom'].map(k=>'<td>'+players.reduce((sum,r)=>sum+num(r[k]),0)+'</td>').join('')+'<td>'+players.length*team.points+'</td></tr></tfoot></table></div>';
 }
 function detailUnassignedHtml(items){
   if(!items.length)return '';
@@ -150,7 +151,7 @@ function matchDetailRecordsHtml(data,playerKey){
       ['팀 득점',t.score],['도움',t.totals.a],['적용 팀파울',t.fouls],['개인파울 합계',t.totals.f],['선방',t.totals.sv],['MOM',t.totals.mom]
     ])+'<p class="detail-foul-note">팀파울 = 개인파울 + 추가 파울 · 추가 파울 '+t.rawFouls+'</p>'+detailPlayerTable(t,m,mobile)+(t.totals.ownGoal?'<p class="detail-note">자책골·베네핏 표기 '+t.totals.ownGoal+'골은 등록된 팀의 득점 기록에 포함됩니다.</p>':'')+
     (t.totals.g!==t.score?'<p class="detail-notice">팀 점수 '+t.score+'골 / 등록 득점자 합계 '+t.totals.g+'골</p>':'')+'</section>').join('')+'</div>'+
-    '<p class="detail-note">출석은 해당 경기의 출석 명단 기준입니다. 기록만 있고 출석이 미등록인 선수도 표시하며, 경기승점은 출석이 등록된 선수에게만 반영합니다.</p>'+detailUnassignedHtml(data.unassigned)+(m.memo||m.note?'<section class="detail-section"><h3>비고</h3><p class="detail-note detail-prewrap">'+esc([m.memo,m.note].filter(Boolean).join('\n'))+'</p></section>':'')+'</div>';
+    '<p class="detail-note">선수 기록표와 합계는 이 경기의 출석 명단을 기준으로 표시합니다.</p>'+detailUnassignedHtml(data.unassigned)+(m.memo||m.note?'<section class="detail-section"><h3>비고</h3><p class="detail-note detail-prewrap">'+esc([m.memo,m.note].filter(Boolean).join('\n'))+'</p></section>':'')+'</div>';
 }
 function matchDetailAttrs(m){
   if(!detailMatchKey(m.id))return '';
@@ -379,7 +380,7 @@ function analysisEventStats(list,names){
 }
 function analysisEventsHtml(data,paired=false){
  const names=data.players.map(p=>p.name),list=paired?data.pair.tog.rows.map(r=>r.m):data.scope.list,stats=analysisEventStats(list,names);
- return '<section class="detail-section"><h3>'+ (paired?'같은 팀 동행':'조회기간')+' · 신규 기록 비교</h3><p class="detail-note">유효슛·키패스·수비성공은 팀별 기록지, 선방은 연결된 선방 기록을 사용합니다. 빈칸은 미기록(—)이며 기록된 0회와 구분합니다. 평균 분모는 해당 항목을 기록한 경기 수입니다.'+(paired?' 두 선수가 같은 경기·같은 팀으로 함께 출석한 경기만 포함합니다.':'')+'</p><div class="compare-stat-columns">'+[['sot','유효슛'],['keyPass','키패스'],['defSuccess','수비성공'],['saves','선방']].map(([k,label])=>{const a=stats[names[0]][k],b=stats[names[1]][k];return comparisonRow(label+' 합계',a.total,b.total,{unit:'회'})+comparisonRow(label+' 기록 경기',a.games,b.games,{unit:'경기'})+comparisonRow(label+' / 기록 경기',a.perGame,b.perGame,{decimals:2});}).join('')+'</div></section>';
+ return '<section class="detail-section"><h3>'+ (paired?'같은 팀 동행':'조회기간')+' · 신규 기록 비교</h3><p class="detail-note">유효슛·키패스·수비성공은 앱 공유 카운트, 선방은 연결된 선방 기록을 사용합니다. 빈칸은 미기록(—)이며 기록된 0회와 구분합니다. 평균 분모는 해당 항목을 기록한 경기 수입니다.'+(paired?' 두 선수가 같은 경기·같은 팀으로 함께 출석한 경기만 포함합니다.':'')+'</p><div class="compare-stat-columns">'+[['sot','유효슛'],['keyPass','키패스'],['defSuccess','수비성공'],['saves','선방']].map(([k,label])=>{const a=stats[names[0]][k],b=stats[names[1]][k];return comparisonRow(label+' 합계',a.total,b.total,{unit:'회'})+comparisonRow(label+' 기록 경기',a.games,b.games,{unit:'경기'})+comparisonRow(label+' / 기록 경기',a.perGame,b.perGame,{decimals:2});}).join('')+'</div></section>';
 }
 function analysisPlayerIdentity(players,year){
   return '<div class="compare-players">'+players.map((p,i)=>'<div class="compare-player '+(i?'other':'base')+'"><span class="compare-role">'+(i?'상대 선수':'기준 선수')+'</span>'+playerFaceChip(p.name,true,year)+'<p>'+esc(teamDisplayName(p.stat.mainTeam||p.roster.team||'소속 미등록'))+' · '+esc(p.roster.pos||'포지션 미등록')+'</p></div>').join('')+'</div>';

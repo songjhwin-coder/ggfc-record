@@ -369,7 +369,7 @@ const UNI = {
   name:"경기기록",
   head:"날짜,대회,반기,라운드,경기번호,팀,상대팀,득점,실점,추가 파울,승점삭감,몰수패,득점자,도움,개인파울,키퍼실점,MOM,득점자 열 검사,"+
     Array.from({length:MAXP},(_,i)=>"선수"+(i+1)).join(",")+",유튜브 링크",
-  desc:"한 줄 = 한 경기의 한 팀. 첨부 GGFC DB 양식과 동일하게 추가 파울=개인에게 배정하지 않은 별도 팀파울, 도움·개인파울·MOM=선수별 기록입니다. 키퍼실점(P열)은 임일규-3(15) 또는 임일규3(15)처럼 이름·실점·키퍼 수행시간(분)을 적고 여러 선수는 쉼표로 구분합니다. 선방 횟수는 팀별 기록지의 선방 열에 기록합니다. 빈칸과 0은 구분합니다. 득점자·도움·개인파울·MOM은 '김철수 2, 최민수 1'처럼 이름과 횟수를 쉼표로 적습니다. 개인파울은 페어플레이 기록과 해당 경기·팀의 팀파울 합계에만 반영하며 능력치·FORM을 감점하지 않습니다. 도움 칸에 0을 입력하면 도움 없음이 확인된 경기로 구분하고 빈칸은 미기록으로 둡니다. 팀파울은 개인파울 합계 + 추가 파울입니다. 추가 파울은 개인 능력치를 감점하지 않습니다. K열 승점삭감에는 차감할 점수를 양수 정수로 입력합니다. 팀 누적승점과 해당 경기의 해당 팀 출석 선수 각각의 개인 누적승점에서 같은 점수를 한 번 차감합니다. 대진 점수·승무패·능력치에는 반영하지 않습니다. 구양식 파울수/파울은 기존 호환 규칙으로 읽으며 새 추가 파울 양식을 업로드하면 합산 규칙이 적용됩니다. MOM은 선수 능력치에 반영합니다. MOM은 수상 선수명을 입력하며 같은 선수가 한 Round에 여러 경기 MOM이면 횟수만큼 누적됩니다. 대회는 정규리그로 입력해도 경기일 기준 양 팀의 팀스쿼드 그룹으로 슈퍼리그·챌린지리그·인터리그를 자동 표시합니다. 경기기록의 반기 열은 호환용이며 경기일에 유효한 팀스쿼드의 반기·그룹을 사용합니다. 인터리그는 두 팀의 소속 그룹을 각각 유지합니다. 같은 경기의 두 행에는 같은 대회명을 입력하세요. 몰수패한 팀의 몰수패 칸에 '몰수패'를 입력하면 점수와 관계없이 패배로 판정되고 상대팀은 승리로 판정됩니다. 출석 선수를 선수1~15에 적습니다. 팀스쿼드의 반기는 상반기/하반기, 그룹은 A/슈퍼리그 또는 B/챌린지리그로 입력합니다. Rev.4는 라운드=1경기~6경기, 경기번호=1R-A·1R-B처럼 적습니다. 기존 라운드=R1, 경기번호=1A 형식도 지원합니다. 감독·코치 역시 팀스쿼드 기준입니다. 감독이 선수로 뛰었다면 선수 칸에도 이름을 적어야 출석으로 집계됩니다. 유튜브 링크 열에는 해당 경기의 영상 주소를 입력합니다. 한쪽 팀 행에만 입력해도 경기 상세에 연결하며, 같은 경기의 서로 다른 주소는 함께 표시합니다. 링크 열은 위치와 관계없이 이름으로 인식합니다.",
+  desc:"한 줄 = 한 경기의 한 팀. 첨부 GGFC DB 양식과 동일하게 추가 파울=개인에게 배정하지 않은 별도 팀파울, 도움·개인파울·MOM=선수별 기록입니다. 키퍼실점(P열)은 임일규-3(15) 또는 임일규3(15)처럼 이름·실점·키퍼 수행시간(분)을 적고 여러 선수는 쉼표로 구분합니다. 유효슛·키패스·수비성공·선방은 앱의 대진결과 상세에서 저장합니다. 빈칸과 0은 구분합니다. 득점자·도움·개인파울·MOM은 '김철수 2, 최민수 1'처럼 이름과 횟수를 쉼표로 적습니다. 개인파울은 페어플레이 기록과 해당 경기·팀의 팀파울 합계에만 반영하며 능력치·FORM을 감점하지 않습니다. 도움 칸에 0을 입력하면 도움 없음이 확인된 경기로 구분하고 빈칸은 미기록으로 둡니다. 팀파울은 개인파울 합계 + 추가 파울입니다. 추가 파울은 개인 능력치를 감점하지 않습니다. K열 승점삭감에는 차감할 점수를 양수 정수로 입력합니다. 팀 누적승점과 해당 경기의 해당 팀 출석 선수 각각의 개인 누적승점에서 같은 점수를 한 번 차감합니다. 대진 점수·승무패·능력치에는 반영하지 않습니다. 구양식 파울수/파울은 기존 호환 규칙으로 읽으며 새 추가 파울 양식을 업로드하면 합산 규칙이 적용됩니다. MOM은 선수 능력치에 반영합니다. MOM은 수상 선수명을 입력하며 같은 선수가 한 Round에 여러 경기 MOM이면 횟수만큼 누적됩니다. 대회는 정규리그로 입력해도 경기일 기준 양 팀의 팀스쿼드 그룹으로 슈퍼리그·챌린지리그·인터리그를 자동 표시합니다. 경기기록의 반기 열은 호환용이며 경기일에 유효한 팀스쿼드의 반기·그룹을 사용합니다. 인터리그는 두 팀의 소속 그룹을 각각 유지합니다. 같은 경기의 두 행에는 같은 대회명을 입력하세요. 몰수패한 팀의 몰수패 칸에 '몰수패'를 입력하면 점수와 관계없이 패배로 판정되고 상대팀은 승리로 판정됩니다. 출석 선수를 선수1~15에 적습니다. 팀스쿼드의 반기는 상반기/하반기, 그룹은 A/슈퍼리그 또는 B/챌린지리그로 입력합니다. Rev.4는 라운드=1경기~6경기, 경기번호=1R-A·1R-B처럼 적습니다. 기존 라운드=R1, 경기번호=1A 형식도 지원합니다. 감독·코치 역시 팀스쿼드 기준입니다. 감독이 선수로 뛰었다면 선수 칸에도 이름을 적어야 출석으로 집계됩니다. 유튜브 링크 열에는 해당 경기의 영상 주소를 입력합니다. 한쪽 팀 행에만 입력해도 경기 상세에 연결하며, 같은 경기의 서로 다른 주소는 함께 표시합니다. 링크 열은 위치와 관계없이 이름으로 인식합니다.",
   rows:[
     uniRow("2026-03-07","슈퍼리그","상반기","R1","1A","A특공대","박감독","풀파워",3,2,4,["김철수","최민수","이준호","박도윤","장민석"],"김철수 2, 최민수 1","","A","최민수 1","김철수 1","박도윤2(15)","김철수",""),
     uniRow("2026-03-07","슈퍼리그","상반기","R1","1A","풀파워","정감독","A특공대",2,3,6,["이영호","한지훈","권태현","오세훈"],"이영호 2","","A","한지훈 1","이영호 2","오세훈3(15)","",""),
@@ -382,10 +382,9 @@ const TEMPLATE = [
   { name:UNI.name, head:UNI.head, rows:UNI.rows, desc:UNI.desc },
   { name:"선수명단", head:SCHEMA.roster.head, sample:SCHEMA.roster.sample, desc:"시즌(출전 등 상태)과 연도는 구분합니다. 시작일자 이전은 능력치 성장·결석 및 커플 분석에서 제외합니다. 빈 시작일은 기존 방식입니다. 사진·포지션은 이 명단으로 연결합니다. 선수카드는 사진(URL) 배경삭제 열을 우선 사용하고, 일반 목록 사진은 사진(URL)을 사용합니다." },
   { name:"팀스쿼드", head:"날짜,대회,반기,그룹,팀,감독,코치,"+Array.from({length:15},(_,i)=>'선수'+(i+1)).join(','), rows:[['2026-03-01','정규리그','상반기','A','A특공대','박감독','','김철수','최민수','이준호','박도윤','장민석'],['2026-03-01','정규리그','상반기','A','풀파워','정감독','','이영호','한지훈','권태현','오세훈'],['2026-03-01','정규리그','상반기','B','어우씨','강감독','','정우성','배진우','신동혁','고상철'],['2026-03-01','정규리그','상반기','B','D져스','윤감독','','윤성민','임재훈','노경환','서지호','문태일']], desc:"날짜부터 다음 변경 전까지 적용할 팀별 전체 명단입니다. 반기·그룹은 필수이며 경기 분류의 기준입니다. 대회는 정규리그(공통 명단)를 그대로 사용해도 됩니다. 감독·코치도 포함하며, 선수1~15를 지원합니다. 실제 출석은 경기기록의 선수 칸으로 판단합니다." },
-  { name:"팀별 기록지", head:"날짜,대회,반기,라운드,경기번호,팀명,이름,유효슛,키패스,수비성공,선방", rows:[],desc:"날짜·라운드·경기번호·팀명·이름으로 실제 경기 출전에 연결합니다. 팀명이 없는 구양식은 출전 팀이 유일할 때만 연결합니다. 횟수는 0 이상 정수, 미기록은 빈칸입니다. 선방은 경기기록과 중복 합산하지 않습니다. 연결 확인은 능력치 운영 안내에서 확인합니다." },
   { name:"스페셜기록", head:SCHEMA.specials.head, sample:SCHEMA.specials.sample, desc:SHEET_DESC.specials }
 ];
-const LABEL = Object.assign({ unified:"경기기록", roster:"선수명단", rosterDraft:"선수명단", allTime:"역대기록", leadership:"역대 운영진", squads:"팀스쿼드", teamRecords:"팀별 기록지" }, SHEET_OF);
+const LABEL = Object.assign({ unified:"경기기록", roster:"선수명단", rosterDraft:"선수명단", allTime:"역대기록", leadership:"역대 운영진", squads:"팀스쿼드" }, SHEET_OF);
 
 function isOwnGoalPlayer(name){
   const key=String(name??'').normalize('NFKC').toUpperCase().replace(/[\s._-]/g,'');
@@ -629,7 +628,7 @@ function detectKind(name, headers){
   const nm=String(name||""); const h=headers.join(",");
   if(/역대\s*운영진/.test(nm)||(/운영년도|운영연도/.test(h)&&/기수/.test(h)&&/이름/.test(h)))return "leadership";
   if(/역대\s*기록/.test(nm)||(/통합\s*경기수/.test(h)&&/통합\s*득점/.test(h)))return "allTime";
-  if(/팀\s*별\s*기록지/.test(nm)||(/유효슛/.test(h)&&/키패스/.test(h)&&/수비성공/.test(h)))return "teamRecords";
+  if(/팀\s*별\s*기록지/.test(nm)||(/유효슛/.test(h)&&/키패스/.test(h)&&/수비성공/.test(h)))return null; // Archive-only Excel sheet.
   /* 선수명단는 기존 선수명단과 별도 시트여도 선수 기본정보를 안전하게 병합한다. */
   if(/팀\s*스쿼드|team\s*squad/i.test(nm)||(/코치/.test(h)&&/날짜/.test(h)&&/선수\s*1/.test(h)&&!/상대팀/.test(h))) return "squads";
   if(/draft/i.test(nm) && /선수|이름|성명/.test(h)) return "rosterDraft";
@@ -704,29 +703,8 @@ function assertMatchMetadata(list=verifiedRecords().matches,options){
   if(issues.length)throw new Error('팀스쿼드 분류 확인 '+issues.length+'건: '+issues.slice(0,5).map(x=>[x.date,x.team,x.reason].join(' ')).join(' / ')+(issues.length>5?' / 나머지는 원본 팀스쿼드를 확인하세요.':''));
 }
 
-/* Rev.4: independent per-player match records; raw rows persist in shared settings. */
-const TEAM_RECORD_HEAD='날짜,대회,반기,라운드,경기번호,팀명,이름,유효슛,키패스,수비성공,선방';
-function applyTeamPlayerRecords(objs){
-  const rows=[],seen=new Map();
-  for(const o of objs){
-    const player=String(pick(o,'이름','선수명','선수')||'').normalize('NFKC').trim();if(!player||player==='-')continue;
-    const date=normDate(pick(o,'날짜','경기일','일자'));
-    const row={date,comp:String(pick(o,'대회')||'정규리그').trim(),half:normHalf(pick(o,'반기')),round:String(pick(o,'라운드','Round')||'').trim(),no:String(pick(o,'경기번호')||'').trim(),team:String(pick(o,'팀명','팀','소속팀')||'').normalize('NFKC').trim(),player};
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!row.round||!row.no)throw new Error('팀별 기록지: '+player+'의 날짜·라운드·경기번호를 확인하세요.');
-    for(const [key,label] of Object.entries({sot:'유효슛',keyPass:'키패스',defSuccess:'수비성공',saves:'선방'})){
-      const values=key==='saves'?Object.entries(o).filter(([header])=>['선방','키퍼선방','골키퍼선방','세이브'].includes(header.replace(/\s/g,''))).map(([,v])=>String(v??'').trim()).filter(Boolean):[];
-      if(new Set(values.map(Number)).size>1)throw new Error('팀별 기록지: '+player+'의 선방 열 값이 서로 다릅니다.');
-      const raw=key==='saves'?(values[0]??''):String(pick(o,label)??'').trim();row[key]=raw===''?null:Number(raw);
-      if(row[key]!==null&&(!Number.isInteger(row[key])||row[key]<0))throw new Error('팀별 기록지: '+player+' '+label+'는 0 이상의 정수 또는 빈칸이어야 합니다.');
-    }
-    const key=JSON.stringify([date,isLeagueFamilyComp(row.comp)?'LEAGUE':compCompact(row.comp),row.round,row.no,teamRecordTeamKey(row.team),normalizePlayerMatchKey(player)]);
-    if(seen.has(key)){if(JSON.stringify(seen.get(key))!==JSON.stringify(row))throw new Error('팀별 기록지 중복값 충돌: '+date+' '+row.no+' '+row.round+' '+player);continue;}
-    seen.set(key,row);rows.push(row);
-  }
-  DB.settings=DB.settings||{};DB.settings.teamPlayerRecords=rows;return rows.length;
-}
 function teamRecordTeamKey(value){return String(value||'').normalize('NFKC').replace(/\s/g,'').toUpperCase();}
-// App counters are stored independently; only missing Excel fields enter the existing record pipeline.
+// Counted team records come from the app; Excel team sheets are kept only as archived data.
 const APP_TEAM_RECORD_FIELDS=['sot','keyPass','defSuccess','saves'];
 // Live public counter input, deliberately kept outside the shared DB and wire format.
 let liveCounterTeamPlayerRecords=[];
@@ -739,16 +717,12 @@ function matchCounterGoalkeeperSource(m,team,player){
   return normalizeAbilityPosition(pos)==='GR'||pos==='골키퍼'||pos==='GOALKEEPER'?'ROSTER':'';
 }
 function appTeamRecordKey(m,team,player){return JSON.stringify([verifiedFixtureKey(m),teamRecordTeamKey(team),normalizePlayerMatchKey(player)]);}
-function appTeamRecordBlocked(row,m,team,player){
-  return row.date===normDate(m.date)&&String(row.no||'').trim()===String(m.no||'').trim()&&String(row.round||'').trim()===String(m.round||'').trim()&&normalizePlayerMatchKey(row.player)===normalizePlayerMatchKey(player)&&(!row.team||teamRecordTeamKey(row.team)===teamRecordTeamKey(team))&&(isLeagueFamilyComp(row.comp)?isLeagueFamilyComp(m.comp):compCompact(row.comp)===compCompact(m.comp));
-}
 function mergeAppTeamPlayerRecords(result){
   const stored=DB.settings?.appTeamPlayerRecords;
   if(!Array.isArray(stored)||!stored.length)return result;
   const matched=result.matched.slice(),issues=result.issues.slice(),fixtures=new Map(),canon=soccerBeeCanonicalPlayerMap(),groups=new Map();
   const appearance=(id,team,player)=>JSON.stringify([String(id),teamRecordTeamKey(team),normalizePlayerMatchKey(player)]);
   const attendees=new Set(verifiedRecords().attendance.map(r=>appearance(r.id,r.team,r.player)));
-  const saves=new Set(verifiedRecords().saves.filter(r=>teamRecordValuePresent(r.saves)).map(r=>appearance(r.id,r.team,r.player)));
   const positions=new Map(matched.map((r,i)=>[appearance(r.id,r.team,r.player),i]));
   for(const m of verifiedRecords().matches){const key=verifiedFixtureKey(m);if(!fixtures.has(key))fixtures.set(key,[]);fixtures.get(key).push(m);}
   for(const row of stored){
@@ -758,7 +732,6 @@ function mergeAppTeamPlayerRecords(result){
     const fail=reason=>issues.push({...row,source:'APP',reason});
     if(!m||!team||!player||isOwnGoalPlayer(player)){fail('앱 기록의 경기·팀·선수 연결을 확인하세요');continue;}
     if(!attendees.has(appearance(m.id,team,player))||!playerEligibleOn(player,m.date)){fail('앱 기록의 출전 명단·참가 시작일을 확인하세요');continue;}
-    if(result.issues.some(r=>appTeamRecordBlocked(r,m,team,player))){fail('엑셀 기록 충돌을 먼저 확인하세요');continue;}
     const values={};let invalid=false;
     for(const key of APP_TEAM_RECORD_FIELDS){const v=row.values?.[key];if(v===undefined||v===null)continue;if(typeof v!=='number'||!Number.isSafeInteger(v)||v<0){invalid=true;break;}values[key]=v;}
     if(invalid){fail('앱 카운트는 0 이상의 정수여야 합니다');continue;}
@@ -773,7 +746,6 @@ function mergeAppTeamPlayerRecords(result){
     const row={...current,appFields:[]};
     for(const key of APP_TEAM_RECORD_FIELDS){
       if(teamRecordValuePresent(current[key]))continue;
-      if(key==='saves'&&saves.has(appearance(m.id,team,player)))continue;
       if(appValues[key]!==undefined){row[key]=appValues[key];row.appFields.push(key);}
     }
     if(!row.appFields.length)continue;
@@ -797,7 +769,6 @@ function mergeLiveCounterTeamPlayerRecords(result){
     const fail=reason=>issues.push({...raw,source:'COUNTER',reason});
     if(repeated.has(key)){if(!seen.has(key))fail('공유 카운트 중복을 확인하세요');seen.add(key);continue;}
     if(!m||!team||!player||isOwnGoalPlayer(player)||!attendees.has(appearance(m.id,team,player))||!playerEligibleOn(player,m.date)){fail('공유 카운트의 경기·출전 명단을 확인하세요');continue;}
-    if(result.issues.some(r=>r.source!=='COUNTER'&&appTeamRecordBlocked(r,m,team,player))){fail('원본 기록 충돌을 먼저 확인하세요');continue;}
     const appearanceKey=appearance(m.id,team,player),index=positions.get(appearanceKey)??-1;
     const current=index>=0?matched[index]:{date:normDate(m.date),comp:m.comp,half:matchHalfKey(m),round:m.round,no:m.no,inputTeam:team,team,player,id:m.id,attendanceConfirmed:true,sot:null,keyPass:null,defSuccess:null,saves:null};
     const sharedValues=Object.fromEntries(APP_TEAM_RECORD_FIELDS.map(k=>[k,teamRecordValuePresent(current[k])?Number(current[k]):null])),row={...current,sharedValues,counterFields:[]};
@@ -806,8 +777,7 @@ function mergeLiveCounterTeamPlayerRecords(result){
       if(!Object.prototype.hasOwnProperty.call(raw.values||{},k))continue;
       const value=raw.values[k],base=raw.baseValues?.[k];
       if(typeof value!=='number'||!Number.isSafeInteger(value)||value<0||value>10000){fail('공유 카운트 값을 확인하세요');continue;}
-      if(k==='saves'&&sharedValues.saves===null&&!matchCounterGoalkeeperSource(m,team,player))continue;
-      if((teamRecordValuePresent(base)?Number(base):null)!==sharedValues[k]){fail('저장 후 DB 값이 변경된 공유 항목은 반영하지 않습니다');continue;}
+      if(k==='saves'&&sharedValues.saves===null&&!teamRecordValuePresent(base)&&!matchCounterGoalkeeperSource(m,team,player))continue;
       row[k]=value;row.counterFields.push(k);
     }
     if(!row.counterFields.length)continue;
@@ -817,43 +787,10 @@ function mergeLiveCounterTeamPlayerRecords(result){
 }
 let teamPlayerRecordCache=null;
 function teamPlayerRecordLinks(){
-  const raw=DB.settings?.teamPlayerRecords||[],refs=[raw,verifiedRecords().matches,verifiedRecords().attendance,DB.roster,DB.settings?.teamSquads,DB.settings?.appTeamPlayerRecords,liveCounterTeamPlayerRecords];
-  if(teamPlayerRecordCache&&refs.every((x,i)=>teamPlayerRecordCache.refs[i]===x)&&teamPlayerRecordCache.size===raw.length)return teamPlayerRecordCache;
-  const canon=soccerBeeCanonicalPlayerMap(),matched=[],issues=[];
-  const clean=v=>String(v||'').normalize('NFKC').replace(/\s/g,'').toUpperCase();
-  const attendees=new Map();
-  for(const a of verifiedRecords().attendance||[]){const k=String(a.id)+'|'+normalizePlayerMatchKey(a.player);if(!attendees.has(k))attendees.set(k,new Set());attendees.get(k).add(a.team);}
-  for(const row of raw){
-    const player=canon[normalizePlayerMatchKey(row.player)];let reason='';
-    const fixtures=(verifiedRecords().matches||[]).filter(m=>normDate(m.date)===row.date&&clean(m.no)===clean(row.no)&&clean(m.round)===clean(row.round)&&(isLeagueFamilyComp(row.comp)?isLeagueFamilyComp(m.comp):compCompact(row.comp)===compCompact(m.comp)));
-    if(!player||isOwnGoalPlayer(player))reason='선수명단·경기기록에서 선수 확인 불가';
-    else if(!fixtures.length)reason='일치 경기 없음: 날짜·라운드·경기번호 확인';
-    const found=fixtures.flatMap(m=>[...(attendees.get(String(m.id)+'|'+normalizePlayerMatchKey(player))||[])].filter(t=>t===m.home||t===m.away).map(team=>({m,team})));
-    const specified=teamRecordTeamKey(row.team);
-    let linked=specified?found.filter(x=>teamRecordTeamKey(x.team)===specified):found;
-    let attendanceConfirmed=true;
-    if(!reason&&!found.length&&!linked.length&&specified&&['sot','keyPass','defSuccess','saves'].some(k=>num(row[k])>0)){
-      const candidates=fixtures.flatMap(m=>[m.home,m.away].filter(team=>teamRecordTeamKey(team)===specified).map(team=>({m,team})));
-      if(candidates.length===1){const hit=candidates[0],assigned=squadPlayerTeams(hit.m,player);
-        if(!assigned.length||assigned.includes(hit.team)){linked=candidates;attendanceConfirmed=false;}
-      }
-    }
-    if(!reason&&specified&&!fixtures.some(m=>[m.home,m.away].some(t=>teamRecordTeamKey(t)===specified)))reason='입력 팀명이 해당 경기의 팀과 다릅니다';
-    if(!reason&&linked.length!==1)reason=linked.length?'경기·팀 연결이 여러 건입니다':specified?'입력 팀의 선수1~15에 출전 기록 없음':'해당 경기의 선수1~15에 출전 기록 없음';
-    if(!reason&&!playerEligibleOn(player,row.date))reason='선수 참가 시작일 이전 기록';
-    if(reason){issues.push({...row,reason});continue;}
-    matched.push({...row,player,attendanceConfirmed,id:linked[0].m.id,inputTeam:row.team||'',team:linked[0].team});
-  }
-  // Legacy and named-team rows may resolve to the same appearance. Never double count.
-  const groups=new Map();
-  matched.forEach(r=>{const k=JSON.stringify([r.id,r.team,r.player]);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(r);});
-  const unique=[];
-  for(const rows of groups.values()){
-    const values=r=>JSON.stringify(['sot','keyPass','defSuccess','saves'].map(k=>r[k]??null));
-    if(rows.some(r=>values(r)!==values(rows[0])))rows.forEach(r=>issues.push({...r,reason:'동일 경기·팀·선수 기록의 값이 충돌합니다'}));
-    else unique.push(rows[0]);
-  }
-  return teamPlayerRecordCache=mergeLiveCounterTeamPlayerRecords(mergeAppTeamPlayerRecords({refs,size:raw.length,matched:unique,issues}));
+  const refs=[verifiedRecords(),DB.roster,DB.settings?.teamSquads,DB.settings?.goalkeeperEntries,DB.settings?.appTeamPlayerRecords,liveCounterTeamPlayerRecords];
+  if(teamPlayerRecordCache&&refs.every((x,i)=>teamPlayerRecordCache.refs[i]===x))return teamPlayerRecordCache;
+  const previousAppRecords=mergeAppTeamPlayerRecords({refs,matched:[],issues:[]});
+  return teamPlayerRecordCache=mergeLiveCounterTeamPlayerRecords(previousAppRecords);
 }
 function playerSaveRows(){
   const saveKey=r=>JSON.stringify([String(r.id),r.team,normalizePlayerMatchKey(r.player)]),extra=teamPlayerRecordLinks().matched.filter(r=>r.saves!==null&&r.saves!==undefined),keys=new Set(extra.map(saveKey));
@@ -955,7 +892,7 @@ function renderGoalkeeperRanking(){
  const metrics={gaPer15:'15분당 실점 · 낮은 순',savesPer15:'15분당 선방 · 높은 순',saveRate:'선방률 · 높은 순'};
  root.innerHTML='<div class="gr-controls"><label>시즌<select id="grYear"><option value="ALL">전체 시즌</option>'+years.map(y=>'<option value="'+y+'">'+y+'</option>').join('')+'</select></label><label>조회 구간<select id="grHalf"><option value="ALL">연간 전체</option><option value="H1">상반기</option><option value="H2">하반기</option></select></label><label>순위 기준<select id="grMetric">'+Object.entries(metrics).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('')+'</select></label><label>최소 GR 수행시간<select id="grMinMinutes">'+[0,30,60,90,120].map(n=>'<option value="'+n+'">'+n+'분'+(!n?' · 제한 없음':'')+'</option>').join('')+'</select></label></div><p class="note">'+esc(query.start||'기록 없음')+' ~ '+esc(query.end)+' · '+list.length+'경기 · '+rows.filter(p=>p.rank!==null).length+'명 순위 산정 · '+esc(metrics[grMetric])+'</p>'+
  (rows.length?'<div class="tablewrap gr-ranking-table" tabindex="0" aria-label="골레이로 랭킹 표 · 좌우 스크롤">'+tbl(['순위','선수','GR 경기','GR 시간(분)','실점','선방','실점/15분','선방/15분','선방률(%)','선방·시간 연결(분)','연결 실점 / 선방','확인 사항'].map(t=>({t})),rows.map(p=>[p.rank??'—',playerCardLink(p.player,playerFaceChip(p.player,false,grYear),query),p.gkGames,p.gkGames?goalkeeperNumber(p.minutes):'—',p.gkGames?p.ga:'—',p.saveGames?p.saves:'—',goalkeeperNumber(p.gaPer15,2),goalkeeperNumber(p.savesPer15,2),goalkeeperNumber(p.saveRate,2),goalkeeperNumber(p.pairedMinutes),p.pairedGa+' / '+p.pairedSaves,esc(p.rankingReason||goalkeeperStatus(p))]))+'</div>':'<p class="empty">선택 기간에 골레이로 기록이 없습니다.</p>')+
- '<details class="gk-method"><summary>순위 계산 방식 · 기록 인정 기준</summary><p>기본 순위는 15분당 실점이 낮은 순입니다. 실점/15분 = 기록된 키퍼실점 합계 ÷ GR 수행시간 합계 × 15.</p><p>선방/15분 = 선방·실점·시간이 모두 연결된 경기의 선방 합계 ÷ 해당 경기 GR 시간 합계 × 15. 선방률 = 같은 연결 경기의 선방 ÷ (선방 + 실점) × 100. 선방과 실점이 모두 0이면 선방률은 미산정입니다.</p><p>선택한 최소시간 이상인 선수만 순위를 부여합니다. 실점 순위는 전체 GR 기록시간, 선방·선방률 순위는 선방이 입력된 연결 경기의 GR 시간을 사용합니다. 기본 60분은 GGFC 운영용 표본 기준이며 변경할 수 있습니다.</p><p>반올림 전 실제 비율로 정렬하며 같은 값은 공동순위(1·1·3)입니다. 동률 내 표시순서는 수행시간 내림차순·이름순입니다. 미기록·시간 미달·실점 배정 확인 대상은 아래에 순위 없이 표시합니다. 별도 종합 가중점수는 만들지 않습니다.</p><p>경기기록의 키퍼실점 ‘이름-실점(분)’과 팀별 기록지 선방을 같은 경기·팀·선수로 연결합니다. 빈칸은 0회가 아닙니다. 선방 총합에는 시간이 없는 기록이 있을 수 있으므로 비율 계산은 연결 기록만 사용합니다. 현재 포지션이 GR이 아니어도 실제 골키퍼 수행 기록이 있으면 포함합니다. 많은 선방은 상대 슈팅 기회에도 영향을 받습니다.</p><p>예: 60분·실점 4골·선방 12회가 모두 같은 경기 집합이면 실점/15분=1, 선방/15분=3, 선방률=75%입니다. 이 순위는 선수 능력치나 카드 등급을 변경하지 않습니다.</p></details>'+
+ '<details class="gk-method"><summary>순위 계산 방식 · 기록 인정 기준</summary><p>기본 순위는 15분당 실점이 낮은 순입니다. 실점/15분 = 기록된 키퍼실점 합계 ÷ GR 수행시간 합계 × 15.</p><p>선방/15분 = 선방·실점·시간이 모두 연결된 경기의 선방 합계 ÷ 해당 경기 GR 시간 합계 × 15. 선방률 = 같은 연결 경기의 선방 ÷ (선방 + 실점) × 100. 선방과 실점이 모두 0이면 선방률은 미산정입니다.</p><p>선택한 최소시간 이상인 선수만 순위를 부여합니다. 실점 순위는 전체 GR 기록시간, 선방·선방률 순위는 선방이 입력된 연결 경기의 GR 시간을 사용합니다. 기본 60분은 GGFC 운영용 표본 기준이며 변경할 수 있습니다.</p><p>반올림 전 실제 비율로 정렬하며 같은 값은 공동순위(1·1·3)입니다. 동률 내 표시순서는 수행시간 내림차순·이름순입니다. 미기록·시간 미달·실점 배정 확인 대상은 아래에 순위 없이 표시합니다. 별도 종합 가중점수는 만들지 않습니다.</p><p>경기기록의 키퍼실점 ‘이름-실점(분)’과 앱에서 저장한 선방을 같은 경기·팀·선수로 연결합니다. 빈칸은 0회가 아닙니다. 선방 총합에는 시간이 없는 기록이 있을 수 있으므로 비율 계산은 연결 기록만 사용합니다. 현재 포지션이 GR이 아니어도 실제 골키퍼 수행 기록이 있으면 포함합니다. 많은 선방은 상대 슈팅 기회에도 영향을 받습니다.</p><p>예: 60분·실점 4골·선방 12회가 모두 같은 경기 집합이면 실점/15분=1, 선방/15분=3, 선방률=75%입니다. 이 순위는 선수 능력치나 카드 등급을 변경하지 않습니다.</p></details>'+
  '<details class="gk-method"><summary>경기별 원자료 · 연결 확인 '+data.issues.length+'건</summary>'+goalkeeperTableHtml(data,query)+'<div class="tablewrap">'+tbl(['날짜','선수','팀','경기','GR 분','실점','선방','확인'].map(t=>({t})),rows.flatMap(p=>p.rows.map(r=>[esc(r.date),esc(p.player),esc(r.team),esc(r.no+' / '+r.round),goalkeeperNumber(r.minutes),r.ga??'—',r.saves??'—',esc(r.warning)])))+'</div>'+data.issues.map(r=>'<p>'+esc(r.date+' '+r.team+' '+r.reason)+'</p>').join('')+'</details>';
  for(const [id,value] of Object.entries({grYear,grHalf,grMetric,grMinMinutes}))$('#'+id).value=value;
  root.onchange=e=>{const id=e.target.id;if(id==='grYear')grYear=e.target.value;else if(id==='grHalf')grHalf=e.target.value;else if(id==='grMetric')grMetric=e.target.value;else if(id==='grMinMinutes')grMinMinutes=Number(e.target.value);else return;renderGoalkeeperRanking();$('#'+id)?.focus();};
@@ -970,19 +907,6 @@ function goalkeeperAuditHtml(){
   const data=goalkeeperRecordData();
   return '<h4>키퍼실점 연결 확인</h4><p>연결 '+data.rows.length+'명·경기 / 확인 '+data.issues.length+'건. 원본 입력을 임의로 수정하지 않습니다.</p><div class="tablewrap">'+tbl(['날짜','경기','팀','원본','확인 사항'].map(t=>({t})),data.issues.map(r=>[esc(r.date),esc(r.no+' / '+r.round),esc(r.team),esc(r.text),esc(r.reason)]))+'</div>';
 }
-function exportTeamPlayerRecords(){
-  const rows=(DB.settings?.teamPlayerRecords||[]).map(r=>({...r})),matchesById=new Map(matches().map(m=>[String(m.id),m])),linked=teamPlayerRecordLinks().matched;
-  // Migrate legacy save entries into the new dedicated saves column on export.
-  for(const saveRow of verifiedRecords().saves||[]){
-    const m=matchesById.get(String(saveRow.id));if(!m)continue;
-    const match=linked.find(r=>String(r.id)===String(saveRow.id)&&r.team===saveRow.team&&normalizePlayerMatchKey(r.player)===normalizePlayerMatchKey(saveRow.player));
-    const raw=match&&rows.find(r=>r.date===match.date&&r.no===match.no&&r.round===match.round&&normalizePlayerMatchKey(r.player)===normalizePlayerMatchKey(match.player)&&teamRecordTeamKey(r.team)===teamRecordTeamKey(match.inputTeam));
-    if(raw){if(raw.saves===null||raw.saves===undefined)raw.saves=num(saveRow.saves);}
-    else rows.push({date:m.date,comp:m.comp,half:matchHalfKey(m),round:m.round,no:m.no,team:saveRow.team,player:saveRow.player,sot:null,keyPass:null,defSuccess:null,saves:num(saveRow.saves)});
-  }
-  return rows.map(r=>[r.date,r.comp,halfLabel(r.half),r.round,r.no,r.team||'',r.player,r.sot??'',r.keyPass??'',r.defSuccess??'',r.saves??'']);
-}
-
 function teamRecordGrowth(value,key){const c=abilityConfig().teamRecords[key];return Math.min(Math.max(0,num(c.cap)),Math.max(0,num(value))*Math.max(0,num(c.rate)));}
 function matchCompetition(m){
   if(!isLeagueFamilyComp(m?.comp))return m?.comp||'정규리그';
@@ -1002,8 +926,9 @@ function playerOpportunityCount(player,list,fallbackTeam){
 function teamRecordAuditHtml(){
  const data=teamPlayerRecordLinks();
  const scoreIssues=[];for(const m of verifiedRecords().matches){for(const [team,score] of [[m.home,m.hs],[m.away,m.as]]){const goals=verifiedRecords().goals.filter(g=>g.id===m.id&&g.team===team).reduce((a,g)=>a+num(g.g),0);if(goals!==num(score))scoreIssues.push([esc(m.date),esc(m.no+' / '+m.round),esc(team),num(score),goals]);}}
- const rows=(DB.settings?.teamPlayerRecords||[]).map(r=>{const bad=data.issues.find(x=>x.date===r.date&&x.round===r.round&&x.no===r.no&&normalizePlayerMatchKey(x.player)===normalizePlayerMatchKey(r.player)&&teamRecordTeamKey(x.inputTeam??x.team)===teamRecordTeamKey(r.team));return [esc(r.date),esc(r.no+' / '+r.round),esc(r.team||'구양식 · 자동 확인'),esc(r.player),r.sot??'—',r.keyPass??'—',r.defSuccess??'—',r.saves??'—',bad?esc(bad.reason):'연결 완료'];});
- return '<h4>원본 득점 확인</h4><p>팀 점수와 득점자 합계 불일치 '+scoreIssues.length+'건. 누락된 득점자를 임의로 배정하지 않습니다.</p><div class="tablewrap">'+tbl(['날짜','경기','팀','팀 득점','득점자 합계'].map(t=>({t})),scoreIssues)+'</div><h4>신규 기록 연결</h4><p>팀별 기록지 '+rows.length+'행 · 연결 '+data.matched.length+'행 · 확인 필요 '+data.issues.length+'행. 확인 필요 기록은 보존하며 계산에서 제외합니다.</p><div class="tablewrap">'+tbl(['날짜','경기','팀명','선수','유효슛','키패스','수비성공','선방','상태'].map(t=>({t})),rows)+'</div>';
+ const row=(r,status)=>[esc(r.date),esc([r.no,r.round].filter(Boolean).join(' / ')),esc(r.team),esc(r.player),...APP_TEAM_RECORD_FIELDS.map(k=>esc(r.values?.[k]??r[k]??'—')),esc(status)];
+ const rows=[...data.matched.map(r=>row(r,'연결 완료')),...data.issues.map(r=>row(r,r.reason))];
+ return '<h4>원본 득점 확인</h4><p>팀 점수와 득점자 합계 불일치 '+scoreIssues.length+'건.</p><div class="tablewrap">'+tbl(['날짜','경기','팀','팀 득점','득점자 합계'].map(t=>({t})),scoreIssues)+'</div><h4>앱 카운트 연결</h4><p>연결 '+data.matched.length+'행 · 확인 필요 '+data.issues.length+'행.</p><div class="tablewrap">'+tbl(['날짜','경기','팀명','선수','유효슛','키패스','수비성공','선방','상태'].map(t=>({t})),rows)+'</div>';
 }
 
 function applyUnified(objs){
@@ -1099,7 +1024,6 @@ function applyUnified(objs){
 function applyRows(kind, objs){
   if(kind==="leadership")return applyLeadershipRows(objs);
   if(kind==="allTime")return applyAllTimeRows(objs);
-  if(kind==="teamRecords")return applyTeamPlayerRecords(objs);
   if(kind==="squads") return applySquadRows(objs);
   if(kind==="unified") return applyUnified(objs);
   if(kind==="rosterDraft"){
@@ -1148,14 +1072,14 @@ function rebuildRosterFromExcel(){
 }
 function applyWorkbookSheets(sheets){
   const previous=DB, groups=new Map();
-  sheets.forEach(s=>{if(!groups.has(s.kind))groups.set(s.kind,[]);groups.get(s.kind).push(...s.objs);});
+  sheets.forEach(s=>{if(s.kind==='teamRecords')return;if(!groups.has(s.kind))groups.set(s.kind,[]);groups.get(s.kind).push(...s.objs);});
   if(!groups.size)throw new Error('인식할 수 있는 시트가 없습니다. 통합 양식을 사용해 주세요.');
   const full=groups.has('unified')||groups.has('matches');
   const draft=groups.get('rosterDraft'), roster=groups.get('roster');
   DB=JSON.parse(JSON.stringify(previous));
   try{
     if(full){
-      DB.settings=DB.settings||{};DB.settings.teamSquads=[];DB.settings.teamPlayerRecords=[];
+      DB.settings=DB.settings||{};DB.settings.teamSquads=[];
       for(const k of ['matches','attendance','goals','saves','fouls','moms','specials','roster']) DB[k]=[];
     }
     for(const [kind,objs] of groups) if(kind!=='roster' && kind!=='rosterDraft') applyRows(kind,objs);
@@ -3199,7 +3123,7 @@ function renderAbilityConfig(){
       abilityCfgField('PAS 시작값','initialSkills.fallbackPas',num((c.initialSkills||{}).fallbackPas),'1','0','99')+
     '</div></div>'+ 
     '<div class="ability-config-card"><div class="ability-config-title"><div><h3>Round 출석 1회 가산</h3><p>명단 출석일당 1회 · 각 축의 실제 연간 출석 기여는 아래 한도로 제한</p></div></div><div class="ability-config-fields">'+statKeys.map(k=>abilityCfgField(statLbl[k],'attendance.'+k,num(c.attendance[k]),'0.005','0')).join('')+'</div></div>'+ 
-    '<div class="ability-config-card full"><h3>팀별 기록지 가산 · 일자별 상한</h3><p>기록 기본 가산은 상한 적용 후 승점·성장·FORM 배율을 곱합니다. 0으로 설정하면 해당 가산을 끌 수 있습니다.</p><div class="ability-config-fields">'+Object.entries({sot:'유효슛 → SHO',keyPass:'키패스 → PAS',defSuccess:'수비성공 → DEF'}).map(([k,label])=>abilityCfgField(label+' 1회','teamRecords.'+k+'.rate',c.teamRecords[k].rate,'0.005','0','1')+abilityCfgField(label+' 하루 상한','teamRecords.'+k+'.cap',c.teamRecords[k].cap,'0.01','0','5')).join('')+'</div></div>'+
+    '<div class="ability-config-card full"><h3>앱 카운트 가산 · 일자별 상한</h3><p>기록 기본 가산은 상한 적용 후 승점·성장·FORM 배율을 곱합니다. 0으로 설정하면 해당 가산을 끌 수 있습니다.</p><div class="ability-config-fields">'+Object.entries({sot:'유효슛 → SHO',keyPass:'키패스 → PAS',defSuccess:'수비성공 → DEF'}).map(([k,label])=>abilityCfgField(label+' 1회','teamRecords.'+k+'.rate',c.teamRecords[k].rate,'0.005','0','1')+abilityCfgField(label+' 하루 상한','teamRecords.'+k+'.cap',c.teamRecords[k].cap,'0.01','0','5')).join('')+'</div></div>'+
     '<div class="ability-config-card"><div class="ability-config-title"><div><h3>Round 득점 → SHO</h3><p>득점 상한 없음 · 해당 Round 득점 수 × 골당 가산값</p></div></div><div class="ability-config-fields">'+abilityCfgField('골당 SHO 가산','goalPerGoal',num(c.goalPerGoal),'0.005','0','1')+'</div></div>'+steps('Round 어시스트 → PAS','assistSteps',c.assistSteps,'PAS 가산')+steps('Round 선방 → DEF','saveSteps',c.saveSteps,'DEF 가산')+
     '<div class="ability-config-card"><div class="ability-config-title"><div><h3>Round MOM 1회 직접 가산</h3><p>PAC 제외 · 실제 수상 횟수 × 현재 능력 성장 완화 × FORM 성장 배율</p></div></div><div class="ability-config-fields">'+statKeys.map(k=>abilityCfgField(statLbl[k],'mom.firstSeasonBonus.'+k,num((((c.mom||{}).firstSeasonBonus||{})[k])),'0.005','0','1')).join('')+'</div></div>'+
     '<div class="ability-config-card"><div class="ability-config-title"><div><h3>Round 승점 성장 배율</h3><p>1Round 최대 4경기 기준</p></div></div><div style="overflow-x:auto"><table class="ability-config-table"><thead><tr><th>승점</th>'+c.pointMultipliers.map(x=>'<th>'+num(x.min)+'+</th>').join('')+'</tr></thead><tbody><tr><td>배율</td>'+c.pointMultipliers.map((x,i)=>'<td>'+abilityCfgInput('pointMultipliers.'+i+'.value',num(x.value),'0.01','0')+'</td>').join('')+'</tr><tr><td>최소 승점</td>'+c.pointMultipliers.map((x,i)=>'<td>'+abilityCfgInput('pointMultipliers.'+i+'.min',num(x.min),'1','0','12')+'</td>').join('')+'</tr></tbody></table></div></div>'+ 
@@ -3253,7 +3177,7 @@ function validateAbilityConfig(cfg){
   if(num(init.scoreMin)>num(init.scoreMid) || num(init.scoreMid)>num(init.scoreMax)) return '초기 SHO/PAS 백분위 점수는 최저 ≤ 중앙 ≤ 최고 순서여야 합니다.';
   if(num(init.reliabilityRounds)<1) return '전년도 신뢰 기준 Round는 1 이상이어야 합니다.';
   const checkAscending=(arr,key,label)=>{for(let i=1;i<arr.length;i++)if(num(arr[i][key])<num(arr[i-1][key]))return label+' 구간값은 왼쪽부터 오름차순이어야 합니다.';return '';};
-  for(const x of Object.values(cfg.teamRecords||{})){if(!Number.isFinite(Number(x.rate))||!Number.isFinite(Number(x.cap))||num(x.rate)<0||num(x.cap)<0)return '팀별 기록지 가산과 상한은 0 이상의 수여야 합니다.';}
+  for(const x of Object.values(cfg.teamRecords||{})){if(!Number.isFinite(Number(x.rate))||!Number.isFinite(Number(x.cap))||num(x.rate)<0||num(x.cap)<0)return '앱 카운트 가산과 상한은 0 이상의 수여야 합니다.';}
   if(num(cfg.goalPerGoal)<0)return '골당 SHO 가산값은 0 이상이어야 합니다.';
   let e=checkAscending(cfg.assistSteps,'min','어시스트')||checkAscending(cfg.saveSteps,'min','선방')||checkAscending(cfg.foulPenaltySteps,'min','개인파울')||checkAscending(cfg.pointMultipliers,'min','승점'); if(e)return e;
   if((cfg.foulPenaltySteps||[]).some(x=>num(x.value)>0)) return '개인파울 감점값은 0 이하로 입력해야 합니다.';
@@ -6667,7 +6591,6 @@ function buildRecordXlsx(){
     { name:UNI.name, head:UNI.head, rows:mrows },
     exportAllTimeSheet(),
     exportLeadershipSheet(),
-    { name:'팀별 기록지',head:TEAM_RECORD_HEAD,rows:exportTeamPlayerRecords() },
     { name:"선수명단", head:"연도,팀,등번호,선수,영문이름,포지션,비고,사진(URL),사진(URL) 배경삭제,시즌,시작일자,출석,팀경기수,출석률,득점누계,어시스트누계,개인파울누계,선방누계,MOM누계",
       rows: rs.map(r=>{
         const raw=(DB.roster||[]).find(x=>String(x.player||"").trim()===String(r.player||"").trim() && String(x.year||"").trim()===String(r.year||"").trim()) ||
@@ -6801,9 +6724,8 @@ function renderRecordDataValidation(){
 
   const deductions=verifiedRecords().matches.flatMap(m=>[m.home,m.away].map(team=>({m,team,points:matchPointDeduction(m,team)}))).filter(r=>r.points>0);
   if(deductions.length){details.style.display='';summary.textContent+=' 승점삭감 '+deductions.length+'건.';table.innerHTML+='<h4>팀 누적 승점삭감</h4><p>승점삭감은 해당 날짜를 포함하는 팀 누적승점에 한 번 적용합니다. 해당 경기·팀의 출석 선수 각각의 개인 누적승점에도 같은 점수를 차감합니다. 대진 결과와 능력치는 유지합니다. 확정된 대표승점 구간의 순위까지 변경하려면 해당 구간을 확인하고 다시 확정하세요.</p>'+tbl(['날짜','경기','팀','삭감점수'].map(t=>({t})),deductions.map(r=>[esc(r.m.date),esc(r.m.no+' / '+r.m.round),esc(r.team),r.points]));}
-  const integrity=verifiedRecords().issues,pending=teamPlayerRecordLinks().matched.filter(r=>r.attendanceConfirmed===false),legacy=verifiedRecords().matches.filter(m=>m.hExtraFouls===undefined||m.aExtraFouls===undefined);
+  const integrity=verifiedRecords().issues,legacy=verifiedRecords().matches.filter(m=>m.hExtraFouls===undefined||m.aExtraFouls===undefined);
   if(integrity.length){details.style.display='';summary.textContent+=' 경기 연결·중복 확인 '+integrity.length+'건.';table.innerHTML+='<h4>공통 계산 검증</h4><p>충돌 경기는 모든 계산에서 보류합니다. JSON 백업에 원본은 남아 있습니다. 원본 Excel/JSON에서 중복·충돌을 수정하고 재업로드하세요.</p>'+tbl(['날짜','경기 ID','팀','확인 내용'].map(t=>({t})),integrity.map(r=>[esc(r.date),esc(r.id),esc(r.team),esc(r.reason)]));}
-  if(pending.length){details.style.display='';summary.textContent+=' 출석 명단 누락 '+pending.length+'건.';table.innerHTML+='<h4>참여 증거 있음 · 출석 확인 필요</h4><p>양수 활동 기록으로 결석 감점은 방지합니다. 출석 가산·공식 출전수·승점은 선수1~15 명단을 보완한 뒤 반영됩니다.</p>'+tbl(['날짜','경기','팀','선수'].map(t=>({t})),pending.map(r=>[esc(r.date),esc(r.no+' / '+r.round),esc(r.team),esc(r.player)]));}
   if(legacy.length){details.style.display='';table.innerHTML+='<p>구양식 팀파울 '+legacy.length+'경기는 기존 규칙으로 유지됩니다. 추가 파울 열이 있는 최신 Excel을 업로드하면 개인파울+추가 파울 합산으로 전환됩니다.</p>';}
 }
 // On-demand, browser-only image checks. Never writes player records or URLs.
@@ -6883,7 +6805,7 @@ function renderData(){
     ["MOM", (verifiedRecords().moms||[]).length, '<span class="muted">총 '+(verifiedRecords().moms||[]).reduce((s,g)=>s+num(g.mom),0)+'회 · 선수 능력치 반영</span>'],
     ["SoccerBee", (DB.soccerbee||[]).length, '<span class="muted">측정 이력 '+(DB.soccerbee||[]).length+'건</span>'],
     ["선수명단", DB.roster.length, '<span class="muted">'+esc([...new Set(DB.roster.map(r=>r.year).filter(Boolean))].join(", ")||"—")+'</span>'],
-    ["팀별 기록지", (DB.settings?.teamPlayerRecords||[]).length, "연결 "+teamPlayerRecordLinks().matched.length+"행 · 확인 필요 "+teamPlayerRecordLinks().issues.length+"행"],
+    ["앱 공유 카운트", teamPlayerRecordLinks().matched.length, "확인 필요 "+teamPlayerRecordLinks().issues.length+"행"],
     ["팀스쿼드", squadRows().length, '<span class="muted">적용일별 감독·코치·선수 명단</span>'],
     ["역대 운영진", leadershipRows().length, "운영년도·기수별 운영진 · 진행 중 기수 우선 표시"],
     ["역대기록", allTimeRows().length, "2019~2025 보관 자료 · 전체 누적에서 2026년 이후 득점·출전 자동 가산"],
@@ -7118,7 +7040,7 @@ function renderActiveView(v,options={}){
   mobilePageSwipe?.rendered(next);
 }
 // Analysis assets are requested only by an administrator opening this menu.
-const ABILITY_AUDIT_ASSETS={ui:'assets/ggfc-ability-audit.js?v=77a44d4ccb366b8e',css:'assets/ggfc-ability-audit.css?v=19c81455534472fa',worker:'assets/ggfc-ability-audit-worker.js?v=a5f59c7dbcab4dd1'};
+const ABILITY_AUDIT_ASSETS={ui:'assets/ggfc-ability-audit.js?v=06d9b641c7efa5e5',css:'assets/ggfc-ability-audit.css?v=19c81455534472fa',worker:'assets/ggfc-ability-audit-worker.js?v=b7547581343a1c7e'};
 let abilityAuditLoader=null;
 function renderAbilityAudit(){
  const root=document.getElementById('abilityAuditRoot');
@@ -7144,7 +7066,7 @@ let menuAbilityCache=null;
 function menuAbilitySignature(){
  const settings=DB.settings||{};
  const roster=(DB.roster||[]).map(r=>{const {photo,photoCutout,...fields}=r;return [fields,!!String(photo||'').trim()];});
- return JSON.stringify([DB.matches,DB.attendance,DB.goals,DB.saves,DB.fouls,DB.moms,DB.specials,roster,DB.soccerbee,settings.seasons,settings.teamSquads,settings.teamPlayerRecords,settings.appTeamPlayerRecords,liveCounterTeamPlayerRecords,settings.goalkeeperEntries,settings.ability,comp]);
+ return JSON.stringify([DB.matches,DB.attendance,DB.goals,DB.saves,DB.fouls,DB.moms,DB.specials,roster,DB.soccerbee,settings.seasons,settings.teamSquads,settings.appTeamPlayerRecords,liveCounterTeamPlayerRecords,settings.goalkeeperEntries,settings.ability,comp]);
 }
 function withRenderCalculationCache(render){
   if(renderCalculationCache)return render();

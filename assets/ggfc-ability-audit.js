@@ -57,7 +57,7 @@ window.GGFCAbilityAudit=(()=>{
    // Small batches yield between transfers, so touch/paint can continue.
    const items=['matches','attendance','goals','saves','fouls','moms','roster','soccerbee','specials'].map(key=>({key,value:sourceDB[key]||[],settings:false}));
    items.push({key:'liveCounterTeamPlayerRecords',value:sourceCounters,settings:false});
-   for(const key of ['ability','seasons','teamSquads','teamPlayerRecords','appTeamPlayerRecords','goalkeeperEntries'])items.push({key,value:sourceDB.settings?.[key]??(key==='ability'||key==='seasons'?{}:[]),settings:true});
+   for(const key of ['ability','seasons','teamSquads','appTeamPlayerRecords','goalkeeperEntries'])items.push({key,value:sourceDB.settings?.[key]??(key==='ability'||key==='seasons'?{}:[]),settings:true});
    for(const item of items){
     if(!valid())return;
     if(Array.isArray(item.value)){
