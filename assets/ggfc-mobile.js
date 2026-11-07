@@ -232,7 +232,7 @@ function initMemberUI(){
   // Mobile uses the backdrop so an outside tap never activates the page underneath.
   document.addEventListener('pointerdown',e=>{
     if(sidebarPinned||document.documentElement.classList.contains('ggfc-mobile')||!desktopSidebarOpen())return;
-    if(panel.contains(e.target)||toggle.contains(e.target)||e.target.closest('.mask,dialog'))return;
+    if(panel.contains(e.target)||toggle.contains(e.target)||e.target.closest('.mask,dialog,[data-sidebar-resize]'))return;
     setDesktopSidebar(false);
   },{capture:true});
   document.addEventListener('keydown',e=>{
@@ -261,7 +261,42 @@ function initMemberUI(){
     closeMemberSidebar(false,true);
     if(keepPinnedOpen)openMemberSidebar();
   };
-  media.addEventListener('change',update);update();initMobilePageSwipe();
+  media.addEventListener('change',update);update();initMobilePageSwipe();initSidebarResize();
+}
+
+let sidebarResizeInitialized=false;
+function initSidebarResize(){
+ const handle=document.getElementById('sidebarResizeHandle'),panel=document.getElementById('ggfcSidebar'),root=document.documentElement,key='ggfc-sidebar-width-v1';
+ if(!handle||sidebarResizeInitialized)return;sidebarResizeInitialized=true;
+ let requested=null,drag=null;
+ try{const value=Number(localStorage.getItem(key));if(Number.isFinite(value)&&value>=180&&value<=420)requested=value;}catch(e){}
+ const desktop=()=>!root.classList.contains('ggfc-mobile'),limits=()=>({min:180,max:Math.max(180,Math.min(420,innerWidth-360))});
+ const apply=()=>{
+  const {min,max}=limits();
+  if(!desktop()||requested===null)root.style.removeProperty('--ggfc-sidebar-w');else root.style.setProperty('--ggfc-sidebar-w',Math.round(Math.max(min,Math.min(max,requested)))+'px');
+  handle.setAttribute('aria-valuemin',min);handle.setAttribute('aria-valuemax',max);
+  if(desktop()){const width=Math.round(panel.getBoundingClientRect().width);handle.setAttribute('aria-valuenow',width);handle.setAttribute('aria-valuetext',width+'픽셀');}
+ };
+ const persist=()=>{try{if(requested===null)localStorage.removeItem(key);else localStorage.setItem(key,String(Math.round(requested)));}catch(e){}};
+ const finish=commit=>{
+  if(!drag)return;const current=drag;drag=null;if(!commit)requested=current.original;
+  document.body.classList.remove('sidebar-resizing');if(handle.hasPointerCapture(current.id))handle.releasePointerCapture(current.id);apply();if(commit)persist();
+ };
+ handle.addEventListener('pointerdown',e=>{
+  if(!desktop()||!desktopSidebarOpen()||e.button!==0||!e.isPrimary)return;
+  e.preventDefault();drag={id:e.pointerId,x:e.clientX,width:panel.getBoundingClientRect().width,original:requested};handle.setPointerCapture(e.pointerId);handle.focus({preventScroll:true});document.body.classList.add('sidebar-resizing');
+ });
+ handle.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;const {min,max}=limits();requested=Math.max(min,Math.min(max,drag.width+e.clientX-drag.x));apply();});
+ handle.addEventListener('pointerup',e=>{if(drag?.id===e.pointerId)finish(true);});
+ handle.addEventListener('pointercancel',()=>finish(false));handle.addEventListener('lostpointercapture',()=>finish(false));window.addEventListener('blur',()=>finish(false));
+ handle.addEventListener('dblclick',()=>{finish(false);requested=null;persist();apply();});
+ handle.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&drag){e.preventDefault();e.stopPropagation();finish(false);return;}
+  if(!desktop()||!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
+  e.preventDefault();e.stopPropagation();const {min,max}=limits(),width=panel.getBoundingClientRect().width;
+  requested=e.key==='Home'?min:e.key==='End'?max:Math.max(min,Math.min(max,width+(e.key==='ArrowLeft'?-1:1)*(e.shiftKey?20:10)));apply();persist();
+ });
+ const resized=()=>{if(!desktop())finish(false);apply();};window.addEventListener('resize',resized,{passive:true});new MutationObserver(resized).observe(root,{attributes:true,attributeFilter:['class']});apply();
 }
 
 function syncSidebarPinUI(){

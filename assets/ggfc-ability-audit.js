@@ -75,7 +75,54 @@ window.GGFCAbilityAudit=(()=>{
  }
  function formHtml(f){
   if(f.mode!=='MATCH_PERFORMANCE')return '<p>FORM 평가 보류</p>';
-  return '<p>'+E(f.reason)+' · '+(f.ready?'평가 가능':'잠정')+'</p><p>CURRENT 보정 '+signed(f.modifier)+' OVR · 성장 배율 ×'+N(f.growthMultiplier)+' · 최근 '+(f.recentGames||0)+'경기 / 평소 '+(f.baselineGames||0)+'경기</p>'+table(['지표','최근 경기당','평소 경기당','보정 후 변화'],Object.entries(f.metrics||{}).map(([k,v])=>[E(k),N(v.recent),N(v.baseline),N(v.change)]))+'<p>출석·결석·개인파울은 FORM에 직접 가감하지 않습니다. 미기록은 0회로 바꾸지 않습니다.</p>';
+  const d=report.formDiagnostics;if(!d)return '<p>'+E(f.reason)+'</p>';
+  const names={g:'득점',a:'도움',sot:'유효슛',keyPass:'키패스',defSuccess:'수비성공',saves:'선방',ga:'키퍼실점',minutes:'키퍼 수행시간(분)',mom:'MOM'},percent=v=>N(v*100,2)+'%',range=list=>list.length?list[0].date+' ~ '+list.at(-1).date:'없음';
+  const next=d.additionalCompleteGames===null?'설정 확인 필요':d.additionalCompleteGames===0?'현재 경기 수·기록칸 조건 충족':'앞으로 완전한 기록의 실제 출전 '+d.additionalCompleteGames+'경기';
+  let html='<section class="aa-form-explain"><p class="aa-form-verdict '+(f.ready?'aa-form-ready':'aa-form-wait')+'"><b>'+(f.ready?'FORM 평가 가능':'FORM 평가 보류')+'</b> · '+E(f.reason)+'</p>'+
+   '<div class="aa-form-summary"><span>실제 평가 대상 출전 <b>'+d.totalGames+'경기</b></span><span>최근 <b>'+d.recent.length+'/'+d.window+'경기</b></span><span>평소 <b>'+d.baseline.length+'경기</b> / 최대 '+d.maxBaseline+'</span><span>FORM 관련 공유 기록 연결 <b>'+d.sharedGames+'경기</b></span><span>마지막 공유 기록 경기일 <b>'+E(d.lastSharedMatchDate||'없음')+'</b></span></div>'+
+   '<p><b>CURRENT 보정 '+signed(f.modifier)+' OVR</b> · 성장 배율 ×'+N(f.growthMultiplier)+' · 평가 기준 경기일 '+E(d.cutoff||'없음')+'</p>'+
+   '<p>경기일 수가 아닌 <b>실제 개별 출전 경기 수</b>입니다. 최근 '+d.window+'경기는 '+E(range(d.recent))+', 그 직전 평소 비교 경기는 '+E(range(d.baseline))+'입니다. 두 구간은 겹치지 않습니다.</p>'+
+   '<h4>1. 왜 계산되거나 보류되는지</h4>'+table(['조건','현재 값','필요 조건','판정'],[
+    ['FORM 사용 설정',d.formEnabled?'켜짐':'꺼짐','켜짐',d.formEnabled?'충족':'미사용'],
+    ['전체 실제 출전',d.totalGames+'경기',d.minimumMatches+'경기 이상',d.totalGames>=d.minimumMatches?'충족':'부족'],
+    ['최근 창',d.recent.length+'경기',d.window+'경기',d.recent.length>=d.window?'충족':'부족'],
+    ['평소 비교 창',d.baseline.length+'경기',d.minimumBaseline+'경기 이상',d.baseline.length>=d.minimumBaseline?'충족':'부족'],
+    ['기준일 실제 출전',d.cutoffPlayed?'확인':'미출전', '새 FORM 평가를 위한 출전 확인',d.cutoffPlayed?'충족':'현재 정책상 보류'],
+    ['역할별 기록 충족',percent(f.coverage||0),'포지션 가중치 합계 '+percent(d.roleCoverage)+' 이상',f.ready?'충족':!d.enoughGames?'경기 수 확인 후 평가':'아래 항목 확인']
+   ])+
+   '<p>각 항목은 최근·평소 구간에서 '+percent(d.coverage)+' 이상 기록되어야 합니다. 득점과 유효슛, 도움과 키패스는 <b>같은 경기에서 둘 다 확인</b>되어야 하며, 평소 구간에는 최소 '+d.minimumBaseline+'개의 유효 경기 기록이 필요합니다.</p>'+
+   table(['능력치·필요 항목','역할 가중치','최근 유효 / 전체','최근 필요·부족','평소 유효 / 전체','평소 필요·부족','항목 기록 조건'],d.groups.map(g=>[
+    '<b>'+g.axis.toUpperCase()+'</b> · '+E(g.fields.map(k=>names[k]).join(' + ')),percent(g.weight),g.recentKnown+' / '+d.recent.length,g.requiredRecent+'경기 필요 · '+g.recentMissing+'경기 부족',g.baselineKnown+' / '+d.baseline.length,g.requiredBaseline+'경기 필요 · '+g.baselineMissing+'경기 부족',g.ready?'충족':'미충족'
+   ]))+
+   '<p>포지션 역할은 '+E(d.roleFallback?'포지션 미지정 → AL 기본 역할':d.position)+'이며 역할 가중치는 '+Object.entries(d.role).map(([k,w])=>k.toUpperCase()+' '+percent(w)).join(' · ')+'입니다. 유효한 축의 가중치 합계가 '+percent(d.roleCoverage)+'에 도달해야 최종 FORM을 계산합니다. 충족한 축만으로 가중치를 다시 나눕니다.</p>';
+  if(d.gk){const r=d.gk.recent,b=d.gk.baseline;html+='<h4>골키퍼 추가 조건</h4><p>일반 출전 이력 '+d.totalAppearances+'경기 중 FORM용 골키퍼 경기로 연결된 이력은 '+d.totalGames+'경기입니다. 아래 합계에는 선방·실점·수행시간이 모두 확인된 경기만 포함합니다.</p>'+table(['구간','선방','실점','상대 유효슛(선방+실점)','수행시간'],[['최근',r.saves,r.ga,r.shots,N(r.minutes)+'분'],['평소',b.saves,b.ga,b.shots,N(b.minutes)+'분']])+'<p>두 구간의 상대 유효슛 합계 '+(r.shots+b.shots)+'회 / 최소 '+d.gk.shotsRequired+'회 · 부족 '+d.gk.shotsMissing+'회. 최근·평소 각각 상대 유효슛과 수행시간이 0보다 커야 합니다. 추가 조건 '+(d.gk.sampleReady?'충족':'미충족')+'. 팀 실점과 키퍼별 실점 배정이 맞지 않는 경기는 아래에 사유를 표시합니다.</p>';}
+  html+='<h4>2. 몇 경기를 더 기록해야 하는지</h4><p class="aa-form-projection"><b>'+E(next)+'</b><br>이 예상은 앞으로 출전하는 매 경기에서 필요한 경기기록과 앱 카운트가 모두 확인된다는 가정의 경기 수·기록 충족도 계산입니다. 경기력 향상이나 FORM 점수 변화 자체를 예측한 값은 아닙니다.'+(d.gk?' 골키퍼 상대 유효슛·수행시간 조건은 별도입니다.':'')+'</p>'+
+   '<p>기존 비교 구간의 빈칸을 보완하면 새 경기를 기다리지 않고 조건을 충족할 수도 있습니다. 위 부족 수와 아래 경기 목록을 확인하세요. 최근부터 모든 평가 항목이 연속으로 확인된 경기는 '+d.completeStreak+'경기입니다.</p>'+
+   '<p>기본 예시로 과거 출전이 충분히 있고 평소 20경기가 모두 미기록이면, 최근 5경기와 평소 20경기 중 16경기 기록이 필요합니다. 최근부터 연속으로 완전한 기록을 채우는 경우 <b>21경기를 채워야 하는 예</b>가 생깁니다. 출전 이력이 8경기뿐이고 모두 기록되어 있으면 최근 5 + 평소 3으로도 평가할 수 있습니다. 현재 선수·설정에 맞춘 값은 위 예상입니다.</p>';
+  if(!d.formEnabled)html+='<p class="aa-form-wait">현재 FORM 사용 설정이 꺼져 있습니다. 기록을 채워도 FORM을 적용하지 않습니다.</p>';
+  if(!d.cutoffPlayed)html+='<p class="aa-form-wait">기준 경기일에 실제 출전하지 않아 현행 정책상 FORM이 보류됩니다. 미출전 시 이전 FORM을 유지하는 정책으로 변경한 상태는 아닙니다.</p>';
+  const fields=d.position==='GR'?['saves','ga','minutes','mom']:['g','sot','a','keyPass','defSuccess','mom'];
+  const rowsHtml=(rows,recent)=>table(['순서','경기일','경기번호 / 경기','팀',...(recent&&d.position!=='GR'?['최근 가중치']:[]),...fields.map(k=>names[k]),'확인 사항'],rows.map(r=>[
+   r.index,E(r.date),E(r.no+' / '+r.round),E(r.team),...(recent&&d.position!=='GR'?[percent(r.recentWeight)]:[]),...fields.map(k=>(r.values[k]===null?(r.inputValues[k]!==undefined?N(r.inputValues[k])+'<small class="aa-down">평가 제외</small>':'<span class="aa-down">'+(['g','a','ga','minutes'].includes(k)?'미확인':'미기록')+'</span>'):N(r.values[k]))+(r.origins[k]&&r.origins[k]!=='미기록'?'<small class="aa-record-origin">'+E(r.origins[k])+'</small>':'')),E(r.notes.join(' · ')||'—')
+  ]));
+  html+='<h4>3. 이번 계산에 사용한 경기와 항목</h4><p>오래된 경기부터 표시합니다. <b>공유</b> 표시는 앱에서 공유 저장한 기록입니다. ‘평가 제외’는 입력은 있지만 기록 검증 문제로 FORM에 사용하지 않는 값입니다. 0은 검수된 0회이며 미기록과 다릅니다.</p><h5>최근 '+d.recent.length+'경기</h5>'+rowsHtml(d.recent,true)+'<details class="aa-form-baseline"><summary>평소 비교 '+d.baseline.length+'경기 목록 보기</summary>'+rowsHtml(d.baseline,false)+'</details>';
+  if(d.unlinkedKeeperCount)html+='<details class="aa-form-baseline"><summary>골키퍼 경기 연결 확인 '+d.unlinkedKeeperCount+'경기 · 최근 '+d.unlinkedKeeperGames.length+'경기 보기</summary><p>선방을 저장했어도 키퍼실점·수행시간이 연결되지 않으면 GK FORM 표본이 되지 않습니다. 실제 골키퍼로 출전한 경기는 원본 키퍼실점·시간·배정을 보완하세요. 필드 선수로 뛴 경기를 임의로 골키퍼 경기로 바꾸지는 않습니다.</p>'+rowsHtml(d.unlinkedKeeperGames,false)+'</details>';
+  html+='<h4>4. 실제 수치 대입과 계산식</h4>';
+  if(d.position==='GR'){
+   const r=d.gk.recent,b=d.gk.baseline,sr=r.shots?r.saves/r.shots:null,sb=b.shots?b.saves/b.shots:null,gr=r.minutes?r.ga/r.minutes*15:null,gb=b.minutes?b.ga/b.minutes*15:null,q=d.gk.recent.known/(d.gk.recent.known+d.smoothingMatches);
+   html+=table(['지표','최근','평소'],[['선방률',sr===null?'미확인':percent(sr),sb===null?'미확인':percent(sb)],['15분당 실점',N(gr),N(gb)]])+ '<p>선방률 변화 = 최근 선방률 − 평소 선방률<br>실점률 변화 = (최근 15분당 실점 − 평소 15분당 실점) ÷ max(평소 15분당 실점, 1)<br>표본 완화 = 최근 유효 경기 수 ÷ (최근 유효 경기 수 + '+d.smoothingMatches+') = '+N(q)+'<br>DEF 변화지수 = clamp((선방률 변화 × 0.7 − 실점률 변화 × 0.3) × 표본 완화, −1, +1)</p><p>실제 DEF 변화지수 '+N(f.indices?.def)+' · 골키퍼는 최근 경기의 횟수·시간을 합산하며 경기별 최근 가중 평균은 사용하지 않습니다.</p>';
+  }else{
+   const floors={g:.25,sot:.5,a:.25,keyPass:.5,defSuccess:1};
+   html+='<p>최근 가중 평균 R = Σ(확인된 경기 기록 × 해당 경기 가중치) ÷ Σ(그 경기 가중치). 최신 경기부터 '+(report.cfg.form.recency||[]).map(percent).join(' · ')+'를 적용합니다. 평소 평균 B = 같은 항목 묶음이 확인된 비교 경기의 합계 ÷ 그 유효 경기 수입니다.</p>'+
+    '<p>표본 보정 S = (R × 최근 유효 경기 수 n + B × '+d.smoothingMatches+') ÷ (n + '+d.smoothingMatches+')<br>항목 변화지수 = clamp((S − B) ÷ max(B, 항목 최소 분모), −1, +1)</p>'+
+    table(['항목','최근 가중 평균 R','평소 평균 B','최근 유효 n','표본 보정 S','최소 분모','변화지수'],Object.entries(floors).map(([k,floor])=>{const v=f.metrics?.[k];return [names[k],N(v?.recent),N(v?.baseline),v?.recentKnown??'—',N(v?.smoothed),N(floor),N(v?.change)];}))+
+    '<p>SHO 변화 = 득점 변화 × 0.4 + 유효슛 변화 × 0.6<br>PAS 변화 = 도움 변화 × 0.4 + 키패스 변화 × 0.6<br>DEF 변화 = 수비성공 변화</p>'+table(['SHO 변화','PAS 변화','DEF 변화'],[[N(f.indices?.sho),N(f.indices?.pas),N(f.indices?.def)]]);
+  }
+  html+='<p>종합 변화 = Σ(유효한 축의 변화지수 × 포지션 역할 가중치) ÷ 유효한 축의 가중치 합계 = '+(f.ready?N(f.performance):'평가 조건 미충족으로 미계산')+'<br>MOM 보정 = min(1, 최근 MOM '+d.momCount+'회 × '+N(report.cfg.growthPolicy.formMom)+') = '+N(d.momBonus)+(f.ready?'':' (평가 보류 시 미적용)')+'<br>최종 FORM = clamp(종합 변화 ÷ '+N(d.fullFormChange)+' × '+N(d.formLimit)+' + MOM 보정, −'+N(d.formLimit)+', +'+N(d.formLimit)+')<br>실제 적용값 = <b>'+signed(f.modifier)+' OVR</b>'+(f.ready?'':' · 평가 조건 미충족으로 수치를 적용하지 않고 보정 0')+'</p>'+
+   '<p>성장 배율 = clamp(1 + FORM × 0.025, 0.9, 1.1) = ×'+N(f.growthMultiplier)+'<br>CURRENT OVR 원점수 = clamp(BASE OVR 원점수 '+N(report.result.baseOvrRaw)+' + 적용 FORM '+signed(f.modifier)+', '+report.cfg.scoreMin+', '+report.cfg.scoreMax+') = '+N(report.result.currentOvrRaw)+'</p>'+
+   '<p>식에서 Σ는 합계, max는 더 큰 값, min은 더 작은 값, clamp는 최솟값~최댓값 범위로 제한한다는 뜻입니다. 필드 선수의 항목 변화지수 0.1은 +10%, −0.5는 −50% 변화입니다. 여기 표시한 OVR은 소수 원점수이므로 선수카드의 정수 표시와 차이가 있을 수 있습니다.</p>'+
+   '<p>FORM이 0이어도 평가 보류와 정상 중립은 다릅니다. 경기력이 평소와 비슷하거나, 자료 부족·설정 꺼짐·기준일 미출전이면 0일 수 있습니다. 출석·결석·개인파울은 FORM에 직접 가감하지 않습니다. MOM만으로 자료 부족 조건을 통과하지는 않습니다.</p></section>';
+  return html;
  }
  function slumpHtml(l){
   if(report.cfg.growthPolicy){const x=report.result.growthPolicy.sustainedState;return "<p>기존 SLUMP 감점은 중복 적용하지 않습니다. 새 지속 부진 BASE 조정 "+x.events.length+"회.</p>";}

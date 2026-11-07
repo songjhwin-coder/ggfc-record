@@ -3844,6 +3844,16 @@ body:not(.admin-mode) #playerRecordQueryPanel{display:none!important}
 .lh-president-icon{display:inline-block;width:20px;height:20px;flex:none;vertical-align:middle}
 .lh-hero+.lh-history{margin-top:24px}
 /* Local member preview and explicit sidebar pin. */
+#sidebarResizeHandle{display:none}
+html:not(.ggfc-mobile) body:not(.sidebar-collapsed) #sidebarResizeHandle{display:grid;place-items:center;position:fixed;left:calc(var(--ggfc-sidebar-w) - 5px);top:var(--ggfc-topbar-h);bottom:0;width:10px;z-index:19;cursor:ew-resize;touch-action:none;user-select:none}
+#sidebarResizeHandle::before{content:"";position:absolute;inset:0 4px;background:#91accb66}
+#sidebarResizeHandle span{position:relative;display:grid;place-items:center;width:16px;height:48px;border:1px solid #8da9c8;border-radius:8px;background:#d9e6f3;color:#183c60;font-size:12px;box-shadow:0 1px 4px #09234825}
+#sidebarResizeHandle:hover::before,#sidebarResizeHandle:focus-visible::before{background:#8db6df}
+#sidebarResizeHandle:focus-visible{outline:2px solid #8db6df;outline-offset:1px}
+.sidebar-resizing,.sidebar-resizing *{cursor:ew-resize!important;user-select:none!important}
+.sidebar-resizing>main{transition:none!important}
+.sidebar-resizing iframe{pointer-events:none!important}
+@media print{#sidebarResizeHandle{display:none!important}}
 .topbar-admin-actions{display:flex;align-items:center;flex:none}
 .topbar-admin-actions[hidden],#memberPreviewToggle[hidden],#memberPreviewBar[hidden]{display:none!important}
 #memberPreviewToggle{white-space:nowrap;font-size:12px;min-height:38px;padding:8px 12px}

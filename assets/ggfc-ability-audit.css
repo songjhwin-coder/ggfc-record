@@ -37,4 +37,13 @@ body:not(.admin-mode) #v-abilityaudit{display:none!important}
 #v-abilityaudit .aa-pending{color:#6b6475;background:#f0edf4}
 #v-abilityaudit .aa-reasons{display:inline-block;max-width:260px;white-space:normal;line-height:1.5;min-width:120px}
 #v-abilityaudit .aa-empty{padding:18px 12px;border:1px dashed #cbdde5;border-radius:8px;color:#506477}
+#v-abilityaudit .aa-form-explain{min-width:0}
+#v-abilityaudit .aa-form-explain h4{margin:26px 0 12px;color:#153b5a}
+#v-abilityaudit .aa-form-summary{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+#v-abilityaudit .aa-form-summary>span{padding:8px 10px;border-radius:7px;background:#edf3f8;border:1px solid #d5e1ec;font-size:12px}
+#v-abilityaudit .aa-form-verdict,#v-abilityaudit .aa-form-projection{padding:12px 14px;border:1px solid #bed2e6;border-radius:8px;background:#f0f6fc}
+#v-abilityaudit .aa-form-wait{color:#765224;background:#fff7e8;border-color:#e4cca3}
+#v-abilityaudit .aa-form-ready{color:#166352;background:#eef8f3;border-color:#bddbcf}
+#v-abilityaudit .aa-record-origin{display:block;font-size:10px;line-height:1.4;color:#627a90}
+#v-abilityaudit .aa-form-baseline .aa-table{max-height:560px}
 @media(max-width:600px){#v-abilityaudit .aa-summary{gap:6px}#v-abilityaudit .aa-summary>div{padding:10px 4px}#v-abilityaudit .aa-summary b{font-size:20px}#v-abilityaudit .aa-summary small{font-size:11px}#v-abilityaudit .aa-search>label{flex:1;min-width:130px}#v-abilityaudit input{width:100%;min-width:0}#v-abilityaudit .aa-detail{padding:10px}#v-abilityaudit .aa-step-total{display:block;margin:5px 0 0}}
