@@ -119,16 +119,17 @@ function matchDetailHtml(data){
 function matchDetailRecordsHtml(data){
   const m=data.match,round=recordMatchRoundNumber(m),ground=matchGround(m);
   const meta=[normDate(m.date),matchCompetition(m),halfLabel(matchHalfKey(m)),round?round+'R':'',m.round,m.no,ground?ground+'구장':''].filter(Boolean);
-  return '<div class="match-detail-navigation"><button type="button" class="match-detail-back" data-match-back>← 경기 목록으로</button><span>PC에서는 ESC · 휴대폰에서는 뒤로가기로 닫기</span></div><div class="detail-match-meta">'+meta.map(v=>'<span>'+esc(v)+'</span>').join('')+'</div>'+
+  return '<div class="match-detail-summary"><div class="match-detail-navigation"><button type="button" class="match-detail-back" data-match-back>← 경기 목록으로</button><span>PC에서는 ESC · 휴대폰에서는 뒤로가기로 닫기</span></div><div class="detail-match-meta">'+meta.map(v=>'<span>'+esc(v)+'</span>').join('')+'</div>'+
     '<div class="detail-scoreboard">'+data.teams.map((t,i)=>
       (i===1?'<div class="detail-score"><b>'+num(m.hs)+' <span>:</span> '+num(m.as)+'</b>'+fixtureMomHtml(m)+'</div>':'')+
       '<div class="detail-score-team">'+fixtureLogoHtml(t.team)+'<strong>'+esc(teamDisplayName(t.team))+'</strong><span>'+detailResultLabel(t.result)+' · 승점 '+t.points+(t.group?' · '+esc(leagueGroupLabel(t.group)):'')+'</span></div>'
-    ).join('')+'</div>'+matchYoutubeButtonsHtml(m,false)+(window.GGFCMatchRecords?.permissionMarkerHtml()||'')+(forfeitText(m)?'<p class="detail-notice">'+esc(forfeitText(m))+' · 승패와 승점은 몰수패 판정을 적용합니다.</p>':'')+
+    ).join('')+'</div>'+matchYoutubeButtonsHtml(m,false)+(window.GGFCMatchRecords?.permissionMarkerHtml()||'')+(forfeitText(m)?'<p class="detail-notice">'+esc(forfeitText(m))+' · 승패와 승점은 몰수패 판정을 적용합니다.</p>':'')+'</div>'+
+    '<div class="match-player-records" tabindex="0" aria-label="양 팀 선수별 경기 기록">'+
     '<div class="detail-team-columns">'+data.teams.map(t=>'<section class="detail-section"><h3>'+teamChip(t.team)+'</h3><p class="detail-note">감독: '+esc(t.coaches.join(', ')||'미등록')+' · 코치: '+esc(t.assistants.join(', ')||'미등록')+(t.squadDate?' · '+esc(t.squadDate)+' 스쿼드 기준':' · 해당 경기일 이전 팀스쿼드 없음')+'</p>'+detailMetricGrid([
       ['팀 득점',t.score],['도움',t.totals.a],['적용 팀파울',t.fouls],['개인파울 합계',t.totals.f],['선방',t.totals.sv],['MOM',t.totals.mom]
     ])+'<p class="detail-foul-note">팀파울 = 개인파울 + 추가 파울 · 추가 파울 '+t.rawFouls+'</p>'+detailPlayerTable(t,m)+(t.totals.ownGoal?'<p class="detail-note">자책골·베네핏 표기 '+t.totals.ownGoal+'골은 등록된 팀의 득점 기록에 포함됩니다.</p>':'')+
     (t.totals.g!==t.score?'<p class="detail-notice">팀 점수 '+t.score+'골 / 등록 득점자 합계 '+t.totals.g+'골</p>':'')+'</section>').join('')+'</div>'+
-    '<p class="detail-note">출석은 해당 경기의 출석 명단 기준입니다. 기록만 있고 출석이 미등록인 선수도 표시하며, 경기승점은 출석이 등록된 선수에게만 반영합니다.</p>'+detailUnassignedHtml(data.unassigned)+(m.memo||m.note?'<section class="detail-section"><h3>비고</h3><p class="detail-note detail-prewrap">'+esc([m.memo,m.note].filter(Boolean).join('\n'))+'</p></section>':'');
+    '<p class="detail-note">출석은 해당 경기의 출석 명단 기준입니다. 기록만 있고 출석이 미등록인 선수도 표시하며, 경기승점은 출석이 등록된 선수에게만 반영합니다.</p>'+detailUnassignedHtml(data.unassigned)+(m.memo||m.note?'<section class="detail-section"><h3>비고</h3><p class="detail-note detail-prewrap">'+esc([m.memo,m.note].filter(Boolean).join('\n'))+'</p></section>':'')+'</div>';
 }
 function matchDetailAttrs(m){
   if(!detailMatchKey(m.id))return '';
@@ -188,9 +189,10 @@ function refreshMatchDetailRecords(){
   if(ggfcDetailState?.kind!=='match')return;
   const m=verifiedRecords().matches.find(m=>verifiedFixtureKey(m)===ggfcDetailState.fixtureKey),panel=document.querySelector('#ggfcDetailBody .match-record-scroll');
   if(!panel)return;if(!m){closeGGFCDetail();return;}
-  const top=panel.scrollTop,x=[...panel.querySelectorAll('.detail-table-wrap')].map(e=>e.scrollLeft);
-  panel.innerHTML=matchDetailRecordsHtml(matchDetailData(m));panel.scrollTop=top;
-  panel.querySelectorAll('.detail-table-wrap').forEach((e,i)=>e.scrollLeft=x[i]||0);
+  const scrollAreas=()=>[panel,...panel.querySelectorAll('.match-detail-summary,.match-player-records,.detail-table-wrap')];
+  const offsets=scrollAreas().map(e=>[e.scrollLeft,e.scrollTop]);
+  panel.innerHTML=matchDetailRecordsHtml(matchDetailData(m));
+  scrollAreas().forEach((e,i)=>{if(offsets[i])[e.scrollLeft,e.scrollTop]=offsets[i];});
 }
 function rememberMatchDetailNavigation(){
   if(matchDetailNavigation||matchDetailPendingBack)return;

@@ -4018,6 +4018,55 @@ body:not(.admin-mode) #v-interleague :is(.note,.head>p){display:none!important}
 .match-record-row-actions button{padding:5px 5px;white-space:nowrap}
 .match-record-status{white-space:pre-line}
 
+/* Wide PC match view: video and result on the left, editable tables on the right. */
+@media (min-width:821px) and (min-height:400px){
+ html:not(.ggfc-mobile) .detail-match-fullscreen .ggfc-detail-body:has(>.match-video-dock){
+  display:grid;
+  grid-template-columns:minmax(0,58fr) minmax(350px,42fr);
+  grid-template-rows:auto minmax(0,1fr);
+ }
+ html:not(.ggfc-mobile) .detail-match-fullscreen .match-video-dock{
+  grid-area:1 / 1;
+ }
+ html:not(.ggfc-mobile) .detail-match-fullscreen .match-video-dock .match-youtube-player{
+  width:min(100%,calc((var(--ggfc-detail-viewport,100dvh) - 225px) * 16 / 9));
+  height:auto;
+  max-width:none;
+  max-height:none;
+  aspect-ratio:16 / 9;
+ }
+ html:not(.ggfc-mobile) .detail-match-fullscreen .match-video-dock+.match-record-scroll{display:contents}
+ html:not(.ggfc-mobile) .detail-match-fullscreen .match-video-dock+.match-record-scroll>.match-detail-summary{
+  grid-area:2 / 1;
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  overflow:auto;
+  padding:14px 18px;
+ }
+ html:not(.ggfc-mobile) .detail-match-fullscreen .match-detail-summary>*{flex-shrink:0}
+ html:not(.ggfc-mobile) .detail-match-fullscreen .match-detail-summary>.detail-scoreboard{order:-1;margin-bottom:8px;padding:12px}
+ html:not(.ggfc-mobile) .detail-match-fullscreen .match-video-dock+.match-record-scroll>.match-player-records{
+  grid-area:1 / 2 / 3;
+  min-width:0;
+  min-height:0;
+  overflow:auto;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+  padding:14px 12px;
+  border-left:1px solid #c8d6e5;
+ }
+ html:not(.ggfc-mobile) .detail-match-fullscreen .match-video-dock+.match-record-scroll .detail-team-columns{grid-template-columns:minmax(0,1fr)}
+ html:not(.ggfc-mobile) .detail-match-fullscreen .match-video-dock+.match-record-scroll .detail-table{border-collapse:separate;border-spacing:0}
+ html:not(.ggfc-mobile) .detail-match-fullscreen .match-player-records .detail-table td{padding-inline:4px}
+ html:not(.ggfc-mobile) .detail-match-fullscreen .match-player-records .match-count-cell{gap:2px}
+ html:not(.ggfc-mobile) .detail-match-fullscreen .match-player-records .match-count-cell button{width:22px;font-size:16px}
+ html:not(.ggfc-mobile) .detail-match-fullscreen .match-player-records .match-count-cell input{width:38px}
+ html:not(.ggfc-mobile) .detail-match-fullscreen .match-video-dock+.match-record-scroll .detail-table th:first-child{position:sticky;left:0;z-index:2;background:#fff}
+ html:not(.ggfc-mobile) .detail-match-fullscreen .match-video-dock+.match-record-scroll .detail-table thead th:first-child{background:#edf2f8}
+ html:not(.ggfc-mobile) .detail-match-fullscreen .match-video-dock+.match-record-scroll .detail-table tfoot th:first-child{background:#f0f5fb}
+}
+
 /* V3.25.80: match the live mobile standings to neighboring Overview cards. */
 .ggfc-mobile #v-dash #exportTeamStandingSection .record-period-head .sec-t{font-size:16px;line-height:1.4}
 .ggfc-mobile #v-dash #exportTeamStandingSection .record-period-label{font-size:11px;line-height:1.5}

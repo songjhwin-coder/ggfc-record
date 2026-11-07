@@ -1,4 +1,4 @@
-/* Public missing-record channel. Never writes ggfc/v3 or changes ability rates. */
+/* Public channel for match counts and corrections, stored separately from ggfc/v3. */
 window.GGFCPublicCounters=(()=>{
  const fields=['sot','keyPass','defSuccess','saves'],countPattern=/^(0|[1-9][0-9]{0,3}|10000)$/;
  const cacheKey=KEY+'-shared-match-counters-v1',own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);

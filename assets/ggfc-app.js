@@ -786,7 +786,7 @@ function mergeLiveCounterTeamPlayerRecords(result){
   const matched=result.matched.slice(),issues=result.issues.slice(),fixtures=new Map(),canon=soccerBeeCanonicalPlayerMap();
   const appearance=(id,team,player)=>JSON.stringify([String(id),teamRecordTeamKey(team),normalizePlayerMatchKey(player)]);
   const attendees=new Set(verifiedRecords().attendance.map(r=>appearance(r.id,r.team,r.player)));
-  const saves=new Set(verifiedRecords().saves.filter(r=>teamRecordValuePresent(r.saves)).map(r=>appearance(r.id,r.team,r.player)));
+  const saves=new Map(verifiedRecords().saves.filter(r=>teamRecordValuePresent(r.saves)).map(r=>[appearance(r.id,r.team,r.player),Number(r.saves)]));
   const positions=new Map(matched.map((r,i)=>[appearance(r.id,r.team,r.player),i])),seen=new Set();
   for(const m of verifiedRecords().matches){const key=verifiedFixtureKey(m);if(!fixtures.has(key))fixtures.set(key,[]);fixtures.get(key).push(m);}
   const repeated=new Set(),keys=new Set();for(const r of liveCounterTeamPlayerRecords||[]){if(!r)continue;const key=JSON.stringify([r.fixtureKey,teamRecordTeamKey(r.team),normalizePlayerMatchKey(r.player)]);if(keys.has(key))repeated.add(key);keys.add(key);}
@@ -798,20 +798,20 @@ function mergeLiveCounterTeamPlayerRecords(result){
     if(repeated.has(key)){if(!seen.has(key))fail('공유 카운트 중복을 확인하세요');seen.add(key);continue;}
     if(!m||!team||!player||isOwnGoalPlayer(player)||!attendees.has(appearance(m.id,team,player))||!playerEligibleOn(player,m.date)){fail('공유 카운트의 경기·출전 명단을 확인하세요');continue;}
     if(result.issues.some(r=>r.source!=='COUNTER'&&appTeamRecordBlocked(r,m,team,player))){fail('원본 기록 충돌을 먼저 확인하세요');continue;}
-    const index=positions.get(appearance(m.id,team,player))??-1;
+    const appearanceKey=appearance(m.id,team,player),index=positions.get(appearanceKey)??-1;
     const current=index>=0?matched[index]:{date:normDate(m.date),comp:m.comp,half:matchHalfKey(m),round:m.round,no:m.no,inputTeam:team,team,player,id:m.id,attendanceConfirmed:true,sot:null,keyPass:null,defSuccess:null,saves:null};
     const sharedValues=Object.fromEntries(APP_TEAM_RECORD_FIELDS.map(k=>[k,teamRecordValuePresent(current[k])?Number(current[k]):null])),row={...current,sharedValues,counterFields:[]};
+    sharedValues.saves??=saves.get(appearanceKey)??null;
     for(const k of APP_TEAM_RECORD_FIELDS){
       if(!Object.prototype.hasOwnProperty.call(raw.values||{},k))continue;
       const value=raw.values[k],base=raw.baseValues?.[k];
-      if(typeof value!=='number'||!Number.isSafeInteger(value)||value<0){fail('공유 카운트 값을 확인하세요');continue;}
-      if(k==='saves'&&(!matchCounterGoalkeeperSource(m,team,player)||saves.has(appearance(m.id,team,player))))continue;
-      if(teamRecordValuePresent(current[k])&&!(current.appFields||[]).includes(k))continue;
+      if(typeof value!=='number'||!Number.isSafeInteger(value)||value<0||value>10000){fail('공유 카운트 값을 확인하세요');continue;}
+      if(k==='saves'&&sharedValues.saves===null&&!matchCounterGoalkeeperSource(m,team,player))continue;
       if((teamRecordValuePresent(base)?Number(base):null)!==sharedValues[k]){fail('저장 후 DB 값이 변경된 공유 항목은 반영하지 않습니다');continue;}
       row[k]=value;row.counterFields.push(k);
     }
     if(!row.counterFields.length)continue;
-    if(index>=0)matched[index]=row;else{positions.set(appearance(m.id,team,player),matched.length);matched.push(row);}
+    if(index>=0)matched[index]=row;else{positions.set(appearanceKey,matched.length);matched.push(row);}
   }
   return {...result,matched,issues};
 }
@@ -7118,7 +7118,7 @@ function renderActiveView(v,options={}){
   mobilePageSwipe?.rendered(next);
 }
 // Analysis assets are requested only by an administrator opening this menu.
-const ABILITY_AUDIT_ASSETS={ui:'assets/ggfc-ability-audit.js?v=77a44d4ccb366b8e',css:'assets/ggfc-ability-audit.css?v=19c81455534472fa',worker:'assets/ggfc-ability-audit-worker.js?v=bc24a272ba7cbc3e'};
+const ABILITY_AUDIT_ASSETS={ui:'assets/ggfc-ability-audit.js?v=77a44d4ccb366b8e',css:'assets/ggfc-ability-audit.css?v=19c81455534472fa',worker:'assets/ggfc-ability-audit-worker.js?v=a5f59c7dbcab4dd1'};
 let abilityAuditLoader=null;
 function renderAbilityAudit(){
  const root=document.getElementById('abilityAuditRoot');
