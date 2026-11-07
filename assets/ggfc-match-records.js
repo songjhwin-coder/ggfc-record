@@ -3,6 +3,7 @@ window.GGFCMatchRecords=(()=>{
  const fields={sot:'유효슛',keyPass:'키패스',defSuccess:'수비성공',saves:'선방'};
  const drafts=new Map(),saving=new Set(),statuses=new Map(),conflicts=new Map(),localRows=new Map(),localKey=KEY+'-viewer-match-counters-v1';
  let pressedPointer=null,refreshPending=false;
+ const batch={date:'',running:false,stop:false,preview:null,summary:'',done:0,total:0,result:null};
  const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k),signedIn=()=>admin&&GGFC.authorized;
  const eligible=(m,r)=>r.att&&!r.ownGoal&&!!m.round&&!!m.no&&playerEligibleOn(r.player,m.date);
  const metric=v=>teamRecordValuePresent(v)?Number(v):null;
@@ -19,7 +20,7 @@ window.GGFCMatchRecords=(()=>{
    const defaultFields=Array.isArray(row.defaultFields)?row.defaultFields.filter(k=>own(values,k)&&values[k]===0):[];
    if(valid&&Object.keys(values).length)localRows.set(storedKey(row),{...row,values,baseValues,seenValues,defaultFields,shareStamp:typeof row.shareStamp==='string'?row.shareStamp:null});
   }}catch(e){/* Damaged local data never replaces shared DB. */}}
- function writeLocal(next){try{if(next.size)localStorage.setItem(localKey,JSON.stringify({version:1,records:[...next.values()]}));else localStorage.removeItem(localKey);localRows.clear();next.forEach((v,k)=>localRows.set(k,v));return true;}catch(e){return false;}}
+ function writeLocal(next){try{if(next.size)localStorage.setItem(localKey,JSON.stringify({version:1,records:[...next.values()]}));else localStorage.removeItem(localKey);localRows.clear();next.forEach((v,k)=>localRows.set(k,v));batch.preview=null;return true;}catch(e){return false;}}
  function context(key,cache){if(cache?.has(key))return cache.get(key);let id;try{id=JSON.parse(key);}catch(e){return null;}const m=verifiedRecords().matches.find(x=>verifiedFixtureKey(x)===id[0]);if(!m)return null;let found=null;for(const team of matchDetailData(m).teams)for(const row of team.rows){const rowKey=appTeamRecordKey(m,team.team,row.player),value={m,team:team.team,row};cache?.set(rowKey,value);if(rowKey===key)found=value;}return found;}
  function statusFor(key){
   const review=conflicts.get(key);
@@ -69,7 +70,7 @@ window.GGFCMatchRecords=(()=>{
    if(!own(draft.seenValues,field)&&!(local&&own(local.values,field)&&!defaulted(local,field)))draft.seenValues[field]=input.dataset.sharedValue===''?null:Number(input.dataset.sharedValue);
   }
   if(Object.keys(draft.values).length)drafts.set(key,draft);else drafts.delete(key);
-  input.value=value;statuses.delete(key);updateRowState(key);GGFC.refreshUI();return true;
+  input.value=value;statuses.delete(key);batch.preview=null;updateRowState(key);GGFC.refreshUI();return true;
  }
  function flushRecordRefresh(savedKey){
   if(!refreshPending||pressedPointer!==null)return;
@@ -97,7 +98,7 @@ window.GGFCMatchRecords=(()=>{
    }else if(result.conflicts)conflicts.set(key,result.conflicts);
    else statuses.set(key,result.message);
    return result.ok;
-  }finally{saving.delete(key);requestRecordRefresh(key);updateRowState(key);}
+  }finally{saving.delete(key);requestRecordRefresh(key);updateRowState(key);if(!batch.running&&document.getElementById('v-data')?.classList.contains('on'))renderBatchControls();}
  }
  async function saveRow(key){
   const local=localRows.get(key),draft=drafts.get(key),c=context(key);
@@ -120,11 +121,66 @@ window.GGFCMatchRecords=(()=>{
   drafts.delete(key);conflicts.delete(key);statuses.set(key,'기기 저장 · 공유 대기');
   requestRecordRefresh();return publishLocal(key);
  }
- function cancel(key){if(saving.has(key))return;drafts.delete(key);statuses.delete(key);refreshMatchDetailRecords();GGFC.refreshUI();}
- function clearLocal(key){if(saving.has(key))return;const next=new Map(localRows);next.delete(key);if(!writeLocal(next)){toast('기기 저장 상태를 확인하세요.');return;}drafts.delete(key);statuses.delete(key);conflicts.delete(key);refreshMatchDetailRecords();}
+ function cancel(key){if(saving.has(key))return;drafts.delete(key);statuses.delete(key);batch.preview=null;refreshMatchDetailRecords();GGFC.refreshUI();}
+ function clearLocal(key){if(saving.has(key))return;const next=new Map(localRows);next.delete(key);if(!writeLocal(next)){toast('기기 저장 상태를 확인하세요.');return;}drafts.delete(key);statuses.delete(key);conflicts.delete(key);refreshMatchDetailRecords();GGFC.refreshUI();}
  function reconcile(){for(const [key,local] of localRows){if(drafts.has(key)||saving.has(key))continue;const shared=window.GGFCPublicCounters?.latest(key);if(!window.GGFCPublicCounters?.sameValues(shared,local.values,local.defaultFields))continue;const next=new Map(localRows);next.delete(key);if(writeLocal(next)){conflicts.delete(key);statuses.set(key,'공유 반영 완료');}}}
  async function retryPending(){if(!window.GGFCPublicCounters?.ready)return;for(const key of [...localRows.keys()])if(!drafts.has(key))await publishLocal(key);}
- function refreshPermissions(){const cache=new Map();for(const el of document.querySelectorAll('[data-match-record-row]'))updateRowState(el.dataset.matchRecordRow,context(el.dataset.matchRecordRow,cache));}
+ function batchPlan(date){
+  date=normDate(date);const matches=verifiedRecords().matches.filter(m=>normDate(m.date)===date),rows=[],seen=new Set();let count=0,skipped=0;
+  for(const m of matches)for(const team of matchDetailData(m).teams)for(const r of team.rows){
+   if(!eligible(m,r))continue;const key=appTeamRecordKey(m,team.team,r.player);if(seen.has(key))continue;seen.add(key);
+   const missing=Object.keys(fields).filter(k=>allowed(r,k)&&metric(r.recordValues[k])===null);if(!missing.length)continue;
+   if(drafts.has(key)||localRows.has(key)||saving.has(key)||conflicts.has(key)){skipped++;continue;}
+   rows.push({key,fields:missing});count+=missing.length;
+  }
+  return {date,matches:matches.length,players:rows.length,fields:count,skipped,rows};
+ }
+ function renderBatchControls(){
+  const root=document.getElementById('matchCounterBatchPanel');if(!root)return;root.hidden=!signedIn();if(root.hidden)return;
+  const select=root.querySelector('#matchCounterBatchDate'),button=root.querySelector('#matchCounterBatchSave'),stop=root.querySelector('#matchCounterBatchStop');
+  if(!batch.running){
+   const dates=[...new Set(verifiedRecords().matches.map(m=>normDate(m.date)).filter(Boolean))].sort().reverse(),signature=dates.join('|');
+   if(select.dataset.dates!==signature){select.dataset.dates=signature;select.innerHTML='<option value="">경기일 선택</option>'+dates.map(date=>'<option value="'+esc(date)+'">'+esc(date)+'</option>').join('');}
+   if(batch.date&&!dates.includes(batch.date)){batch.date='';batch.preview=null;}select.value=batch.date;
+  }
+  select.disabled=batch.running||!GGFC.canEdit();
+  const plan=batch.running?null:(batch.preview??=batchPlan(batch.date));
+  root.querySelector('#matchCounterBatchPreview').textContent=batch.running?'선택한 경기일 '+batch.date+' · 선수 기록 '+batch.done+' / '+batch.total+'건 처리':!batch.date?'일괄 저장할 경기일을 선택하세요.':plan.matches+'경기 · 미확정 '+plan.players+'명·경기 / '+plan.fields+'항목을 0회로 확정'+(plan.skipped?' · 수정 중·공유 대기 '+plan.skipped+'명·경기 제외':'');
+  button.disabled=batch.running||!GGFC.canEdit()||!window.GGFCPublicCounters?.ready||!plan?.players;
+  button.textContent=batch.running?'공유 저장 중…':'미확정 0회 일괄 공유 저장';stop.hidden=!batch.running;stop.disabled=batch.stop;
+  root.querySelector('#matchCounterBatchStatus').textContent=batch.summary||(!window.GGFCPublicCounters?.ready?'공유 연결을 확인한 뒤 저장할 수 있습니다.':'');
+  select.onchange=()=>{if(batch.running)return;batch.date=select.value;batch.preview=null;batch.summary='';batch.result=null;renderBatchControls();};
+  button.onclick=()=>saveDateZeros(batch.date).catch(()=>{batch.summary='일괄 저장 중 오류가 발생했습니다. 공유 상태와 기기 대기 기록을 확인하세요.';renderBatchControls();});
+  stop.onclick=()=>{batch.stop=true;batch.summary='현재 전송의 응답을 받은 뒤 중단합니다.';renderBatchControls();};
+ }
+ async function saveDateZeros(date){
+  if(batch.running||!signedIn()||!GGFC.canEdit()||!window.GGFCPublicCounters?.ready)return {ok:false,message:'관리자 인증과 공유 연결을 확인하세요.'};
+  const plan=batchPlan(date);if(!plan.players)return {ok:false,message:'저장할 미확정 항목이 없습니다.'};
+  const revision=GGFC.publicCounterContext().revision;
+  Object.assign(batch,{date:plan.date,running:true,stop:false,preview:null,summary:'미확정 항목을 선수별로 공유 저장하고 있습니다.',done:0,total:plan.players,result:null});renderBatchControls();
+  let saved=0,skipped=plan.skipped,failed=0,reason='';
+  try{
+   for(const item of plan.rows){
+    if(batch.stop){reason='사용자 중단';break;}
+    if(!signedIn()||!GGFC.canEdit()||!GGFCPublicCounters.ready){reason='관리자 인증 또는 공유 연결 확인 필요';break;}
+    if(GGFC.publicCounterContext().revision!==revision){reason='원본 DB가 변경되어 중단했습니다. 경기일을 다시 확인하세요.';break;}
+    const c=context(item.key);
+    if(!c||normDate(c.m.date)!==plan.date||!eligible(c.m,c.row)||!hasMissing(c.row)||drafts.has(item.key)||localRows.has(item.key)||saving.has(item.key)||conflicts.has(item.key)){skipped++;batch.done++;renderBatchControls();continue;}
+    const ok=await saveRow(item.key);batch.done++;
+    if(ok)saved++;
+    else{failed++;reason=statusFor(item.key)||'공유 응답을 확인하지 못했습니다.';break;}
+    batch.summary='공유 완료 '+saved+'명·경기 · '+batch.done+' / '+batch.total+'건 처리';renderBatchControls();
+   }
+  }catch(e){failed++;reason='전송 오류 · 기기 대기 기록과 공유 상태를 확인하세요.';}
+  finally{
+   const remaining=plan.players-batch.done,ok=!reason&&!failed;
+   batch.result={ok,date:plan.date,saved,skipped,failed,remaining,reason};batch.running=false;batch.preview=null;
+   batch.summary=(ok?'일괄 공유 완료':'일괄 저장 중단')+' · 공유 완료 '+saved+'명·경기 · 제외 '+skipped+'명·경기'+(failed?' · 공유 대기·실패 '+failed+'명·경기':'')+(remaining?' · 미처리 '+remaining+'명·경기':'')+(reason?' · '+reason:'');
+   renderBatchControls();window.GGFCPublicCounters?.refreshUI();GGFC.refreshUI();
+  }
+  return batch.result;
+ }
+ function refreshPermissions(){const cache=new Map();for(const el of document.querySelectorAll('[data-match-record-row]'))updateRowState(el.dataset.matchRecordRow,context(el.dataset.matchRecordRow,cache));if(document.getElementById('v-data')?.classList.contains('on'))renderBatchControls();}
  document.addEventListener('pointerdown',e=>{if(e.target.closest('#matchRecordScroll'))pressedPointer=e.pointerId;},true);
  function releasePress(e){if(e.pointerId===pressedPointer){pressedPointer=null;setTimeout(flushRecordRefresh,0);}}
  document.addEventListener('pointerup',releasePress,true);
@@ -149,7 +205,7 @@ window.GGFCMatchRecords=(()=>{
   if(player&&html)player.outerHTML=html;
  });
  readLocal();
- return {canEdit:eligible,rowActionsHtml,cellHtml,playerEditorHtml,permissionMarkerHtml,saveRow,refreshPermissions,retryPending,get pendingCount(){return localRows.size;},get dirty(){return drafts.size>0;},get cloudEditing(){return false;},discard(){drafts.clear();statuses.clear();refreshMatchDetailRecords();},onPublicChanged(){reconcile();requestRecordRefresh();},onDatabaseChanged(){reconcile();requestRecordRefresh();retryPending();}};
+ return {canEdit:eligible,rowActionsHtml,cellHtml,playerEditorHtml,permissionMarkerHtml,saveRow,refreshPermissions,retryPending,batchPlan,renderBatchControls,saveDateZeros,get batchRunning(){return batch.running;},get batchResult(){return batch.result;},get pendingCount(){return localRows.size;},get dirty(){return drafts.size>0;},get cloudEditing(){return false;},discard(){drafts.clear();statuses.clear();batch.preview=null;refreshMatchDetailRecords();},onPublicChanged(){batch.preview=null;reconcile();requestRecordRefresh();if(!batch.running&&document.getElementById('v-data')?.classList.contains('on'))renderBatchControls();},onDatabaseChanged(){batch.preview=null;reconcile();requestRecordRefresh();retryPending();if(document.getElementById('v-data')?.classList.contains('on'))renderBatchControls();}};
 })();
 window.GGFCMatchRecords.onDatabaseChanged();
 window.addEventListener('pageshow',()=>{window.GGFCMatchRecords.refreshPermissions();window.GGFCMatchRecords.retryPending();});

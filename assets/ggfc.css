@@ -3381,6 +3381,9 @@ body:not(.admin-mode) .view>.head>p,body:not(.admin-mode) .view>.insight-page-he
 .top-menu-nav{display:flex;align-items:stretch;gap:4px;flex:1;min-width:0;height:100%;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:#bac7d5 transparent}
 .top-menu-nav button{flex:none;display:flex;align-items:center;justify-content:center;max-width:240px;padding:8px 13px;border:0;border-bottom:3px solid transparent;background:none;color:#092348;line-height:1.3;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;overflow-wrap:anywhere}
 .top-menu-nav button.on{border-bottom-color:#e3264e;background:#f4f7fa}.top-menu-nav button:hover{background:#f4f7fa}
+.top-menu-nav button{gap:6px}.top-menu-nav .top-menu-icon{width:16px;height:16px;flex-shrink:0}
+.counter-batch-actions{display:flex;align-items:flex-end;flex-wrap:wrap;gap:10px;margin:12px 0}.counter-batch-actions label{display:grid;gap:6px;font-size:13px;font-weight:700}.counter-batch-actions select{min-height:40px;max-width:100%;padding:8px;border:1px solid var(--border);border-radius:7px;background:var(--canvas);color:var(--text)}
+#matchCounterBatchStatus{font-size:13px;line-height:1.6;overflow-wrap:anywhere}
 .ggfc-topbar button:focus-visible{outline:3px solid #70a5ce;outline-offset:-3px}
 html:not(.ggfc-mobile) #ggfcSidebar{top:var(--ggfc-topbar-h);transition:transform .18s,visibility .18s}
 html:not(.ggfc-mobile) body>main{padding-top:calc(var(--ggfc-topbar-h) + 24px);padding-left:calc(var(--ggfc-sidebar-w) + 28px);transition:padding-left .18s}

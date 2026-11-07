@@ -4677,7 +4677,7 @@ function renderDashboardPeriodControls(){
     if(note){
       if(kind==="ranking"){
         const scope=dashboardRankingInfo(info);
-        note.textContent=scope.label+' · '+scope.list.length+'경기 · 선택 날짜와 대회 기준. 대표승점은 기간 안에 완전히 포함된 확정 구간만 합산합니다.';
+        note.textContent=scope.label+' · '+scope.list.length+'경기 · 선택 날짜와 대회 기준. 대표승점은 기간에 포함된 완료 구간의 점수와 개별승점 구간에서 선택한 경기의 승점(승 3·무 1·패 0)을 합산합니다.';
       }else{
         note.innerHTML='<b>'+esc(info.label)+'</b> · '+info.list.length+'경기 · DB 최종일 기준 기본조회 · 상단 대회 필터 '+(comp==="ALL"?'전체 대회':'「'+esc(comp)+'」')+' 적용';
       }
@@ -4716,7 +4716,7 @@ function halfTeamRankingInfo(info){
 }
 function halfTeamRanking(info){
   const scope=halfTeamRankingInfo(info), attendance=teamAttendanceCounts(scope.list);
-  const detail=representativePointsDetailForList(scope.list,scope,{representativeOnly:true});
+  const detail=representativePointsDetailForList(scope.list,scope,{representativeOnly:true,includeIndividual:true});
   const map=new Map(statsFromMatches(scope.list).map(t=>[t.team,{...t}]));
   Object.keys(detail.totals).forEach(team=>{if(!scope.exactScope&&!map.has(team))map.set(team,{team,p:0,w:0,d:0,l:0,gf:0,ga:0,f:0,pts:0});});
   const teams=[...map.values()].map(t=>({...t,representative:num(detail.totals[t.team]),attendance:num(attendance[t.team])}));
@@ -4742,7 +4742,10 @@ function teamAttendanceCounts(list){
   return totals;
 }
 function representativeSegmentQueryIncluded(seg,info,list,scoreMode){
-  if(info?.exactScope)return !!seg.start&&!!seg.end&&(!info.start||seg.start>=info.start)&&(!info.end||seg.end<=info.end);
+  if(info?.exactScope){
+    if(String(scoreMode||seg.mode||'REP').toUpperCase()==='IND')return !!seg.start&&!!seg.end&&(!info.end||seg.start<=info.end)&&(!info.start||seg.end>=info.start);
+    return !!seg.start&&!!seg.end&&(!info.start||seg.start>=info.start)&&(!info.end||seg.end<=info.end);
+  }
   const mode=String((info&&info.mode)||'').toUpperCase();
   const year=String((info&&info.year)||seg.year||'');
   if(year && seg.year!==year) return false;
@@ -4851,7 +4854,7 @@ function representativeSegmentsWithFinalization(year,half,list,existing){
   });
 }
 function representativePointsDetailForList(list,info,options){
-  const queryList=uniqueRecordMatches(list||[]), totals={}, segments=[], representativeOnly=!!(options&&options.representativeOnly);
+  const queryList=uniqueRecordMatches(list||[]), totals={}, segments=[], representativeOnly=!!(options&&options.representativeOnly),includeIndividual=options?.includeIndividual===true;
   const explicitYear=String((info&&info.year)||"");
   const queryYears=[...new Set(queryList.map(m=>normDate(m.date).slice(0,4)).filter(y=>/^\d{4}$/.test(y)&&parseInt(y,10)>=2026))];
   /* 팀순위 조회에서 시즌이 명시되면 경기 유무와 관계없이 그 시즌의 저장 설정을 직접 읽는다. */
@@ -4868,8 +4871,8 @@ function representativePointsDetailForList(list,info,options){
           year:y,half:halfKey,index:segIndex+1,start:normDate(seg.s),end:normDate(seg.e),
           complete:seg.complete===true,enabled:cfg.repEnabled===true,mode
         };
-        descriptor.inQuery=!representativeOnly || mode==="REP" ? representativeSegmentQueryIncluded(descriptor,info,queryList,mode) : false;
-        if(representativeOnly && mode!=="REP"){ segments.push(descriptor); return; }
+        descriptor.inQuery=(!representativeOnly || mode==="REP" || includeIndividual) && representativeSegmentQueryIncluded(descriptor,info,queryList,mode);
+        if(representativeOnly && mode!=="REP" && !includeIndividual){ segments.push(descriptor); return; }
 
         let sourceList=uniqueRecordMatches(eligibleAll.filter(m=>{
           const d=normDate(m.date);
@@ -4891,6 +4894,8 @@ function representativePointsDetailForList(list,info,options){
         if(mode==="IND" && asOf && (queryMode==="DAY"||queryMode==="LATEST"||queryMode==="RANGE")){
           sourceList=sourceList.filter(m=>normDate(m.date)<=asOf);
         }
+        // Individual points follow the actual selected fixtures, including partial segments.
+        if(mode==='IND' && (info?.exactScope||includeIndividual)){const ids=new Set(queryList.map(m=>verifiedFixtureKey(m)));sourceList=sourceList.filter(m=>ids.has(verifiedFixtureKey(m)));}
         descriptor.games=sourceList.length;
         descriptor.leagues=[];
         if(!descriptor.enabled || !descriptor.inQuery){segments.push(descriptor);return;}
@@ -4973,7 +4978,7 @@ function renderRepresentativePointBreakdown(detail,info){
   const repComplete=relevant.filter(x=>x.mode!=="IND"&&x.complete).length;
   const repPending=relevant.filter(x=>x.mode!=="IND"&&!x.complete).length;
   const indCount=relevant.filter(x=>x.mode==="IND").length;
-  box.innerHTML='<details class="rep-breakdown"><summary>구간별 승점 산출 내역 확인 '+(repComplete?'<span class="rep-status-chip">대표 완료 '+repComplete+'</span>':'')+(repPending?' <span class="rep-status-chip off">대표 미완료 '+repPending+'</span>':'')+(indCount?' <span class="rep-mode-chip ind">개별 '+indCount+'구간</span>':'')+'</summary><div class="rep-breakdown-note" data-dashboard-admin data-export-ignore>'+esc(info.label)+' 기준 · 대표승점은 현재 조회 반기의 완료 구간만 반영 · 다른 반기 및 개별승점 구간은 팀 순위 대표승점에서 제외 · '+(totalPairs||'확정 적용승점 없음')+'</div><div class="rep-breakdown-grid">'+cards+'</div></details>';
+  box.innerHTML='<details class="rep-breakdown"><summary>구간별 승점 산출 내역 확인 '+(repComplete?'<span class="rep-status-chip">대표 완료 '+repComplete+'</span>':'')+(repPending?' <span class="rep-status-chip off">대표 미완료 '+repPending+'</span>':'')+(indCount?' <span class="rep-mode-chip ind">개별 '+indCount+'구간</span>':'')+'</summary><div class="rep-breakdown-note" data-dashboard-admin data-export-ignore>'+esc(info.label)+' 기준 · 대표승점은 조회 범위의 완료 구간 점수 + 개별승점 구간의 경기별 승점 · 다른 반기 이월 없음 · '+(totalPairs||'확정 적용승점 없음')+'</div><div class="rep-breakdown-grid">'+cards+'</div></details>';
 }
 
 function refreshRecordLinkedViews(){
@@ -5536,7 +5541,7 @@ function renderDashboardQueryRankings(info){
   const ranking=halfTeamRanking(info), {teams,ranks:teamPointRanks,scope}=ranking;
   const basis=scope.label+' · '+recordRoundRangeLabel(scope.list)+' · '+scope.list.length+'경기';
   if($("#dashTeamPointPeriod")) $("#dashTeamPointPeriod").textContent=basis;
-  if($("#dashTeamPointQueryNote")) $("#dashTeamPointQueryNote").textContent='대표승점 → 누적 참석수 → 누적 승점 순으로 정렬합니다. 현재 선택한 기간의 누적값입니다. 대표승점은 기간 안에 완전히 포함된 확정 구간만 반영합니다. 참석수는 같은 날·같은 팀·같은 선수를 1명으로 계산하며 다른 날짜의 참석은 합산합니다. 누적 승점은 승 3점·무 1점·패 0점의 합계에서 선택 기간의 승점삭감을 차감합니다. 대표승점에 감점액을 다시 차감하지 않으며 확정 구간은 재확정 전까지 유지됩니다. 세 기준이 같으면 공동순위입니다.';
+  if($("#dashTeamPointQueryNote")) $("#dashTeamPointQueryNote").textContent='대표승점 → 누적 참석수 → 누적 승점 순으로 정렬합니다. 현재 선택한 기간의 누적값입니다. 완료된 대표승점 구간 점수에 조회 범위의 개별승점 구간 경기 승점을 매 경기 합산합니다. 참석수는 같은 날·같은 팀·같은 선수를 1명으로 계산하며 다른 날짜의 참석은 합산합니다. 누적 승점은 승 3점·무 1점·패 0점의 합계에서 선택 기간의 승점삭감을 차감합니다. 개별승점 구간은 기존 승점삭감을 포함한 경기 승점을 합산하고 감점액을 한 번 더 빼지 않습니다. 확정된 대표승점 구간은 재확정 전까지 유지됩니다. 세 기준이 같으면 공동순위입니다.';
   $("#dashTeamPointRank").innerHTML=tbl(
     [{t:"#"},{t:"팀"},{t:"대표승점",n:1},{t:"누적 참석수",n:1},{t:"누적 승점",n:1},{t:"득실차",n:1}],
     teams.map((t,i)=>['<span class="rank'+(teamPointRanks[i]<=3?' top':'')+'">'+teamPointRanks[i]+'</span>',teamChip(t.team),'<span class="rep-point'+(t.representative?'':' zero')+'">'+t.representative+'</span>','<b>'+t.attendance+'</b>','<b>'+t.pts+'</b>',(t.gf-t.ga>0?'+':'')+(t.gf-t.ga)])
@@ -6862,6 +6867,7 @@ function renderData(){
     TEMPLATE.map(t=>['<b>'+esc(t.name)+'</b>', '<code>'+esc(t.head)+'</code>', '<span class="muted">'+esc(t.desc)+'</span>']));
   ["#upAll","#clearBtn","#importJson","#sampleBtn"].forEach(s=>$(s).disabled=!admin);
   syncAbilityAdminControls();
+  window.GGFCMatchRecords?.renderBatchControls();
   renderRecordDataValidation();
 }
 function renderCardSettings(){
@@ -6935,7 +6941,7 @@ function renderBest5(){
 /* V3.25.25 — menu publication settings; data authorization remains in Firebase. */
 const MEMBER_MENUS=[
  {id:'squad',label:'팀 스쿼드'}, {id:'insights',label:'주간 레코드'},
- {id:'dash',label:'주간 경기 결과'}, {id:'interleague',label:'인터리그 승률 현황'}, {id:'player',label:'선수 명단'},
+ {id:'dash',label:'경기 결과'}, {id:'interleague',label:'인터리그 승률 현황'}, {id:'player',label:'선수 명단'},
  {id:'goalkeeper',label:'골레이로 랭킹'}, {id:'ability',label:'선수 OVR 현황'},
  {id:'chem',label:'베스트 듀오'}, {id:'best5',label:'주간 베스트 5'},
  {id:'maker',label:'팀 메이커'}, {id:'alltime',label:'GG 역대 기록'},
@@ -6953,7 +6959,7 @@ function normalizedMenuOrder(raw,items){
  const known=items.map(m=>m.id),seen=new Set();
  return [...(Array.isArray(raw)?raw:[]),...known].filter(id=>known.includes(id)&&!seen.has(id)&&seen.add(id));
 }
-const LEGACY_MENU_LABELS={squad:['Team Squad'],insights:['Record Stories'],dash:['Overview'],interleague:['Interleague Stats'],player:['Player Stats'],ability:['Player Ratings'],chem:['Player Analysis'],best5:['Weekly Best 5'],maker:['Team Maker'],alltime:['All-Time Records'],leadership:['역대 운영진','Leadership History'],team:['Team Stats']};
+const LEGACY_MENU_LABELS={squad:['Team Squad'],insights:['Record Stories'],dash:['Overview','주간 경기 결과'],interleague:['Interleague Stats'],player:['Player Stats'],ability:['Player Ratings'],chem:['Player Analysis'],best5:['Weekly Best 5'],maker:['Team Maker'],alltime:['All-Time Records'],leadership:['역대 운영진','Leadership History'],team:['Team Stats']};
 function navigationSettings(raw=DB.settings?.menuNavigation){
  raw=raw&&typeof raw==='object'?raw:{};const labels={};
  for(const m of [...MEMBER_MENUS,...ADMIN_MENUS]){const s=raw.labels?.[m.id];if(typeof s==='string'&&s.trim()&&!LEGACY_MENU_LABELS[m.id]?.some(label=>label.toLowerCase()===s.trim().toLowerCase()))labels[m.id]=s.trim().slice(0,32);}
@@ -6999,7 +7005,7 @@ function syncMenuNavigation(){
  const temp=tabs.querySelector('.sidebar-temp-title');if(temp)temp.hidden=true;
  adminTitle.hidden=!admin;
  const top=document.getElementById('topMenuNav');if(top){
-  top.innerHTML=orderedMenus(false,nav).filter(m=>menuViewAllowed(m.id)).map(m=>'<button type="button" data-top-menu="'+m.id+'" title="'+esc(menuLabel(m.id,nav))+'">'+esc(menuLabel(m.id,nav))+'</button>').join('');
+  top.innerHTML=orderedMenus(false,nav).filter(m=>menuViewAllowed(m.id)).map(m=>'<button type="button" data-top-menu="'+m.id+'" title="'+esc(menuLabel(m.id,nav))+'">'+(tabs.querySelector('[data-v="'+m.id+'"] .sidebar-menu-icon')?.outerHTML.replace('sidebar-menu-icon','sidebar-menu-icon top-menu-icon')||'')+'<span>'+esc(menuLabel(m.id,nav))+'</span></button>').join('');
  }
  const brand=document.getElementById('topBrandName');if(brand)brand.textContent=displaySettings().brandTitle||'GGFC';
 }

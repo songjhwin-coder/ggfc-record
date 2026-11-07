@@ -27,7 +27,7 @@ window.GGFCPublicCounters=(()=>{
   if(scheduled)return;scheduled=true;
   queueMicrotask(()=>{
    scheduled=false;invalidateVerifiedRecords();
-   if(GGFC.editing||GGFC.pending)renderPending=true;
+   if(GGFC.editing||GGFC.pending||window.GGFCMatchRecords?.batchRunning)renderPending=true;
    else{
     renderPending=false;renderAll();
     if(typeof playerCardHistoryState!=='undefined'&&playerCardHistoryState&&document.querySelector('#playerCardMask')?.classList.contains('on'))openPlayerCard(playerCardHistoryState.player,playerCardHistoryState.query);
@@ -57,7 +57,7 @@ window.GGFCPublicCounters=(()=>{
    c.ref.on('value',listener,e=>{loaded=false;error=String(e.code||'접근 오류');window.GGFCMatchRecords?.onPublicChanged();refreshPanel();});
   }
   const connected=!!c.ready;if(connected&&!connectedBefore)queueMicrotask(()=>window.GGFCMatchRecords?.retryPending());connectedBefore=connected;
-  if(renderPending&&!GGFC.editing&&!GGFC.pending)notify();
+  if(renderPending&&!GGFC.editing&&!GGFC.pending&&!window.GGFCMatchRecords?.batchRunning)notify();
   refreshPanel();
  }
  function sourceFor(records,m,team,player){
