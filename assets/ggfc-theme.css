@@ -136,11 +136,18 @@
 
 .view[aria-busy="true"] > :not(.menu-render-status) {display:none!important}
 .menu-render-status {min-height:96px;display:grid;align-content:center;color:var(--text2)}
-.sb-measurement-controls {display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.sb-measurement-controls label {font-weight:800}
-.sb-measurement-controls input {min-height:42px;padding:7px 9px}
+.sb-measurement-controls {display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.sb-measurement-controls label {display:grid;gap:5px;font-weight:800;font-size:13px}
+.sb-measurement-controls :is(input,select) {min-height:42px;max-width:100%;padding:7px 9px;font:inherit}
+.sb-measurement-controls input[type="number"] {width:8rem}
+.sb-measurement-actions {display:flex;align-items:center;flex-wrap:wrap;gap:8px;flex-basis:100%}
 .sb-measurement-controls .note {flex-basis:100%;margin:0}
-.sb-measurement-sheet > p {margin:6px 0;color:var(--text2)}
+.sb-measurement-sheet {margin-bottom:16px}
+:is(.sb-measurement-sheet,.sb-measurement-roster) > p {margin:6px 0;color:var(--text2)}
+.sb-measurement-roster .tablewrap {margin-top:12px;overflow-x:auto}
+.sb-measurement-roster table {min-width:470px}
+.sb-measurement-roster :is(th,td) {text-align:center}
+.sb-measurement-roster tbody th {background:transparent;font-weight:750}
 .sb-measurement-groups {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:20px;margin-top:18px}
 .sb-measurement-group h4 {margin:0 0 8px;color:var(--kl-navy)}
 .sb-measurement-group table {width:100%;table-layout:auto;border-collapse:collapse}
