@@ -23,6 +23,22 @@ function initMobilePageSwipe(){
  main.dataset.pageSwipeBound='1';
  let gesture=null,paintFrame=0,settleTimer=0,suppressClickUntil=0,viewportWidth=innerWidth;
  const prepared=new Set();
+ let preparedDay=recordToday();
+ function isPrepared(id){
+  const day=recordToday();
+  if(day!==preparedDay){prepared.clear();preparedDay=day;}
+  return prepared.has(id);
+ }
+ // Only reuse a rendered view while its inputs are unchanged. Shared data and
+ // settings already invalidate the set through renderAll/save.
+ function forgetOnViewInput(event){
+  if(event.target.closest('section.view.on'))prepared.clear();
+ }
+ main.addEventListener('input',forgetOnViewInput,true);
+ main.addEventListener('change',forgetOnViewInput,true);
+ main.addEventListener('click',event=>{
+  if(event.target.closest('button,a,summary,[role="button"]'))forgetOnViewInput(event);
+ },true);
  const masks=document.getElementsByClassName('mask'),dialogs=document.getElementsByTagName('dialog');
  const modalOpen=()=>{
   for(const node of masks)if(node.classList.contains('on'))return true;
@@ -31,7 +47,7 @@ function initMobilePageSwipe(){
  };
 
  const menus=()=>Array.from(document.querySelectorAll('#tabs button[data-v]')).filter(b=>!b.hidden&&b.style.display!=='none'&&menuViewAllowed(b.dataset.v)).map(b=>b.dataset.v);
- const blocked=()=>!mobileSwipeSettings().enabled||squadAppearanceDirty||squadExportBusy||!document.documentElement.classList.contains('ggfc-mobile')||document.body.classList.contains('sidebar-open')||modalOpen()||GGFC.pending||GGFC.editing||menuSettingsDirty||careerFrameSettingsDirty||analysisStartSettingsDirty||cardDesignSettingsDirty;
+ const blocked=()=>!mobileSwipeSettings().enabled||squadAppearanceDirty||squadExportBusy||!document.documentElement.classList.contains('ggfc-mobile')||document.body.classList.contains('sidebar-open')||modalOpen()||pendingMenuRender||GGFC.pending||GGFC.editing||menuSettingsDirty||careerFrameSettingsDirty||analysisStartSettingsDirty||cardDesignSettingsDirty;
  const interactive=target=>{
   if(!(target instanceof Element)||target.closest('a,button,input,select,textarea,label,summary,[contenteditable]:not([contenteditable="false"]),[draggable="true"],[role="slider"],svg,canvas,#chemistryMap,[data-no-menu-swipe]'))return true;
   for(let el=target;el&&el!==main;el=el.parentElement)if(el.scrollWidth>el.clientWidth+2&&/auto|scroll/.test(getComputedStyle(el).overflowX))return true;
@@ -49,11 +65,10 @@ function initMobilePageSwipe(){
   if(state.aria===null)node.removeAttribute('aria-hidden');else node.setAttribute('aria-hidden',state.aria);
   node.classList.remove('swipe-page','swipe-preparing','swipe-content');
  };
- const originTop=()=>Math.max(document.getElementById('ggfcTopbar').getBoundingClientRect().bottom,parseFloat(getComputedStyle(main).paddingTop)||0);
- function cancel(){
+ function cancel(restoreScroll=true){
   clearTimeout(settleTimer);cancelAnimationFrame(paintFrame);paintFrame=0;
   const g=gesture;gesture=null;if(!g)return;
-  g.transitionCleanup?.();restore(g.incoming);restore(g.outgoing);g.backdrop?.remove();g.placeholder?.remove();if(g.locked)window.scrollTo({top:g.scrollY,behavior:'instant'});document.body.classList.remove('swipe-active');recordTableScrollRefresh?.();
+  g.transitionCleanup?.();restore(g.incoming);restore(g.outgoing);g.backdrop?.remove();g.placeholder?.remove();if(restoreScroll&&g.outgoing&&window.scrollY!==g.scrollY)window.scrollTo({top:g.scrollY,behavior:'instant'});document.body.classList.remove('swipe-active');recordTableScrollRefresh?.();
  }
  function invalidate(){cancel();prepared.clear();}
  function rendered(id){prepared.add(id);}
@@ -77,14 +92,16 @@ function initMobilePageSwipe(){
   return {node:frame,content:state,anchor,temporary};
  }
  function stage(g){
-  const panel=document.getElementById('v-'+g.view),rect=panel.getBoundingClientRect(),flowHeight=main.getBoundingClientRect().height,childTop=[...panel.children].find(el=>el.getClientRects().length)?.getBoundingClientRect().top;
+  const panel=document.getElementById('v-'+g.view),rect=panel.getBoundingClientRect(),flowHeight=g.scrollY?main.getBoundingClientRect().height:0,childTop=[...panel.children].find(el=>el.getClientRects().length)?.getBoundingClientRect().top;
   // Read stable header geometry before moving a large table/card tree.
-  g.origin=originTop();g.frameHeight=Math.max(0,innerHeight-g.origin);g.headerBottom=document.getElementById('ggfcTopbar').getBoundingClientRect().bottom;
+  g.headerBottom=document.getElementById('ggfcTopbar').getBoundingClientRect().bottom;
+  g.origin=Math.max(g.headerBottom,parseFloat(getComputedStyle(main).paddingTop)||0);
+  g.frameHeight=Math.max(0,innerHeight-g.origin);
   g.left=rect.left;g.width=rect.width;document.body.classList.add('swipe-active');
   g.placeholder=document.createElement('div');g.placeholder.className='swipe-placeholder';g.placeholder.style.height=rect.height+'px';panel.before(g.placeholder);
   g.backdrop=document.createElement('div');g.backdrop.className='swipe-backdrop';g.backdrop.style.top=g.headerBottom+'px';g.backdrop.setAttribute('aria-hidden','true');main.append(g.backdrop);
   g.outgoing=mountPanel(panel,g,rect.top,11,false,childTop??null);
-  g.placeholder.style.height=Math.max(0,rect.height+flowHeight-main.getBoundingClientRect().height)+'px';g.locked=true;
+  if(flowHeight)g.placeholder.style.height=Math.max(0,rect.height+flowHeight-main.getBoundingClientRect().height)+'px';
  }
  function adjacent(g,dx){
   const direction=dx<0?1:-1;
@@ -93,7 +110,7 @@ function initMobilePageSwipe(){
   restore(g.incoming);g.incoming=null;g.target=null;g.direction=direction;
   if(!target)return;
   let panel,temporary=false;
-  if(prepared.has(target)){
+  if(isPrepared(target)){
    panel=document.getElementById('v-'+target);if(!panel)return;
   }else{
    // Never calculate a view in touchmove/touchend. Slide a lightweight first-visit preview.
@@ -129,7 +146,11 @@ function initMobilePageSwipe(){
    const navigate=()=>{
     if(gesture!==g)return;
     if(blocked()||activeView!==g.view||!menuViewAllowed(target)){cancel();return;}
-    try{const next=goTab(target,{swipePrepared:true});location.hash=next;window.scrollTo({top:0,behavior:'instant'});}
+    try{
+     if(g.scrollY)window.scrollTo({top:0,behavior:'instant'});
+     cancel(false);
+     const next=goTab(target,{swipePrepared:true,interactive:true});location.hash=next;
+    }
     catch(error){console.error('메뉴 화면 준비 실패',error);cancel();goTab(g.view);}
    };
    if(g.incoming?.temporary){
@@ -158,18 +179,25 @@ function initMobilePageSwipe(){
   if(!g.locked){
    if(Math.abs(scrollY-g.scrollY)>12||Math.abs(dy)>10&&Math.abs(dy)>Math.abs(dx)*.8){cancel();return;}
    if(Math.abs(dx)<10||Math.abs(dx)<Math.abs(dy)*1.35)return;
-   if(!event.cancelable){cancel();return;}stage(g);
+   if(!event.cancelable){cancel();return;}g.locked=true;
   }
   if(event.cancelable)event.preventDefault();else{cancel();return;}
-  g.dx=dx;sample(g,t.clientX);adjacent(g,dx);suppressClickUntil=performance.now()+400;
-  if(!paintFrame)paintFrame=requestAnimationFrame(()=>{paintFrame=0;paint(g);});
+  g.dx=dx;sample(g,t.clientX);suppressClickUntil=performance.now()+400;
+  if(!paintFrame)paintFrame=requestAnimationFrame(()=>{
+   paintFrame=0;
+   if(gesture!==g)return;
+   if(!g.outgoing)stage(g);
+   adjacent(g,g.dx);paint(g);
+  });
  },{passive:false});
  main.addEventListener('touchcancel',()=>{cancel();},{passive:true});
  main.addEventListener('touchend',event=>{
   const g=gesture;if(!g||g.settling)return;
   if(event.touches.length||blocked()||activeView!==g.view){cancel();return;}
   const t=Array.from(event.changedTouches).find(t=>t.identifier===g.id);if(!t||!g.locked){cancel();return;}
-  g.dx=t.clientX-g.x;adjacent(g,g.dx);
+  g.dx=t.clientX-g.x;
+  if(!g.outgoing)stage(g);
+  adjacent(g,g.dx);
   const samples=g.samples,first=samples[0],last=samples[samples.length-1],dt=last.time-first.time;
   const velocity=performance.now()-g.lastMove<160&&dt>0?(last.x-first.x)/dt:0;
   const factor=mobileSwipeDistance(g.viewport)/Math.max(60,Math.min(100,g.viewport*.18));
@@ -185,7 +213,7 @@ function initMobilePageSwipe(){
  window.addEventListener('orientationchange',invalidate,{passive:true});
  window.addEventListener('scroll',()=>{if(gesture&&Math.abs(scrollY-gesture.scrollY)>12)cancel();},{passive:true});
  document.addEventListener('visibilitychange',()=>{if(document.hidden)cancel();});
- mobilePageSwipe={cancel,invalidate,rendered,isPrepared:id=>prepared.has(id)};
+ mobilePageSwipe={cancel,invalidate,rendered,isPrepared};
 }
 
 let sidebarReturnFocus=null,sidebarPinned=false;
@@ -236,8 +264,8 @@ function initMemberUI(){
   document.getElementById('sidebarPin').onclick=()=>setSidebarPinned(!sidebarPinned);
   document.getElementById('sidebarDismiss').onclick=()=>closeMemberSidebar(true,true);
   document.getElementById('sidebarToggle').onclick=()=>document.documentElement.classList.contains('ggfc-mobile')?openMemberSidebar():setDesktopSidebar(!desktopSidebarOpen());
-  document.getElementById('topBrandHome').onclick=()=>{location.hash=goTab(menuFallbackView());window.scrollTo({top:0,behavior:'smooth'});};
-  document.getElementById('topMenuNav').onclick=e=>{const b=e.target.closest('[data-top-menu]');if(b){location.hash=goTab(b.dataset.topMenu);window.scrollTo({top:0,behavior:'smooth'});}};
+  document.getElementById('topBrandHome').onclick=()=>openMenuFromNavigation(menuFallbackView());
+  document.getElementById('topMenuNav').onclick=e=>{const b=e.target.closest('[data-top-menu]');if(b)openMenuFromNavigation(b.dataset.topMenu);};
   document.querySelector('#sidebarBackdrop').onclick=()=>closeMemberSidebar(true);
   // Mobile uses the backdrop so an outside tap never activates the page underneath.
   document.addEventListener('pointerdown',e=>{

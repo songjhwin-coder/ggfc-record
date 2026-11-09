@@ -133,3 +133,28 @@
 @media print {
   .sidebar-theme-toggle {display:none!important}
 }
+
+.view[aria-busy="true"] > :not(.menu-render-status) {display:none!important}
+.menu-render-status {min-height:96px;display:grid;align-content:center;color:var(--text2)}
+.sb-measurement-controls {display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sb-measurement-controls label {font-weight:800}
+.sb-measurement-controls input {min-height:42px;padding:7px 9px}
+.sb-measurement-controls .note {flex-basis:100%;margin:0}
+.sb-measurement-sheet > p {margin:6px 0;color:var(--text2)}
+.sb-measurement-groups {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:20px;margin-top:18px}
+.sb-measurement-group h4 {margin:0 0 8px;color:var(--kl-navy)}
+.sb-measurement-group table {width:100%;table-layout:auto;border-collapse:collapse}
+.sb-measurement-group :is(th,td) {padding:8px 5px;text-align:center;white-space:normal;overflow-wrap:anywhere}
+.sb-measurement-group tbody th {background:transparent;font-weight:750}
+.sb-measurement-group tbody tr td[colspan] {color:var(--text2)}
+@media print {
+  body:has(#v-soccerbeeroster.on) > :not(#mainContent),
+  body:has(#v-soccerbeeroster.on) #mainContent > :not(#v-soccerbeeroster),
+  #v-soccerbeeroster.on > :not(#sbMeasurementSheet) {display:none!important}
+  body:has(#v-soccerbeeroster.on) #mainContent {padding:0!important;margin:0!important}
+  #v-soccerbeeroster.on {max-width:none;animation:none}
+  #sbMeasurementSheet {padding:0;border:0;box-shadow:none;background:#fff;color:#132339}
+  #sbMeasurementSheet .sb-measurement-groups {display:block}
+  #sbMeasurementSheet .sb-measurement-group {break-inside:avoid;margin-bottom:14px}
+  #sbMeasurementSheet :is(th,td) {font-size:11pt;padding:5px 6px;border-bottom:1px solid #ccd6e1}
+}

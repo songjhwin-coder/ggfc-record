@@ -6957,7 +6957,7 @@ const MEMBER_MENUS=[
  {id:'leadership',label:'GG 역대 운영진'}, {id:'team',label:'팀 상태',defaultOpen:false}
 ];
 const ADMIN_MENUS=[
- {id:'menus',label:'메뉴 공개 관리'}, {id:'photos',label:'선수 사진 관리'}, {id:'cardsettings',label:'선수 카드 설정'}, {id:'screensettings',label:'화면 설정'}, {id:'abilityguide',label:'능력치 운영 안내'}, {id:'abilityaudit',label:'능력치 변동 분석'},
+ {id:'menus',label:'메뉴 공개 관리'}, {id:'photos',label:'선수 사진 관리'}, {id:'cardsettings',label:'선수 카드 설정'}, {id:'screensettings',label:'화면 설정'}, {id:'soccerbeeroster',label:'사커비 측정 명단'}, {id:'abilityguide',label:'능력치 운영 안내'}, {id:'abilityaudit',label:'능력치 변동 분석'},
  {id:'abilitycfg',label:'선수 능력치 설정'}, {id:'rep',label:'대표승점 설정'}, {id:'data',label:'데이터 관리'}, {id:'thumbnail',label:'유튜브 썸네일'}
 ];
 let menuEditorDraft=null,menuSettingsDirty=false;
@@ -7099,8 +7099,36 @@ function bindMenuEditor(){
 }
 function renderMenusClosed(){const root=document.getElementById('closedMenuMessage');if(root)root.textContent='현재 공개된 메뉴가 없습니다. 메뉴가 공개되면 여기에서 확인하실 수 있습니다.';}
 
+const deferredMemberViews=new Set(['dash','player','ability']);
+let pendingMenuRender=null;
+function cancelMenuRender(){
+  if(!pendingMenuRender)return;
+  const {panel,status,frame,task}=pendingMenuRender;
+  pendingMenuRender=null;
+  cancelAnimationFrame(frame);clearTimeout(task);
+  panel.removeAttribute('aria-busy');status.remove();
+}
+function deferMenuRender(id){
+  const panel=document.getElementById('v-'+id),status=document.createElement('p');
+  status.className='card menu-render-status';
+  status.setAttribute('role','status');
+  status.textContent='화면을 준비하고 있습니다…';
+  panel.setAttribute('aria-busy','true');panel.prepend(status);
+  const pending={panel,status,frame:0,task:0};
+  pendingMenuRender=pending;
+  // Let the selected menu and loading feedback paint before running the existing renderer.
+  pending.frame=requestAnimationFrame(()=>{
+    pending.frame=requestAnimationFrame(()=>{
+      pending.task=setTimeout(()=>{
+        if(pendingMenuRender!==pending||activeView!==id)return;
+        cancelMenuRender();
+        renderMenuContent(id);mobilePageSwipe?.rendered(id);recordTableScrollRefresh?.();
+      },0);
+    });
+  });
+}
 function renderActiveView(v,options={}){
-  mobilePageSwipe?.cancel();
+  mobilePageSwipe?.cancel();cancelMenuRender();
   const next=resolveMenuView(v);
   if(next!==v){
     history.replaceState(null,'','#'+next);
@@ -7108,7 +7136,10 @@ function renderActiveView(v,options={}){
   }
   if(activeView==='abilityaudit'&&next!==activeView)window.GGFCAbilityAudit?.stop(true);
   activeView=next;syncMenuNavigation();selectMenuView(next);
-  if(!options.swipePrepared||!mobilePageSwipe?.isPrepared(next))renderMenuContent(next);
+  const deferred=options.interactive&&deferredMemberViews.has(next);
+  if((options.swipePrepared||deferred)&&mobilePageSwipe?.isPrepared(next))return;
+  if(deferred){deferMenuRender(next);return;}
+  renderMenuContent(next);
   mobilePageSwipe?.rendered(next);
 }
 // Analysis assets are requested only by an administrator opening this menu.
@@ -7129,7 +7160,7 @@ function renderAbilityAudit(){
 }
 
 function renderMenuContent(next){
-  const renderers={thumbnail:()=>window.GGFCThumbnail?.render(),abilityaudit:renderAbilityAudit,photos:renderPlayerPhotoManager,cardsettings:renderCardSettings,screensettings:renderScreenSettings,interleague:renderInterleagueStats,menus:renderMenuManagement,closed:renderMenusClosed,goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide};
+  const renderers={thumbnail:()=>window.GGFCThumbnail?.render(),abilityaudit:renderAbilityAudit,photos:renderPlayerPhotoManager,cardsettings:renderCardSettings,screensettings:renderScreenSettings,interleague:renderInterleagueStats,menus:renderMenuManagement,closed:renderMenusClosed,goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide,soccerbeeroster:renderSoccerBeeMeasurementRoster};
   return withRenderCalculationCache(renderers[next]);
 }
 // Recheck calculation inputs on every render, including edits made in place.
@@ -7267,8 +7298,15 @@ function goTab(v,options={}){
   else{syncMenuNavigation();selectMenuView(next);}
   return next;
 }
-$("#tabs").onclick=e=>{const b=e.target.closest('button[data-v]');if(!b)return;location.hash=goTab(b.dataset.v);window.scrollTo({top:0,behavior:'smooth'});};
-window.addEventListener('hashchange',()=>goTab(location.hash.slice(1)));
+function openMenuFromNavigation(id){
+  if(window.scrollY)window.scrollTo({top:0,behavior:'instant'});
+  location.hash=goTab(id,{interactive:true});
+}
+$("#tabs").onclick=e=>{const b=e.target.closest('button[data-v]');if(b)openMenuFromNavigation(b.dataset.v);};
+window.addEventListener('hashchange',()=>{
+  const id=location.hash.slice(1);
+  if(id!==activeView)goTab(id,{interactive:true});
+});
 $("#compFilter").onchange = e=>{ comp=e.target.value; dashDate=""; renderAll(); };
 $("#prevM").onclick=()=>{ calRef=new Date(calRef.getFullYear(),calRef.getMonth()-1,1); renderCal(); };
 $("#nextM").onclick=()=>{ calRef=new Date(calRef.getFullYear(),calRef.getMonth()+1,1); renderCal(); };

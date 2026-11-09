@@ -15,10 +15,15 @@
   if(!view.classList.contains('on')||view.hidden||document.body.classList.contains('swipe-active')||!box.getClientRects().length){hide();return;}
   const source=box.querySelector('table'),head=source?.tHead;
   if(!head||!box.querySelector('tbody tr:not([hidden])')){hide();return;}
+  const rect=box.getBoundingClientRect(),headRect=head.getBoundingClientRect();
+  let top=Math.max(0,topbar?.getBoundingClientRect().bottom||0);
+  if(preview&&!preview.hidden&&preview.getClientRects().length)top=Math.max(top,preview.getBoundingClientRect().bottom+8);
+  if(headRect.top>=top||rect.bottom<=top||rect.width<=0){hide();return;}
+  // Copy column geometry only when the floating header is actually needed.
   if(dirty||head!==sourceHead){
    if(head!==sourceHead){if(sourceHead)observer.unobserve(sourceHead);sourceHead=head;observer.observe(head);}
    const cells=[...head.rows[0].cells],widths=cells.map(cell=>cell.getBoundingClientRect().width);
-   height=head.getBoundingClientRect().height;
+   height=headRect.height;
    copy=document.createElement('table');copy.className='player-table-head-copy';copy.style.width=widths.reduce((a,b)=>a+b,0)+'px';copy.style.height=height+'px';
    const cols=document.createElement('colgroup');widths.forEach(width=>{const col=document.createElement('col');col.style.width=width+'px';cols.append(col);});
    const clone=head.cloneNode(true);clone.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));
@@ -26,10 +31,7 @@
    [...clone.rows[0].cells].forEach((cell,i)=>{const css=getComputedStyle(cells[i]);properties.forEach(k=>cell.style[k]=css[k]);cell.style.width=widths[i]+'px';cell.style.minWidth='0';cell.style.maxWidth='none';});
    copy.append(cols,clone);layer.replaceChildren(copy);dirty=false;
   }
-  const rect=box.getBoundingClientRect(),headRect=head.getBoundingClientRect();
-  let top=Math.max(0,topbar?.getBoundingClientRect().bottom||0);
-  if(preview&&!preview.hidden&&preview.getClientRects().length)top=Math.max(top,preview.getBoundingClientRect().bottom+8);
-  if(headRect.top>=top||rect.bottom<=top||rect.width<=0||!height){hide();return;}
+  if(!height){hide();return;}
   const contentLeft=rect.left+box.clientLeft,left=Math.max(0,contentLeft),right=Math.min(innerWidth,contentLeft+box.clientWidth);
   if(right<=left){hide();return;}
   layer.style.left=left+'px';layer.style.top=Math.min(top,rect.bottom-height)+'px';layer.style.width=(right-left)+'px';layer.style.height=height+'px';
