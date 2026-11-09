@@ -12,6 +12,15 @@
 :root body #v-dash .ground-title {
   background:var(--stadium-pattern)!important;
 }
+/* Keep the stadium backdrop behind the card entrance in both themes. */
+#playerCardMask {
+  background-color:#06162d;
+  background-image:
+    radial-gradient(ellipse at 35% 18%, #3870aa4d, transparent 52%),
+    radial-gradient(ellipse at 50% 35%, transparent 38%, #030a1899),
+    var(--stadium-pattern);
+  backdrop-filter:none;
+}
 .sidebar-theme-toggle {
   display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:8px 10px;flex:none;
   border:1px solid #ffffff35;border-radius:6px;background:#ffffff0e;color:#edf5ff;
@@ -70,7 +79,7 @@
   [data-theme="dark"] :is(.swipe-backdrop,.swipe-viewport,section.view.swipe-page,section.view.swipe-loading,.ggfc-detail-dialog) {
     background:var(--page);color:var(--text);
   }
-  [data-theme="dark"] :is(.ggfc-topbar,.card,.modal,.player-card-dialog,.detail-scoreboard,.ground-panel,.ground-match,.match,.record-day,.record-attendance,.record-attendance-item,.record-attendance-league,.record-summary-item,.league-team-card,.ts-team,.ts-roster,.at-podium-card,.at-table-wrap,.at-empty,.ability-config-card,.ability-half-section,.member-card,.monthly-summary-item,.monthly-chart-wrap,.ggfc-ui-settings,.tm-entry,.tm-roster-panel,.tm-main,.tm-team,.menu-publish-row,.menu-editor-row,#dashResultHeader) {
+  [data-theme="dark"] :is(.ggfc-topbar,.card,.modal,.detail-scoreboard,.ground-panel,.ground-match,.match,.record-day,.record-attendance,.record-attendance-item,.record-attendance-league,.record-summary-item,.league-team-card,.ts-team,.ts-roster,.at-podium-card,.at-table-wrap,.at-empty,.ability-config-card,.ability-half-section,.member-card,.monthly-summary-item,.monthly-chart-wrap,.ggfc-ui-settings,.tm-entry,.tm-roster-panel,.tm-main,.tm-team,.menu-publish-row,.menu-editor-row,#dashResultHeader) {
     background-color:var(--canvas);color:var(--text);border-color:var(--border);
   }
   [data-theme="dark"] :is(.record-query,.record-season-panel,.record-analysis-note,.ranking-basis,.record-round-range,.ability-half-compare,.rep-status-chip.off,.dashboard-secondary-query,.league-team-grid,.league-rule-note,.comp-title,.record-day summary,.record-attendance-league-title,.ability-config-actions,.ability-config-badge,.ability-half-head,.ability-kpi,.ability-riser-item,.ability-sort-toolbar,.member-metrics,.ts-method,.aa-summary>div,.match-split-handle,.rep-segment-card,.menu-publish-summary,.member-preview-bar,.day,.tm-balance-summary>div,.tm-tabs button) {
