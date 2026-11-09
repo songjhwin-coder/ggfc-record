@@ -1,0 +1,126 @@
+/* Blue-black stadium stripes are shared by the main navy surfaces. */
+:root {
+  --stadium-pattern:
+    linear-gradient(125deg, transparent 47%, #6e9dd41c 47% 54%, transparent 54% 58%, #6e9dd40e 58% 66%, transparent 66%),
+    repeating-linear-gradient(125deg, transparent 0 40px, #8db5e30a 40px 41px, transparent 41px 81px),
+    linear-gradient(115deg, #06162d, #001c48 58%, #112d50);
+}
+:is(.ggfc-sidebar,.head,.ts-team-header,.ggfc-detail-header,.at-hero) {
+  background-image:var(--stadium-pattern);
+}
+#v-dash #dashLeagueSummary .league-zone .league-zone-head,
+:root body #v-dash .ground-title {
+  background:var(--stadium-pattern)!important;
+}
+.sidebar-theme-toggle {
+  display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:8px 10px;flex:none;
+  border:1px solid #ffffff35;border-radius:6px;background:#ffffff0e;color:#edf5ff;
+  font:inherit;font-size:13px;font-weight:750;cursor:pointer;text-align:left;
+}
+.sidebar-theme-toggle:hover {background:#ffffff1c}
+.sidebar-theme-toggle svg {width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7}
+.theme-switch {margin-inline-start:auto;position:relative;width:34px;height:20px;border-radius:12px;background:#596e89;flex:none}
+.theme-switch::after {content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff}
+.sidebar-theme-toggle[aria-pressed="true"] .theme-switch {background:#347bb2}
+.sidebar-theme-toggle[aria-pressed="true"] .theme-switch::after {left:17px}
+.ability-config-field select {width:100%;min-height:39px;padding:8px 10px;font:inherit;font-size:13px;font-weight:800}
+
+.ggfc-mobile {
+  --ggfc-topbar-h:calc(54px + env(safe-area-inset-top,0px));
+  --ggfc-bottom-nav-h:calc(62px + env(safe-area-inset-bottom,0px));
+  scroll-padding-bottom:calc(var(--ggfc-bottom-nav-h) + 10px);
+}
+.ggfc-mobile body {padding-bottom:var(--ggfc-bottom-nav-h)}
+.ggfc-mobile .ggfc-topbar {
+  height:var(--ggfc-topbar-h);grid-template-rows:minmax(0,1fr);
+  padding:env(safe-area-inset-top,0px) max(12px,env(safe-area-inset-right,0px)) 0 max(12px,env(safe-area-inset-left,0px));
+}
+.ggfc-mobile .top-menu-nav {
+  position:fixed;inset:auto 0 0;width:auto;height:var(--ggfc-bottom-nav-h);gap:2px;box-sizing:border-box;
+  padding:4px max(6px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(6px,env(safe-area-inset-left,0px));
+  background:var(--stadium-pattern);border-top:1px solid #355274;box-shadow:0 -4px 15px #06162d38;
+  scrollbar-width:thin;scrollbar-color:#58759b transparent;
+}
+.ggfc-mobile .top-menu-nav:empty {display:none}
+.ggfc-mobile .top-menu-nav button {
+  flex-direction:column;gap:3px;min-width:68px;min-height:44px;max-width:120px;padding:3px 8px 4px;
+  border-bottom:0;border-top:2px solid transparent;border-radius:6px;
+  color:#d0deef;font-size:10px;white-space:normal;word-break:keep-all;
+}
+.ggfc-mobile .top-menu-nav .top-menu-icon {width:21px;height:21px;flex:0 0 21px}
+.ggfc-mobile .top-menu-nav button:is(.on,:hover) {background:#ffffff19;color:#fff}
+.ggfc-mobile .top-menu-nav button.on {border-top-color:#8dc6ff}
+
+@media screen {
+  html[data-theme="dark"] {
+    color-scheme:dark;
+    --page:#0e1724;--canvas:#182536;--soft:#202f42;--surface2:#24364b;
+    --card:var(--canvas);--border:#374b62;--line:var(--border);
+    --text:#edf3fa;--text2:#b5c5d8;--muted:var(--text2);
+    --kl-navy:#c3dafa;--kl-navy-light:#284665;
+    --pl-purple:#91b8e0;--pl-purple-2:#223953;--pl-purple-3:#112339;--pl-lilac:var(--soft);
+    --blue:#8ec1ff;--blue-soft:#203a59;--green:#77d6ad;--green-soft:#153b35;
+    --red:#ff98a3;--red-soft:#462836;--shadow:0 3px 12px #0002;
+    --stadium-pattern:
+      linear-gradient(125deg, transparent 47%, #6e9dd419 47% 54%, transparent 54% 58%, #6e9dd40b 58% 66%, transparent 66%),
+      repeating-linear-gradient(125deg, transparent 0 40px, #8db5e309 40px 41px, transparent 41px 81px),
+      linear-gradient(115deg, #101c2d, #132841 58%, #1b334e);
+  }
+  html[data-theme="dark"] body,
+  [data-theme="dark"] :is(.swipe-backdrop,.swipe-viewport,section.view.swipe-page,section.view.swipe-loading,.ggfc-detail-dialog) {
+    background:var(--page);color:var(--text);
+  }
+  [data-theme="dark"] :is(.ggfc-topbar,.card,.modal,.player-card-dialog,.detail-scoreboard,.ground-panel,.ground-match,.match,.record-day,.record-attendance,.record-attendance-item,.record-attendance-league,.record-summary-item,.league-team-card,.ts-team,.ts-roster,.at-podium-card,.at-table-wrap,.at-empty,.ability-config-card,.ability-half-section,.member-card,.monthly-summary-item,.monthly-chart-wrap,.ggfc-ui-settings,.tm-entry,.tm-roster-panel,.tm-main,.tm-team,.menu-publish-row,.menu-editor-row,#dashResultHeader) {
+    background-color:var(--canvas);color:var(--text);border-color:var(--border);
+  }
+  [data-theme="dark"] :is(.record-query,.record-season-panel,.record-analysis-note,.ranking-basis,.record-round-range,.ability-half-compare,.rep-status-chip.off,.dashboard-secondary-query,.league-team-grid,.league-rule-note,.comp-title,.record-day summary,.record-attendance-league-title,.ability-config-actions,.ability-config-badge,.ability-half-head,.ability-kpi,.ability-riser-item,.ability-sort-toolbar,.member-metrics,.ts-method,.aa-summary>div,.match-split-handle,.rep-segment-card,.menu-publish-summary,.member-preview-bar,.day,.tm-balance-summary>div,.tm-tabs button) {
+    background-color:var(--soft);color:var(--text);border-color:var(--border);
+  }
+  [data-theme="dark"] :is(.topbar-brand,.top-menu-nav button,.detail-score>b,.detail-score-team strong,.at-podium strong,.squad-present,.ability-riser-card>summary,.ggfc-panel-toggle>summary,.ts-movement-head b,.ts-roster-switch b,.detail-team-title,.aa-summary b,.menu-editor-row strong,.menu-publish-row strong) {
+    color:var(--kl-navy);
+  }
+  [data-theme="dark"] :is(.topbar-toggle,.top-menu-nav button:hover,.top-menu-nav button.on) {background-color:var(--soft);color:var(--text)}
+  [data-theme="dark"] :is(.fixture-team-scorers,.fixture-mom,.ground-match-meta,.league-team-wdl,.league-team-goals,.rep-breakdown-note,.squad-absent,.ability-delta-note,.at-empty p,.at-breakdown,.ts-toolbar>span,.ts-movement-empty,.ts-movement-head>span,.squad-export-tools small,.ts-roster-title>div>span,.record-day-meta,.record-field>label,.record-season-title,.ability-config-field label,.ability-config-title p,.ability-half-meta,.ability-half-compare,.ability-riser-sub,.ability-sort-status,.ability-kpi :is(.k,.s),.member-card p,.member-card-foot,.member-metrics dt,.detail-score-team>span:last-child,.detail-table td>small,.at-podium p,.at-scope,.at-footnote,.menu-editor-name label,.menu-locked-badge,.tm-balance-summary small,.tm-empty) {color:var(--text2)}
+  [data-theme="dark"] :is(.btn,select,textarea,input:not([type=checkbox],[type=radio],[type=color],[type=range],[type=file]),.at-filters button,.menu-move-buttons button,.ability-sort-button,.match-count-cell button,.ggfc-detail-close) {
+    background-color:var(--soft);border-color:var(--border);color:var(--text);
+  }
+  [data-theme="dark"] :is(.btn:hover,.at-filters button:hover,.menu-move-buttons button:hover) {background-color:var(--surface2)}
+  [data-theme="dark"] :is(.btn.primary,.rep-point:not(.zero),.rank.top,.ability-sort-button[aria-pressed=true],.dashboard-result-round,.ts-staff-caption,.toast,.tm-tabs button[aria-pressed=true],.at-filters button[aria-pressed=true]) {
+    background:#204875;color:#f1f7ff;border-color:#40658f;
+  }
+  [data-theme="dark"] :is(#dashResultHeader .dashboard-result-date,#abilityPlayerSearchStatus,#playerRecordSearchStatus,#teamSquadScope,#squadAppearanceStatus,#tmNotice) {color:var(--text2)}
+  [data-theme="dark"] :is(#mainContent,.modal,.ggfc-detail-dialog) table {background-color:var(--canvas)}
+  [data-theme="dark"] :is(table td,table tbody th) {color:var(--text);border-color:var(--border)}
+  [data-theme="dark"] :is(tbody tr:nth-child(even) td,.detail-table tbody th) {background:var(--canvas)}
+  [data-theme="dark"] :is(tbody tr:hover td,.team-league-standing .league-standing-cell) {background:var(--soft)!important;border-color:var(--border)}
+  [data-theme="dark"] :is(table thead th,.tablewrap th,.team-league-standing thead th,.at-table thead th,.detail-table thead th,.detail-table tfoot,.player-table-sticky-head,.player-table-head-copy th) {
+    background:var(--surface2)!important;color:var(--text)!important;border-color:var(--border);
+  }
+  [data-theme="dark"] .at-table tbody th {background:var(--canvas)}
+  [data-theme="dark"] .at-table .at-active {background:var(--green-soft);color:var(--green)}
+  [data-theme="dark"] .at-rank {color:#e2c184}
+  [data-theme="dark"] :is(.league-crest,.league-standing-fallback) {color:#081627}
+  [data-theme="dark"] .ts-league-heading .league-symbol {color:#244f7b}
+  [data-theme="dark"] .detail-match-fullscreen .detail-table tbody th:first-child {background:var(--canvas)!important;color:var(--text)}
+  [data-theme="dark"] .detail-match-fullscreen .detail-table tfoot th:first-child {background:var(--surface2)!important;color:var(--text)}
+  [data-theme="dark"] :is(.match-player-records,.match-detail-summary,.match-record-scroll,.detail-team,.detail-table-wrap,.tablewrap,.match-split-handle) {border-color:var(--border)}
+  [data-theme="dark"] :is(.record-attendance-item:hover,.fixture-match-card:hover,.league-team-card:hover,.day:hover) {background-color:var(--soft)}
+  [data-theme="dark"] :is(.ability-delta.up,.ability-delta-note .up,#v-abilityaudit .aa-up,.rank-up,.il-result.W) {color:var(--green)}
+  [data-theme="dark"] :is(.ability-delta.down,.ability-delta-note .down,#v-abilityaudit .aa-down,.rank-down,.il-result.L) {color:var(--red)}
+  [data-theme="dark"] .callout {background:var(--blue-soft);color:var(--text);border-color:var(--blue)}
+  [data-theme="dark"] .callout.warn {background:#49351f;color:#ffdfad;border-color:#d9a865}
+  [data-theme="dark"] :is(.fixture-mom-label,.ability-riser-delta) {background:var(--red-soft);color:var(--red)}
+  [data-theme="dark"] #v-abilityaudit :is(input,select,.aa-summary>div,.aa-detail,.aa-daily-summary>span,.aa-form-summary>span,.aa-form-verdict,.aa-form-projection,.aa-daily-card td:first-child) {background:var(--soft);border-color:var(--border)}
+  [data-theme="dark"] #v-abilityaudit :is(.aa-summary b,.aa-form-explain h4) {color:var(--kl-navy)}
+  [data-theme="dark"] #v-abilityaudit :is(.aa-summary small,.aa-empty,.aa-record-origin,.aa-zero,.aa-transition>span) {color:var(--text2)}
+  [data-theme="dark"] #v-abilityaudit .aa-form-wait {background:#49351f;color:#ffdfad;border-color:#d9a865}
+  [data-theme="dark"] #v-abilityaudit .aa-form-ready {background:var(--green-soft);color:var(--green);border-color:var(--border)}
+  [data-theme="dark"] :is(.fixture-logo-fallback,.record-tag,.rep-point.zero,.rank,.day.sel) {
+    background-color:var(--surface2);color:var(--text);
+  }
+  [data-theme="dark"].ggfc-mobile .top-menu-nav button {color:#d0deef;background-color:transparent}
+  [data-theme="dark"].ggfc-mobile .top-menu-nav button:is(.on,:hover) {color:#fff;background-color:#ffffff19}
+}
+@media print {
+  .sidebar-theme-toggle {display:none!important}
+}

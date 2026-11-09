@@ -2507,8 +2507,9 @@ function abilityHalfInfo(year,half){
   return {year:String(year),half:h,label:h==='H2'?'하반기':'상반기',start,end};
 }
 function abilityLatestContext(){
-  const ds=(verifiedRecords().matches||[]).map(m=>normDate(m.date)).filter(Boolean).sort();
-  const d=ds[ds.length-1]||""; const y=d.slice(0,4)||abilityYearList()[0]; const c=seasonCfg(y);
+  const start=abilityCareerStartDate();
+  const ds=verifiedRecords().matches.map(m=>normDate(m.date)).filter(d=>d>=start).sort();
+  const d=ds.at(-1)||""; const y=d.slice(0,4)||abilityYearList()[0]; const c=seasonCfg(y);
   const h=dateHalfKey(d)||(d&&d>=c.h2s&&d<=c.h2e?"H2":"H1");
   return abilityHalfInfo(y,h);
 }
@@ -2519,7 +2520,9 @@ function abilitySelectedInfo(){
 }
 function previousAbilityHalf(year,half){ return half==="H2"?{year:String(year),half:"H1"}:{year:String(Number(year)-1),half:"H2"}; }
 function abilityMatches(info){
-  return (verifiedRecords().matches||[]).filter(m=>{const d=normDate(m.date);return d && d>=info.start && d<=info.end && (!/^(H1|H2)$/.test(info.half)||matchHalfKey(m)===info.half);});
+  // Older match data is used only by the legacy prior-year initialization option.
+  const start=info.initialSkillReference?info.start:[info.start,abilityCareerStartDate()].sort().pop();
+  return verifiedRecords().matches.filter(m=>{const d=normDate(m.date);return d && d>=start && d<=info.end && (!/^(H1|H2)$/.test(info.half)||matchHalfKey(m)===info.half);});
 }
 /* V3.17: 선수별 소속팀 추적 여부와 무관하게 선택 기간의 '최종 Round 번호'를 기준R로 사용한다.
    예: 2026 상반기 DB의 최종 Round가 13R이면 모든 선수의 기준R은 13이며, 출석R + 결석R = 13이 된다. */
@@ -2665,7 +2668,7 @@ function abilityCareerStartYear(){
 }
 function abilityCareerStartDate(){return abilityCareerStartYear()+'-01-01';}
 function abilityReferenceYear(){return abilityCareerStartYear()-1;}
-function abilityCalendarYearInfo(year){year=String(year);return {start:year+'-01-01',end:year+'-12-31'};}
+function abilityCalendarYearInfo(year){year=String(year);return {start:year+'-01-01',end:year+'-12-31',initialSkillReference:true};}
 function abilityYearPlayerNames(year){
   const info=abilityCalendarYearInfo(year), list=abilityMatches(info), ids=new Set(list.map(m=>m.id)), names=new Set();
   (verifiedRecords().attendance||[]).forEach(r=>{if(ids.has(r.id)&&String(r.player||'').trim())names.add(String(r.player).trim());});
@@ -3143,6 +3146,9 @@ function renderAbilityGuide(){syncAbilityAdminControls();const root=$('#abilityG
 
 function renderAbilityConfig(){
   const root=$("#abilityConfigBody"); if(!root)return; const c=abilityConfig(), ap=c.absence||{};
+  const startYear=abilityCareerStartYear(), recordedYears=new Set(seasonYears());
+  const years=Array.from({length:101},(_,i)=>2000+i);
+  const startYearSelect='<div class="ability-config-field"><label for="abilityCareerStartYear">경기 기록 반영 시작 연도</label><select id="abilityCareerStartYear" data-ability-cfg="initialSkills.careerStartYear"'+(!admin?' disabled':'')+'>'+years.map(y=>'<option value="'+y+'"'+(y===startYear?' selected':'')+'>'+y+'년'+(recordedYears.has(String(y))?' · 경기 기록 있음':'')+'</option>').join('')+'</select></div>';
   const statKeys=['pac','sho','pas','dri','def','phy'], statLbl={pac:'PAC',sho:'SHO',pas:'PAS',dri:'DRI',def:'DEF',phy:'PHY'};
   const steps=(title,key,rows,valueLabel)=>'<div class="ability-config-card"><div class="ability-config-title"><div><h3>'+title+'</h3><p>모든 시즌 공통 · 해당 Round 이벤트 1회 누적</p></div></div><div style="overflow-x:auto"><table class="ability-config-table"><thead><tr><th>구간</th>'+rows.map(x=>'<th>'+num(x.min)+'+</th>').join('')+'</tr></thead><tbody><tr><td>'+valueLabel+'</td>'+rows.map((x,i)=>'<td>'+abilityCfgInput(key+'.'+i+'.value',num(x.value),'0.0001','0')+'</td>').join('')+'</tr><tr><td>최소 기록</td>'+rows.map((x,i)=>'<td>'+abilityCfgInput(key+'.'+i+'.min',num(x.min),'1','0')+'</td>').join('')+'</tr></tbody></table></div></div>';
   const penaltySteps=(title,key,rows)=>'<div class="ability-config-card"><div class="ability-config-title"><div><h3>'+title+'</h3><p>모든 시즌 공통 · 해당 Round 개인파울 DEF 직접 감점</p></div></div><div style="overflow-x:auto"><table class="ability-config-table"><thead><tr><th>구간</th>'+rows.map(x=>'<th>'+num(x.min)+'+</th>').join('')+'</tr></thead><tbody><tr><td>DEF 감점</td>'+rows.map((x,i)=>'<td>'+abilityCfgInput(key+'.'+i+'.value',num(x.value),'0.01','-2','0')+'</td>').join('')+'</tr><tr><td>최소 파울</td>'+rows.map((x,i)=>'<td>'+abilityCfgInput(key+'.'+i+'.min',num(x.min),'1','0')+'</td>').join('')+'</tr></tbody></table></div></div>';
@@ -3155,8 +3161,8 @@ function renderAbilityConfig(){
       abilityCfgField('SoccerBee 68P PAC','unassessed.pac',c.unassessed.pac,'1','0','99')+abilityCfgField('SoccerBee 68P DRI','unassessed.dri',c.unassessed.dri,'1','0','99')+abilityCfgField('SoccerBee 68P DEF','unassessed.def',c.unassessed.def,'1','0','99')+abilityCfgField('SoccerBee 68P PHY','unassessed.phy',c.unassessed.phy,'1','0','99')+
       abilityCfgField('표시 최소점수','scoreMin',c.scoreMin,'1','0','99')+abilityCfgField('표시 최대점수','scoreMax',c.scoreMax,'1','1','100')+
     '</div></div>'+
-    '<div class="ability-config-card full"><div class="ability-config-title"><div><h3>초기 능력치 산정</h3><p>현재 기록지부터 누적 계산 · SHO/PAS 고정 시작 · 연도 변경 시 초기화 없음. PAC·DRI·DEF·PHY는 기존 SoccerBee 환산 유지.</p></div></div><div class="ability-config-fields">'+
-      abilityCfgField('능력치 적용 시작연도','initialSkills.careerStartYear',num((c.initialSkills||{}).careerStartYear),'1','2000','2100')+
+    '<div class="ability-config-card full"><div class="ability-config-title"><div><h3>기록 반영 기간과 초기 능력치</h3><p>선택한 연도 1월 1일부터의 경기 기록으로 BASE·FORM·지속 부진을 다시 계산합니다. 원본 경기 기록은 보관됩니다. 시작일 이전의 유효 SoccerBee 측정은 초기값 산정에 사용될 수 있습니다.</p></div></div><div class="ability-config-fields">'+
+      startYearSelect+
       abilityCfgField('SHO 시작값','initialSkills.fallbackSho',num((c.initialSkills||{}).fallbackSho),'1','0','99')+
       abilityCfgField('PAS 시작값','initialSkills.fallbackPas',num((c.initialSkills||{}).fallbackPas),'1','0','99')+
     '</div></div>'+ 
@@ -3212,6 +3218,7 @@ function validateAbilityConfig(cfg){
 
   if(cfg.scoreMax<=cfg.scoreMin) return '표시 최대점수는 최소점수보다 커야 합니다.';
   const init=cfg.initialSkills||{};
+  if(!Number.isInteger(init.careerStartYear)||init.careerStartYear<2000||init.careerStartYear>2100)return '경기 기록 반영 시작 연도는 2000~2100년 중 선택하세요.';
   if(num(init.scoreMin)>num(init.scoreMid) || num(init.scoreMid)>num(init.scoreMax)) return '초기 SHO/PAS 백분위 점수는 최저 ≤ 중앙 ≤ 최고 순서여야 합니다.';
   if(num(init.reliabilityRounds)<1) return '전년도 신뢰 기준 Round는 1 이상이어야 합니다.';
   const checkAscending=(arr,key,label)=>{for(let i=1;i<arr.length;i++)if(num(arr[i][key])<num(arr[i-1][key]))return label+' 구간값은 왼쪽부터 오름차순이어야 합니다.';return '';};
@@ -3240,7 +3247,8 @@ function bindAbilityConfigEvents(){
 
 function abilityYearGameDates(year){
   const y=String(year||"");
-  return [...new Set((verifiedRecords().matches||[]).map(m=>normDate(m.date)).filter(d=>d&&d.slice(0,4)===y))].sort().reverse();
+  if(num(y)<abilityCareerStartYear())return [];
+  return [...new Set(verifiedRecords().matches.map(m=>normDate(m.date)).filter(d=>d.slice(0,4)===y))].sort().reverse();
 }
 function sortAbilityRecords(records){
   const {key,direction}=abilitySort, sign=direction==="desc"?-1:1;
@@ -3359,6 +3367,7 @@ function renderAbility(){
   ensureAbilityData(); const ys=abilityYearList();
   if(!abilityYear||!ys.includes(abilityYear)){const c=abilityLatestContext();abilityYear=c.year;abilityHalf=c.half;}
   let selectedDate=normDate(abilityAsOfDate);
+  if(selectedDate&&selectedDate<abilityCareerStartDate())selectedDate=abilityAsOfDate='';
   if(selectedDate && /^\d{4}/.test(selectedDate) && selectedDate.slice(0,4)!==abilityYear){
     abilityYear=selectedDate.slice(0,4);
     if(!ys.includes(abilityYear)) ys.unshift(abilityYear);
@@ -7013,7 +7022,11 @@ let recordTableScrollRefresh=null;
 function selectMenuView(v){
  const id=canonicalMenu(v);
  document.querySelectorAll('#tabs button[data-v], [data-top-menu]').forEach(el=>{const active=(el.dataset.v||el.dataset.topMenu)===id;el.classList.toggle('on',active);if(active)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');});
- const top=document.getElementById('topMenuNav'),button=top?.querySelector('.on');if(button&&(button.offsetLeft<top.scrollLeft||button.offsetLeft+button.offsetWidth>top.scrollLeft+top.clientWidth))top.scrollLeft=Math.max(0,button.offsetLeft-(top.clientWidth-button.offsetWidth)/2);
+ const top=document.getElementById('topMenuNav'),button=top?.querySelector('.on');
+ if(button){
+  const bar=top.getBoundingClientRect(),item=button.getBoundingClientRect();
+  if(item.left<bar.left||item.right>bar.right)top.scrollLeft+=(item.left+item.right-bar.left-bar.right)/2;
+ }
  // Measure the small navigation before revealing a potentially long, unlaid-out view.
  document.querySelectorAll('section.view').forEach(el=>el.classList.toggle('on',el.id==='v-'+id));syncMobileNav(id);recordTableScrollRefresh?.();
 syncMemberPreviewUI();
@@ -7099,7 +7112,7 @@ function renderActiveView(v,options={}){
   mobilePageSwipe?.rendered(next);
 }
 // Analysis assets are requested only by an administrator opening this menu.
-const ABILITY_AUDIT_ASSETS={ui:'assets/ggfc-ability-audit.js?v=65e5b41ad5539ab6',css:'assets/ggfc-ability-audit.css?v=60cd2b8807bd30a9',worker:'assets/ggfc-ability-audit-worker.js?v=a60b25525ee057c7'};
+const ABILITY_AUDIT_ASSETS={ui:'assets/ggfc-ability-audit.js?v=e636933501c30c93',css:'assets/ggfc-ability-audit.css?v=60cd2b8807bd30a9',worker:'assets/ggfc-ability-audit-worker.js?v=1e8df58eae92fe83'};
 let abilityAuditLoader=null;
 function renderAbilityAudit(){
  const root=document.getElementById('abilityAuditRoot');

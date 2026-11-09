@@ -223,6 +223,16 @@ function initMemberUI(){
   const panel=document.querySelector('#ggfcSidebar'),toggle=document.getElementById('sidebarToggle');
   let pinOpen=sidebarPinned;try{pinOpen=pinOpen&&localStorage.getItem('ggfc-sidebar-open')!=='0';}catch(e){}
   setDesktopSidebar(pinOpen,false);syncSidebarPinUI();
+  const themeToggle=document.getElementById('themeToggle'),root=document.documentElement;
+  const syncTheme=()=>themeToggle.setAttribute('aria-pressed',String(root.dataset.theme==='dark'));
+  syncTheme();
+  themeToggle.onclick=()=>{
+    const dark=root.dataset.theme!=='dark';
+    if(dark)root.dataset.theme='dark';
+    else delete root.dataset.theme;
+    try{localStorage.setItem('ggfc-theme',dark?'dark':'light');}catch{}
+    syncTheme();
+  };
   document.getElementById('sidebarPin').onclick=()=>setSidebarPinned(!sidebarPinned);
   document.getElementById('sidebarDismiss').onclick=()=>closeMemberSidebar(true,true);
   document.getElementById('sidebarToggle').onclick=()=>document.documentElement.classList.contains('ggfc-mobile')?openMemberSidebar():setDesktopSidebar(!desktopSidebarOpen());

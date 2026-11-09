@@ -1,4 +1,4 @@
-/* Generated from current core + SLUMP; source SHA256 30e999d1fdf36ebef6fbe5fde23debd47dfbab00ef15f953766ee2ad1effa0ac */
+/* Generated from current core + SLUMP; source SHA256 bb602a4b64a41f1b9d9f5862a75a341bb7e6829f104f8b1e1074dc9850ffba2b */
 const GGFCSlump=(()=>{
  const defaults={enabled:true,startDate:'2026-10-20',recentGames:10,baselineGames:20,minimumBaselineGames:10,formTrigger:-2,performanceTrigger:75,persistenceRounds:4,interval:4,recoveryPerformance:85,recoveryRounds:3,slumpDrop:.20,severeDrop:.35,criticalDrop:.50,seasonCap:1.5,storyEnabled:false};
  Object.assign(defaults,{recoveryStartDate:'2026-10-27',recoveryPercent:25,severePerformance:70,criticalPerformance:60});
@@ -1274,13 +1274,16 @@ function abilityHalfInfo(year,half){
   return {year:String(year),half:h,label:h==='H2'?'하반기':'상반기',start,end};
 }
 function abilityLatestContext(){
-  const ds=(verifiedRecords().matches||[]).map(m=>normDate(m.date)).filter(Boolean).sort();
-  const d=ds[ds.length-1]||""; const y=d.slice(0,4)||abilityYearList()[0]; const c=seasonCfg(y);
+  const start=abilityCareerStartDate();
+  const ds=verifiedRecords().matches.map(m=>normDate(m.date)).filter(d=>d>=start).sort();
+  const d=ds.at(-1)||""; const y=d.slice(0,4)||abilityYearList()[0]; const c=seasonCfg(y);
   const h=dateHalfKey(d)||(d&&d>=c.h2s&&d<=c.h2e?"H2":"H1");
   return abilityHalfInfo(y,h);
 }
 function abilityMatches(info){
-  return (verifiedRecords().matches||[]).filter(m=>{const d=normDate(m.date);return d && d>=info.start && d<=info.end && (!/^(H1|H2)$/.test(info.half)||matchHalfKey(m)===info.half);});
+  // Older match data is used only by the legacy prior-year initialization option.
+  const start=info.initialSkillReference?info.start:[info.start,abilityCareerStartDate()].sort().pop();
+  return verifiedRecords().matches.filter(m=>{const d=normDate(m.date);return d && d>=start && d<=info.end && (!/^(H1|H2)$/.test(info.half)||matchHalfKey(m)===info.half);});
 }
 function normalizePlayerMatchKey(v){
   return String(v??"").normalize("NFKC").trim().toLowerCase().replace(/\s+/g,"");
@@ -1369,7 +1372,7 @@ function abilityCareerStartYear(){
 }
 function abilityCareerStartDate(){return abilityCareerStartYear()+'-01-01';}
 function abilityReferenceYear(){return abilityCareerStartYear()-1;}
-function abilityCalendarYearInfo(year){year=String(year);return {start:year+'-01-01',end:year+'-12-31'};}
+function abilityCalendarYearInfo(year){year=String(year);return {start:year+'-01-01',end:year+'-12-31',initialSkillReference:true};}
 function abilityYearPlayerNames(year){
   const info=abilityCalendarYearInfo(year), list=abilityMatches(info), ids=new Set(list.map(m=>m.id)), names=new Set();
   (verifiedRecords().attendance||[]).forEach(r=>{if(ids.has(r.id)&&String(r.player||'').trim())names.add(String(r.player).trim());});
