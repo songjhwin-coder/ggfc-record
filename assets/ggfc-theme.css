@@ -165,3 +165,6 @@
   #sbMeasurementSheet .sb-measurement-group {break-inside:avoid;margin-bottom:14px}
   #sbMeasurementSheet :is(th,td) {font-size:11pt;padding:5px 6px;border-bottom:1px solid #ccd6e1}
 }
+
+#ggfcMusicToggle[hidden],.sidebar-music-status[hidden] {display:none}
+.sidebar-music-status {margin:-6px 0 0;color:#d5e4f6;font-size:11px;line-height:1.45}
