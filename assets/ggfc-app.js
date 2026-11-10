@@ -3862,7 +3862,7 @@ function drawPlayerCardHex(stats){
   };
   playerCardHexFrame=requestAnimationFrame(frame);
 }
-function playPlayerCardReveal(stats){
+function playPlayerCardReveal(stats,revealSound){
   resetPlayerCardHex();
   const mask=document.getElementById('playerCardMask'),panel=document.getElementById('playerCardHexPanel'),container=document.getElementById('playerCardContainer'),dialog=mask.querySelector('.player-card-dialog');if(!panel||!container)return;
   const run=playerCardRevealRun,valid=()=>run===playerCardRevealRun&&mask.classList.contains('on');
@@ -3870,12 +3870,14 @@ function playPlayerCardReveal(stats){
   if(status){status.hidden=!reduce;status.textContent=reduce?'기기의 동작 줄이기 설정 적용':'';}
   if(reduce){
     panel.classList.add('visible','values-active');const shape=document.getElementById('playerCardHexShape');shape.setAttribute('points',playerCardHexPoints(stats,1));shape.style.opacity='1';shape.style.strokeDashoffset='0';shape.classList.add('complete');
-    ['Pac','Sho','Pas','Dri','Def','Phy'].forEach((k,i)=>{const el=document.getElementById('playerCardHex'+k);if(el)el.textContent=String(stats[i]);});return;
+    ['Pac','Sho','Pas','Dri','Def','Phy'].forEach((k,i)=>{const el=document.getElementById('playerCardHex'+k);if(el)el.textContent=String(stats[i]);});
+    window.GGFCMusic?.playReveal(revealSound);return;
   }
   // Start the entrance after record/history layout has finished and a paint can occur.
   container.classList.add('card-waiting');
   playerCardRevealFrame=requestAnimationFrame(()=>{playerCardRevealFrame=requestAnimationFrame(()=>{
     playerCardRevealFrame=null;if(!valid())return;container.classList.remove('card-waiting');container.classList.add('card-revealing');
+    window.GGFCMusic?.playReveal(revealSound);
     container.onanimationend=e=>{if(e.target===container&&valid())container.classList.remove('card-revealing');};
   });});
   let began=false;
@@ -4045,13 +4047,14 @@ function openPlayerCard(player,query){
   document.body.style.overflow="hidden";
   mask.scrollTop=0;mask.querySelector('.player-card-dialog').scrollTop=0;
   openPlayerCardHistory(name,cardInfo);
-  playPlayerCardReveal(abilities.map(v=>v===null?0:v));
+  const revealSound=window.GGFCMusic?.prepareReveal();
+  playPlayerCardReveal(abilities.map(v=>v===null?0:v),revealSound);
   setTimeout(()=>{if(mask.classList.contains('on'))mask.querySelector('.player-card-dialog').focus({preventScroll:true});},80);
 }
 function closePlayerCard(options={}){
   const mask=$("#playerCardMask"); if(!mask?.classList.contains('on')) return;
   releasePlayerCardNavigation(options.fromHistory===true);
-  clearPlayerCardAnimation();
+  clearPlayerCardAnimation();window.GGFCMusic?.stopReveal();
   if(playerCardHistoryResize){playerCardHistoryResize.disconnect();playerCardHistoryResize=null;}
   playerCardHistoryState=null;playerCardSoccerBeeState=null;
   mask.classList.remove("on"); mask.setAttribute("aria-hidden","true");
@@ -6885,7 +6888,7 @@ function renderCardSettings(){
 }
 function renderScreenSettings(){
   if(!admin)return;
-  renderDisplaySettings();renderLogoManager();window.GGFCStartup?.renderSettings();
+  renderDisplaySettings();renderLogoManager();window.GGFCStartup?.renderSettings();window.GGFCMusicSettings?.render();
 }
 let activeView='dash';
 let memberPreviewActive=false,memberPreviewTarget='',memberPreviewRestoring=false;
@@ -7262,6 +7265,7 @@ function renderAll(){
   invalidateVerifiedRecords();recordCalculationNotice();
   const cs=compList();if(comp!=='ALL'&&!cs.includes(comp))comp='ALL';
   $('#compFilter').innerHTML='<option value="ALL">전체 대회</option>'+cs.map(c=>'<option'+(c===comp?' selected':'')+'>'+esc(c)+'</option>').join('');
+  window.GGFCMusic?.configure(DB.settings?.backgroundMusic);
   renderDisplaySettings();renderActiveView(activeView);GGFC.refreshUI();
 }
 
