@@ -168,3 +168,7 @@
 
 #ggfcMusicToggle[hidden],.sidebar-music-status[hidden] {display:none}
 .sidebar-music-status {margin:-6px 0 0;color:#d5e4f6;font-size:11px;line-height:1.45}
+
+#musicSettingsForm .music-volume-field {grid-template-columns:minmax(0,1fr) auto;max-width:420px}
+.music-volume-field output {font-variant-numeric:tabular-nums}
+.music-volume-field input {grid-column:1/-1;width:100%;min-width:0;accent-color:var(--blue);margin:0}

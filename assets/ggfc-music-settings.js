@@ -5,28 +5,52 @@ window.GGFCMusicSettings=(()=>{
   const saveButton=document.getElementById('musicSettingsSave'),defaultButton=document.getElementById('musicSettingsDefault');
   const current=document.getElementById('musicSettingsCurrent'),status=document.getElementById('musicSettingsStatus');
   const music=window.GGFCMusic;
-  let draft=null,loading=false,saving=false,readId=0;
+  const volumeFields={
+    background:document.getElementById('musicBackgroundVolume'),
+    reveal:document.getElementById('musicRevealVolume'),
+  };
+  let draft=null,volumeDraft=null,loading=false,saving=false,readId=0;
   const saved=()=>music.normalize(DB.settings?.backgroundMusic);
-  const dirty=()=>loading||draft!==null||!!urlInput.value.trim();
+  const savedVolumes=()=>music.normalizeVolumes(DB.settings?.audioVolumes);
+  const trackDirty=()=>loading||draft!==null||!!urlInput.value.trim();
+  const dirty=()=>trackDirty()||volumeDraft!==null;
+  function displayVolumes(levels){
+    for(const [key,input] of Object.entries(volumeFields)){
+      input.value=String(levels[key]);
+      document.getElementById(input.id+'Value').textContent=levels[key]+'%';
+      input.setAttribute('aria-valuetext',levels[key]+'%');
+    }
+  }
   function controls(){
     fileInput.disabled=urlInput.disabled=saving;
-    saveButton.disabled=saving||loading||!draft;
-    defaultButton.disabled=saving||(!saved().src&&!dirty());
+    for(const input of Object.values(volumeFields))input.disabled=saving;
+    saveButton.disabled=saving||loading||(!draft&&!volumeDraft);
+    defaultButton.disabled=saving||(!DB.settings?.backgroundMusic?.src&&!trackDirty());
   }
   function render(){
     panel.hidden=!admin||!GGFC.authorized;
     if(panel.hidden)return;
     const track=saved();
     current.textContent='현재 음악 '+(track.src?(track.name||'등록한 MP3'):'기본곡 · cl_anthem.mp3');
-    controls();
+    displayVolumes(volumeDraft||savedVolumes());controls();
   }
   function discard(){
-    readId++;loading=false;draft=null;fileInput.value='';urlInput.value='';status.textContent='';
+    readId++;loading=false;draft=null;volumeDraft=null;fileInput.value='';urlInput.value='';status.textContent='';
     render();
   }
   function change(message){
     status.textContent=message;controls();GGFC.refreshUI();
   }
+  function changeVolume(){
+    if(!admin||!GGFC.authorized)return;
+    const levels=music.normalizeVolumes({background:volumeFields.background.valueAsNumber,reveal:volumeFields.reveal.valueAsNumber});
+    const persisted=savedVolumes(),wasDirty=dirty();
+    volumeDraft=levels.background!==persisted.background||levels.reveal!==persisted.reveal?levels:null;
+    displayVolumes(levels);controls();
+    status.textContent=dirty()?'음악 설정 저장을 눌러 주세요.':'저장된 볼륨입니다.';
+    if(wasDirty!==dirty())GGFC.refreshUI();
+  }
+  for(const input of Object.values(volumeFields))input.oninput=input.onchange=changeVolume;
   async function fileData(file){
     const bytes=new Uint8Array(await file.slice(0,3).arrayBuffer());
     const tag=bytes[0]===73&&bytes[1]===68&&bytes[2]===51;
@@ -75,21 +99,24 @@ window.GGFCMusicSettings=(()=>{
   form.onsubmit=async event=>{
     event.preventDefault();
     if(!admin||!GGFC.canEdit()){toast('관리자 인증과 서버 연결을 확인해 주세요.');return;}
-    if(!draft||loading||saving)return;
+    if((!draft&&!volumeDraft)||loading||saving)return;
     const settings={...DB.settings};
-    if(draft.src)settings.backgroundMusic=draft;else delete settings.backgroundMusic;
+    if(draft){
+      if(draft.src)settings.backgroundMusic=draft;else delete settings.backgroundMusic;
+    }
+    if(volumeDraft)settings.audioVolumes=volumeDraft;
     const encoded=GGFC.split({...DB,settings},1,'audio-size-check',Date.now());
     if(new TextEncoder().encode(JSON.stringify(encoded)).length>8*1024*1024-1024){
       change('공유 기록 용량 한도에 가까워 MP3 주소로 저장해 주세요.');return;
     }
     DB.settings=settings;
-    draft=null;fileInput.value='';urlInput.value='';saving=true;
+    draft=null;volumeDraft=null;fileInput.value='';urlInput.value='';saving=true;
     render();change('배경 음악을 공유 저장하고 있습니다…');
-    music.configure(settings.backgroundMusic);
+    music.configure(settings.backgroundMusic,settings.audioVolumes);
     save();
     const shared=await GGFC.flush();
     saving=false;render();
     change(shared?'배경 음악 공유 저장 완료.':'상단 공유 저장 상태를 확인해 주세요.');
   };
-  return {render,discard,get dirty(){return dirty();},get draft(){return draft;}};
+  return {render,discard,get dirty(){return dirty();},get draft(){return draft;},get volumeDraft(){return volumeDraft;}};
 })();

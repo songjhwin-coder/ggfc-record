@@ -1,6 +1,6 @@
 /* Background music and the player-card reveal effect have separate playback lifecycles. */
 window.GGFCMusic=(()=>{
-  const audio=document.getElementById('ggfcMusic'),toggle=document.getElementById('ggfcMusicToggle');
+  const nativeAudio=document.getElementById('ggfcMusic'),toggle=document.getElementById('ggfcMusicToggle');
   const status=document.getElementById('ggfcMusicStatus'),detail=document.getElementById('ggfcDetailDialog');
   const detailBody=document.getElementById('ggfcDetailBody'),startup=document.getElementById('ggfcStartup');
   const base=document.currentScript.src,defaultTrack=new URL('cl_anthem.mp3',base).href;
@@ -8,8 +8,19 @@ window.GGFCMusic=(()=>{
   const fileLimit=2*1024*1024,dataPrefix='data:audio/mpeg;base64,';
   let enabled=true,pageActive=true,ready=false,startupPending=!startup.hidden;
   let starting=false,attempt=0,playbackMessage='',needsGesture=false,track=defaultTrack,rawSource,objectURL='',usingDefaultFallback=false;
+  const AudioEngine=window.AudioContext||window.webkitAudioContext;
+  let audio=nativeAudio,context,mixAudio,mixGain,revealGain,mixUnavailable=false,volumeLimited=false,resumeAt=0;
+  let volumes=normalizeVolumes();
   try{enabled=localStorage.getItem(key)!=='0';}catch{}
 
+  function normalizeVolumes(raw){
+    const percent=value=>Number.isFinite(value)?Math.max(0,Math.min(100,Math.round(value))):100;
+    return {background:percent(raw?.background),reveal:percent(raw?.reveal)};
+  }
+  function setMediaVolume(element,value){
+    try{element.volume=value;}catch{}
+    return Math.abs(element.volume-value)<0.001;
+  }
   function normalize(raw){
     const src=typeof raw?.src==='string'?raw.src.trim():'';
     const name=typeof raw?.name==='string'?raw.name.trim().slice(0,100):'';
@@ -30,31 +41,80 @@ window.GGFCMusic=(()=>{
   function updateControls(){
     toggle.setAttribute('aria-pressed',String(enabled));
     toggle.title=enabled?'배경 음악 끄기':'배경 음악 켜기';
-    const message=enabled&&(hasVideo()?'유튜브 영상 화면에서 배경 음악 일시정지':playbackMessage||(usingDefaultFallback?'등록한 음악을 재생할 수 없어 기본곡을 사용합니다.':starting?'음악을 불러오고 있습니다…':''));
-    status.textContent=message||'';
+    let message='';
+    if(enabled){
+      if(hasVideo())message='유튜브 영상 화면에서 배경 음악 일시정지';
+      else if(volumes.background===0)message='관리자 설정 · 배경 음악 볼륨 0%';
+      else if(playbackMessage)message=playbackMessage;
+      else if(audio===mixAudio&&context.state!=='running')message='화면을 한 번 누르면 배경 음악이 시작됩니다.';
+      else if(usingDefaultFallback)message='등록한 음악을 재생할 수 없어 기본곡을 사용합니다.';
+      else if(volumeLimited)message='이 브라우저나 음악 주소에서는 배경 음악 볼륨 조절이 제한됩니다.';
+      else if(starting)message='음악을 불러오고 있습니다…';
+    }
+    status.textContent=message;
     status.hidden=!message;
   }
   function pause(){
     if(starting){attempt++;starting=false;}
     if(!audio.paused)audio.pause();
   }
+  function clearAudio(){
+    pause();
+    if(audio.hasAttribute('src')){audio.removeAttribute('src');audio.load();}
+  }
   function resetMediaSource(){
-    pause();audio.removeAttribute('src');audio.load();
+    clearAudio();resumeAt=0;
     if(objectURL){URL.revokeObjectURL(objectURL);objectURL='';}
+  }
+  function switchAudio(output){
+    if(audio===output)return;
+    resumeAt=audio.currentTime||0;
+    clearAudio();audio=output;
+  }
+  function volumeOutput(){
+    const level=volumes.background/100;
+    volumeLimited=false;
+    if(setMediaVolume(nativeAudio,level))return nativeAudio;
+    if(AudioEngine&&!mixUnavailable){
+      try{
+        context??=new AudioEngine();
+        if(!mixAudio){
+          const stream=new Audio();
+          stream.loop=true;stream.preload='none';stream.crossOrigin='anonymous';
+          mixGain=context.createGain();
+          context.createMediaElementSource(stream).connect(mixGain).connect(context.destination);
+          stream.addEventListener('error',mediaError);
+          mixAudio=stream;
+        }
+        mixGain.gain.value=level;
+        return mixAudio;
+      }catch{mixUnavailable=true;}
+    }
+    volumeLimited=true;
+    return nativeAudio;
+  }
+  function resumeMixer(){
+    if(audio===mixAudio&&context.state!=='running')context.resume().then(updateControls,()=>{});
   }
   function playbackError(error){
     needsGesture=error?.name==='NotAllowedError';
+    if(!needsGesture&&audio===mixAudio){
+      // Cross-origin media may be playable directly even when its host blocks a Web Audio stream.
+      mixUnavailable=true;
+      switchAudio(nativeAudio);syncPlayback();return;
+    }
     if(!needsGesture&&track!==defaultTrack&&!usingDefaultFallback){
-      usingDefaultFallback=true;
+      usingDefaultFallback=true;mixUnavailable=false;
       resetMediaSource();syncPlayback();
       return;
     }
     playbackMessage=needsGesture?'화면을 한 번 누르면 배경 음악이 시작됩니다.':'배경 음악을 재생할 수 없습니다. 설정이나 연결을 확인해 주세요.';
   }
   function syncPlayback(){
-    if(!enabled||suspended()){
+    if(!enabled||volumes.background===0||suspended()){
       pause();updateControls();return;
     }
+    switchAudio(volumeOutput());resumeMixer();
     if(starting||!audio.paused||playbackMessage){updateControls();return;}
     // Keep the shared upload portable and expose it to the media decoder as a Blob.
     const selected=usingDefaultFallback?defaultTrack:track;
@@ -63,7 +123,10 @@ window.GGFCMusic=(()=>{
       objectURL=URL.createObjectURL(new Blob([bytes],{type:'audio/mpeg'}));
     }
     const src=objectURL||selected;
-    if(audio.getAttribute('src')!==src)audio.src=src;
+    if(audio.getAttribute('src')!==src){
+      audio.src=src;
+      if(resumeAt){audio.currentTime=resumeAt;resumeAt=0;}
+    }
     const token=++attempt;
     starting=true;updateControls();
     audio.play().then(()=>{
@@ -74,13 +137,23 @@ window.GGFCMusic=(()=>{
       starting=false;playbackError(error);updateControls();
     });
   }
-  function configure(raw){
-    if(raw?.src===rawSource)return;
-    rawSource=raw?.src;
-    const next=normalize(raw).src||defaultTrack;
-    if(track===next)return;
-    resetMediaSource();
-    track=next;usingDefaultFallback=false;playbackMessage='';needsGesture=false;
+  function configure(raw,settings){
+    const nextVolumes=normalizeVolumes(settings);
+    const levelsChanged=nextVolumes.background!==volumes.background||nextVolumes.reveal!==volumes.reveal;
+    volumes=nextVolumes;
+    let trackChanged=false;
+    if(raw?.src!==rawSource){
+      rawSource=raw?.src;
+      const next=normalize(raw).src||defaultTrack;
+      if(track!==next){
+        resetMediaSource();
+        track=next;trackChanged=true;usingDefaultFallback=false;mixUnavailable=false;playbackMessage='';needsGesture=false;
+      }
+    }
+    if(!levelsChanged&&!trackChanged)return;
+    if(volumes.reveal===0)stopReveal();
+    if(revealGain)revealGain.gain.value=volumes.reveal/100;
+    if(revealAudio)setMediaVolume(revealAudio,volumes.reveal/100);
     syncPlayback();
   }
   toggle.onclick=()=>{
@@ -89,17 +162,18 @@ window.GGFCMusic=(()=>{
     if(enabled&&(usingDefaultFallback||audio.error)){usingDefaultFallback=false;resetMediaSource();}
     syncPlayback();
   };
-  audio.addEventListener('error',()=>{
-    if(!enabled||starting)return;
+  function mediaError(event){
+    if(event.currentTarget!==audio||!enabled||starting)return;
     playbackError(audio.error);updateControls();
-  });
+  }
+  nativeAudio.addEventListener('error',mediaError);
   document.addEventListener('click',event=>{
-    if(!event.isTrusted||!enabled||!needsGesture||suspended()||toggle.contains(event.target))return;
-    needsGesture=false;playbackMessage='';syncPlayback();
+    if(!event.isTrusted||!enabled||volumes.background===0||suspended()||toggle.contains(event.target))return;
+    if(needsGesture){needsGesture=false;playbackMessage='';syncPlayback();}
+    else resumeMixer();
   },true);
 
-  const AudioEngine=window.AudioContext||window.webkitAudioContext;
-  let context,bytesRequest,bufferRequest,source,revealAudio,revealToken=0;
+  let bytesRequest,bufferRequest,source,revealAudio,revealToken=0;
   function getRevealBytes(){
     if(!bytesRequest)bytesRequest=fetch(revealTrack,{priority:'low'}).then(response=>{
       if(!response.ok)throw Error('Player reveal sound unavailable');
@@ -121,11 +195,11 @@ window.GGFCMusic=(()=>{
   }
   function prepareReveal(){
     stopReveal();
-    if(suspended())return null;
+    if(volumes.reveal===0||suspended())return null;
     if(!AudioEngine){
       // Keep HTML audio in the player's original click when Web Audio is unavailable.
       warmReveal();
-      revealAudio.currentTime=0;
+      revealAudio.currentTime=0;setMediaVolume(revealAudio,volumes.reveal/100);
       revealAudio.play().catch(()=>{});
       return null;
     }
@@ -143,9 +217,14 @@ window.GGFCMusic=(()=>{
     if(!effect)return;
     const deadline=performance.now()+650;
     effect.prepared.then(([running,buffer])=>{
-      if(!running||!buffer||effect.token!==revealToken||suspended()||performance.now()>deadline)return;
+      if(!running||!buffer||effect.token!==revealToken||volumes.reveal===0||suspended()||performance.now()>deadline)return;
       const node=context.createBufferSource();
-      node.buffer=buffer;node.connect(context.destination);
+      if(!revealGain){
+        revealGain=context.createGain();
+        revealGain.connect(context.destination);
+      }
+      revealGain.gain.value=volumes.reveal/100;
+      node.buffer=buffer;node.connect(revealGain);
       source=node;node.onended=()=>{if(source===node)source=null;};
       node.start();
     });
@@ -175,5 +254,5 @@ window.GGFCMusic=(()=>{
     if(!startupPending)warmReveal();
     refreshPlayback();
   },0),{once:true});
-  return {configure,normalize,fileLimit,dataPrefix,prepareReveal,playReveal,stopReveal};
+  return {configure,normalize,normalizeVolumes,fileLimit,dataPrefix,prepareReveal,playReveal,stopReveal};
 })();

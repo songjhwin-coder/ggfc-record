@@ -7265,7 +7265,7 @@ function renderAll(){
   invalidateVerifiedRecords();recordCalculationNotice();
   const cs=compList();if(comp!=='ALL'&&!cs.includes(comp))comp='ALL';
   $('#compFilter').innerHTML='<option value="ALL">전체 대회</option>'+cs.map(c=>'<option'+(c===comp?' selected':'')+'>'+esc(c)+'</option>').join('');
-  window.GGFCMusic?.configure(DB.settings?.backgroundMusic);
+  window.GGFCMusic?.configure(DB.settings?.backgroundMusic,DB.settings?.audioVolumes);
   renderDisplaySettings();renderActiveView(activeView);GGFC.refreshUI();
 }
 

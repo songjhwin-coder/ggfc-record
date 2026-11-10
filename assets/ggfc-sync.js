@@ -443,6 +443,7 @@ const GGFC = (() => {
       if(typeof squadAppearanceDirty!=='undefined'&&squadAppearanceDirty&&squadAppearanceDraft)draft.settings.squadAppearance=normalizeSquadAppearance(squadAppearanceDraft);
       if(window.GGFCStartup?.dirty&&window.GGFCStartup.draft)draft.settings.startupScreen=window.GGFCStartup.draft;
       if(window.GGFCMusicSettings?.draft)draft.settings.backgroundMusic=window.GGFCMusicSettings.draft;
+      if(window.GGFCMusicSettings?.volumeDraft)draft.settings.audioVolumes=window.GGFCMusicSettings.volumeDraft;
       if(window.GGFCThumbnail?.dirty&&window.GGFCThumbnail.draft)draft.settings.youtubeThumbnail=window.GGFCThumbnail.draft;
       download('GGFC_미저장기록.json',JSON.stringify(draft,null,2),'application/json');
     };
@@ -476,4 +477,4 @@ const GGFC = (() => {
   }
   return {publicCounterContext,get editing(){return editLease||hasSettingsDraft()||!!window.GGFCThumbnail?.dirty||!!window.GGFCOperator?.pending;},get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving||state.busy>0;},canEdit,adminPasswordStatus,changeAdminPassword,get passwordChanging(){return passwordBusy;},normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,signIn,loginOrLogout,closeLogin,togglePassword};
 })();
-window.GGFC_VERSION='3.25.100';
+window.GGFC_VERSION='3.25.101';
