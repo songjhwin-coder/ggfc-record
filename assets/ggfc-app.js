@@ -1700,6 +1700,7 @@ function renderHeaderLogo(){
   }
 }
 function renderDisplaySettings(){
+  window.GGFCStadiumTheme?.configure(DB.settings?.stadiumTheme);
   renderCareerFrameSettings();
   renderPlayerCardDesignSettings();renderAnalysisStartSettings();
   if(careerFrameCardContext&&document.getElementById('playerCardMask')?.classList.contains('on'))renderCareerFrame(careerFrameCardContext.player,careerFrameCardContext.cutoff);
@@ -6888,7 +6889,7 @@ function renderCardSettings(){
 }
 function renderScreenSettings(){
   if(!admin)return;
-  renderDisplaySettings();renderLogoManager();window.GGFCStartup?.renderSettings();window.GGFCMusicSettings?.render();
+  renderDisplaySettings();renderLogoManager();window.GGFCStartup?.renderSettings();window.GGFCMusicSettings?.render();window.GGFCStadiumTheme?.render();
 }
 let activeView='dash';
 let memberPreviewActive=false,memberPreviewTarget='',memberPreviewRestoring=false;

@@ -3906,7 +3906,7 @@ body:not(.admin-mode) .il-rules{display:none!important}
 /* Start card entry after layout, on a separate layer from the card's size scaling. */
 #playerCardMask.on #playerCardContainer{opacity:1;transform:none;filter:none;animation:none}
 #playerCardMask.on #playerCardContainer.card-waiting{opacity:0}
-#playerCardMask.on #playerCardContainer.card-revealing{animation:ggfc-card-visible-entry .7s cubic-bezier(.22,.7,.25,1) both}
+#playerCardMask.on #playerCardContainer.card-revealing{animation:ggfc-card-visible-entry .84s cubic-bezier(.22,.7,.25,1) both}
 @keyframes ggfc-card-visible-entry{from{opacity:0;transform:translate3d(0,20px,0) scale(.92)}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
 .player-card-motion-status{font-size:11px;color:#d3dfed;max-width:180px}
 .player-card-motion-status[hidden]{display:none}

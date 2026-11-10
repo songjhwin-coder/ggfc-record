@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="232" viewBox="0 0 480 232">
+  <defs>
+    <path id="star" d="M0-31 8.2-10.3 30-9.6 13 4.7 18.5 26 0 14-18.5 26-13 4.7-30-9.6-8.2-10.3Z"/>
+    <linearGradient id="glass" x1="0" x2="1" y1="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop stop-color="#d8f5ff" stop-opacity=".72"/>
+      <stop offset=".56" stop-color="#7eb6ff" stop-opacity=".38"/>
+      <stop offset="1" stop-color="#747aff" stop-opacity=".13"/>
+    </linearGradient>
+    <linearGradient id="rail">
+      <stop stop-color="#70a6ff" stop-opacity="0"/>
+      <stop offset=".49" stop-color="#92d8ff" stop-opacity=".29"/>
+      <stop offset="1" stop-color="#70a6ff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke="url(#rail)">
+    <path d="M-10 227C102 83 289 18 490 47"/>
+    <path d="M-10 232C130 92 288 36 490 52" opacity=".4"/>
+    <path d="M-10 177C119 122 257 105 490 138" opacity=".4"/>
+  </g>
+  <g fill="#a2bfff" fill-opacity=".065" stroke="url(#glass)" stroke-linejoin="round">
+    <use href="#star" transform="translate(414 92) rotate(15) scale(1.72)" stroke-width=".8" opacity=".83"/>
+    <use href="#star" transform="translate(292 39) rotate(-17) scale(.96)" stroke-width="1.25" opacity=".72"/>
+    <use href="#star" transform="translate(181 132) rotate(14) scale(1.29)" stroke-width=".85" opacity=".63"/>
+    <use href="#star" transform="translate(61 87) rotate(-19) scale(.82)" stroke-width="1.3" opacity=".73"/>
+    <use href="#star" transform="translate(344 172) rotate(12) scale(.59)" stroke-width="1.55" opacity=".58"/>
+    <use href="#star" transform="translate(42 194) rotate(15) scale(.49)" stroke-width="1.55" opacity=".5"/>
+  </g>
+  <g fill="#ccedff" opacity=".46">
+    <circle cx="95" cy="53" r="1.4"/><circle cx="141" cy="174" r="1.1"/>
+    <circle cx="215" cy="48" r="1.2"/><circle cx="304" cy="114" r="1.4"/>
+    <circle cx="377" cy="29" r="1.3"/><circle cx="433" cy="166" r="1.1"/>
+    <circle cx="464" cy="33" r="1.2"/><circle cx="25" cy="121" r="1.1"/>
+  </g>
+</svg>

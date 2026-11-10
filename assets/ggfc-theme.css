@@ -1,6 +1,7 @@
 /* Blue-black stadium stripes are shared by the main navy surfaces. */
 :root {
-  --stadium-pattern:
+  --stadium-pattern:var(--stadium-stripes);
+  --stadium-stripes:
     linear-gradient(125deg, transparent 47%, #6e9dd41c 47% 54%, transparent 54% 58%, #6e9dd40e 58% 66%, transparent 66%),
     repeating-linear-gradient(125deg, transparent 0 40px, #8db5e30a 40px 41px, transparent 41px 81px),
     linear-gradient(115deg, #06162d, #001c48 58%, #112d50);
@@ -70,7 +71,7 @@
     --pl-purple:#91b8e0;--pl-purple-2:#223953;--pl-purple-3:#112339;--pl-lilac:var(--soft);
     --blue:#8ec1ff;--blue-soft:#203a59;--green:#77d6ad;--green-soft:#153b35;
     --red:#ff98a3;--red-soft:#462836;--shadow:0 3px 12px #0002;
-    --stadium-pattern:
+    --stadium-stripes:
       linear-gradient(125deg, transparent 47%, #6e9dd419 47% 54%, transparent 54% 58%, #6e9dd40b 58% 66%, transparent 66%),
       repeating-linear-gradient(125deg, transparent 0 40px, #8db5e309 40px 41px, transparent 41px 81px),
       linear-gradient(115deg, #101c2d, #132841 58%, #1b334e);
@@ -172,3 +173,40 @@
 #musicSettingsForm .music-volume-field {grid-template-columns:minmax(0,1fr) auto;max-width:420px}
 .music-volume-field output {font-variant-numeric:tabular-nums}
 .music-volume-field input {grid-column:1/-1;width:100%;min-width:0;accent-color:var(--blue);margin:0}
+
+#ggfcMobileMute {display:none}
+.ggfc-mobile #ggfcMobileMute:not([hidden]) {display:flex}
+
+.stadium-theme-form {display:grid;justify-items:start;gap:12px}
+.stadium-theme-form label {display:grid;gap:6px;max-width:100%;font-size:13px;font-weight:800}
+.stadium-theme-form select {width:100%;min-height:42px;padding:8px 10px;font:inherit}
+.stadium-theme-form .note {margin:0}
+.stadium-theme-preview {
+  display:grid;align-content:center;width:min(100%,520px);min-height:108px;box-sizing:border-box;
+  padding:16px 20px;border-radius:10px;border:1px solid #45639c;
+  background:var(--stadium-pattern);color:#f4f8ff;font-size:16px;font-weight:850;
+}
+.stadium-theme-preview[data-style="stadium"] {--stadium-pattern:var(--stadium-stripes)}
+
+@media screen {
+  :root[data-stadium-theme="champions"],.stadium-theme-preview[data-style="champions"] {
+    --stadium-pattern:
+      radial-gradient(ellipse at 50% 5%, #4f8dff36, transparent 72%),
+      url("ggfc-champions-stars.svg"),
+      linear-gradient(117deg,#060e29 0%,#10235a 53%,#101738 100%);
+  }
+  [data-stadium-theme="champions"] :is(#ggfcTopbar,#dashResultHeader,.lh-hero,.ggfc-startup) {
+    background:var(--stadium-pattern);color:#f3f7ff;border-color:#5c85bd;
+  }
+  [data-stadium-theme="champions"] :is(#ggfcTopbar .topbar-brand,#ggfcTopbar .topbar-toggle,#ggfcTopbar .top-menu-nav button,#dashResultHeader .dashboard-result-league,#dashResultHeader .sec-t) {
+    color:#f3f7ff;
+  }
+  [data-stadium-theme="champions"] #ggfcTopbar .topbar-toggle,
+  [data-stadium-theme="champions"] #ggfcTopbar .top-menu-nav button:is(.on,:hover) {background:#f4f7ff20}
+  [data-stadium-theme="champions"] #ggfcTopbar .top-menu-nav button.on {border-color:#9ad5ff}
+  [data-stadium-theme="champions"] #dashResultHeader .dashboard-result-date {color:#c2d9ff}
+  [data-stadium-theme="champions"] .lh-hero span {color:#a6d3ff}
+  [data-stadium-theme="champions"] #playerCardMask {
+    background-image:radial-gradient(ellipse at 50% 22%,#79afff3d,transparent 56%),var(--stadium-pattern);
+  }
+}

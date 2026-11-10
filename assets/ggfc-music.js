@@ -1,17 +1,23 @@
 /* Background music and the player-card reveal effect have separate playback lifecycles. */
 window.GGFCMusic=(()=>{
   const nativeAudio=document.getElementById('ggfcMusic'),toggle=document.getElementById('ggfcMusicToggle');
+  const muteToggle=document.getElementById('ggfcMobileMute'),root=document.documentElement;
   const status=document.getElementById('ggfcMusicStatus'),detail=document.getElementById('ggfcDetailDialog');
   const detailBody=document.getElementById('ggfcDetailBody'),startup=document.getElementById('ggfcStartup');
   const base=document.currentScript.src,defaultTrack=new URL('cl_anthem.mp3',base).href;
   const revealTrack=new URL('sfx_reveal.mp3',base).href,key='ggfc-background-music';
   const fileLimit=2*1024*1024,dataPrefix='data:audio/mpeg;base64,';
-  let enabled=true,pageActive=true,ready=false,startupPending=!startup.hidden;
+  const muteKey='ggfc-mobile-silence';
+  let enabled=true,muted=false,pageActive=true,ready=false,startupPending=!startup.hidden;
+  let previousSessionType=null;
   let starting=false,attempt=0,playbackMessage='',needsGesture=false,track=defaultTrack,rawSource,objectURL='',usingDefaultFallback=false;
   const AudioEngine=window.AudioContext||window.webkitAudioContext;
   let audio=nativeAudio,context,mixAudio,mixGain,revealGain,mixUnavailable=false,volumeLimited=false,resumeAt=0;
   let volumes=normalizeVolumes();
-  try{enabled=localStorage.getItem(key)!=='0';}catch{}
+  try{
+    enabled=localStorage.getItem(key)!=='0';
+    muted=localStorage.getItem(muteKey)==='1';
+  }catch{}
 
   function normalizeVolumes(raw){
     const percent=value=>Number.isFinite(value)?Math.max(0,Math.min(100,Math.round(value))):100;
@@ -37,12 +43,33 @@ window.GGFCMusic=(()=>{
     return {src:'',name:''};
   }
   const hasVideo=()=>detail.open&&!!detailBody.querySelector('.match-youtube-frame');
-  const suspended=()=>!ready||startupPending||!pageActive||document.hidden||hasVideo();
+  const isMobile=()=>root.classList.contains('ggfc-mobile');
+  const mobileMuted=()=>isMobile()&&muted;
+  const suspended=()=>!ready||startupPending||!pageActive||document.hidden||hasVideo()||mobileMuted();
+  function syncAudioSession(){
+    const session=navigator.audioSession;
+    if(!session)return;
+    try{
+      // Where supported, ambient follows the device's mute policy. Yield the session to video.
+      if(isMobile()&&pageActive&&!document.hidden&&!hasVideo()){
+        const current=session.type;
+        if(current!=='ambient'){
+          session.type='ambient';
+          previousSessionType??=current;
+        }
+      }else if(previousSessionType!==null){
+        session.type=previousSessionType;
+        previousSessionType=null;
+      }
+    }catch{}
+  }
   function updateControls(){
     toggle.setAttribute('aria-pressed',String(enabled));
     toggle.title=enabled?'배경 음악 끄기':'배경 음악 켜기';
+    muteToggle.setAttribute('aria-pressed',String(muted));
     let message='';
-    if(enabled){
+    if(mobileMuted())message='이 기기의 앱 소리가 꺼져 있습니다.';
+    else if(enabled){
       if(hasVideo())message='유튜브 영상 화면에서 배경 음악 일시정지';
       else if(volumes.background===0)message='관리자 설정 · 배경 음악 볼륨 0%';
       else if(playbackMessage)message=playbackMessage;
@@ -112,8 +139,9 @@ window.GGFCMusic=(()=>{
   }
   function syncPlayback(){
     if(!enabled||volumes.background===0||suspended()){
-      pause();updateControls();return;
+      pause();syncAudioSession();updateControls();return;
     }
+    syncAudioSession();
     switchAudio(volumeOutput());resumeMixer();
     if(starting||!audio.paused||playbackMessage){updateControls();return;}
     // Keep the shared upload portable and expose it to the media decoder as a Blob.
@@ -162,13 +190,20 @@ window.GGFCMusic=(()=>{
     if(enabled&&(usingDefaultFallback||audio.error)){usingDefaultFallback=false;resetMediaSource();}
     syncPlayback();
   };
+  muteToggle.onclick=()=>{
+    if(!isMobile())return;
+    muted=!muted;
+    try{localStorage.setItem(muteKey,muted?'1':'0');}catch{}
+    if(!muted&&needsGesture){needsGesture=false;playbackMessage='';}
+    refreshPlayback();
+  };
   function mediaError(event){
     if(event.currentTarget!==audio||!enabled||starting)return;
     playbackError(audio.error);updateControls();
   }
   nativeAudio.addEventListener('error',mediaError);
   document.addEventListener('click',event=>{
-    if(!event.isTrusted||!enabled||volumes.background===0||suspended()||toggle.contains(event.target))return;
+    if(!event.isTrusted||!enabled||volumes.background===0||suspended()||toggle.contains(event.target)||muteToggle.contains(event.target))return;
     if(needsGesture){needsGesture=false;playbackMessage='';syncPlayback();}
     else resumeMixer();
   },true);
@@ -240,6 +275,7 @@ window.GGFCMusic=(()=>{
   const videoObserver=new MutationObserver(refreshPlayback);
   videoObserver.observe(detail,{attributes:true,attributeFilter:['open']});
   videoObserver.observe(detailBody,{childList:true});
+  new MutationObserver(refreshPlayback).observe(root,{attributes:true,attributeFilter:['class']});
   if(startupPending){
     const introObserver=new MutationObserver(()=>{
       if(!startup.hidden)return;
@@ -250,7 +286,7 @@ window.GGFCMusic=(()=>{
     introObserver.observe(startup,{attributes:true,attributeFilter:['hidden']});
   }
   document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{
-    ready=true;toggle.hidden=false;
+    ready=true;toggle.hidden=false;muteToggle.hidden=false;
     if(!startupPending)warmReveal();
     refreshPlayback();
   },0),{once:true});
