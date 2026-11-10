@@ -190,13 +190,36 @@
 
 @media screen {
   :root[data-stadium-theme="champions"],.stadium-theme-preview[data-style="champions"] {
-    --stadium-pattern:
-      radial-gradient(ellipse at 50% 5%, #4f8dff36, transparent 72%),
-      url("ggfc-champions-stars.svg"),
-      linear-gradient(117deg,#060e29 0%,#10235a 53%,#101738 100%);
+    --champions-base:linear-gradient(110deg,#060d29 12%,#09153c 66%,#13153e);
+    --stadium-pattern:radial-gradient(ellipse at 90% 0%,#2859ad45,transparent 70%),var(--champions-base);
+  }
+  /* Keep a single cropped ball on major surfaces. Compact bars use the same palette. */
+  [data-stadium-theme="champions"] :is(.ggfc-sidebar,.head,.ggfc-detail-header,.at-hero,#ggfcTopbar,#dashResultHeader,.lh-hero,.ggfc-startup,#playerCardMask),
+  .stadium-theme-preview[data-style="champions"] {
+    background:
+      var(--champions-veil,linear-gradient(90deg,#060e2dde,#060e2d66 58%,#07143826)),
+      url("ggfc-champions-stars.svg") var(--champions-position,right -40px top 20%) / var(--champions-size,clamp(290px,52vw,660px)) auto no-repeat,
+      var(--champions-base);
+  }
+  [data-stadium-theme="champions"] .ggfc-sidebar {
+    --champions-size:345px;
+    --champions-position:right -100px top 105px;
+    --champions-veil:linear-gradient(90deg,#060e2dec,#060e2d8c 66%,#07143840);
+  }
+  [data-stadium-theme="champions"] #ggfcTopbar {
+    --champions-size:clamp(295px,42vw,610px);
+  }
+  [data-stadium-theme="champions"] :is(.ggfc-startup,#playerCardMask) {
+    --champions-size:clamp(470px,67vw,1090px);
+    --champions-position:right -94px top -45px;
+    --champions-veil:linear-gradient(90deg,#060e2ddd,#060e2d80 56%,#07143833);
+  }
+  .stadium-theme-preview[data-style="champions"] {
+    --champions-size:clamp(200px,77%,420px);
+    --champions-position:right -14px top 12%;
   }
   [data-stadium-theme="champions"] :is(#ggfcTopbar,#dashResultHeader,.lh-hero,.ggfc-startup) {
-    background:var(--stadium-pattern);color:#f3f7ff;border-color:#5c85bd;
+    color:#f3f7ff;border-color:#5c85bd;
   }
   [data-stadium-theme="champions"] :is(#ggfcTopbar .topbar-brand,#ggfcTopbar .topbar-toggle,#ggfcTopbar .top-menu-nav button,#dashResultHeader .dashboard-result-league,#dashResultHeader .sec-t) {
     color:#f3f7ff;
@@ -206,7 +229,4 @@
   [data-stadium-theme="champions"] #ggfcTopbar .top-menu-nav button.on {border-color:#9ad5ff}
   [data-stadium-theme="champions"] #dashResultHeader .dashboard-result-date {color:#c2d9ff}
   [data-stadium-theme="champions"] .lh-hero span {color:#a6d3ff}
-  [data-stadium-theme="champions"] #playerCardMask {
-    background-image:radial-gradient(ellipse at 50% 22%,#79afff3d,transparent 56%),var(--stadium-pattern);
-  }
 }

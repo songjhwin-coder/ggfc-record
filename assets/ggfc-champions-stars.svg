@@ -1,34 +1,45 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="480" height="232" viewBox="0 0 480 232">
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="470" viewBox="0 0 720 470">
   <defs>
-    <path id="star" d="M0-31 8.2-10.3 30-9.6 13 4.7 18.5 26 0 14-18.5 26-13 4.7-30-9.6-8.2-10.3Z"/>
-    <linearGradient id="glass" x1="0" x2="1" y1="0" y2="1" gradientUnits="objectBoundingBox">
-      <stop stop-color="#d8f5ff" stop-opacity=".72"/>
-      <stop offset=".56" stop-color="#7eb6ff" stop-opacity=".38"/>
-      <stop offset="1" stop-color="#747aff" stop-opacity=".13"/>
+    <radialGradient id="halo" gradientUnits="userSpaceOnUse" cx="432" cy="118" r="300">
+      <stop stop-color="#2689ff" stop-opacity=".55"/>
+      <stop offset=".49" stop-color="#224cc7" stop-opacity=".25"/>
+      <stop offset="1" stop-color="#163c9c" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="shell" gradientUnits="userSpaceOnUse" cx="430" cy="43" r="411">
+      <stop stop-color="#255de0"/>
+      <stop offset=".3" stop-color="#102f87"/>
+      <stop offset=".71" stop-color="#0a1a53"/>
+      <stop offset="1" stop-color="#080e33"/>
+    </radialGradient>
+    <linearGradient id="rim" gradientUnits="userSpaceOnUse" x1="320" y1="45" x2="688" y2="403">
+      <stop stop-color="#83f5ff"/>
+      <stop offset=".33" stop-color="#4aabff"/>
+      <stop offset=".69" stop-color="#1b3b9a"/>
+      <stop offset="1" stop-color="#8b59ff" stop-opacity=".58"/>
     </linearGradient>
-    <linearGradient id="rail">
-      <stop stop-color="#70a6ff" stop-opacity="0"/>
-      <stop offset=".49" stop-color="#92d8ff" stop-opacity=".29"/>
-      <stop offset="1" stop-color="#70a6ff" stop-opacity="0"/>
+    <linearGradient id="star" gradientUnits="userSpaceOnUse" x1="348" y1="72" x2="498" y2="271">
+      <stop stop-color="#8ef9f3" stop-opacity=".92"/>
+      <stop offset=".26" stop-color="#43bfe8" stop-opacity=".77"/>
+      <stop offset=".62" stop-color="#255ede" stop-opacity=".51"/>
+      <stop offset="1" stop-color="#172b80" stop-opacity=".04"/>
     </linearGradient>
+    <radialGradient id="violet" gradientUnits="userSpaceOnUse" cx="742" cy="451" r="235">
+      <stop stop-color="#8a2cdd" stop-opacity=".61"/>
+      <stop offset=".45" stop-color="#4a25a9" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#211566" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="sphere">
+      <circle cx="516" cy="248" r="225"/>
+    </clipPath>
   </defs>
-  <g fill="none" stroke="url(#rail)">
-    <path d="M-10 227C102 83 289 18 490 47"/>
-    <path d="M-10 232C130 92 288 36 490 52" opacity=".4"/>
-    <path d="M-10 177C119 122 257 105 490 138" opacity=".4"/>
+  <path fill="url(#halo)" d="M0 0h720v470H0z"/>
+  <circle cx="516" cy="248" r="225" fill="url(#shell)"/>
+  <g clip-path="url(#sphere)" stroke-linecap="round" stroke-linejoin="round">
+    <path fill="#080f3d" fill-opacity=".59" d="M533 55Q620 17 696 87Q707 108 708 132Q657 111 597 126Q539 155 504 211Q531 261 580 300Q662 298 718 263V470H387Q411 410 417 338Q440 266 461 205Q517 190 574 192Q527 162 490 127Q505 89 533 55Z"/>
+    <path fill="url(#violet)" d="M280 15h470v460H280z"/>
+    <path fill="url(#star)" stroke="url(#rim)" stroke-width="1.35" d="M368 66Q396 73 427 92Q479 72 533 55Q503 88 490 127Q529 160 574 192Q517 191 461 205Q435 268 417 338Q405 282 374 231Q330 229 291 252Q312 196 350 155Q354 110 368 66Z"/>
+    <path fill="none" stroke="url(#rim)" stroke-width="1.15" stroke-opacity=".58" d="M368 66Q403 37 451 28Q506 31 533 55M427 92Q438 60 451 28M490 127Q548 111 597 126Q655 107 708 132M597 126Q546 160 504 211Q530 264 580 300Q645 300 712 267"/>
+    <path fill="none" stroke="url(#rim)" stroke-width="1" stroke-opacity=".38" d="M291 252Q318 270 351 296Q369 369 362 416M351 296Q385 309 417 338Q479 341 538 360Q574 405 587 465M538 360Q557 327 580 300M708 132Q703 185 712 267"/>
   </g>
-  <g fill="#a2bfff" fill-opacity=".065" stroke="url(#glass)" stroke-linejoin="round">
-    <use href="#star" transform="translate(414 92) rotate(15) scale(1.72)" stroke-width=".8" opacity=".83"/>
-    <use href="#star" transform="translate(292 39) rotate(-17) scale(.96)" stroke-width="1.25" opacity=".72"/>
-    <use href="#star" transform="translate(181 132) rotate(14) scale(1.29)" stroke-width=".85" opacity=".63"/>
-    <use href="#star" transform="translate(61 87) rotate(-19) scale(.82)" stroke-width="1.3" opacity=".73"/>
-    <use href="#star" transform="translate(344 172) rotate(12) scale(.59)" stroke-width="1.55" opacity=".58"/>
-    <use href="#star" transform="translate(42 194) rotate(15) scale(.49)" stroke-width="1.55" opacity=".5"/>
-  </g>
-  <g fill="#ccedff" opacity=".46">
-    <circle cx="95" cy="53" r="1.4"/><circle cx="141" cy="174" r="1.1"/>
-    <circle cx="215" cy="48" r="1.2"/><circle cx="304" cy="114" r="1.4"/>
-    <circle cx="377" cy="29" r="1.3"/><circle cx="433" cy="166" r="1.1"/>
-    <circle cx="464" cy="33" r="1.2"/><circle cx="25" cy="121" r="1.1"/>
-  </g>
+  <circle cx="516" cy="248" r="224.5" fill="none" stroke="url(#rim)" stroke-width="1.35" stroke-opacity=".76"/>
 </svg>
