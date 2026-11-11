@@ -5,11 +5,11 @@ window.GGFCStadiumTheme=(()=>{
   const preview=document.getElementById('stadiumThemePreview'),button=document.getElementById('stadiumThemeSave');
   const status=document.getElementById('stadiumThemeStatus');
   let saved='stadium',draft=null,saving=false;
-  const normalize=value=>value==='champions'?'champions':'stadium';
+  const normalize=value=>value==='champions'||value==='premier'?value:'stadium';
   function configure(value){
     saved=normalize(value);
-    if(saved==='champions')root.dataset.stadiumTheme=saved;
-    else delete root.dataset.stadiumTheme;
+    if(saved==='stadium')delete root.dataset.stadiumTheme;
+    else if(root.dataset.stadiumTheme!==saved)root.dataset.stadiumTheme=saved;
   }
   function render(){
     panel.hidden=!admin||!GGFC.authorized;

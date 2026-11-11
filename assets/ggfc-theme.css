@@ -241,3 +241,28 @@
   [data-stadium-theme="champions"] #dashResultHeader .dashboard-result-date {color:#c2d9ff}
   [data-stadium-theme="champions"] .lh-hero span {color:#a6d3ff}
 }
+
+@media screen {
+  :root[data-stadium-theme="premier"],.stadium-theme-preview[data-style="premier"] {
+    --premier-accent:#83f5d3;
+    --premier-text:#fff7ff;
+    --stadium-pattern:
+      linear-gradient(115deg,transparent 0 68%,#a445e13b 68% 81%,#eb4bb040 81% 96%,#83f5d34d 96% 97.2%,transparent 97.2%),
+      linear-gradient(104deg,#26042e 8%,#37003c 54%,#591379 100%);
+  }
+  [data-stadium-theme="premier"] :is(#ggfcTopbar,#dashResultHeader,.lh-hero,.ggfc-startup,#playerCardMask) {
+    background:var(--stadium-pattern);
+    color:var(--premier-text);
+    border-color:#a865b8;
+  }
+  [data-stadium-theme="premier"] :is(#ggfcTopbar .topbar-brand,#ggfcTopbar .topbar-toggle,#ggfcTopbar .top-menu-nav button,#dashResultHeader .dashboard-result-league,#dashResultHeader .sec-t) {
+    color:var(--premier-text);
+  }
+  [data-stadium-theme="premier"] #ggfcTopbar .topbar-toggle,
+  [data-stadium-theme="premier"] #ggfcTopbar .top-menu-nav button:is(.on,:hover) {background:#fff0ff24}
+  [data-stadium-theme="premier"] #ggfcTopbar .top-menu-nav button.on {border-color:var(--premier-accent)}
+  [data-stadium-theme="premier"] #dashResultHeader .dashboard-result-round {background:var(--premier-accent);color:#290630}
+  [data-stadium-theme="premier"] #dashResultHeader .dashboard-result-date {color:#efd8f5}
+  [data-stadium-theme="premier"] .lh-hero span {color:var(--premier-accent)}
+  .stadium-theme-preview[data-style="premier"] {border-color:#a865b8;color:var(--premier-text)}
+}
