@@ -1,4 +1,4 @@
-/* Generated from current core + SLUMP; source SHA256 bb602a4b64a41f1b9d9f5862a75a341bb7e6829f104f8b1e1074dc9850ffba2b */
+/* Generated from current core + SLUMP; source SHA256 a4e6724cc18d8d61a51d233f18872ee241a5c9faa4351666133c96370a816110 */
 const GGFCSlump=(()=>{
  const defaults={enabled:true,startDate:'2026-10-20',recentGames:10,baselineGames:20,minimumBaselineGames:10,formTrigger:-2,performanceTrigger:75,persistenceRounds:4,interval:4,recoveryPerformance:85,recoveryRounds:3,slumpDrop:.20,severeDrop:.35,criticalDrop:.50,seasonCap:1.5,storyEnabled:false};
  Object.assign(defaults,{recoveryStartDate:'2026-10-27',recoveryPercent:25,severePerformance:70,criticalPerformance:60});
@@ -1537,29 +1537,53 @@ function applyLongFormCheckpoint(career,weights,state,entry,rounds,index,cfg,abs
  }
  state.events.push(event);
 }
+function abilityRowsForPlayer(rows,player){
+  const nameOf=row=>String(row.player||'').trim();
+  const indexes=renderCalculationCache?.abilityRecordIndexes;
+  if(!indexes)return rows.filter(row=>nameOf(row)===player);
+  // Keep original row order, including multiple records for the same player and match.
+  if(!indexes.has(rows)){
+    const byPlayer=new Map();
+    for(const row of rows){
+      const name=nameOf(row);
+      if(!byPlayer.has(name))byPlayer.set(name,[]);
+      byPlayer.get(name).push(row);
+    }
+    indexes.set(rows,byPlayer);
+  }
+  return indexes.get(rows).get(player)||[];
+}
 function playerAbilityRoundRows(player,info){
   const cacheKey=renderCalculationCache?JSON.stringify([player,info]):null;
   if(cacheKey!==null&&renderCalculationCache.rounds.has(cacheKey))return renderCalculationCache.rounds.get(cacheKey).slice();
   const list=abilityMatches(info).filter(m=>normDate(m.date)<abilityCareerStartDate()||playerEligibleOn(player,m.date)), ids=new Set(list.map(m=>m.id)), M={}; list.forEach(m=>M[m.id]=m); const rounds={};
   const get=(d)=>rounds[d]||(rounds[d]={date:d,att:false,g:0,a:0,sv:0,sot:0,keyPass:0,defSuccess:0,f:0,mom:0,w:0,d:0,l:0,pts:0,games:new Set(),expectedTeam:''});
   const pName=String(player||'').trim();
+  const records=verifiedRecords(),attendance=abilityRowsForPlayer(records.attendance,pName);
 
   /* V3.17 수정: 결석은 '리그에 경기가 있었는가'가 아니라 '그 선수의 소속팀이 실제로 경기한 날인가'를 기준으로 한다.
      이전 출전의 팀을 우선 사용하고, 출전 이력이 없을 때만 해당 연도 선수명단 팀을 fallback으로 사용한다. */
-  const attEvents=(verifiedRecords().attendance||[]).filter(r=>String(r.player||'').trim()===pName&&ids.has(r.id)).map(r=>{
+  const attEvents=attendance.filter(r=>ids.has(r.id)).map(r=>{
     const m=M[r.id]; return m?{date:normDate(m.date),team:String(r.team||'').trim(),id:r.id}:null;
   }).filter(Boolean).sort((a,b)=>a.date.localeCompare(b.date));
   const rosterTeamForYear=y=>{
     const rr=(DB.roster||[]).filter(r=>String(r.player||'').trim()===pName&&String(r.year||'').trim()===String(y)&&String(r.team||'').trim());
     return rr.length?String(rr[rr.length-1].team||'').trim():'';
   };
-  const dates=[...new Set(list.map(m=>normDate(m.date)).filter(Boolean))].sort();
+  const matchesByDate=new Map();
+  for(const match of list){
+    const date=normDate(match.date);
+    if(!date)continue;
+    if(!matchesByDate.has(date))matchesByDate.set(date,[]);
+    matchesByDate.get(date).push(match);
+  }
+  const dates=[...matchesByDate.keys()].sort();
   /* V3.17: 소속팀을 아직 추적하지 못한 선수도 R1부터 결석 판정이 가능하도록
      선택 기간의 모든 실제 Round 날짜를 먼저 생성한다. 강동훈처럼 첫 출전이 R5인 선수도 R1~R4가 누락되지 않는다. */
   // Create expected rounds below only when the player's team actually plays.
   // If neither squad nor team history is known, retain the legacy league-day fallback.
   dates.forEach(d=>{
-    const day=list.filter(m=>normDate(m.date)===d);
+    const day=matchesByDate.get(d);
     const same=attEvents.find(x=>x.date===d&&x.team);
     const assigned=[...new Set(day.flatMap(m=>squadPlayerTeams(m,pName)))];
     let expected=same?same.team:assigned[0]||'';
@@ -1574,14 +1598,14 @@ function playerAbilityRoundRows(player,info){
     }
   });
 
-  (verifiedRecords().attendance||[]).forEach(r=>{
-    if(String(r.player||'').trim()!==pName||!ids.has(r.id)) return; const m=M[r.id]; if(!m)return; const d=normDate(m.date),R=get(d); R.att=true; R.expectedTeam=String(r.team||R.expectedTeam||'').trim();
+  attendance.forEach(r=>{
+    if(!ids.has(r.id)) return; const m=M[r.id]; if(!m)return; const d=normDate(m.date),R=get(d); R.att=true; R.expectedTeam=String(r.team||R.expectedTeam||'').trim();
     if(R.games.has(r.id)) return; R.games.add(r.id); const res=matchResult(m,r.team); if(res==='W'){R.w++;R.pts+=3;}else if(res==='D'){R.d++;R.pts++;}else if(res==='L')R.l++;
   });
-  (verifiedRecords().goals||[]).forEach(r=>{if(String(r.player||'').trim()!==pName||!ids.has(r.id))return;const m=M[r.id];if(!m)return;const R=get(normDate(m.date));R.g+=num(r.g);R.a+=num(r.a);if(!R.expectedTeam)R.expectedTeam=String(r.team||'').trim();});
+  abilityRowsForPlayer(records.goals,pName).forEach(r=>{if(!ids.has(r.id))return;const m=M[r.id];if(!m)return;const R=get(normDate(m.date));R.g+=num(r.g);R.a+=num(r.a);if(!R.expectedTeam)R.expectedTeam=String(r.team||'').trim();});
   playerSaveRows().forEach(r=>{if(String(r.player||'').trim()!==pName||!ids.has(r.id))return;const m=M[r.id];if(!m)return;get(normDate(m.date)).sv+=num(r.saves);});
-  (verifiedRecords().fouls||[]).forEach(r=>{if(String(r.player||'').trim()!==pName||!ids.has(r.id))return;const m=M[r.id];if(!m)return;get(normDate(m.date)).f+=num(r.fouls);});
-  (verifiedRecords().moms||[]).forEach(r=>{if(String(r.player||'').trim()!==pName||!ids.has(r.id))return;const m=M[r.id];if(!m)return;get(normDate(m.date)).mom+=num(r.mom);});
+  abilityRowsForPlayer(records.fouls,pName).forEach(r=>{if(!ids.has(r.id))return;const m=M[r.id];if(!m)return;get(normDate(m.date)).f+=num(r.fouls);});
+  abilityRowsForPlayer(records.moms,pName).forEach(r=>{if(!ids.has(r.id))return;const m=M[r.id];if(!m)return;get(normDate(m.date)).mom+=num(r.mom);});
   teamPlayerRecordLinks().matched.forEach(r=>{if(r.player!==pName||!ids.has(r.id))return;const R=get(normDate(M[r.id].date));['sot','keyPass','defSuccess'].forEach(k=>R[k]+=num(r[k]));});
   const result=Object.values(rounds).sort((a,b)=>a.date.localeCompare(b.date));
   if(cacheKey!==null)renderCalculationCache.rounds.set(cacheKey,result);

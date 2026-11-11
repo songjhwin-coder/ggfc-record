@@ -1,7 +1,4 @@
 function mobileMetrics(items){return '<dl class="member-metrics">'+items.map(([k,v])=>'<div><dt>'+esc(k)+'</dt><dd>'+v+'</dd></div>').join('')+'</dl>';}
-function mobilePlayerCards(rows,info){
-  return rows.length?rows.map(p=>{const a=p.ability,f=a?.form;return '<article class="member-card" data-member-name="'+esc(p.player)+'"><header><div>'+playerCardLink(p.player,playerFaceChip(p.player,false,info?.year),info)+'<p>'+esc(teamDisplayName(p.displayTeam||p.mainTeam||''))+'</p></div><span class="member-label">'+(a?('CURRENT '+a.currentOvr+' · BASE '+fmtAbility(a.baseOvrRaw)+' · '+esc(f.status.icon)+' '+abilityFormValue(f)):'출석 '+p.attendanceRate+'%')+'</span></header>'+careerFrameListHtml(p.frameState)+mobileMetrics([['등번호',esc(String(p.shirtNumber??'')||'—')],['포지션',esc(p.position||'—')],['팀경기',p.teamGames],['득점',p.g],['도움',p.a||0],['승점',p.pts],['출석',p.att],['선방',p.sv||0],['MOM',p.mom||0]])+'<div class="member-card-foot">'+p.w+'승 '+p.d+'무 '+p.l+'패 · 승률 '+p.winRate+'% · 개인파울 '+(p.f||0)+(a?' · '+(a.measured?'SB MEASURED':'SB 68P'):'')+'</div>'+playerListAchievements(p.player,p.careerCutoff)+'</article>';}).join(''):'<p class="empty">선택 기간에 선수 기록이 없습니다.</p>';
-}
 function mobileAbilityCards(rows,prevMap){
   return '<div class="mobile-only member-cards">'+rows.map(r=>{
     const p=prevMap[r.player]||{},f=r.form;

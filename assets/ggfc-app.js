@@ -2843,29 +2843,53 @@ function applyLongFormCheckpoint(career,weights,state,entry,rounds,index,cfg,abs
  }
  state.events.push(event);
 }
+function abilityRowsForPlayer(rows,player){
+  const nameOf=row=>String(row.player||'').trim();
+  const indexes=renderCalculationCache?.abilityRecordIndexes;
+  if(!indexes)return rows.filter(row=>nameOf(row)===player);
+  // Keep original row order, including multiple records for the same player and match.
+  if(!indexes.has(rows)){
+    const byPlayer=new Map();
+    for(const row of rows){
+      const name=nameOf(row);
+      if(!byPlayer.has(name))byPlayer.set(name,[]);
+      byPlayer.get(name).push(row);
+    }
+    indexes.set(rows,byPlayer);
+  }
+  return indexes.get(rows).get(player)||[];
+}
 function playerAbilityRoundRows(player,info){
   const cacheKey=renderCalculationCache?JSON.stringify([player,info]):null;
   if(cacheKey!==null&&renderCalculationCache.rounds.has(cacheKey))return renderCalculationCache.rounds.get(cacheKey).slice();
   const list=abilityMatches(info).filter(m=>normDate(m.date)<abilityCareerStartDate()||playerEligibleOn(player,m.date)), ids=new Set(list.map(m=>m.id)), M={}; list.forEach(m=>M[m.id]=m); const rounds={};
   const get=(d)=>rounds[d]||(rounds[d]={date:d,att:false,g:0,a:0,sv:0,sot:0,keyPass:0,defSuccess:0,f:0,mom:0,w:0,d:0,l:0,pts:0,games:new Set(),expectedTeam:''});
   const pName=String(player||'').trim();
+  const records=verifiedRecords(),attendance=abilityRowsForPlayer(records.attendance,pName);
 
   /* V3.17 수정: 결석은 '리그에 경기가 있었는가'가 아니라 '그 선수의 소속팀이 실제로 경기한 날인가'를 기준으로 한다.
      이전 출전의 팀을 우선 사용하고, 출전 이력이 없을 때만 해당 연도 선수명단 팀을 fallback으로 사용한다. */
-  const attEvents=(verifiedRecords().attendance||[]).filter(r=>String(r.player||'').trim()===pName&&ids.has(r.id)).map(r=>{
+  const attEvents=attendance.filter(r=>ids.has(r.id)).map(r=>{
     const m=M[r.id]; return m?{date:normDate(m.date),team:String(r.team||'').trim(),id:r.id}:null;
   }).filter(Boolean).sort((a,b)=>a.date.localeCompare(b.date));
   const rosterTeamForYear=y=>{
     const rr=(DB.roster||[]).filter(r=>String(r.player||'').trim()===pName&&String(r.year||'').trim()===String(y)&&String(r.team||'').trim());
     return rr.length?String(rr[rr.length-1].team||'').trim():'';
   };
-  const dates=[...new Set(list.map(m=>normDate(m.date)).filter(Boolean))].sort();
+  const matchesByDate=new Map();
+  for(const match of list){
+    const date=normDate(match.date);
+    if(!date)continue;
+    if(!matchesByDate.has(date))matchesByDate.set(date,[]);
+    matchesByDate.get(date).push(match);
+  }
+  const dates=[...matchesByDate.keys()].sort();
   /* V3.17: 소속팀을 아직 추적하지 못한 선수도 R1부터 결석 판정이 가능하도록
      선택 기간의 모든 실제 Round 날짜를 먼저 생성한다. 강동훈처럼 첫 출전이 R5인 선수도 R1~R4가 누락되지 않는다. */
   // Create expected rounds below only when the player's team actually plays.
   // If neither squad nor team history is known, retain the legacy league-day fallback.
   dates.forEach(d=>{
-    const day=list.filter(m=>normDate(m.date)===d);
+    const day=matchesByDate.get(d);
     const same=attEvents.find(x=>x.date===d&&x.team);
     const assigned=[...new Set(day.flatMap(m=>squadPlayerTeams(m,pName)))];
     let expected=same?same.team:assigned[0]||'';
@@ -2880,14 +2904,14 @@ function playerAbilityRoundRows(player,info){
     }
   });
 
-  (verifiedRecords().attendance||[]).forEach(r=>{
-    if(String(r.player||'').trim()!==pName||!ids.has(r.id)) return; const m=M[r.id]; if(!m)return; const d=normDate(m.date),R=get(d); R.att=true; R.expectedTeam=String(r.team||R.expectedTeam||'').trim();
+  attendance.forEach(r=>{
+    if(!ids.has(r.id)) return; const m=M[r.id]; if(!m)return; const d=normDate(m.date),R=get(d); R.att=true; R.expectedTeam=String(r.team||R.expectedTeam||'').trim();
     if(R.games.has(r.id)) return; R.games.add(r.id); const res=matchResult(m,r.team); if(res==='W'){R.w++;R.pts+=3;}else if(res==='D'){R.d++;R.pts++;}else if(res==='L')R.l++;
   });
-  (verifiedRecords().goals||[]).forEach(r=>{if(String(r.player||'').trim()!==pName||!ids.has(r.id))return;const m=M[r.id];if(!m)return;const R=get(normDate(m.date));R.g+=num(r.g);R.a+=num(r.a);if(!R.expectedTeam)R.expectedTeam=String(r.team||'').trim();});
+  abilityRowsForPlayer(records.goals,pName).forEach(r=>{if(!ids.has(r.id))return;const m=M[r.id];if(!m)return;const R=get(normDate(m.date));R.g+=num(r.g);R.a+=num(r.a);if(!R.expectedTeam)R.expectedTeam=String(r.team||'').trim();});
   playerSaveRows().forEach(r=>{if(String(r.player||'').trim()!==pName||!ids.has(r.id))return;const m=M[r.id];if(!m)return;get(normDate(m.date)).sv+=num(r.saves);});
-  (verifiedRecords().fouls||[]).forEach(r=>{if(String(r.player||'').trim()!==pName||!ids.has(r.id))return;const m=M[r.id];if(!m)return;get(normDate(m.date)).f+=num(r.fouls);});
-  (verifiedRecords().moms||[]).forEach(r=>{if(String(r.player||'').trim()!==pName||!ids.has(r.id))return;const m=M[r.id];if(!m)return;get(normDate(m.date)).mom+=num(r.mom);});
+  abilityRowsForPlayer(records.fouls,pName).forEach(r=>{if(!ids.has(r.id))return;const m=M[r.id];if(!m)return;get(normDate(m.date)).f+=num(r.fouls);});
+  abilityRowsForPlayer(records.moms,pName).forEach(r=>{if(!ids.has(r.id))return;const m=M[r.id];if(!m)return;get(normDate(m.date)).mom+=num(r.mom);});
   teamPlayerRecordLinks().matched.forEach(r=>{if(r.player!==pName||!ids.has(r.id))return;const R=get(normDate(M[r.id].date));['sot','keyPass','defSuccess'].forEach(k=>R[k]+=num(r[k]));});
   const result=Object.values(rounds).sort((a,b)=>a.date.localeCompare(b.date));
   if(cacheKey!==null)renderCalculationCache.rounds.set(cacheKey,result);
@@ -5887,7 +5911,6 @@ function filterPlayerRecordRows(){
  const query=playerRecordSearchQuery(),rows=[...document.querySelectorAll('#playerTable tbody tr')];let count=0;
  const match=name=>!query||normalizePlayerMatchKey(name).includes(query);
  rows.forEach(row=>{row.hidden=!match(row.dataset.playerName||'');if(!row.hidden)count++;});
- document.querySelectorAll('#memberPlayerCards [data-member-name]').forEach(el=>el.hidden=!match(el.dataset.memberName));
  document.querySelectorAll('#goalkeeperAnalysis tbody tr').forEach(row=>row.hidden=!match(row.cells[0]?.textContent||''));
  $('#playerRecordSearchStatus').textContent=(query?'검색 결과 ':'전체 ')+count+'명 / '+rows.length+'명 · 조회 종료일 기준';
  $('#playerRecordSearchClear').disabled=!query;
@@ -5927,7 +5950,6 @@ function renderPlayer(){
   );
   $('#playerTable').querySelectorAll('tbody tr').forEach((row,i)=>row.dataset.playerName=ps[i].player);
   if(search&&!ps.length)$('#playerTable').innerHTML=emptySearch;
-  if($("#memberPlayerCards")) $("#memberPlayerCards").innerHTML=search&&!ps.length?emptySearch:mobilePlayerCards(ps,info);
 
   filterPlayerRecordRows();
 }
@@ -6120,7 +6142,7 @@ function chemistryHubBadge(name,hub,x,y,width=100){
   const w=Math.max(94,width),h=19;
   return '<g class="chem-map-hub-badge" aria-hidden="true"><rect x="'+(x-w/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+w+'" height="'+h+'" rx="9.5"/><text x="'+x.toFixed(1)+'" y="'+(y+13).toFixed(1)+'">CHEMISTRY HUB ×'+hub.count+'</text></g>';
 }
-function chemistryMapSvg(target,model){
+function chemistryMapSvg(target,model,centerPhoto){
   const depth=model.depth===3?3:2;
   const W=depth===3?1220:1040,H=depth===3?820:700,cx=W/2,cy=depth===3?365:325,nodes=model.partners;
   if(!nodes.length)return '<div class="empty chemistry-map-empty">함께 뛴 선수 기록이 없어 CHEMISTRY MAP을 만들 수 없습니다.</div>';
@@ -6159,7 +6181,7 @@ function chemistryMapSvg(target,model){
       '<rect class="chem-map-score-bg" x="'+(x-25).toFixed(1)+'" y="'+(y+r-2).toFixed(1)+'" width="50" height="21" rx="10.5"/><text class="chem-map-score" x="'+x.toFixed(1)+'" y="'+(y+r+12).toFixed(1)+'">'+row.score+' ♥</text>'+
       '<text class="chem-map-games" x="'+x.toFixed(1)+'" y="'+(y+r+34).toFixed(1)+'">'+row.p+'경기</text>'+(row.name===model.partners[0]?.name?'<rect class="chem-base-best-bg" x="'+(x-43)+'" y="'+(y+5)+'" width="86" height="17" rx="10"/><text class="chem-base-best-label" x="'+x+'" y="'+(y+17)+'">기준 BEST #1</text>':'')+chemistryHubBadge(name,model.hub,x,y-r-31,108)+'</g>';
   }).join('');
-  const centerPhoto=playerPhoto(target),centerR=53,centerClip='chemCenterClip';
+  const centerR=53,centerClip='chemCenterClip';
   const centerFallback='<circle class="chem-map-center-fallback" cx="'+cx+'" cy="'+cy+'" r="'+centerR+'"/><text class="chem-map-center-initials" x="'+cx+'" y="'+(cy+7)+'">'+esc(String(target||'?').trim().slice(0,2))+'</text>';
   const centerAvatar=centerFallback+(centerPhoto
     ?'<defs><clipPath id="'+centerClip+'"><circle cx="'+cx+'" cy="'+cy+'" r="'+centerR+'"/></clipPath></defs><image href="'+esc(centerPhoto)+'" x="'+(cx-centerR)+'" y="'+(cy-centerR)+'" width="'+(centerR*2)+'" height="'+(centerR*2)+'" preserveAspectRatio="xMidYMid slice" clip-path="url(#'+centerClip+')" class="chem-map-photo"/>'
@@ -6269,13 +6291,24 @@ function bindChemistryZoom(){
   if(!chemistryZoomObserver){let width=0;chemistryZoomObserver=new ResizeObserver(entries=>{const next=entries[0].contentRect.width;if(next&&Math.abs(next-width)>1){width=next;paintChemistryViewport();}});chemistryZoomObserver.observe(map);}
   setChemistryZoom(100,true);
 }
+let chemistryMapCache=null;
 function renderChemistryMap(){
   if(!renderCalculationCache)return withRenderCalculationCache(renderChemistryMap);
   const map=$('#chemistryMap'),side=$('#chemistryMapSide'),note=$('#chemMapNote'),depthSel=$('#chemDepth');if(!map||!side)return;
   chemDepth=chemDepth===3?3:2;if(depthSel)depthSel.value=String(chemDepth);
   if(!chemSel){map.innerHTML='<div class="empty chemistry-map-empty">분석할 선수를 선택해 주세요.</div>';side.innerHTML='';bindChemistryZoom();return;}
-  const model=chemistryMapModel(chemSel,chemDepth);
-  map.innerHTML=chemistryMapSvg(chemSel,model);fitChemistryMap(map);side.innerHTML=chemistryMapSideHtml(chemSel,model);
+  const recordLinks=teamPlayerRecordLinks();
+  const key=JSON.stringify([chemSel,chemDepth,comp,chemYear,chemMatches().map(match=>match.id)]);
+  if(chemistryMapCache?.recordLinks!==recordLinks||chemistryMapCache.key!==key){
+    chemistryMapCache={recordLinks,key,model:chemistryMapModel(chemSel,chemDepth)};
+  }
+  const cache=chemistryMapCache,photo=playerPhoto(chemSel);
+  if(cache.photo!==photo||!cache.svg){
+    cache.photo=photo;
+    cache.svg=chemistryMapSvg(chemSel,cache.model,photo);
+  }
+  // Refit and rebind the fresh SVG for the current viewport and font geometry.
+  map.innerHTML=cache.svg;fitChemistryMap(map);side.innerHTML=chemistryMapSideHtml(chemSel,cache.model);
   if(note){
     const period=chemYear==='ALL'?'전체 연도':chemYear+'년';
     note.textContent=chemDepth===3
@@ -7147,7 +7180,7 @@ function renderActiveView(v,options={}){
   mobilePageSwipe?.rendered(next);
 }
 // Analysis assets are requested only by an administrator opening this menu.
-const ABILITY_AUDIT_ASSETS={ui:'assets/ggfc-ability-audit.js?v=e636933501c30c93',css:'assets/ggfc-ability-audit.css?v=60cd2b8807bd30a9',worker:'assets/ggfc-ability-audit-worker.js?v=1e8df58eae92fe83'};
+const ABILITY_AUDIT_ASSETS={ui:'assets/ggfc-ability-audit.js?v=e636933501c30c93',css:'assets/ggfc-ability-audit.css?v=60cd2b8807bd30a9',worker:'assets/ggfc-ability-audit-worker.js?v=5623c16db03955d7'};
 let abilityAuditLoader=null;
 function renderAbilityAudit(){
  const root=document.getElementById('abilityAuditRoot');
@@ -7187,7 +7220,7 @@ function withRenderCalculationCache(render){
     if(value!==null&&typeof value==='object')return fn(value);
     if(!cache.has(value))cache.set(value,fn(value));return cache.get(value);
   };};
-  renderCalculationCache={attendance:new Map(),rounds:new Map(),chemistry:new Map(),pairs:new Map(),config:null,ability:null};
+  renderCalculationCache={attendance:new Map(),rounds:new Map(),abilityRecordIndexes:new WeakMap(),chemistry:new Map(),pairs:new Map(),config:null,ability:null};
   const memoArgs=(fn,copy=value=>value)=>{const cache=new Map();return (...args)=>{
     const key=JSON.stringify(args);if(!cache.has(key))cache.set(key,fn(...args));return copy(cache.get(key));
   };};
