@@ -6,8 +6,8 @@ const GGFC = (() => {
   let database=null,auth=null,dataRef=null,readTimer=null,saveTimer=null,editLease=false;
   let started=false,connectionPromise=null,lastSnapshotText=null,cacheSavedAt=null,cacheWarning='';
   const CACHE_VERSION=2,CACHE_MAX_AGE=180*86400000;
-  const hasSettingsDraft=()=>!!((typeof GGFCPlayerPhotos!=='undefined'&&GGFCPlayerPhotos.dirty)||window.GGFCStartup?.dirty||window.GGFCMusicSettings?.dirty||window.GGFCStadiumTheme?.dirty||window.GGFCMatchRecords?.cloudEditing||(typeof squadAppearanceDirty!=='undefined'&&squadAppearanceDirty)||(typeof menuSettingsDirty!=='undefined'&&menuSettingsDirty)||(typeof careerFrameSettingsDirty!=='undefined'&&careerFrameSettingsDirty)||(typeof analysisStartSettingsDirty!=='undefined'&&analysisStartSettingsDirty)||(typeof cardDesignSettingsDirty!=='undefined'&&cardDesignSettingsDirty));
-  function discardSettingsDraft(){if(typeof GGFCPlayerPhotos!=='undefined')GGFCPlayerPhotos.discard();window.GGFCStartup?.discard();window.GGFCMusicSettings?.discard();window.GGFCStadiumTheme?.discard();window.GGFCThumbnail?.discard();window.GGFCMatchRecords?.discard();if(typeof squadAppearanceDirty!=='undefined'){squadAppearanceDirty=false;squadAppearanceDraft=null;}if(typeof menuSettingsDirty!=='undefined'){menuSettingsDirty=false;menuEditorDraft=null;}if(typeof cardDesignSettingsDirty!=='undefined')cardDesignSettingsDirty=false;if(typeof careerFrameSettingsDirty!=='undefined')careerFrameSettingsDirty=false;if(typeof analysisStartSettingsDirty!=='undefined')analysisStartSettingsDirty=false;}
+  const hasSettingsDraft=()=>!!((typeof GGFCPlayerPhotos!=='undefined'&&GGFCPlayerPhotos.dirty)||window.GGFCStartup?.dirty||window.GGFCMusicSettings?.dirty||window.GGFCStadiumTheme?.dirty||window.GGFCSoccerBeeRoster?.dirty||window.GGFCMatchRecords?.cloudEditing||(typeof squadAppearanceDirty!=='undefined'&&squadAppearanceDirty)||(typeof menuSettingsDirty!=='undefined'&&menuSettingsDirty)||(typeof careerFrameSettingsDirty!=='undefined'&&careerFrameSettingsDirty)||(typeof analysisStartSettingsDirty!=='undefined'&&analysisStartSettingsDirty)||(typeof cardDesignSettingsDirty!=='undefined'&&cardDesignSettingsDirty));
+  function discardSettingsDraft(){if(typeof GGFCPlayerPhotos!=='undefined')GGFCPlayerPhotos.discard();window.GGFCStartup?.discard();window.GGFCMusicSettings?.discard();window.GGFCStadiumTheme?.discard();window.GGFCSoccerBeeRoster?.discard();window.GGFCThumbnail?.discard();window.GGFCMatchRecords?.discard();if(typeof squadAppearanceDirty!=='undefined'){squadAppearanceDirty=false;squadAppearanceDraft=null;}if(typeof menuSettingsDirty!=='undefined'){menuSettingsDirty=false;menuEditorDraft=null;}if(typeof cardDesignSettingsDirty!=='undefined')cardDesignSettingsDirty=false;if(typeof careerFrameSettingsDirty!=='undefined')careerFrameSettingsDirty=false;if(typeof analysisStartSettingsDirty!=='undefined')analysisStartSettingsDirty=false;}
   const fields=['matches','attendance','goals','saves','fouls','moms','specials','roster','soccerbee'];
   const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
   const copy=v=>JSON.parse(JSON.stringify(v));
@@ -445,6 +445,8 @@ const GGFC = (() => {
       if(window.GGFCMusicSettings?.draft)draft.settings.backgroundMusic=window.GGFCMusicSettings.draft;
       if(window.GGFCMusicSettings?.volumeDraft)draft.settings.audioVolumes=window.GGFCMusicSettings.volumeDraft;
       if(window.GGFCStadiumTheme?.draft)draft.settings.stadiumTheme=window.GGFCStadiumTheme.draft;
+      const soccerBeeDraft=window.GGFCSoccerBeeRoster?.draft;
+      if(soccerBeeDraft)draft.settings.soccerbeeMeasurement=soccerBeeDraft;
       if(window.GGFCThumbnail?.dirty&&window.GGFCThumbnail.draft)draft.settings.youtubeThumbnail=window.GGFCThumbnail.draft;
       download('GGFC_미저장기록.json',JSON.stringify(draft,null,2),'application/json');
     };
@@ -478,4 +480,4 @@ const GGFC = (() => {
   }
   return {publicCounterContext,get editing(){return editLease||hasSettingsDraft()||!!window.GGFCThumbnail?.dirty||!!window.GGFCOperator?.pending;},get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving||state.busy>0;},canEdit,adminPasswordStatus,changeAdminPassword,get passwordChanging(){return passwordBusy;},normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,signIn,loginOrLogout,closeLogin,togglePassword};
 })();
-window.GGFC_VERSION='3.25.103';
+window.GGFC_VERSION='3.25.104';

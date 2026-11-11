@@ -143,7 +143,16 @@
 .sb-measurement-controls input[type="number"] {width:8rem}
 .sb-measurement-actions {display:flex;align-items:center;flex-wrap:wrap;gap:8px;flex-basis:100%}
 .sb-measurement-controls .note {flex-basis:100%;margin:0}
-.sb-measurement-sheet {margin-bottom:16px}
+.sb-measurement-sheet,.sb-measurement-overview {margin-bottom:16px}
+.sb-measurement-overview > p {margin:6px 0;color:var(--text2)}
+.sb-measurement-overview details {margin:8px 0;color:var(--text2)}
+.sb-measurement-rounds {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr));gap:8px;margin-top:12px}
+.sb-measurement-rounds .sb-measurement-round {display:grid;gap:4px;justify-items:start;white-space:normal;text-align:left}
+.sb-measurement-round[aria-current="true"] {outline:2px solid var(--blue);outline-offset:-2px}
+.sb-measurement-round small {color:var(--text2)}
+.sb-measurement-group input[type="checkbox"] {width:22px;height:22px;margin:0;accent-color:var(--blue);vertical-align:middle}
+.sb-measurement-attempt {display:block;color:var(--text2);font-size:11px;margin-top:3px}
+.sb-measurement-print-status {display:none}
 :is(.sb-measurement-sheet,.sb-measurement-roster) > p {margin:6px 0;color:var(--text2)}
 .sb-measurement-roster .tablewrap {margin-top:12px;overflow-x:auto}
 .sb-measurement-roster table {min-width:470px}
@@ -163,6 +172,8 @@
   #v-soccerbeeroster.on {max-width:none;animation:none}
   #sbMeasurementSheet {padding:0;border:0;box-shadow:none;background:#fff;color:#132339}
   #sbMeasurementSheet .sb-measurement-groups {display:block}
+  #sbMeasurementSheet input[type="checkbox"],#sbMeasurementSheet .sb-measurement-attempt {display:none}
+  #sbMeasurementSheet .sb-measurement-print-status {display:inline}
   #sbMeasurementSheet .sb-measurement-group {break-inside:avoid;margin-bottom:14px}
   #sbMeasurementSheet :is(th,td) {font-size:11pt;padding:5px 6px;border-bottom:1px solid #ccd6e1}
 }
