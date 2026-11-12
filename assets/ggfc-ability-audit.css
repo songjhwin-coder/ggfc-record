@@ -47,3 +47,17 @@ body:not(.admin-mode) #v-abilityaudit{display:none!important}
 #v-abilityaudit .aa-record-origin{display:block;font-size:10px;line-height:1.4;color:#627a90}
 #v-abilityaudit .aa-form-baseline .aa-table{max-height:560px}
 @media(max-width:600px){#v-abilityaudit .aa-summary{gap:6px}#v-abilityaudit .aa-summary>div{padding:10px 4px}#v-abilityaudit .aa-summary b{font-size:20px}#v-abilityaudit .aa-summary small{font-size:11px}#v-abilityaudit .aa-search>label{flex:1;min-width:130px}#v-abilityaudit input{width:100%;min-width:0}#v-abilityaudit .aa-detail{padding:10px}#v-abilityaudit .aa-step-total{display:block;margin:5px 0 0}}
+
+#v-abilityaudit [data-counter-panel],#v-abilityaudit .aa-counter-editor{min-width:0}
+#v-abilityaudit .aa-counter-day{border-top:1px solid var(--border,#dfe8ee)}
+#v-abilityaudit .aa-counter-day summary{line-height:1.6;overflow-wrap:anywhere}
+#v-abilityaudit .aa-counter-totals{display:inline-flex;flex-wrap:wrap;column-gap:14px;row-gap:2px;margin-inline-start:10px;font-size:.87rem;font-weight:500}
+#v-abilityaudit .aa-counter-totals b{font-variant-numeric:tabular-nums}
+#v-abilityaudit [data-counter-editor]:not(:empty){margin:12px 0 18px}
+#v-abilityaudit .aa-counter-editor{margin-top:8px}
+#v-abilityaudit .aa-counter-editor h4{margin:0}
+#v-abilityaudit .aa-counter-editor dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,148px),1fr));gap:12px;margin:14px 0}
+#v-abilityaudit .aa-counter-editor dt{font-weight:700}
+#v-abilityaudit .aa-counter-editor dd{margin:6px 0 0}
+#v-abilityaudit .aa-counter-editor .match-count-cell button{min-height:42px}
+#v-abilityaudit .aa-counter-editor .match-count-cell input{width:60px;min-width:0;font-size:16px}

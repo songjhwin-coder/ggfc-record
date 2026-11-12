@@ -6,18 +6,136 @@ window.GGFCAbilityAudit=(()=>{
  const signed=v=>Math.abs(v)<1e-10?'0':(v>0?'+':'')+N(v,6);
  let worker=null,token=0,report=null,page=0,root=null,names=[],timeout=null,assets=null,viewRequest=0;
  const requests={},dailyPages={loss:0,trend:0};
+ const counterLabels={sot:'유효슛',keyPass:'키패스',defSuccess:'수비성공',saves:'선방'};
+ const counterFields=Object.keys(counterLabels),counterPageSize=12;
+ let counterQuery=null,counterSource=null,counterEditorKey='',counterPage=0,counterDays=[];
  const allowed=()=>admin&&GGFC.authorized&&activeView==='abilityaudit';
  const yieldUI=()=>new Promise(r=>setTimeout(r,0));
- function stop(clear=false){token++;clearTimeout(timeout);worker?.terminate();worker=null;if(clear){report=null;if(root)root.innerHTML='';}if(root){root.querySelector('[data-run]')?.removeAttribute('disabled');root.querySelector('[data-cancel]')?.setAttribute('hidden','');}}
+ function stop(clear=false){token++;clearTimeout(timeout);worker?.terminate();worker=null;if(clear){report=null;counterQuery=null;counterSource=null;counterEditorKey='';counterPage=0;counterDays=[];if(root)root.innerHTML='';}if(root){root.querySelector('[data-run]')?.removeAttribute('disabled');root.querySelector('[data-cancel]')?.setAttribute('hidden','');}}
  function message(s){const el=root?.querySelector('[data-status]');if(el)el.textContent=s;}
  function table(headers,rows){return '<div class="aa-table"><table><thead><tr>'+headers.map(x=>'<th>'+E(x)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(row=>'<tr>'+row.map(x=>'<td>'+x+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';}
  function deltaCell(n){return '<span class="aa-'+(n>1e-10?'up':n< -1e-10?'down':'zero')+'">'+signed(n)+'</span>';}
+ function counterPanelHtml(){
+  return '<details class="card" data-counter-panel hidden><summary>날짜별 앱 카운트 · 확인 및 수정</summary>'+
+   '<p class="note">날짜별 합계는 저장된 앱 기록을 집계합니다. 날짜를 펼쳐 경기를 선택하고 수정할 항목만 입력하세요. ‘—’는 미기록이며, 0은 0회로 저장한 값입니다. 선방은 기존 골키퍼 입력 기준을 따릅니다.</p>'+
+   '<div data-counter-editor></div><div data-counter-days></div>'+
+   '<div class="aa-pages"><button type="button" class="btn" data-counter-prev>이전</button><span data-counter-pages></span><button type="button" class="btn" data-counter-next>다음</button></div></details>';
+ }
+ function collectCounterDays(player,cutoff){
+  const playerKey=normalizePlayerMatchKey(player),records=verifiedRecords();
+  const matchesById=new Map(records.matches.filter(match=>!cutoff||normDate(match.date)<=cutoff).map(match=>[match.id,match]));
+  const byFixture=new Map();
+  for(const row of records.attendance){
+   if(normalizePlayerMatchKey(row.player)!==playerKey)continue;
+   const match=matchesById.get(row.id);
+   if(!match)continue;
+   const team=[match.home,match.away].find(name=>teamRecordTeamKey(name)===teamRecordTeamKey(row.team));
+   if(!team)continue;
+   const key=appTeamRecordKey(match,team,row.player);
+   if(!byFixture.has(key))byFixture.set(key,{key,match,team,counts:{}});
+  }
+  for(const row of teamPlayerRecordLinks().matched){
+   if(normalizePlayerMatchKey(row.player)!==playerKey)continue;
+   const match=matchesById.get(row.id);
+   if(!match)continue;
+   const target=byFixture.get(appTeamRecordKey(match,row.team,row.player));
+   if(!target)continue;
+   for(const field of counterFields){
+    if(((row.appFields||[]).includes(field)||(row.counterFields||[]).includes(field))&&teamRecordValuePresent(row[field]))target.counts[field]=Number(row[field]);
+   }
+  }
+  const days=new Map();
+  for(const item of byFixture.values()){
+   const date=normDate(item.match.date);
+   if(!days.has(date))days.set(date,[]);
+   days.get(date).push(item);
+  }
+  return [...days].sort(([a],[b])=>b.localeCompare(a));
+ }
+ function drawCounterDays(){
+  const host=root.querySelector('[data-counter-days]');
+  const opened=new Set([...host.querySelectorAll('details[open]')].map(el=>el.dataset.counterDay));
+  const totalPages=Math.max(1,Math.ceil(counterDays.length/counterPageSize));
+  counterPage=Math.min(counterPage,totalPages-1);
+  const start=counterPage*counterPageSize;
+  host.innerHTML=counterDays.slice(start,start+counterPageSize).map(([date,items])=>{
+   const totals=counterFields.map(field=>{
+    const values=items.map(item=>item.counts[field]).filter(value=>value!==undefined);
+    return '<span>'+counterLabels[field]+' <b>'+(values.length?values.reduce((sum,value)=>sum+value,0):'—')+'</b></span>';
+   }).join('');
+   const rows=items.map(({key,match,team,counts})=>[
+    E([match.no,match.round,match.comp].filter(Boolean).join(' · ')||'—'),E(teamDisplayName(team)),
+    ...counterFields.map(field=>counts[field]??'—'),
+    '<button class="btn sm" type="button" data-counter-match="'+E(key)+'">수정</button>'
+   ]);
+   return '<details class="aa-counter-day" data-counter-day="'+E(date)+'"'+(opened.has(date)?' open':'')+'>'+
+    '<summary><time>'+E(date)+'</time><span class="aa-counter-totals">'+totals+'</span></summary>'+
+    table(['경기','팀',...Object.values(counterLabels),'편집'],rows)+'</details>';
+  }).join('')||'<p class="aa-empty">선택한 범위에 출전 경기가 없습니다.</p>';
+  root.querySelector('[data-counter-prev]').disabled=counterPage===0;
+  root.querySelector('[data-counter-next]').disabled=counterPage>=totalPages-1;
+  root.querySelector('[data-counter-pages]').textContent=counterDays.length?(counterPage+1)+' / '+totalPages+' 페이지 · '+counterDays.length+'일':'';
+ }
+ function refreshCounterDays(){
+  if(!counterQuery||!root.querySelector('[data-counter-panel]').open)return;
+  counterDays=withRenderCalculationCache(()=>collectCounterDays(counterQuery.player,counterQuery.cutoff));
+  drawCounterDays();
+ }
+ function drawCounterEditor(focus=false){
+  const host=root.querySelector('[data-counter-editor]');
+  host.innerHTML=counterEditorKey?'<button class="btn sm" type="button" data-counter-close>수정 닫기</button>'+GGFCMatchRecords.auditEditorHtml(counterEditorKey):'';
+  if(focus){host.querySelector('[data-counter-close]')?.focus();host.scrollIntoView({block:'nearest'});}
+ }
+ function bindCounterPanel(){
+  const panel=root.querySelector('[data-counter-panel]');
+  panel.addEventListener('toggle',()=>{if(allowed()&&panel.open)refreshCounterDays();});
+  panel.onclick=async event=>{
+   const button=event.target.closest('button');
+   if(!button||!allowed())return;
+   if(button.matches('[data-counter-match],[data-counter-close]')){
+    if(GGFCMatchRecords.hasUnsavedRow(counterEditorKey)){toast('현재 경기의 수정 내용을 저장하거나 취소해 주세요.');return;}
+    counterEditorKey=button.dataset.counterMatch||'';
+    drawCounterEditor(!!counterEditorKey);return;
+   }
+   if(button.matches('[data-counter-prev],[data-counter-next]')){
+    counterPage+=button.hasAttribute('data-counter-prev')?-1:1;drawCounterDays();return;
+   }
+   const row=button.closest('[data-match-record-audit]');
+   if(!row||!button.matches('[data-match-record-save],[data-match-record-cancel],[data-match-record-clear-local]'))return;
+   event.stopPropagation();
+   const key=row.dataset.matchRecordRow;
+   if(button.hasAttribute('data-match-record-cancel'))GGFCMatchRecords.cancel(key);
+   else if(button.hasAttribute('data-match-record-clear-local'))GGFCMatchRecords.clearLocal(key);
+   else{
+    let saved=false;
+    try{saved=await GGFCMatchRecords.saveRow(key,{confirmMissing:false});}
+    catch{toast('공유 저장 상태를 확인해 주세요.');}
+    if(!allowed()||counterEditorKey!==key)return;
+    if(saved){refreshCounterDays();drawCounterEditor();start(counterQuery);return;}
+   }
+   drawCounterEditor();
+  };
+ }
+ function auditNames(){
+  return [...new Set([...(DB.roster||[]),...(DB.attendance||[])].map(r=>String(r.player||'').trim()).filter(Boolean))].sort(compareNamesKo);
+ }
  function render(host,urls){
+  if(root===host&&counterQuery&&allowed()){
+   if(counterSource?.db!==DB||counterSource?.counters!==liveCounterTeamPlayerRecords){
+    if(counterSource?.db!==DB)names=auditNames();
+    counterSource={db:DB,counters:liveCounterTeamPlayerRecords};
+    stop();report=null;root.querySelector('[data-result]').replaceChildren();
+    refreshCounterDays();
+    if(counterEditorKey&&!GGFCMatchRecords.hasUnsavedRow(counterEditorKey)&&!document.activeElement?.closest('[data-counter-editor]'))drawCounterEditor();
+    message('공유 기록이 갱신되었습니다. 계산 결과를 다시 확인하려면 선택 선수 분석을 누르세요.');
+   }
+   return;
+  }
   const previousName=root?.querySelector('[data-name]')?.value||'',previousDate=root?.querySelector('[data-date]')?.value||'';
-  stop();report=null;page=0;root=host;assets=urls;
+  stop(true);page=0;root=host;assets=urls;
   if(!allowed()){root.innerHTML='';return;}
-  names=[...new Set([...(DB.roster||[]),...(DB.attendance||[])].map(r=>String(r.player||'').trim()).filter(Boolean))].sort(compareNamesKo);
-  root.innerHTML='<div class="card"><h3>능력치 변동 분석</h3><p>선수 한 명을 선택하고 분석 버튼을 눌러 주세요. 이름 입력만으로는 능력치를 계산하지 않습니다.</p><form class="aa-search"><label>선수 이름<input data-name type="search" autocomplete="off" placeholder="이름 입력" aria-controls="aaSuggestions" required></label><label>기준일 (선택)<input data-date type="date" min="'+abilityCareerStartDate()+'"></label><button class="btn primary" data-run type="submit">선택 선수 분석</button><button class="btn" data-cancel type="button" hidden>분석 취소</button></form><div id="aaSuggestions" class="aa-suggestions" aria-label="선수 검색 결과"></div><p class="note" data-status role="status">대기 중 · 전체 선수 일괄 분석을 실행하지 않습니다.</p><p class="note">현재 DB와 현재 설정으로 재계산합니다. 과거 설정 변경 전의 확정 이력은 아닙니다. 기준일을 비우면 기존 능력치 화면의 최신 기준을 사용합니다. 분석 결과는 DB에 저장하지 않습니다.</p></div><div data-result></div>';
+  names=auditNames();
+  root.innerHTML='<div class="card"><h3>능력치 변동 분석</h3><p>선수 한 명을 선택하고 분석 버튼을 눌러 주세요. 이름 입력만으로는 능력치를 계산하지 않습니다.</p><form class="aa-search"><label>선수 이름<input data-name type="search" autocomplete="off" placeholder="이름 입력" aria-controls="aaSuggestions" required></label><label>기준일 (선택)<input data-date type="date" min="'+abilityCareerStartDate()+'"></label><button class="btn primary" data-run type="submit">선택 선수 분석</button><button class="btn" data-cancel type="button" hidden>분석 취소</button></form><div id="aaSuggestions" class="aa-suggestions" aria-label="선수 검색 결과"></div><p class="note" data-status role="status">대기 중 · 전체 선수 일괄 분석을 실행하지 않습니다.</p><p class="note">현재 DB와 현재 설정으로 재계산합니다. 과거 설정 변경 전의 확정 이력은 아닙니다. 기준일을 비우면 기존 능력치 화면의 최신 기준을 사용합니다. 분석 결과는 DB에 저장하지 않습니다.</p></div>'+counterPanelHtml()+'<div data-result></div>';
   root.querySelector('[data-name]').value=previousName;root.querySelector('[data-date]').value=previousDate>=abilityCareerStartDate()?previousDate:'';
   root.querySelector('[data-name]').oninput=()=>{
    const q=root.querySelector('[data-name]').value.trim(),box=root.querySelector('#aaSuggestions');
@@ -26,11 +144,20 @@ window.GGFCAbilityAudit=(()=>{
   root.querySelector('#aaSuggestions').onclick=e=>{const b=e.target.closest('[data-pick]');if(b){root.querySelector('[data-name]').value=b.dataset.pick;root.querySelector('#aaSuggestions').innerHTML='';root.querySelector('[data-run]').focus();}};
   root.querySelector('form').onsubmit=e=>{e.preventDefault();start();};
   root.querySelector('[data-cancel]').onclick=()=>{stop();message('분석을 취소했습니다.');};
+  bindCounterPanel();
  }
- async function start(){
+ async function start(query){
   if(!allowed())return;
-  const player=root.querySelector('[data-name]').value.trim(),cutoff=root.querySelector('[data-date]').value;
+  const player=query?.player??root.querySelector('[data-name]').value.trim();
+  const cutoff=query?.cutoff??root.querySelector('[data-date]').value;
   if(!names.includes(player)){message('검색 결과에서 등록된 선수 이름을 정확히 선택해 주세요.');return;}
+  if(counterQuery?.player!==player||counterQuery?.cutoff!==cutoff){
+   if(GGFCMatchRecords.hasUnsavedRow(counterEditorKey)){message('현재 경기의 수정 내용을 저장하거나 취소해 주세요.');return;}
+   counterQuery={player,cutoff};counterPage=0;counterEditorKey='';counterDays=[];
+   root.querySelector('[data-counter-panel]').hidden=false;
+   drawCounterEditor();refreshCounterDays();
+  }
+  counterSource={db:DB,counters:liveCounterTeamPlayerRecords};
   if(typeof Worker==='undefined'){message('이 브라우저에서는 분리 분석을 지원하지 않습니다. 화면 지연을 피하기 위해 분석을 실행하지 않았습니다. 최신 Chrome 또는 Safari에서 이용해 주세요.');return;}
   stop();const run=token;report=null;page=0;root.querySelector('[data-result]').innerHTML='';root.querySelector('[data-run]').disabled=true;root.querySelector('[data-cancel]').hidden=false;root.querySelector('#aaSuggestions').innerHTML='';message('기록을 준비하고 있습니다…');
   const began=performance.now(),sourceDB=DB,sourceCounters=liveCounterTeamPlayerRecords;
