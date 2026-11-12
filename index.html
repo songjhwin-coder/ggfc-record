@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <script defer src="assets/ggfc-browser-handoff.js?v=9aa37103839739b5"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>GGFC 기록센터 · 3.25.113</title>
+<title>GGFC 기록센터 · 3.25.114</title>
 <script>try{if(localStorage.getItem("ggfc-theme")==="dark")document.documentElement.dataset.theme="dark";}catch{}</script>
-<link rel="stylesheet" href="assets/ggfc.css?v=ac644c120d6077bc">
+<link rel="stylesheet" href="assets/ggfc.css?v=58c37f4c750445b5">
 <link rel="stylesheet" href="assets/ggfc-startup.css?v=026c02cbc9a0bd71">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="mobile-web-app-capable" content="yes">
@@ -80,7 +80,7 @@
     <a class="sidebar-community-link" href="https://cafe.naver.com/ggfcc" target="_blank" rel="noopener noreferrer" title="GGFC 네이버 카페 · 새 창" aria-label="GGFC 네이버 카페 새 창 열기"><span class="community-disc community-cafe"><img src="assets/ggfc-naver-cafe.png" alt="" width="64" height="64"></span></a>
   </div>
   <div class="pwa-menu-actions"><a class="btn sm pwa-guide-link" href="install.html">앱 설치 안내</a><button class="btn sm" id="pwaInstall" hidden>GGFC를 앱으로 설치</button><button class="btn sm" id="pwaCheck">앱 업데이트 확인</button><button class="btn sm" id="lockBtn" type="button">관리자 로그인</button><button class="btn sm" id="operatorLoginBtn" type="button">운영진 로그인</button><span id="operatorModeBadge" class="badge open" hidden>운영진 · 썸네일 전용</span><span class="badge locked" id="lockBadge">🔒 열람 모드</span><p id="pwaStatus" role="status" aria-live="polite"></p></div>
-  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.25.113 · 기록센터</span></footer>
+  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.25.114 · 기록센터</span></footer>
 </aside>
 <div id="sidebarResizeHandle" data-sidebar-resize role="separator" tabindex="0" aria-label="사이드바 너비 조절" aria-orientation="vertical" aria-controls="ggfcSidebar" aria-valuemin="180" aria-valuemax="420" aria-valuenow="226" title="좌우로 끌어 메뉴 너비 조절 · 두 번 클릭하면 기본 너비"><span aria-hidden="true">↔</span></div>
 <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" tabindex="-1" aria-label="메뉴 닫기" hidden></button>
@@ -613,11 +613,11 @@
 
     <div class="grid g2 ability-rule-grid" id="abilityRulePanels" data-ability-admin hidden style="margin-bottom:16px">
       <div class="card">
-        <div class="sec-t">경기기록 → 성장·감점·FORM · V3.25.113</div>
+        <div class="sec-t">경기기록 → 성장·감점·FORM · V3.25.114</div>
         <div id="abilityGrowthRules"></div>
       </div>
       <div class="card">
-        <div class="sec-t">SoccerBee → 축별 초기값·재측정 · V3.25.113</div>
+        <div class="sec-t">SoccerBee → 축별 초기값·재측정 · V3.25.114</div>
         <div id="abilitySoccerbeeRules"></div>
       </div>
     </div>
@@ -635,14 +635,14 @@
   <!-- PLAYER ABILITY SETTINGS / ADMIN ONLY -->
   <section class="view" id="v-abilityaudit" hidden><div class="head"><h2>능력치 변동 분석</h2><p>선택한 선수의 상승·하락 원인을 확인합니다.</p></div><div id="abilityAuditRoot"></div></section>
   <section class="view" id="v-counterreviews" hidden>
-    <div class="head"><h2>경기기록 공유 참여 현황</h2><p>선수별 참여율과 기록 건수를 확인합니다. 순위에서 선수 이름을 누르면 공유 저장 내역이 펼쳐집니다.</p></div>
+    <div class="head"><h2>경기기록 공유 참여 현황</h2><p>출석한 대진에서 선수별 기록이 얼마나 공유 저장됐는지 확인합니다. 선수 이름을 누르면 대진별 내역이 펼쳐집니다.</p></div>
     <div class="card">
       <div class="counter-review-filters">
         <label>연도<select id="counterReviewYear"></select></label>
         <label>반기<select id="counterReviewHalf"><option value="H1">상반기</option><option value="H2">하반기</option></select></label>
-        <button type="button" id="counterReviewRefresh" class="btn">참여 내역 다시 불러오기</button>
+        <button type="button" id="counterReviewRefresh" class="btn">공유 기록 다시 불러오기</button>
       </div>
-      <p class="note">참여율은 이름을 남겨 기록을 공유한 대진 수를 기록 가능한 완료 대진 수로 나눈 값입니다. 같은 대진에서 여러 선수의 기록을 저장하면 기록 건수에 각각 반영되며, 같은 선수 기록의 재저장은 한 건으로 집계합니다.</p>
+      <p class="note">저장률은 선수 기록이 공유 저장된 대진 수를 해당 선수의 출석 대진 수로 나눈 값입니다. 같은 선수의 기록을 같은 대진에서 다시 저장해도 한 경기로 집계합니다.</p>
       <p id="counterReviewStatus" class="note" role="status"></p>
       <div id="counterReviewData" class="counter-review-data"></div>
     </div>
@@ -926,7 +926,7 @@
     </div>
   </section>
   <footer class="page-status-footer" aria-label="프로그램 버전 및 공유 기록 상태">
-  <div class="release-version" aria-label="현재 프로그램 버전">GGFC · V3.25.113</div>
+  <div class="release-version" aria-label="현재 프로그램 버전">GGFC · V3.25.114</div>
   <section class="cloud-status" id="cloudStatus" role="status" aria-live="polite"><span id="cloudStatusText">공유 기록을 확인하고 있습니다…</span>
     <div class="cloud-actions"><button id="cloudRetry" class="btn sm" hidden>공유 저장 재시도</button><button id="cloudDownload" class="btn sm" hidden>미저장 내용 내려받기</button><button id="cloudReload" class="btn sm" hidden>서버 기록 다시 받기</button></div>
   </section>
@@ -1133,9 +1133,9 @@
 <input type="file" id="soccerbeeFilepick" accept=".xlsx" hidden>
 
 <script defer src="firebase-config.js"></script>
-<script defer src="assets/ggfc-sync.js?v=5d2bc5e4f39c66e3"></script>
+<script defer src="assets/ggfc-sync.js?v=eb308d3f586d2e1e"></script>
 <script defer src="assets/ggfc-mobile.js?v=a32da1367a5577ee"></script>
-<script defer src="assets/ggfc-details.js?v=d1610cba30da3104"></script>
+<script defer src="assets/ggfc-details.js?v=87c22d96cb4c6182"></script>
 <script defer src="assets/ggfc-squad.js?v=f8751dcc7f0973f2"></script>
 <script defer src="assets/ggfc-card-design.js?v=3.25.31"></script>
 <script defer src="assets/ggfc-alltime.js?v=898aa7b903e24445"></script>
@@ -1144,10 +1144,10 @@
 <script defer src="assets/ggfc-interleague.js?v=862e75c927855759"></script>
 <script defer src="assets/ggfc-player-photos.js?v=c41c32b27c46991b"></script>
 <script defer src="assets/ggfc-soccerbee-roster.js?v=783284d29021f5ac"></script>
-<script defer src="assets/ggfc-app.js?v=897cab057c99fb68"></script>
-<script defer src="assets/ggfc-public-counters.js?v=4bf977b25a358acb"></script>
-<script defer src="assets/ggfc-counter-reviews.js?v=161a33f365afb3c2"></script>
-<script defer src="assets/ggfc-match-records.js?v=d04ce62544cc2398"></script>
+<script defer src="assets/ggfc-app.js?v=6f81aa32287d793d"></script>
+<script defer src="assets/ggfc-public-counters.js?v=8e29a3706a3888dc"></script>
+<script defer src="assets/ggfc-counter-reviews.js?v=e231e6093b17a02a"></script>
+<script defer src="assets/ggfc-match-records.js?v=82331ad389467640"></script>
 <script defer src="assets/ggfc-player-table.js?v=4e89b1b6de91988b"></script>
 <script defer src="assets/ggfc-admin-password.js?v=89e60e87013241cf"></script>
 <script defer src="assets/ggfc-thumbnail-access.js?v=6754fa4f16767c51"></script>

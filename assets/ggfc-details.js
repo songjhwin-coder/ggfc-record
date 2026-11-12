@@ -166,7 +166,7 @@ function matchDetailRecordsHtml(data,playerKey){
     (t.totals.g!==t.score?'<p class="detail-notice">팀 점수 '+t.score+'골 / 등록 득점자 합계 '+t.totals.g+'골</p>':'')+'</section>';
   }).join('')+'</div>';
   const otherRecords='<p class="detail-note">선수 기록표와 합계는 이 경기의 출석 명단을 기준으로 표시합니다.</p>'+detailUnassignedHtml(data.unassigned)+(m.memo||m.note?'<section class="detail-section"><h3>비고</h3><p class="detail-note detail-prewrap">'+esc([m.memo,m.note].filter(Boolean).join('\n'))+'</p></section>':'');
-  const inputHeader=(window.GGFCCounterReviews?.reviewerHtml()||'')+'<p class="match-zero-guide">미기록은 0부터 시작합니다. 해당 선수의 모든 항목을 확인한 뒤 공유 저장하세요. 미확정 항목도 0회로 함께 확정됩니다.</p>';
+  const inputHeader='<p class="match-zero-guide">미기록은 0부터 시작합니다. 해당 선수의 모든 항목을 확인한 뒤 공유 저장하세요. 미확정 항목도 0회로 함께 확정됩니다.</p>';
   const start='<div class="match-player-records" tabindex="0" aria-label="양 팀 선수별 경기 기록">';
   return mobile?summary+'</div>'+start+inputHeader+teamSections('combined')+otherRecords+'</div>':
     summary+'<div class="match-detail-readonly" aria-label="경기 상세 기록">'+teamSections('readonly')+otherRecords+'</div></div>'+

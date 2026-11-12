@@ -7172,7 +7172,6 @@ function renderActiveView(v,options={}){
     if(document.getElementById('playerCardMask')?.classList.contains('on'))closePlayerCard();
   }
   if(activeView==='abilityaudit'&&next!==activeView)window.GGFCAbilityAudit?.stop(true);
-  if(activeView==='counterreviews'&&next!==activeView)window.GGFCCounterReviews?.stop();
   activeView=next;syncMenuNavigation();selectMenuView(next);
   const deferred=options.interactive&&deferredMemberViews.has(next);
   if((options.swipePrepared||deferred)&&mobilePageSwipe?.isPrepared(next))return;
@@ -7198,7 +7197,7 @@ function renderAbilityAudit(){
 }
 
 function renderMenuContent(next){
-  const renderers={thumbnail:()=>window.GGFCThumbnail?.render(),abilityaudit:renderAbilityAudit,photos:renderPlayerPhotoManager,cardsettings:renderCardSettings,screensettings:renderScreenSettings,interleague:renderInterleagueStats,menus:renderMenuManagement,closed:renderMenusClosed,goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide,soccerbeeroster:renderSoccerBeeMeasurementRoster,counterreviews:()=>window.GGFCCounterReviews?.render()};
+  const renderers={thumbnail:()=>window.GGFCThumbnail?.render(),abilityaudit:renderAbilityAudit,photos:renderPlayerPhotoManager,cardsettings:renderCardSettings,screensettings:renderScreenSettings,interleague:renderInterleagueStats,menus:renderMenuManagement,closed:renderMenusClosed,goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide,soccerbeeroster:renderSoccerBeeMeasurementRoster,counterreviews:()=>window.GGFCSharedRecordStatus?.render()};
   return withRenderCalculationCache(renderers[next]);
 }
 // Recheck calculation inputs on every render, including edits made in place.

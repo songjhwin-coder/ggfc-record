@@ -4,7 +4,7 @@ window.GGFCPublicCounters=(()=>{
  const cacheKey=KEY+'-shared-match-counters-v1',own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
  let tree={},entries=new Map(),channel=null,listeningRef=null,listener=null,loaded=false,error='',signature='',scheduled=false,connectedBefore=false,renderPending=false;
  const active=new Map();
- let writeError='',lastSharedAt=0;
+ let writeError='',lastSharedAt=0,snapshotSequence=0;
  const keyOf=r=>JSON.stringify([r.fixtureKey,teamRecordTeamKey(r.team),normalizePlayerMatchKey(r.player)]);
  const stamp=r=>r?r.path+':'+r.revision+':'+r.savedAt:'';
  const context=()=>GGFC.publicCounterContext();
@@ -27,7 +27,9 @@ window.GGFCPublicCounters=(()=>{
   if(scheduled)return;scheduled=true;
   queueMicrotask(()=>{
    scheduled=false;invalidateVerifiedRecords();
-   if(GGFC.editing||GGFC.pending||window.GGFCMatchRecords?.batchRunning)renderPending=true;
+   if(GGFC.editing||GGFC.pending||window.GGFCMatchRecords?.batchRunning){
+    renderPending=true;window.GGFCSharedRecordStatus?.refreshFromSource();
+   }
    else{
     renderPending=false;renderAll();
     if(typeof playerCardHistoryState!=='undefined'&&playerCardHistoryState&&document.querySelector('#playerCardMask')?.classList.contains('on'))openPlayerCard(playerCardHistoryState.player,playerCardHistoryState.query);
@@ -44,7 +46,7 @@ window.GGFCPublicCounters=(()=>{
    if(!prior||row.sourceRevision>prior.sourceRevision||row.sourceRevision===prior.sourceRevision&&(row.savedAt>prior.savedAt||row.savedAt===prior.savedAt&&(row.revision>prior.revision||row.revision===prior.revision&&row.path>prior.path)))next.set(key,row);
   }
   entries=next;const rows=[...entries.values()].sort((a,b)=>keyOf(a).localeCompare(keyOf(b))),text=JSON.stringify(rows);
-  if(!fromCache){loaded=true;error='';try{localStorage.setItem(cacheKey,JSON.stringify({version:1,records:tree}));}catch(e){/* Live data remains usable when cache is full. */}}
+  if(!fromCache){snapshotSequence++;loaded=true;error='';try{localStorage.setItem(cacheKey,JSON.stringify({version:1,records:tree}));}catch(e){/* Live data remains usable when cache is full. */}}
   if(text!==signature){signature=text;liveCounterTeamPlayerRecords=rows;notify();}
   else refreshPanel();
   if(first&&!fromCache)queueMicrotask(()=>window.GGFCMatchRecords?.retryPending());
@@ -134,15 +136,31 @@ window.GGFCPublicCounters=(()=>{
   let timer;try{return await Promise.race([task,new Promise(resolve=>timer=setTimeout(()=>resolve({ok:false,message:'기기 저장 · 공유 응답 대기 중'}),12000))]);}finally{clearTimeout(timer);}
  }
  function refreshPanel(){
+  window.GGFCSharedRecordStatus?.refreshFromSource();
   const el=document.getElementById('publicCounterStatus');if(!el)return;
   const pending=window.GGFCMatchRecords?.pendingCount||0;
   el.textContent=(error?'공유 읽기 실패 · 규칙·연결 확인':writeError?'공유 저장 실패 · '+(/permission/i.test(writeError)?'Firebase 규칙·연결 확인':writeError):loaded?'공유 읽기 연결 · '+entries.size+'건':'공유 카운트 연결 대기')+(pending?' · 이 기기 전송 대기 '+pending+'명':'')+(lastSharedAt?' · 최근 저장 성공 '+new Date(lastSharedAt).toLocaleTimeString('ko-KR'):'')+(context().ready?'':' · 오프라인 또는 DB 동기화 중');
  }
  function backup(){const blob=new Blob([JSON.stringify({version:1,path:'ggfc/teamCounterRecords/v1',records:tree},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='GGFC_공유카운트_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
  document.getElementById('publicCounterBackup')?.addEventListener('click',backup);
- document.getElementById('publicCounterRetry')?.addEventListener('click',()=>{const c=context();if(error){channel=null;refreshUI();}if(c.ref)c.ref.get().then(s=>{accept(s.val());window.GGFCMatchRecords?.retryPending();}).catch(e=>{error=String(e.code||'접근 오류');refreshPanel();});});
+ async function reload(){
+  const c=context();
+  if(!c.ref)return false;
+  if(error){channel=null;refreshUI();}
+  const requestedAt=snapshotSequence;
+  try{
+   const snapshot=await c.ref.get();
+   if(requestedAt===snapshotSequence)accept(snapshot.val());
+   window.GGFCMatchRecords?.retryPending();
+   return true;
+  }catch(e){
+   if(requestedAt===snapshotSequence){error=String(e.code||'접근 오류');refreshPanel();}
+   return false;
+  }
+ }
+ document.getElementById('publicCounterRetry')?.addEventListener('click',reload);
  window.addEventListener('online',()=>{if(error){channel=null;refreshUI();}});
  try{const cached=JSON.parse(localStorage.getItem(cacheKey)||'null');if(cached?.version===1)accept(cached.records,true);}catch(e){}
- return {refreshUI,publish,sourceFor,latest:key=>entries.get(key),stamp:key=>stamp(entries.get(key)),sameValues,get ready(){return loaded&&context().ready;}};
+ return {refreshUI,reload,publish,get readState(){return error?'error':loaded?'ready':'loading';},latest:key=>entries.get(key),stamp:key=>stamp(entries.get(key)),sameValues,get ready(){return loaded&&context().ready;}};
 })();
 window.GGFCPublicCounters.refreshUI();

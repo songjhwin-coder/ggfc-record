@@ -4167,15 +4167,12 @@ body:not(.admin-mode) #v-interleague :is(.note,.head>p){display:none!important}
 .ggfc-mobile #v-dash #exportTeamStandingSection .overview-leader .league-standing-rank{min-width:38px;height:24px;gap:3px}
 .ggfc-mobile #v-dash #exportTeamStandingSection .overview-rank-medal{width:18px;height:22px}
 
-.sb-measurement-reset>label,.match-counter-reviewer>label,.counter-review-filters>label{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sb-measurement-reset>label,.counter-review-filters>label{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .sb-measurement-reset fieldset{display:grid;gap:8px;min-width:0;padding:12px;border:1px solid var(--border);border-radius:10px}
 .sb-measurement-reset fieldset label{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:center}
-.sb-measurement-reset input,.sb-measurement-reset select,.counter-review-filters select,.match-counter-reviewer select{min-height:36px;max-width:100%;color:var(--text);background:var(--card);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font:inherit}
+.sb-measurement-reset input,.sb-measurement-reset select,.counter-review-filters select{min-height:36px;max-width:100%;color:var(--text);background:var(--card);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font:inherit}
 .sb-measurement-reset>label{margin:10px 0}
 .sb-measurement-reset .sb-measurement-actions{margin-top:12px}
-.match-counter-reviewer{margin:0 0 12px;padding:10px;border:1px solid var(--border);border-radius:10px}
-.match-counter-reviewer small{display:block;margin-top:4px}
-.match-counter-reviewer [data-counter-review-retry]{margin-top:6px}
 .counter-review-filters{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
 .counter-review-data{margin-top:14px}
 .counter-review-data .tablewrap{margin-bottom:18px}
@@ -4186,9 +4183,7 @@ body:not(.admin-mode) #v-interleague :is(.note,.head>p){display:none!important}
 .counter-review-detail h4{margin:0 0 8px}
 .counter-review-detail h5{margin:0 0 5px;font-size:inherit}
 .counter-review-fixture{margin-top:8px;padding:10px 12px;border:1px solid var(--border);border-radius:8px}
-.counter-review-fixture ul{list-style:none;padding:0;margin:0}
-.counter-review-fixture li{padding:5px 0;overflow-wrap:anywhere}
-.counter-review-fixture li+li{border-top:1px solid var(--border)}
+.counter-review-fixture p{margin:0;overflow-wrap:anywhere}
 .counter-review-fixture time{display:block;font-size:.85em}
 .counter-review-more{margin-top:8px}
 @media(max-width:520px){.counter-review-ranking :is(th,td):not(.counter-review-detail-cell){padding:7px 5px;font-size:12px}}
