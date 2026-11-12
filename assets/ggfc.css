@@ -4044,7 +4044,7 @@ body:not(.admin-mode) #v-interleague :is(.note,.head>p){display:none!important}
 .ggfc-mobile .detail-match-fullscreen .detail-table thead th:first-child{z-index:3;background:#edf2f8}
 .ggfc-mobile .detail-match-fullscreen .detail-table tfoot th:first-child{background:#f0f5fb}
 @media(orientation:landscape) and (min-width:400px){
- .ggfc-mobile .detail-match-fullscreen .ggfc-detail-body:has(>.match-split-handle){
+ .ggfc-mobile .detail-match-fullscreen .ggfc-detail-body:has(>.match-video-dock){
   --match-split-handle-width:24px;
   --match-split-min-video:150px;
   --match-split-min-records:174px;
@@ -4053,21 +4053,21 @@ body:not(.admin-mode) #v-interleague :is(.note,.head>p){display:none!important}
   grid-template-columns:var(--match-split-columns);
   grid-template-rows:minmax(0,1fr);
  }
- .ggfc-mobile .detail-match-fullscreen .match-split-handle{display:flex}
+ .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-split-handle{display:flex}
  .ggfc-mobile .detail-match-fullscreen .match-video-dock{grid-area:1 / 1;display:flex;flex-direction:column;justify-content:center;min-height:0;padding-left:env(safe-area-inset-left,0px)}
  .ggfc-mobile .detail-match-fullscreen .match-video-dock:has(>.match-video-picker){--match-video-picker-height:34px}
  .ggfc-mobile .detail-match-fullscreen .match-video-dock .match-youtube-player{
   width:min(100%,calc((var(--ggfc-detail-viewport,100dvh) - env(safe-area-inset-top,0px) - var(--match-video-picker-height,0px)) * 16 / 9));
   height:auto;max-width:none;max-height:none;aspect-ratio:16 / 9;
  }
- .ggfc-mobile .detail-match-fullscreen .match-split-handle+.match-record-scroll{grid-area:1 / 3;padding:8px max(8px,env(safe-area-inset-right,0px)) max(8px,env(safe-area-inset-bottom,0px)) 8px}
- .ggfc-mobile .detail-match-fullscreen .match-split-handle+.match-record-scroll .detail-team-columns{grid-template-columns:minmax(0,1fr)}
- .ggfc-mobile .detail-match-fullscreen .match-split-handle+.match-record-scroll .detail-scoreboard{grid-template-columns:minmax(0,1fr) minmax(68px,.75fr) minmax(0,1fr);gap:4px;padding:10px 4px}
- .ggfc-mobile .detail-match-fullscreen .match-split-handle+.match-record-scroll .detail-score b{font-size:28px}
- .ggfc-mobile .detail-match-fullscreen .match-split-handle+.match-record-scroll .detail-table th,.ggfc-mobile .detail-match-fullscreen .match-split-handle+.match-record-scroll .detail-table td{padding:8px 3px;font-size:11px}
- .ggfc-mobile .detail-match-fullscreen .match-split-handle+.match-record-scroll .detail-table th:first-child{min-width:76px;width:76px;max-width:100px;white-space:normal;overflow-wrap:anywhere}
- .ggfc-mobile .detail-match-fullscreen .match-split-handle+.match-record-scroll .match-detail-navigation{gap:4px}
- .ggfc-mobile .detail-match-fullscreen .match-split-handle+.match-record-scroll .detail-score-team :is(.fixture-team-logo,.fixture-logo-fallback){max-width:100%;max-height:52px}
+ .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-split-handle+.match-record-scroll{grid-area:1 / 3;padding:8px max(8px,env(safe-area-inset-right,0px)) max(8px,env(safe-area-inset-bottom,0px)) 8px}
+ .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-split-handle+.match-record-scroll .detail-team-columns{grid-template-columns:minmax(0,1fr)}
+ .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-split-handle+.match-record-scroll .detail-scoreboard{grid-template-columns:minmax(0,1fr) minmax(68px,.75fr) minmax(0,1fr);gap:4px;padding:10px 4px}
+ .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-split-handle+.match-record-scroll .detail-score b{font-size:28px}
+ .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-split-handle+.match-record-scroll .detail-table th,.ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-split-handle+.match-record-scroll .detail-table td{padding:8px 3px;font-size:11px}
+ .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-split-handle+.match-record-scroll .detail-table th:first-child{min-width:76px;width:76px;max-width:100px;white-space:normal;overflow-wrap:anywhere}
+ .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-split-handle+.match-record-scroll .match-detail-navigation{gap:4px}
+ .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-split-handle+.match-record-scroll .detail-score-team :is(.fixture-team-logo,.fixture-logo-fallback){max-width:100%;max-height:52px}
 }
 
 /* V3.25.79: goalkeeper indicators and local counter save actions. */
@@ -4093,7 +4093,7 @@ body:not(.admin-mode) #v-interleague :is(.note,.head>p){display:none!important}
 }
 
 /* Wide PC match view: video and result on the left, editable tables on the right. */
-@media (min-width:821px) and (min-height:400px){
+@media (min-width:821px){
  html:not(.ggfc-mobile) .detail-match-fullscreen .ggfc-detail-body:has(>.match-split-handle){
   display:grid;
   grid-template-columns:var(--match-split-columns);
@@ -4104,7 +4104,7 @@ body:not(.admin-mode) #v-interleague :is(.note,.head>p){display:none!important}
   grid-area:1 / 1;
  }
  html:not(.ggfc-mobile) .detail-match-fullscreen .match-video-dock .match-youtube-player{
-  width:min(100%,calc((var(--ggfc-detail-viewport,100dvh) - 225px) * 16 / 9));
+  width:min(100%,max(200px,calc((var(--ggfc-detail-viewport,100dvh) - 225px) * 16 / 9)));
   height:auto;
   max-width:none;
   max-height:none;
@@ -4119,6 +4119,7 @@ body:not(.admin-mode) #v-interleague :is(.note,.head>p){display:none!important}
   overflow:auto;
   padding:14px 18px;
  }
+ html:not(.ggfc-mobile) .detail-match-fullscreen .ggfc-detail-body:not(:has(>.match-video-dock)) .match-detail-summary{grid-row:1 / 3}
  html:not(.ggfc-mobile) .detail-match-fullscreen .match-detail-summary>*{flex-shrink:0}
  html:not(.ggfc-mobile) .detail-match-fullscreen .match-detail-summary>.detail-scoreboard{order:-1;margin-bottom:8px;padding:12px;gap:6px;grid-template-columns:minmax(0,1fr) minmax(92px,.7fr) minmax(0,1fr)}
  html:not(.ggfc-mobile) .detail-match-fullscreen .match-split-handle+.match-record-scroll>.match-player-records{
@@ -4157,3 +4158,17 @@ body:not(.admin-mode) #v-interleague :is(.note,.head>p){display:none!important}
 .ggfc-mobile #v-dash #exportTeamStandingSection .league-standing-rank{width:24px;height:24px;font-size:13px}
 .ggfc-mobile #v-dash #exportTeamStandingSection .overview-leader .league-standing-rank{min-width:38px;height:24px;gap:3px}
 .ggfc-mobile #v-dash #exportTeamStandingSection .overview-rank-medal{width:18px;height:22px}
+
+.sb-measurement-reset>label,.match-counter-reviewer>label,.counter-review-filters>label{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sb-measurement-reset fieldset{display:grid;gap:8px;min-width:0;padding:12px;border:1px solid var(--border);border-radius:10px}
+.sb-measurement-reset fieldset label{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:center}
+.sb-measurement-reset input,.sb-measurement-reset select,.counter-review-filters select,.match-counter-reviewer select{min-height:36px;max-width:100%;color:var(--text);background:var(--card);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font:inherit}
+.sb-measurement-reset>label{margin:10px 0}
+.sb-measurement-reset .sb-measurement-actions{margin-top:12px}
+.match-counter-reviewer{margin:0 0 12px;padding:10px;border:1px solid var(--border);border-radius:10px}
+.match-counter-reviewer small{display:block;margin-top:4px}
+.counter-review-filters{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
+.counter-review-data{margin-top:14px}
+.counter-review-data .tablewrap{margin-bottom:18px}
+.counter-review-data td,.counter-review-data th{white-space:nowrap}
+.counter-review-data button{margin-block:8px}

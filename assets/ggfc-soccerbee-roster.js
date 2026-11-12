@@ -25,7 +25,7 @@ function soccerBeeMeasurementPlan(settings,year,half){
   const legacy=normDate(settings.date);
   if(!rounds[1]&&legacy.slice(0,4)===year&&latestDbPeriodContext(legacy)?.half===half)rounds[1]={date:legacy};
   const protectedRound=Math.max(1,...Object.keys(rounds).map(Number).filter(number=>
-    Number.isInteger(number)&&number>=1&&number<=SOCCERBEE_ROUND_LIMIT&&(rounds[number]?.date||rounds[number]?.completed===true)
+    Number.isInteger(number)&&number>=1&&number<=SOCCERBEE_ROUND_LIMIT&&(rounds[number]?.date||rounds[number]?.manual||rounds[number]?.completed===true)
   ));
   const count=Number(plan.roundCount);
   const roundCount=Number.isInteger(count)&&count>=1&&count<=SOCCERBEE_ROUND_LIMIT?count:15;
@@ -82,6 +82,12 @@ function soccerBeeSlotPlayers(slot){
   return Array.isArray(slot?.assignment?.players)?slot.assignment.players.filter(row=>row?.player):[];
 }
 
+function soccerBeeGroups(slot){
+  const groups=[[],[]];
+  soccerBeeSlotPlayers(slot).forEach((row,i)=>groups[(row.group??(i<SOCCERBEE_GROUP_SIZE?1:2))-1]?.push(row));
+  return groups;
+}
+
 function soccerBeeChecked(slot){
   return new Set(Array.isArray(slot?.checked)?slot.checked:[]);
 }
@@ -101,6 +107,13 @@ function buildSoccerBeeSchedule(plan,players,rank,regenerate,lockedRound){
     }
   }
   for(const [key,total] of completed)projected.set(key,total);
+  for(const slot of rounds){
+    if(slot.completed===true||!slot.manual)continue;
+    for(const row of soccerBeeSlotPlayers(slot)){
+      const key=normalizePlayerMatchKey(row.player);
+      projected.set(key,(projected.get(key)||0)+1);
+    }
+  }
   const results=rounds.map((slot,index)=>{
     if(slot.completed===true){
       const checked=soccerBeeChecked(slot);
@@ -113,9 +126,9 @@ function buildSoccerBeeSchedule(plan,players,rank,regenerate,lockedRound){
     }
     const date=slot.date||'';
     let assignment=slot.assignment;
-    if(!assignment||assignment.date!==date||(regenerate&&index+1!==lockedRound)){
+    if(!assignment||assignment.date!==date||(regenerate&&!slot.manual&&index+1!==lockedRound)){
       const {from,through,rows}=rank(date);
-      const remaining=rounds.slice(index).filter(item=>item.completed!==true);
+      const remaining=rounds.slice(index).filter(item=>item.completed!==true&&!item.manual);
       const candidates=rows.filter(row=>(!date||!row.start||row.start<=date)&&(projected.get(row.key)||0)<SOCCERBEE_TARGET)
         .map(row=>({...row,slack:remaining.filter(item=>!item.date||!row.start||row.start<=item.date).length-SOCCERBEE_TARGET+(projected.get(row.key)||0)}));
       candidates.sort((a,b)=>Number(carry.has(b.key))-Number(carry.has(a.key))||
@@ -125,7 +138,7 @@ function buildSoccerBeeSchedule(plan,players,rank,regenerate,lockedRound){
     const assigned=soccerBeeSlotPlayers({assignment}),previousChecks=soccerBeeChecked(slot);
     for(const row of assigned){
       const key=normalizePlayerMatchKey(row.player);
-      projected.set(key,(projected.get(key)||0)+1);
+      if(!slot.manual)projected.set(key,(projected.get(key)||0)+1);
       carry.delete(key);
     }
     const checked=assigned.map(row=>normalizePlayerMatchKey(row.player)).filter(key=>previousChecks.has(key));
@@ -136,10 +149,9 @@ function buildSoccerBeeSchedule(plan,players,rank,regenerate,lockedRound){
 }
 
 function renderSoccerBeeGroupTables(slot,checked,editable,completed,attempts){
-  const players=soccerBeeSlotPlayers(slot);
-  return [0,SOCCERBEE_GROUP_SIZE].map((offset,i)=>{
+  return soccerBeeGroups(slot).map((players,i)=>{
     const slots=Array.from({length:SOCCERBEE_GROUP_SIZE},(_,j)=>{
-      const row=players[offset+j];
+      const row=players[j];
       if(!row)return '<tr><td>'+(j+1)+'</td><td colspan="5">빈자리</td></tr>';
       const key=normalizePlayerMatchKey(row.player),done=checked.has(key),rate=row.teamGames?esc(row.rate)+'%':'—';
       const attempt=Math.min(SOCCERBEE_TARGET,(attempts.get(key)||0)+1)+'차';
@@ -154,7 +166,7 @@ function renderSoccerBeeGroupTables(slot,checked,editable,completed,attempts){
 }
 
 function renderSoccerBeeAllPlayers(rows,rosterYear,result,slot,date){
-  const picked=new Map(soccerBeeSlotPlayers(slot).map((row,i)=>[normalizePlayerMatchKey(row.player),i<SOCCERBEE_GROUP_SIZE?'1조':'2조']));
+  const picked=new Map(soccerBeeGroups(slot).flatMap((group,i)=>group.map(row=>[normalizePlayerMatchKey(row.player),(i+1)+'조'])));
   const body=rows.slice().sort(soccerBeeCompareAttendance).map(row=>{
     const rate=row.teamGames?row.rate+'%':'—';
     const done=result.completed.get(row.key)||0,planned=(result.projected.get(row.key)||0)-done;
@@ -173,6 +185,7 @@ function renderSoccerBeeMeasurementRoster(){
   const editButton=element('EditCompletion'),refreshButton=element('Refresh'),cancelButton=element('Cancel');
   const printButton=element('Print'),status=element('Status');
   const sheet=element('Sheet'),roster=element('Roster'),overview=element('Rounds');
+  const resetButton=element('Reset'),resetForm=element('ResetForm');
   const config=()=>DB.settings?.soccerbeeMeasurement||{};
   const defaultDate=normDate(config().date)||latestMatchDate()||recordToday();
   const selection=soccerBeeRoundSelection||config().selection||{};
@@ -184,6 +197,7 @@ function renderSoccerBeeMeasurementRoster(){
   const edits=()=>soccerBeeDraft;
   const slot=()=>result.rounds[selected-1];
   const correction=()=>edits().correction;
+  const reset=()=>edits().reset;
   const checks=()=>correction()?.checked??(selected===active&&edits().checked?edits().checked:soccerBeeChecked(slot()));
   const scheduleDirty=()=>edits().count!==null||edits().dates.size>0||edits().regenerate;
   const correctionChanged=()=>{
@@ -192,28 +206,30 @@ function renderSoccerBeeMeasurementRoster(){
     const saved=soccerBeeChecked(base.rounds[draft.round]);
     return saved.size!==draft.checked.size||[...draft.checked].some(key=>!saved.has(key));
   };
-  const changed=()=>scheduleDirty()||edits().checked!==null||correctionChanged();
-  const editable=()=>!!slot()&&selected===active&&!!slot().date&&base.managed&&!scheduleDirty()&&!dateError&&date.validity.valid&&count.validity.valid&&!saving;
+  const changed=()=>scheduleDirty()||edits().checked!==null||correctionChanged()||!!reset();
+  const editable=()=>!!slot()&&selected===active&&!!slot().date&&base.managed&&!reset()&&!scheduleDirty()&&!dateError&&date.validity.valid&&count.validity.valid&&!saving;
   const note=message=>{status.textContent=message;};
 
   function controls(){
-    const correcting=!!correction(),completed=slot().completed===true;
-    year.disabled=half.disabled=count.disabled=round.disabled=saving||correcting;
-    date.disabled=saving||completed||(selected===active&&checks().size>0);
+    const correcting=!!correction(),resetting=!!reset(),editingRound=correcting||resetting,completed=slot().completed===true;
+    year.disabled=half.disabled=count.disabled=round.disabled=saving||editingRound;
+    date.disabled=saving||resetting||completed||slot().manual||(selected===active&&checks().size>0);
+    resetButton.disabled=saving||editingRound||changed();
     const invalid=!count.validity.valid||!date.validity.valid||!!dateError;
-    saveButton.disabled=saving||correcting||invalid||(!changed()&&base.managed);
+    saveButton.disabled=saving||editingRound||invalid||(!changed()&&base.managed);
     completeButton.disabled=!editable();
     editButton.hidden=!completed;
     editButton.disabled=saving||!completed||(correcting?!correctionChanged():changed()||!soccerBeeSlotPlayers(slot()).length);
     editButton.textContent=correcting?'완료 기록 저장':'완료 기록 수정';
-    refreshButton.disabled=saving||correcting||!active;
+    refreshButton.disabled=saving||editingRound||!active;
     cancelButton.disabled=saving||(!correcting&&!changed());
-    printButton.disabled=saving||correcting||invalid||!base.managed||scheduleDirty()||!slot().date||!soccerBeeSlotPlayers(slot()).length;
-    overview.querySelectorAll('[data-sb-round]').forEach(button=>button.disabled=saving||correcting);
+    printButton.disabled=saving||editingRound||invalid||!base.managed||scheduleDirty()||!slot().date||!soccerBeeSlotPlayers(slot()).length;
+    overview.querySelectorAll('[data-sb-round]').forEach(button=>button.disabled=saving||editingRound);
   }
 
   function describe(){
-    if(correction())note('측정 완료 체크를 정정한 뒤 완료 기록 저장을 누르세요. 저장하면 남은 명단을 다시 배정합니다.');
+    if(reset())note('선택 라운드의 측정일과 조별 명단을 바꾼 뒤 저장하세요.');
+    else if(correction())note('측정 완료 체크를 정정한 뒤 완료 기록 저장을 누르세요. 저장하면 남은 명단을 다시 배정합니다.');
     else if(!count.validity.valid)note('라운드 수는 '+base.protectedRound+'~'+SOCCERBEE_ROUND_LIMIT+'R로 설정해 주세요.');
     else if(!date.validity.valid)note('측정일은 2000년부터 2100년 사이로 입력해 주세요.');
     else if(dateError)note(dateError);
@@ -256,6 +272,60 @@ function renderSoccerBeeMeasurementRoster(){
     return rebuildOpenRounds(rounds,lockedRound);
   }
 
+  function resetRounds(){
+    const edit=reset(),current=result.rounds[edit.round-1],date=edit.date;
+    if(!date&&(current.completed===true||soccerBeeChecked(current).size))throw Error('측정 기록이 있는 라운드에는 측정일이 필요합니다.');
+    let last='';
+    for(const [i,item] of result.rounds.entries()){
+      const day=i===edit.round-1?date:item.date;
+      if(!day)continue;
+      if(day<=last)throw Error('라운드 순서대로 서로 다른 측정일을 지정해 주세요.');
+      last=day;
+    }
+    const measured=soccerBeeChecked(current),keys=edit.groups.flat().filter(Boolean),chosen=new Set(keys);
+    if(chosen.size!==keys.length)throw Error('같은 선수를 한 라운드에 두 번 배정할 수 없습니다.');
+    if([...measured].some(key=>!chosen.has(key)))throw Error('측정 완료된 선수를 빼려면 먼저 완료 체크를 정정해 주세요.');
+    if(edit.auto&&(current.completed===true||measured.size))throw Error('측정 기록이 있는 라운드는 직접 편성해 주세요.');
+    const {rows,from,through}=rank(date),original=new Map(soccerBeeSlotPlayers(current).map(row=>[normalizePlayerMatchKey(row.player),row]));
+    const candidates=new Map(rows.map(row=>[row.key,row]));
+    const fixed=new Map();
+    result.rounds.forEach((item,i)=>{
+      if(i===edit.round-1||!(item.completed||item.manual||i+1===active&&soccerBeeChecked(item).size))return;
+      const checked=soccerBeeChecked(item);
+      for(const row of soccerBeeSlotPlayers(item)){
+        const key=normalizePlayerMatchKey(row.player);
+        if(!item.completed||checked.has(key))fixed.set(key,(fixed.get(key)||0)+1);
+      }
+    });
+    const players=edit.auto?[]:edit.groups.flatMap((group,i)=>group.filter(Boolean).map(key=>{
+      const row=candidates.get(key)||original.get(key);
+      if(!row)throw Error('선수 명단을 다시 확인해 주세요.');
+      if(!measured.has(key)&&date&&row.start&&date<row.start)throw Error(row.player+' 선수의 등록 시작일을 확인해 주세요.');
+      if(!original.has(key)&&(fixed.get(key)||0)>=SOCCERBEE_TARGET)throw Error(row.player+' 선수는 다른 확정 라운드에 이미 두 번 배정됐습니다.');
+      const {player,team,att,teamGames,rate}=row;
+      return {player,team,att,teamGames,rate,group:i+1};
+    }));
+    const rounds=result.rounds.slice(),locked=active&&active!==edit.round&&soccerBeeChecked(rounds[active-1]).size?active:null;
+    rounds[edit.round-1]={...current,date,manual:!edit.auto,assignment:edit.auto?null:{date,from,through,players}};
+    return rebuildOpenRounds(rounds,locked);
+  }
+
+  function drawReset(){
+    const edit=reset();
+    resetForm.hidden=!edit;
+    if(!edit)return;
+    const saved=soccerBeeChecked(slot()),canAuto=!slot().completed&&!saved.size;
+    const options=new Map(participants.players.map(row=>[row.key,row.player]));
+    for(const row of soccerBeeSlotPlayers(slot()))options.set(normalizePlayerMatchKey(row.player),row.player);
+    const names=[...options].sort((a,b)=>compareNamesKo(a[1],b[1]));
+    resetForm.innerHTML='<h3>'+selected+'R 날짜·명단 재설정</h3><label>측정일 <input name="date" type="date" min="2000-01-01" max="2100-12-31" value="'+esc(edit.date)+'"'+(slot().completed||saved.size?' required':'')+'></label>'+
+      (canAuto?'<label><input type="checkbox" name="auto"'+(edit.auto?' checked':'')+'> 이 라운드 자동 배정</label>':'')+
+      '<div class="sb-measurement-groups">'+edit.groups.map((group,i)=>'<fieldset'+(edit.auto?' disabled':'')+'><legend>'+(i+1)+'조</legend>'+
+        group.map((key,j)=>'<label>'+(j+1)+'번<select data-sb-group="'+i+'" data-sb-position="'+j+'"><option value="">빈자리</option>'+
+          names.map(([value,name])=>'<option value="'+esc(value)+'"'+(value===key?' selected':'')+'>'+esc(name)+'</option>').join('')+'</select></label>').join('')+'</fieldset>').join('')+'</div>'+
+      '<div class="sb-measurement-actions"><button class="btn primary" type="submit">이 라운드 저장</button><button class="btn" type="button" data-sb-reset-cancel>취소</button></div><p class="note" data-sb-reset-message role="status"></p>';
+  }
+
   function refreshDraft(){
     edits().dirty=changed();
     GGFC.refreshUI();
@@ -290,7 +360,7 @@ function renderSoccerBeeMeasurementRoster(){
       '<p>'+(correcting?'완료 기록 수정 중':done?'라운드 완료':!base.managed||scheduleDirty()?'배정 미리보기':'배정 명단')+' · '+players+' / 12명 · 측정 <strong id="sbMeasurementCheckedCount">'+checked.size+' / '+players+'명</strong></p>'+
       '<div class="sb-measurement-groups">'+renderSoccerBeeGroupTables(current,checked,editable()||correcting,done&&!correcting,attempts)+'</div>';
     roster.innerHTML=renderSoccerBeeAllPlayers(rank(current.date||'').rows,participants.rosterYear,result,current,current.date);
-    drawOverview();controls();describe();
+    drawOverview();drawReset();controls();describe();
   }
 
   function selectRound(number,syncDate=true){
@@ -321,7 +391,7 @@ function renderSoccerBeeMeasurementRoster(){
 
   function load(number){
     const key=year.value+'/'+half.value;
-    if(edits()?.key!==key)soccerBeeDraft={key,count:null,dates:new Map(),checked:null,correction:null,regenerate:false,dirty:false};
+    if(edits()?.key!==key)soccerBeeDraft={key,count:null,dates:new Map(),checked:null,correction:null,reset:null,regenerate:false,dirty:false};
     base=soccerBeeMeasurementPlan(config(),year.value,half.value);
     if(correction()&&!edits().dirty){
       const original=base.rounds[correction().round];
@@ -335,6 +405,7 @@ function renderSoccerBeeMeasurementRoster(){
     edits().backup=()=>{
       if(!changed())return null;
       const rounds=checkedRounds();
+      if(reset()){try{return sharedSettings(resetRounds(),selected);}catch{return null;}}
       return sharedSettings(correctionChanged()?correctedRounds(rounds):rounds,selected);
     };
   }
@@ -354,11 +425,14 @@ function renderSoccerBeeMeasurementRoster(){
       if(!correctionChanged()||slot().completed!==true)return;
       rounds=correctedRounds(rounds);
     }
+    if(action==='reset'){
+      try{rounds=resetRounds();}catch(error){resetForm.querySelector('[data-sb-reset-message]').textContent=error.message;return;}
+    }
     const settings=sharedSettings(rounds,nextRound);
     DB.settings.soccerbeeMeasurement=settings;
     soccerBeeRoundSelection=settings.selection;soccerBeeDraft=null;
     saving=true;
-    form.querySelectorAll('button,input,select').forEach(field=>field.disabled=true);
+    for(const panel of [form,resetForm])panel.querySelectorAll('button,input,select').forEach(field=>field.disabled=true);
     sheet.querySelectorAll('input').forEach(field=>field.disabled=true);
     overview.querySelectorAll('button').forEach(field=>field.disabled=true);
     note('공유 저장 중…');
@@ -367,7 +441,7 @@ function renderSoccerBeeMeasurementRoster(){
     if(form.onsubmit!==submit)return;
     saving=false;
     renderSoccerBeeMeasurementRoster();
-    const messages={complete:'라운드 완료 및 남은 명단 공유 저장 완료',correct:'완료 기록 수정 및 남은 명단 공유 저장 완료',schedule:'일정·명단 공유 저장 완료'};
+    const messages={complete:'라운드 완료 및 남은 명단 공유 저장 완료',correct:'완료 기록 수정 및 남은 명단 공유 저장 완료',schedule:'일정·명단 공유 저장 완료',reset:'선택 라운드의 날짜·명단 공유 저장 완료'};
     note(shared?messages[action]:'상단 공유 저장 상태를 확인해 주세요.');
   }
 
@@ -418,6 +492,24 @@ function renderSoccerBeeMeasurementRoster(){
     edits().correction={round:selected,checked:soccerBeeChecked(slot())};
     draw();
   };
+  resetButton.onclick=()=>{
+    if(resetButton.disabled||!admin||!GGFC.authorized)return;
+    edits().reset={round:selected,date:slot().date||'',auto:false,groups:soccerBeeGroups(slot()).map(group=>
+      Array.from({length:SOCCERBEE_GROUP_SIZE},(_,i)=>normalizePlayerMatchKey(group[i]?.player||'')))};
+    draw();refreshDraft();
+    resetForm.elements.date.focus();
+  };
+  resetForm.oninput=event=>{
+    const edit=reset();
+    if(!edit||saving)return;
+    const field=event.target;
+    if(field.name==='date')edit.date=field.value;
+    else if(field.name==='auto'){edit.auto=field.checked;drawReset();resetForm.elements.auto.focus();}
+    else if(field.matches('[data-sb-group]'))edit.groups[field.dataset.sbGroup][field.dataset.sbPosition]=field.value;
+    resetForm.querySelector('[data-sb-reset-message]').textContent='';
+  };
+  resetForm.onsubmit=event=>{event.preventDefault();if(reset()&&!saving)persist('reset');};
+  resetForm.onclick=event=>{if(event.target.closest('[data-sb-reset-cancel]')&&!saving){edits().reset=null;draw();refreshDraft();resetButton.focus();}};
   printButton.onclick=()=>{
     if(admin&&GGFC.authorized&&!printButton.disabled){draw();window.print();}
   };

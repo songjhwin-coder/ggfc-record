@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <script defer src="assets/ggfc-browser-handoff.js?v=9aa37103839739b5"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>GGFC 기록센터 · 3.25.109</title>
+<title>GGFC 기록센터 · 3.25.110</title>
 <script>try{if(localStorage.getItem("ggfc-theme")==="dark")document.documentElement.dataset.theme="dark";}catch{}</script>
-<link rel="stylesheet" href="assets/ggfc.css?v=38eab98ccfcf83f5">
+<link rel="stylesheet" href="assets/ggfc.css?v=8fb9d5d2f0e3f11b">
 <link rel="stylesheet" href="assets/ggfc-startup.css?v=026c02cbc9a0bd71">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="mobile-web-app-capable" content="yes">
@@ -65,6 +65,7 @@
     <button data-v="screensettings" class="admin-menu-tab" hidden><svg class="sidebar-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4M6 7h5m-5 4h9"/></svg><span>화면 설정</span></button>
     <button data-v="menus" id="menuManagementTab" class="admin-menu-tab" hidden><svg class="sidebar-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M10 5h11M10 12h11M10 19h11m-18-14 1 1 3-3m-4 9 1 1 3-3m-4 9 1 1 3-3"/></svg><span>메뉴 공개 관리</span></button>
     <button data-v="abilityaudit" class="admin-menu-tab" hidden><svg class="sidebar-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 3h12v6m0-6 5 5H4v13h10m-6-8 3 3 4-5"/><circle cx="17" cy="17" r="4"/><path d="m20 20 2 2"/></svg><span>능력치 변동 분석</span></button>
+    <button type="button" data-v="counterreviews" class="admin-menu-tab" hidden><svg class="sidebar-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m7 9 2 2 4-4m-6 9h10m-2-6h2"/></svg><span>경기기록 공유 참여 현황</span></button>
     <button type="button" data-v="soccerbeeroster" class="admin-menu-tab" hidden><svg class="sidebar-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M9 10h6m-6 4h6m-6 4h4"/></svg><span>사커비 측정 명단</span></button>
     <button data-v="abilityguide" id="abilityGuideTab" class="admin-menu-tab" style="display:none"><svg class="sidebar-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5C8 2 4 3 2 4v15c4-2 7-1 10 1 3-2 6-3 10-1V4c-4-2-7-2-10 1zm0 0v15"/></svg><span>능력치 운영 안내</span></button>
     <button data-v="abilitycfg" id="abilityCfgTab" class="admin-menu-tab" style="display:none"><svg class="sidebar-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 3v18m8-18v18m8-18v18M1 8h6m2 8h6m2-10h6"/><circle cx="4" cy="8" r="2"/><circle cx="12" cy="16" r="2"/><circle cx="20" cy="6" r="2"/></svg><span>선수 능력치 설정</span></button>
@@ -79,7 +80,7 @@
     <a class="sidebar-community-link" href="https://cafe.naver.com/ggfcc" target="_blank" rel="noopener noreferrer" title="GGFC 네이버 카페 · 새 창" aria-label="GGFC 네이버 카페 새 창 열기"><span class="community-disc community-cafe"><img src="assets/ggfc-naver-cafe.png" alt="" width="64" height="64"></span></a>
   </div>
   <div class="pwa-menu-actions"><a class="btn sm pwa-guide-link" href="install.html">앱 설치 안내</a><button class="btn sm" id="pwaInstall" hidden>GGFC를 앱으로 설치</button><button class="btn sm" id="pwaCheck">앱 업데이트 확인</button><button class="btn sm" id="lockBtn" type="button">관리자 로그인</button><button class="btn sm" id="operatorLoginBtn" type="button">운영진 로그인</button><span id="operatorModeBadge" class="badge open" hidden>운영진 · 썸네일 전용</span><span class="badge locked" id="lockBadge">🔒 열람 모드</span><p id="pwaStatus" role="status" aria-live="polite"></p></div>
-  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.25.109 · 기록센터</span></footer>
+  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.25.110 · 기록센터</span></footer>
 </aside>
 <div id="sidebarResizeHandle" data-sidebar-resize role="separator" tabindex="0" aria-label="사이드바 너비 조절" aria-orientation="vertical" aria-controls="ggfcSidebar" aria-valuemin="180" aria-valuemax="420" aria-valuenow="226" title="좌우로 끌어 메뉴 너비 조절 · 두 번 클릭하면 기본 너비"><span aria-hidden="true">↔</span></div>
 <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" tabindex="-1" aria-label="메뉴 닫기" hidden></button>
@@ -612,11 +613,11 @@
 
     <div class="grid g2 ability-rule-grid" id="abilityRulePanels" data-ability-admin hidden style="margin-bottom:16px">
       <div class="card">
-        <div class="sec-t">경기기록 → 성장·감점·FORM · V3.25.109</div>
+        <div class="sec-t">경기기록 → 성장·감점·FORM · V3.25.110</div>
         <div id="abilityGrowthRules"></div>
       </div>
       <div class="card">
-        <div class="sec-t">SoccerBee → 축별 초기값·재측정 · V3.25.109</div>
+        <div class="sec-t">SoccerBee → 축별 초기값·재측정 · V3.25.110</div>
         <div id="abilitySoccerbeeRules"></div>
       </div>
     </div>
@@ -633,6 +634,21 @@
 
   <!-- PLAYER ABILITY SETTINGS / ADMIN ONLY -->
   <section class="view" id="v-abilityaudit" hidden><div class="head"><h2>능력치 변동 분석</h2><p>선택한 선수의 상승·하락 원인을 확인합니다.</p></div><div id="abilityAuditRoot"></div></section>
+  <section class="view" id="v-counterreviews" hidden>
+    <div class="head"><h2>경기기록 공유 참여 현황</h2><p>경기 상세에서 본인 이름을 선택한 뒤 공유 저장한 내역입니다. 같은 선수가 같은 경기의 같은 선수 기록을 다시 저장하면 참여 건수는 한 건으로 집계됩니다.</p></div>
+    <div class="card">
+      <div class="counter-review-filters">
+        <label>연도<select id="counterReviewYear"></select></label>
+        <label>반기<select id="counterReviewHalf"><option value="H1">상반기</option><option value="H2">하반기</option></select></label>
+        <label>참여자<select id="counterReviewMember"><option value="">전체</option></select></label>
+        <label>대진<select id="counterReviewMatch"><option value="">전체</option></select></label>
+        <button type="button" id="counterReviewRefresh" class="btn">다시 불러오기</button>
+      </div>
+      <p class="note">선택한 이름을 기준으로 집계합니다. 도입 전 기록과 이름을 선택하지 않고 저장한 기록에는 참여자 정보가 없습니다.</p>
+      <p id="counterReviewStatus" class="note" role="status"></p>
+      <div id="counterReviewData" class="counter-review-data"></div>
+    </div>
+  </section>
   <section class="view" id="v-soccerbeeroster" hidden>
     <div class="head"><h2>사커비 측정 명단</h2><p>반기마다 선수별로 두 번 배정합니다. 라운드별 측정일을 지정하고 완료 여부를 기록하세요.</p></div>
     <form class="card sb-measurement-controls" id="sbMeasurementControls">
@@ -643,6 +659,7 @@
       <label for="sbMeasurementDate">측정일<input type="date" id="sbMeasurementDate" min="2000-01-01" max="2100-12-31"></label>
       <div class="sb-measurement-actions">
         <button type="submit" class="btn" id="sbMeasurementSave">일정·명단 저장</button>
+        <button type="button" class="btn" id="sbMeasurementReset">라운드 재설정</button>
         <button type="button" class="btn" id="sbMeasurementRefresh">남은 명단 다시 배정</button>
         <button type="button" class="btn" id="sbMeasurementCancel" disabled>변경 취소</button>
         <button type="button" class="btn primary" id="sbMeasurementComplete" disabled>라운드 완료</button>
@@ -651,6 +668,7 @@
       </div>
       <p class="note" id="sbMeasurementStatus" role="status"></p>
     </form>
+    <form class="card sb-measurement-reset" id="sbMeasurementResetForm" hidden></form>
     <article class="card sb-measurement-overview" id="sbMeasurementRounds" aria-label="전체 라운드 일정"></article>
     <article class="card sb-measurement-sheet" id="sbMeasurementSheet" aria-label="사커비 측정 명단 출력"></article>
     <article class="card sb-measurement-roster" id="sbMeasurementRoster" aria-label="전체 선수 목록"></article>
@@ -910,7 +928,7 @@
     </div>
   </section>
   <footer class="page-status-footer" aria-label="프로그램 버전 및 공유 기록 상태">
-  <div class="release-version" aria-label="현재 프로그램 버전">GGFC · V3.25.109</div>
+  <div class="release-version" aria-label="현재 프로그램 버전">GGFC · V3.25.110</div>
   <section class="cloud-status" id="cloudStatus" role="status" aria-live="polite"><span id="cloudStatusText">공유 기록을 확인하고 있습니다…</span>
     <div class="cloud-actions"><button id="cloudRetry" class="btn sm" hidden>공유 저장 재시도</button><button id="cloudDownload" class="btn sm" hidden>미저장 내용 내려받기</button><button id="cloudReload" class="btn sm" hidden>서버 기록 다시 받기</button></div>
   </section>
@@ -1117,9 +1135,9 @@
 <input type="file" id="soccerbeeFilepick" accept=".xlsx" hidden>
 
 <script defer src="firebase-config.js"></script>
-<script defer src="assets/ggfc-sync.js?v=b72a451852d34bc5"></script>
+<script defer src="assets/ggfc-sync.js?v=840c3c1fe199ea29"></script>
 <script defer src="assets/ggfc-mobile.js?v=a32da1367a5577ee"></script>
-<script defer src="assets/ggfc-details.js?v=e19490925b60550d"></script>
+<script defer src="assets/ggfc-details.js?v=d1610cba30da3104"></script>
 <script defer src="assets/ggfc-squad.js?v=f8751dcc7f0973f2"></script>
 <script defer src="assets/ggfc-card-design.js?v=3.25.31"></script>
 <script defer src="assets/ggfc-alltime.js?v=898aa7b903e24445"></script>
@@ -1127,10 +1145,11 @@
 <script defer src="assets/ggfc-slump.js?v=143871985b3a6ab3"></script>
 <script defer src="assets/ggfc-interleague.js?v=862e75c927855759"></script>
 <script defer src="assets/ggfc-player-photos.js?v=c41c32b27c46991b"></script>
-<script defer src="assets/ggfc-soccerbee-roster.js?v=790221d0f54a2c79"></script>
-<script defer src="assets/ggfc-app.js?v=29e14a78dc8398c0"></script>
-<script defer src="assets/ggfc-public-counters.js?v=c880994a93189ca9"></script>
-<script defer src="assets/ggfc-match-records.js?v=2a246136ab8aa241"></script>
+<script defer src="assets/ggfc-soccerbee-roster.js?v=783284d29021f5ac"></script>
+<script defer src="assets/ggfc-app.js?v=3ad3b08a722dc06b"></script>
+<script defer src="assets/ggfc-public-counters.js?v=4bf977b25a358acb"></script>
+<script defer src="assets/ggfc-counter-reviews.js?v=c1e35a15a0f4bc10"></script>
+<script defer src="assets/ggfc-match-records.js?v=d6756fe973c6c41f"></script>
 <script defer src="assets/ggfc-player-table.js?v=4e89b1b6de91988b"></script>
 <script defer src="assets/ggfc-admin-password.js?v=89e60e87013241cf"></script>
 <script defer src="assets/ggfc-thumbnail-access.js?v=6754fa4f16767c51"></script>

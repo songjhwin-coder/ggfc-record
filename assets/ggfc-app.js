@@ -6994,7 +6994,7 @@ const MEMBER_MENUS=[
  {id:'leadership',label:'GG 역대 운영진'}, {id:'team',label:'팀 상태',defaultOpen:false}
 ];
 const ADMIN_MENUS=[
- {id:'menus',label:'메뉴 공개 관리'}, {id:'photos',label:'선수 사진 관리'}, {id:'cardsettings',label:'선수 카드 설정'}, {id:'screensettings',label:'화면 설정'}, {id:'soccerbeeroster',label:'사커비 측정 명단'}, {id:'abilityguide',label:'능력치 운영 안내'}, {id:'abilityaudit',label:'능력치 변동 분석'},
+ {id:'menus',label:'메뉴 공개 관리'}, {id:'photos',label:'선수 사진 관리'}, {id:'cardsettings',label:'선수 카드 설정'}, {id:'screensettings',label:'화면 설정'}, {id:'soccerbeeroster',label:'사커비 측정 명단'}, {id:'counterreviews',label:'경기기록 공유 참여 현황'}, {id:'abilityguide',label:'능력치 운영 안내'}, {id:'abilityaudit',label:'능력치 변동 분석'},
  {id:'abilitycfg',label:'선수 능력치 설정'}, {id:'rep',label:'대표승점 설정'}, {id:'data',label:'데이터 관리'}, {id:'thumbnail',label:'유튜브 썸네일'}
 ];
 let menuEditorDraft=null,menuSettingsDirty=false;
@@ -7197,7 +7197,7 @@ function renderAbilityAudit(){
 }
 
 function renderMenuContent(next){
-  const renderers={thumbnail:()=>window.GGFCThumbnail?.render(),abilityaudit:renderAbilityAudit,photos:renderPlayerPhotoManager,cardsettings:renderCardSettings,screensettings:renderScreenSettings,interleague:renderInterleagueStats,menus:renderMenuManagement,closed:renderMenusClosed,goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide,soccerbeeroster:renderSoccerBeeMeasurementRoster};
+  const renderers={thumbnail:()=>window.GGFCThumbnail?.render(),abilityaudit:renderAbilityAudit,photos:renderPlayerPhotoManager,cardsettings:renderCardSettings,screensettings:renderScreenSettings,interleague:renderInterleagueStats,menus:renderMenuManagement,closed:renderMenusClosed,goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide,soccerbeeroster:renderSoccerBeeMeasurementRoster,counterreviews:()=>window.GGFCCounterReviews?.render()};
   return withRenderCalculationCache(renderers[next]);
 }
 // Recheck calculation inputs on every render, including edits made in place.

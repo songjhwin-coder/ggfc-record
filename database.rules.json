@@ -262,6 +262,86 @@
             }
           }
         }
+      },
+      "counterReviews": {
+        "v1": {
+          "$year": {
+            ".read": "auth != null && auth.token.email === 'ggfc-admin@example.com' && auth.token.firebase.sign_in_provider === 'password'",
+            "$entry": {
+              ".write": "newData.exists()",
+              ".validate": "$year.matches(/^(20[0-9][0-9]|2100)$/) && newData.hasChildren(['sourceRevision', 'matchIndex', 'attendanceIndex', 'reviewerIndex', 'matchId', 'date', 'comp', 'round', 'no', 'home', 'away', 'team', 'player', 'reviewer', 'half', 'counts', 'savedAt']) && $entry === newData.child('sourceRevision').val()+'_'+newData.child('matchIndex').val()+'_'+newData.child('attendanceIndex').val()+'_'+newData.child('reviewerIndex').val() && newData.child('sourceRevision').val() === root.child('ggfc/v3/meta/revision').val() && root.child('ggfc/v3/records/matches').child(newData.child('matchIndex').val()).hasChildren(['id','date','comp','round','no','home','away']) && root.child('ggfc/v3/records/attendance').child(newData.child('attendanceIndex').val()).hasChildren(['id','team','player']) && root.child('ggfc/v3/players/roster').child(newData.child('reviewerIndex').val()).child('player').isString() && root.child('ggfc/v3/records/attendance').child(newData.child('attendanceIndex').val()).child('id').val()+'' === root.child('ggfc/v3/records/matches').child(newData.child('matchIndex').val()).child('id').val()+'' && (newData.child('team').val() === newData.child('home').val() || newData.child('team').val() === newData.child('away').val()) && newData.child('date').val().beginsWith($year+'-') && newData.child('matchId').val() === root.child('ggfc/v3/records/matches').child(newData.child('matchIndex').val()).child('id').val()+'' && newData.child('date').val() === root.child('ggfc/v3/records/matches').child(newData.child('matchIndex').val()).child('date').val()+'' && newData.child('comp').val() === root.child('ggfc/v3/records/matches').child(newData.child('matchIndex').val()).child('comp').val()+'' && newData.child('round').val() === root.child('ggfc/v3/records/matches').child(newData.child('matchIndex').val()).child('round').val()+'' && newData.child('no').val() === root.child('ggfc/v3/records/matches').child(newData.child('matchIndex').val()).child('no').val()+'' && newData.child('home').val() === root.child('ggfc/v3/records/matches').child(newData.child('matchIndex').val()).child('home').val()+'' && newData.child('away').val() === root.child('ggfc/v3/records/matches').child(newData.child('matchIndex').val()).child('away').val()+'' && newData.child('team').val() === root.child('ggfc/v3/records/attendance').child(newData.child('attendanceIndex').val()).child('team').val()+'' && newData.child('player').val() === root.child('ggfc/v3/records/attendance').child(newData.child('attendanceIndex').val()).child('player').val()+'' && newData.child('reviewer').val() === root.child('ggfc/v3/players/roster').child(newData.child('reviewerIndex').val()).child('player').val()+''",
+              "sourceRevision": {
+                ".validate": "newData.isNumber() && newData.val() >= 1"
+              },
+              "matchIndex": {
+                ".validate": "newData.isString() && newData.val().matches(/^(0|[1-9][0-9]*)$/)"
+              },
+              "attendanceIndex": {
+                ".validate": "newData.isString() && newData.val().matches(/^(0|[1-9][0-9]*)$/)"
+              },
+              "reviewerIndex": {
+                ".validate": "newData.isString() && newData.val().matches(/^(0|[1-9][0-9]*)$/)"
+              },
+              "matchId": {
+                ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200"
+              },
+              "date": {
+                ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200"
+              },
+              "comp": {
+                ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200"
+              },
+              "round": {
+                ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200"
+              },
+              "no": {
+                ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200"
+              },
+              "home": {
+                ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200"
+              },
+              "away": {
+                ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200"
+              },
+              "team": {
+                ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200"
+              },
+              "player": {
+                ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200"
+              },
+              "reviewer": {
+                ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200"
+              },
+              "half": {
+                ".validate": "newData.val() === 'H1' || newData.val() === 'H2'"
+              },
+              "counts": {
+                ".validate": "newData.hasChildren(['sot','keyPass','defSuccess'])",
+                "sot": {
+                  ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 9007199254740991 && newData.val()%1 === 0"
+                },
+                "keyPass": {
+                  ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 9007199254740991 && newData.val()%1 === 0"
+                },
+                "defSuccess": {
+                  ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 9007199254740991 && newData.val()%1 === 0"
+                },
+                "saves": {
+                  ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 9007199254740991 && newData.val()%1 === 0"
+                },
+                "$other": {
+                  ".validate": false
+                }
+              },
+              "savedAt": {
+                ".validate": "newData.isNumber() && newData.val() <= now && newData.val() >= now-300000 && (!data.exists() || newData.val() >= data.val())"
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
+          }
+        }
       }
     }
   }

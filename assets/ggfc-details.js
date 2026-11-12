@@ -75,17 +75,28 @@ function detailMetricGrid(items){
 function matchRecordRowAttrs(m,team,r){
   return ' data-match-record-row="'+esc(appTeamRecordKey(m,team,r.player))+'" data-match-record-player="'+esc(r.player)+'" data-match-record-team="'+esc(team)+'"';
 }
-function detailPlayerTable(team,m,mobile){
+function detailPlayerTable(team,m,mode){
   const players=team.rows.filter(r=>r.att&&!r.ownGoal);
   if(!players.length)return '<div class="detail-empty">이 경기에 출석한 선수가 없습니다.</div>';
+  const mobile=mode==='combined',counters=mode!=='readonly',other=mode!=='edit';
   const records=window.GGFCMatchRecords;
-  const hint=mobile?'선수 이름을 눌러 기록을 수정하세요. 표는 좌우로 밀어 볼 수 있습니다.':'표를 좌우로 밀면 모든 기록을 볼 수 있습니다.';
-  return '<p class="detail-scroll-hint">'+hint+'</p><div class="detail-table-wrap" tabindex="0" aria-label="'+esc(teamDisplayName(team.team))+' 선수별 경기 기록 표"><table class="detail-table"><caption class="detail-visually-hidden">'+esc(teamDisplayName(team.team))+' 선수별 경기 기록</caption><thead><tr><th scope="col">선수</th><th scope="col">유효슛</th><th scope="col">키패스</th><th scope="col">수비성공</th><th scope="col">선방</th><th scope="col">득점</th><th scope="col">도움</th><th scope="col">개인파울</th><th scope="col">MOM</th><th scope="col">승점</th></tr></thead><tbody>'+players.map(r=>{
+  const hint=mobile?'선수 이름을 눌러 기록을 수정하세요. 표는 좌우로 밀어 볼 수 있습니다.':'';
+  const countKeys=['sot','keyPass','defSuccess','saves'],otherKeys=['g','a','f','mom'];
+  const title=teamDisplayName(team.team)+' 선수별 '+(mode==='edit'?'공유 카운트':mode==='readonly'?'상세 기록':'경기 기록');
+  return (hint?'<p class="detail-scroll-hint">'+hint+'</p>':'')+'<div class="detail-table-wrap" tabindex="0" aria-label="'+esc(title)+' 표"><table class="detail-table"><caption class="detail-visually-hidden">'+esc(title)+'</caption><thead><tr><th scope="col">선수</th>'+
+    (counters?'<th scope="col">유효슛</th><th scope="col">키패스</th><th scope="col">수비성공</th><th scope="col">선방</th>':'')+
+    (other?'<th scope="col">득점</th><th scope="col">도움</th><th scope="col">개인파울</th><th scope="col">MOM</th><th scope="col">승점</th>':'')+'</tr></thead><tbody>'+players.map(r=>{
     const name=mobile&&records?.canEdit(m,r)
       ? '<button type="button" class="match-player-edit-trigger" data-match-player-edit="'+esc(appTeamRecordKey(m,team.team,r.player))+'" aria-label="'+esc(r.player)+' 기록 수정">'+esc(r.player)+'</button>'
       : esc(r.player);
-    return '<tr'+matchRecordRowAttrs(m,team.team,r)+'><th scope="row" class="squad-present">'+name+(r.keeper?' <small class="match-keeper-badge" title="'+(r.keeperSource==='MATCH'?'경기 지정 골키퍼':'선수명단 골키퍼')+'">GK</small>':'')+(r.role&&r.role!=='선수'?' <small>('+esc(r.role)+')</small>':'')+(mobile?'':records?.rowActionsHtml(m,team.team,r)||'')+'</th>'+['sot','keyPass','defSuccess','saves'].map(k=>'<td>'+(records?.cellHtml(m,team.team,r,k,!mobile)??esc(r.recordValues[k]??'—'))+'</td>').join('')+'<td>'+r.g+'</td><td>'+r.a+'</td><td>'+r.f+'</td><td>'+r.mom+'</td><td>'+team.points+'</td></tr>';
-  }).join('')+'</tbody><tfoot><tr><th scope="row">합계</th>'+['sot','keyPass','defSuccess','sv','g','a','f','mom'].map(k=>'<td>'+players.reduce((sum,r)=>sum+num(r[k]),0)+'</td>').join('')+'<td>'+players.length*team.points+'</td></tr></tfoot></table></div>';
+    const keeper=r.keeper?' <small class="match-keeper-badge" title="'+(r.keeperSource==='MATCH'?'경기 지정 골키퍼':'선수명단 골키퍼')+'">GK</small>':'';
+    return '<tr'+(counters?matchRecordRowAttrs(m,team.team,r):'')+'><th scope="row" class="squad-present">'+name+keeper+
+      (other&&r.role&&r.role!=='선수'?' <small>('+esc(r.role)+')</small>':'')+(mode==='edit'?records?.rowActionsHtml(m,team.team,r)||'':'')+'</th>'+
+      (counters?countKeys.map(k=>'<td>'+(records?.cellHtml(m,team.team,r,k,!mobile)??esc(r.recordValues[k]??'—'))+'</td>').join(''):'')+
+      (other?otherKeys.map(k=>'<td>'+r[k]+'</td>').join('')+'<td>'+team.points+'</td>':'')+'</tr>';
+  }).join('')+'</tbody><tfoot><tr><th scope="row">합계</th>'+
+    [...(counters?['sot','keyPass','defSuccess','sv']:[]),...(other?otherKeys:[])].map(k=>'<td>'+players.reduce((sum,r)=>sum+num(r[k]),0)+'</td>').join('')+
+    (other?'<td>'+players.length*team.points+'</td>':'')+'</tr></tfoot></table></div>';
 }
 function detailUnassignedHtml(items){
   if(!items.length)return '';
@@ -124,7 +135,7 @@ function stopMatchYoutubePlayers(){
 }
 function matchDetailHtml(data){
   const video=matchVideoDockHtml(data.match);
-  const divider=video?'<div class="match-split-handle" role="separator" tabindex="0" aria-label="영상과 경기 기록 너비 조절" aria-orientation="vertical" aria-controls="matchRecordScroll" title="좌우로 드래그하여 너비 조절"><span aria-hidden="true">↔</span></div>':'';
+  const divider='<div class="match-split-handle" role="separator" tabindex="0" aria-label="영상과 경기 기록 너비 조절" aria-orientation="vertical" aria-controls="matchRecordScroll" title="좌우로 드래그하여 너비 조절"><span aria-hidden="true">↔</span></div>';
   return video+divider+'<div class="match-record-scroll" id="matchRecordScroll" tabindex="0" aria-label="경기 결과와 선수별 기록">'+matchDetailRecordsHtml(data)+'</div>';
 }
 function matchDetailRecordsHtml(data,playerKey){
@@ -141,18 +152,25 @@ function matchDetailRecordsHtml(data,playerKey){
   }
   const m=data.match,round=recordMatchRoundNumber(m),ground=matchGround(m);
   const meta=[normDate(m.date),matchCompetition(m),halfLabel(matchHalfKey(m)),round?round+'R':'',m.round,m.no,ground?ground+'구장':''].filter(Boolean);
-  return '<div class="match-detail-summary"><div class="match-detail-navigation"><button type="button" class="match-detail-back" data-match-back>← 경기 목록으로</button><span>PC에서는 ESC · 휴대폰에서는 뒤로가기로 닫기</span></div><div class="detail-match-meta">'+meta.map(v=>'<span>'+esc(v)+'</span>').join('')+'</div>'+
+  const summary='<div class="match-detail-summary"><div class="match-detail-navigation"><button type="button" class="match-detail-back" data-match-back>← 경기 목록으로</button><span>PC에서는 ESC · 휴대폰에서는 뒤로가기로 닫기</span></div><div class="detail-match-meta">'+meta.map(v=>'<span>'+esc(v)+'</span>').join('')+'</div>'+
     '<div class="detail-scoreboard">'+data.teams.map((t,i)=>
       (i===1?'<div class="detail-score"><b>'+num(m.hs)+' <span>:</span> '+num(m.as)+'</b>'+fixtureMomHtml(m)+'</div>':'')+
       '<div class="detail-score-team">'+fixtureLogoHtml(t.team)+'<strong>'+esc(teamDisplayName(t.team))+'</strong><span>'+detailResultLabel(t.result)+' · 승점 '+t.points+(t.group?' · '+esc(leagueGroupLabel(t.group)):'')+'</span></div>'
-    ).join('')+'</div>'+matchYoutubeButtonsHtml(m,false)+(window.GGFCMatchRecords?.permissionMarkerHtml()||'')+(forfeitText(m)?'<p class="detail-notice">'+esc(forfeitText(m))+' · 승패와 승점은 몰수패 판정을 적용합니다.</p>':'')+'</div>'+
-    '<div class="match-player-records" tabindex="0" aria-label="양 팀 선수별 경기 기록">'+
-    '<p class="match-zero-guide">미기록은 0부터 시작합니다. 해당 선수의 모든 항목을 확인한 뒤 공유 저장하세요. 미확정 항목도 0회로 함께 확정됩니다.</p>'+
-    '<div class="detail-team-columns">'+data.teams.map(t=>'<section class="detail-section"><h3>'+teamChip(t.team)+'</h3><p class="detail-note">감독: '+esc(t.coaches.join(', ')||'미등록')+' · 코치: '+esc(t.assistants.join(', ')||'미등록')+(t.squadDate?' · '+esc(t.squadDate)+' 스쿼드 기준':' · 해당 경기일 이전 팀스쿼드 없음')+'</p>'+detailMetricGrid([
-      ['팀 득점',t.score],['도움',t.totals.a],['적용 팀파울',t.fouls],['개인파울 합계',t.totals.f],['선방',t.totals.sv],['MOM',t.totals.mom]
-    ])+'<p class="detail-foul-note">팀파울 = 개인파울 + 추가 파울 · 추가 파울 '+t.rawFouls+'</p>'+detailPlayerTable(t,m,mobile)+(t.totals.ownGoal?'<p class="detail-note">자책골·베네핏 표기 '+t.totals.ownGoal+'골은 등록된 팀의 득점 기록에 포함됩니다.</p>':'')+
-    (t.totals.g!==t.score?'<p class="detail-notice">팀 점수 '+t.score+'골 / 등록 득점자 합계 '+t.totals.g+'골</p>':'')+'</section>').join('')+'</div>'+
-    '<p class="detail-note">선수 기록표와 합계는 이 경기의 출석 명단을 기준으로 표시합니다.</p>'+detailUnassignedHtml(data.unassigned)+(m.memo||m.note?'<section class="detail-section"><h3>비고</h3><p class="detail-note detail-prewrap">'+esc([m.memo,m.note].filter(Boolean).join('\n'))+'</p></section>':'')+'</div>';
+    ).join('')+'</div>'+matchYoutubeButtonsHtml(m,false)+(window.GGFCMatchRecords?.permissionMarkerHtml()||'')+(forfeitText(m)?'<p class="detail-notice">'+esc(forfeitText(m))+' · 승패와 승점은 몰수패 판정을 적용합니다.</p>':'');
+  const teamSections=mode=>'<div class="detail-team-columns">'+data.teams.map(t=>{
+    const opening='<section class="detail-section"><h3>'+teamChip(t.team)+'</h3>';
+    if(mode==='edit')return opening+detailPlayerTable(t,m,mode)+'</section>';
+    return opening+'<p class="detail-note">감독: '+esc(t.coaches.join(', ')||'미등록')+' · 코치: '+esc(t.assistants.join(', ')||'미등록')+(t.squadDate?' · '+esc(t.squadDate)+' 스쿼드 기준':' · 해당 경기일 이전 팀스쿼드 없음')+'</p>'+detailMetricGrid([
+      ['팀 득점',t.score],['도움',t.totals.a],['적용 팀파울',t.fouls],['개인파울 합계',t.totals.f],...(mode==='combined'?[['선방',t.totals.sv]]:[]),['MOM',t.totals.mom]
+    ])+'<p class="detail-foul-note">팀파울 = 개인파울 + 추가 파울 · 추가 파울 '+t.rawFouls+'</p>'+detailPlayerTable(t,m,mode)+(t.totals.ownGoal?'<p class="detail-note">자책골·베네핏 표기 '+t.totals.ownGoal+'골은 등록된 팀의 득점 기록에 포함됩니다.</p>':'')+
+    (t.totals.g!==t.score?'<p class="detail-notice">팀 점수 '+t.score+'골 / 등록 득점자 합계 '+t.totals.g+'골</p>':'')+'</section>';
+  }).join('')+'</div>';
+  const otherRecords='<p class="detail-note">선수 기록표와 합계는 이 경기의 출석 명단을 기준으로 표시합니다.</p>'+detailUnassignedHtml(data.unassigned)+(m.memo||m.note?'<section class="detail-section"><h3>비고</h3><p class="detail-note detail-prewrap">'+esc([m.memo,m.note].filter(Boolean).join('\n'))+'</p></section>':'');
+  const inputHeader=(window.GGFCCounterReviews?.reviewerHtml()||'')+'<p class="match-zero-guide">미기록은 0부터 시작합니다. 해당 선수의 모든 항목을 확인한 뒤 공유 저장하세요. 미확정 항목도 0회로 함께 확정됩니다.</p>';
+  const start='<div class="match-player-records" tabindex="0" aria-label="양 팀 선수별 경기 기록">';
+  return mobile?summary+'</div>'+start+inputHeader+teamSections('combined')+otherRecords+'</div>':
+    summary+'<div class="match-detail-readonly" aria-label="경기 상세 기록">'+teamSections('readonly')+otherRecords+'</div></div>'+
+    start+inputHeader+teamSections('edit')+'</div>';
 }
 function matchDetailAttrs(m){
   if(!detailMatchKey(m.id))return '';
@@ -259,7 +277,7 @@ function matchSplitBounds(handle){
   const styles=getComputedStyle(body);
   return {
     available,
-    ratio:handle.previousElementSibling.offsetWidth/available,
+    ratio:(handle.previousElementSibling||body.querySelector('.match-detail-summary')).offsetWidth/available,
     min:parseFloat(styles.getPropertyValue('--match-split-min-video'))/available,
     max:1-parseFloat(styles.getPropertyValue('--match-split-min-records'))/available
   };

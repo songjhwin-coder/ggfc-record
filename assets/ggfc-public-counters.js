@@ -143,6 +143,6 @@ window.GGFCPublicCounters=(()=>{
  document.getElementById('publicCounterRetry')?.addEventListener('click',()=>{const c=context();if(error){channel=null;refreshUI();}if(c.ref)c.ref.get().then(s=>{accept(s.val());window.GGFCMatchRecords?.retryPending();}).catch(e=>{error=String(e.code||'접근 오류');refreshPanel();});});
  window.addEventListener('online',()=>{if(error){channel=null;refreshUI();}});
  try{const cached=JSON.parse(localStorage.getItem(cacheKey)||'null');if(cached?.version===1)accept(cached.records,true);}catch(e){}
- return {refreshUI,publish,latest:key=>entries.get(key),stamp:key=>stamp(entries.get(key)),sameValues,get ready(){return loaded&&context().ready;}};
+ return {refreshUI,publish,sourceFor,latest:key=>entries.get(key),stamp:key=>stamp(entries.get(key)),sameValues,get ready(){return loaded&&context().ready;}};
 })();
 window.GGFCPublicCounters.refreshUI();
