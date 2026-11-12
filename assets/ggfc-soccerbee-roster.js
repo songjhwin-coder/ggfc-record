@@ -170,7 +170,8 @@ function renderSoccerBeeMeasurementRoster(){
   const element=id=>document.getElementById('sbMeasurement'+id);
   const form=element('Controls'),year=element('Year'),half=element('Half'),count=element('RoundCount');
   const round=element('Round'),date=element('Date'),saveButton=element('Save'),completeButton=element('Complete');
-  const refreshButton=element('Refresh'),cancelButton=element('Cancel'),printButton=element('Print'),status=element('Status');
+  const editButton=element('EditCompletion'),refreshButton=element('Refresh'),cancelButton=element('Cancel');
+  const printButton=element('Print'),status=element('Status');
   const sheet=element('Sheet'),roster=element('Roster'),overview=element('Rounds');
   const config=()=>DB.settings?.soccerbeeMeasurement||{};
   const defaultDate=normDate(config().date)||latestMatchDate()||recordToday();
@@ -182,28 +183,45 @@ function renderSoccerBeeMeasurementRoster(){
   half.value=selection.half==='H1'||selection.half==='H2'?selection.half:latestDbPeriodContext(defaultDate)?.half||'H1';
   const edits=()=>soccerBeeDraft;
   const slot=()=>result.rounds[selected-1];
-  const checks=()=>selected===active&&edits().checked?edits().checked:soccerBeeChecked(slot());
+  const correction=()=>edits().correction;
+  const checks=()=>correction()?.checked??(selected===active&&edits().checked?edits().checked:soccerBeeChecked(slot()));
   const scheduleDirty=()=>edits().count!==null||edits().dates.size>0||edits().regenerate;
-  const changed=()=>scheduleDirty()||edits().checked!==null;
+  const correctionChanged=()=>{
+    const draft=correction();
+    if(!draft)return false;
+    const saved=soccerBeeChecked(base.rounds[draft.round]);
+    return saved.size!==draft.checked.size||[...draft.checked].some(key=>!saved.has(key));
+  };
+  const changed=()=>scheduleDirty()||edits().checked!==null||correctionChanged();
   const editable=()=>!!slot()&&selected===active&&!!slot().date&&base.managed&&!scheduleDirty()&&!dateError&&date.validity.valid&&count.validity.valid&&!saving;
   const note=message=>{status.textContent=message;};
 
   function controls(){
-    year.disabled=half.disabled=count.disabled=round.disabled=saving;
-    date.disabled=saving||slot().completed===true||(selected===active&&checks().size>0);
+    const correcting=!!correction(),completed=slot().completed===true;
+    year.disabled=half.disabled=count.disabled=round.disabled=saving||correcting;
+    date.disabled=saving||completed||(selected===active&&checks().size>0);
     const invalid=!count.validity.valid||!date.validity.valid||!!dateError;
-    saveButton.disabled=saving||invalid||(!changed()&&base.managed);
+    saveButton.disabled=saving||correcting||invalid||(!changed()&&base.managed);
     completeButton.disabled=!editable();
-    refreshButton.disabled=saving||!active;
-    cancelButton.disabled=saving||!changed();
-    printButton.disabled=saving||invalid||!base.managed||scheduleDirty()||!slot().date||!soccerBeeSlotPlayers(slot()).length;
+    editButton.hidden=!completed;
+    editButton.disabled=saving||!completed||(correcting?!correctionChanged():changed()||!soccerBeeSlotPlayers(slot()).length);
+    editButton.textContent=correcting?'완료 기록 저장':'완료 기록 수정';
+    refreshButton.disabled=saving||correcting||!active;
+    cancelButton.disabled=saving||(!correcting&&!changed());
+    printButton.disabled=saving||correcting||invalid||!base.managed||scheduleDirty()||!slot().date||!soccerBeeSlotPlayers(slot()).length;
+    overview.querySelectorAll('[data-sb-round]').forEach(button=>button.disabled=saving||correcting);
   }
 
   function describe(){
-    if(!count.validity.valid)note('라운드 수는 '+base.protectedRound+'~'+SOCCERBEE_ROUND_LIMIT+'R로 설정해 주세요.');
+    if(correction())note('측정 완료 체크를 정정한 뒤 완료 기록 저장을 누르세요. 저장하면 남은 명단을 다시 배정합니다.');
+    else if(!count.validity.valid)note('라운드 수는 '+base.protectedRound+'~'+SOCCERBEE_ROUND_LIMIT+'R로 설정해 주세요.');
     else if(!date.validity.valid)note('측정일은 2000년부터 2100년 사이로 입력해 주세요.');
     else if(dateError)note(dateError);
-    else if(slot().completed===true)note('이 라운드는 완료되었습니다. 당시 명단과 측정 결과를 확인할 수 있습니다.');
+    else if(slot().completed===true){
+      if(changed())note('편집 중인 일정이나 체크를 먼저 저장하거나 취소해 주세요.');
+      else if(!soccerBeeSlotPlayers(slot()).length)note('라운드 완료 · 배정된 선수가 없습니다.');
+      else note('라운드 완료 · 측정 결과를 정정하려면 완료 기록 수정을 누르세요.');
+    }
     else if(!base.managed||scheduleDirty())note('편성 미리보기입니다. 일정·명단 저장을 누르면 전체 라운드에 반영됩니다.');
     else if(!slot().date)note('이 라운드의 측정일을 입력하고 일정·명단 저장을 눌러 주세요.');
     else if(selected===active)note('측정한 선수만 체크한 후 라운드 완료를 누르세요. 미측정 선수는 다음 라운드에 우선 배정됩니다.');
@@ -225,6 +243,19 @@ function renderSoccerBeeMeasurementRoster(){
       {...item,checked:[...edits().checked]}:item);
   }
 
+  function rebuildOpenRounds(rounds,lockedRound=null){
+    const plan={roundCount:rounds.length,rounds:Object.fromEntries(rounds.map((item,i)=>[i+1,item]))};
+    return withRenderCalculationCache(()=>buildSoccerBeeSchedule(plan,participants.players,rank,true,lockedRound).rounds);
+  }
+
+  function correctedRounds(rounds){
+    const {round,checked}=correction();
+    rounds[round-1]={...rounds[round-1],checked:[...checked]};
+    // Keep the next round's saved measurements and its roster if it has already started.
+    const lockedRound=active&&soccerBeeChecked(rounds[active-1]).size?active:null;
+    return rebuildOpenRounds(rounds,lockedRound);
+  }
+
   function refreshDraft(){
     edits().dirty=changed();
     GGFC.refreshUI();
@@ -244,7 +275,7 @@ function renderSoccerBeeMeasurementRoster(){
   }
 
   function draw(){
-    const current=slot(),done=current.completed===true,checked=checks(),assignment=current.assignment||{};
+    const current=slot(),done=current.completed===true,correcting=!!correction(),checked=checks(),assignment=current.assignment||{};
     const period=assignment.from?'출석 집계 '+esc(assignment.from)+' ~ '+esc(assignment.through)+(current.date?'':' · 측정일 미설정, 최신 경기 기준'):'출석 집계 자료 없음';
     const dateText=current.date||'미설정',players=soccerBeeSlotPlayers(current).length;
     const attempts=new Map();
@@ -256,8 +287,8 @@ function renderSoccerBeeMeasurementRoster(){
       }
     }
     sheet.innerHTML='<h3>GGFC 사커비 측정 명단</h3><p><strong>'+esc(year.value)+'년 '+esc(halfLabel(half.value))+' '+selected+'R</strong> · 측정일 <strong id="sbMeasurementSheetDate">'+esc(dateText)+'</strong></p><p>'+period+'</p>'+
-      '<p>'+(done?'라운드 완료':!base.managed||scheduleDirty()?'배정 미리보기':'배정 명단')+' · '+players+' / 12명 · 측정 <strong id="sbMeasurementCheckedCount">'+checked.size+' / '+players+'명</strong></p>'+
-      '<div class="sb-measurement-groups">'+renderSoccerBeeGroupTables(current,checked,editable(),done,attempts)+'</div>';
+      '<p>'+(correcting?'완료 기록 수정 중':done?'라운드 완료':!base.managed||scheduleDirty()?'배정 미리보기':'배정 명단')+' · '+players+' / 12명 · 측정 <strong id="sbMeasurementCheckedCount">'+checked.size+' / '+players+'명</strong></p>'+
+      '<div class="sb-measurement-groups">'+renderSoccerBeeGroupTables(current,checked,editable()||correcting,done&&!correcting,attempts)+'</div>';
     roster.innerHTML=renderSoccerBeeAllPlayers(rank(current.date||'').rows,participants.rosterYear,result,current,current.date);
     drawOverview();controls();describe();
   }
@@ -290,25 +321,38 @@ function renderSoccerBeeMeasurementRoster(){
 
   function load(number){
     const key=year.value+'/'+half.value;
-    if(edits()?.key!==key)soccerBeeDraft={key,count:null,dates:new Map(),checked:null,regenerate:false,dirty:false};
+    if(edits()?.key!==key)soccerBeeDraft={key,count:null,dates:new Map(),checked:null,correction:null,regenerate:false,dirty:false};
     base=soccerBeeMeasurementPlan(config(),year.value,half.value);
+    if(correction()&&!edits().dirty){
+      const original=base.rounds[correction().round];
+      if(original?.completed===true)correction().checked=soccerBeeChecked(original);
+      else edits().correction=null;
+    }
     participants=soccerBeeParticipants(year.value);
     rank=soccerBeeAttendanceRanker(participants.players);
     count.min=String(base.protectedRound);count.value=String(edits().count??base.roundCount);
     calculate(number);
-    edits().backup=()=>changed()?sharedSettings(checkedRounds(),selected):null;
+    edits().backup=()=>{
+      if(!changed())return null;
+      const rounds=checkedRounds();
+      return sharedSettings(correctionChanged()?correctedRounds(rounds):rounds,selected);
+    };
   }
 
-  async function persist(complete){
+  async function persist(action){
     if(!admin||!GGFC.canEdit()||GGFC.pending){note('관리자 인증과 상단 공유 저장 상태를 확인해 주세요.');return;}
     let rounds=checkedRounds(),nextRound=selected;
-    if(complete){
+    if(action==='complete'){
       const checked=checks(),missed=soccerBeeSlotPlayers(slot()).length-checked.size;
       const detail=missed?(selected<rounds.length?' 미측정 '+missed+'명은 다음 라운드에 우선 배정됩니다.':' 미측정 '+missed+'명은 미배정 목록에 표시됩니다.'):'';
       if(!window.confirm(selected+'R을 '+checked.size+'명 측정 완료로 마감할까요?'+detail))return;
       rounds[selected-1]={...rounds[selected-1],completed:true,checked:[...checked]};
-      rounds=withRenderCalculationCache(()=>buildSoccerBeeSchedule({roundCount:rounds.length,rounds:Object.fromEntries(rounds.map((item,i)=>[i+1,item]))},participants.players,rank,true,null).rounds);
+      rounds=rebuildOpenRounds(rounds);
       nextRound=rounds.findIndex(item=>item.completed!==true)+1||selected;
+    }
+    if(action==='correct'){
+      if(!correctionChanged()||slot().completed!==true)return;
+      rounds=correctedRounds(rounds);
     }
     const settings=sharedSettings(rounds,nextRound);
     DB.settings.soccerbeeMeasurement=settings;
@@ -323,10 +367,11 @@ function renderSoccerBeeMeasurementRoster(){
     if(form.onsubmit!==submit)return;
     saving=false;
     renderSoccerBeeMeasurementRoster();
-    note(shared?(complete?'라운드 완료 및 남은 명단 공유 저장 완료':'일정·명단 공유 저장 완료'):'상단 공유 저장 상태를 확인해 주세요.');
+    const messages={complete:'라운드 완료 및 남은 명단 공유 저장 완료',correct:'완료 기록 수정 및 남은 명단 공유 저장 완료',schedule:'일정·명단 공유 저장 완료'};
+    note(shared?messages[action]:'상단 공유 저장 상태를 확인해 주세요.');
   }
 
-  const submit=event=>{event.preventDefault();if(!saveButton.disabled)persist(false);};
+  const submit=event=>{event.preventDefault();if(!saveButton.disabled)persist('schedule');};
   form.onsubmit=submit;
   year.onchange=half.onchange=()=>{
     if(changed()&&!window.confirm('저장하지 않은 변경을 취소하고 다른 반기를 볼까요?')){
@@ -337,7 +382,7 @@ function renderSoccerBeeMeasurementRoster(){
   round.onchange=()=>selectRound(round.value);
   overview.onclick=event=>{
     const button=event.target.closest('button[data-sb-round]');
-    if(button&&!saving)selectRound(button.dataset.sbRound);
+    if(button&&!button.disabled)selectRound(button.dataset.sbRound);
   };
   count.oninput=()=>{
     if(!count.validity.valid){controls();describe();return;}
@@ -354,17 +399,25 @@ function renderSoccerBeeMeasurementRoster(){
   };
   sheet.onchange=event=>{
     const input=event.target.closest('input[data-sb-player]');
-    if(!input||!editable())return;
+    if(!input||saving||(!correction()&&!editable()))return;
     const checked=checks(),key=input.dataset.sbPlayer;
     if(input.checked)checked.add(key);else checked.delete(key);
-    const saved=soccerBeeChecked(slot());
-    edits().checked=checked.size===saved.size&&[...checked].every(value=>saved.has(value))?null:checked;
+    if(!correction()){
+      const saved=soccerBeeChecked(slot());
+      edits().checked=checked.size===saved.size&&[...checked].every(value=>saved.has(value))?null:checked;
+    }
     element('CheckedCount').textContent=checked.size+' / '+soccerBeeSlotPlayers(slot()).length+'명';
     controls();refreshDraft();
   };
   cancelButton.onclick=()=>{soccerBeeDraft=null;load(selected);refreshDraft();};
   refreshButton.onclick=()=>{edits().regenerate=true;calculate(selected);refreshDraft();};
-  completeButton.onclick=()=>{if(!completeButton.disabled)persist(true);};
+  completeButton.onclick=()=>{if(!completeButton.disabled)persist('complete');};
+  editButton.onclick=()=>{
+    if(editButton.disabled||!admin||!GGFC.authorized)return;
+    if(correction()){persist('correct');return;}
+    edits().correction={round:selected,checked:soccerBeeChecked(slot())};
+    draw();
+  };
   printButton.onclick=()=>{
     if(admin&&GGFC.authorized&&!printButton.disabled){draw();window.print();}
   };
