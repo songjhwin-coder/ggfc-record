@@ -4095,11 +4095,15 @@ body:not(.admin-mode) #v-interleague :is(.note,.head>p){display:none!important}
 /* Wide PC match view: video and result on the left, editable tables on the right. */
 @media (min-width:821px){
  html:not(.ggfc-mobile) .detail-match-fullscreen .ggfc-detail-body:has(>.match-split-handle){
+  --match-split-min-records:432px;
   display:grid;
   grid-template-columns:var(--match-split-columns);
   grid-template-rows:auto minmax(0,1fr);
  }
  html:not(.ggfc-mobile) .detail-match-fullscreen .match-split-handle{display:flex}
+ html:not(.ggfc-mobile) .detail-match-fullscreen .ggfc-detail-body:has(>.match-video-dock){
+  --match-split-default:.71;
+ }
  html:not(.ggfc-mobile) .detail-match-fullscreen .match-video-dock{
   grid-area:1 / 1;
  }
@@ -4129,14 +4133,18 @@ body:not(.admin-mode) #v-interleague :is(.note,.head>p){display:none!important}
   overflow:auto;
   overscroll-behavior:contain;
   scrollbar-gutter:stable;
-  padding:14px 12px;
+  padding:14px 9px;
  }
  html:not(.ggfc-mobile) .detail-match-fullscreen .match-split-handle+.match-record-scroll .detail-team-columns{grid-template-columns:minmax(0,1fr)}
  html:not(.ggfc-mobile) .detail-match-fullscreen .match-split-handle+.match-record-scroll .detail-table{border-collapse:separate;border-spacing:0}
- html:not(.ggfc-mobile) .detail-match-fullscreen .match-player-records .detail-table td{padding-inline:4px}
+ html:not(.ggfc-mobile) .detail-match-fullscreen .match-player-records .detail-section{padding:12px 6px}
+ html:not(.ggfc-mobile) .detail-match-fullscreen .match-player-records .detail-table{min-width:0}
+ html:not(.ggfc-mobile) .detail-match-fullscreen .match-player-records .detail-table :is(th,td){padding-inline:3px}
+ html:not(.ggfc-mobile) .detail-match-fullscreen .match-player-records .detail-table th:first-child{min-width:70px;max-width:135px;white-space:normal;overflow-wrap:anywhere}
+ html:not(.ggfc-mobile) .detail-match-fullscreen .match-player-records .match-record-row-actions{flex-wrap:wrap;gap:3px}
  html:not(.ggfc-mobile) .detail-match-fullscreen .match-player-records .match-count-cell{gap:2px}
- html:not(.ggfc-mobile) .detail-match-fullscreen .match-player-records .match-count-cell button{width:22px;font-size:16px}
- html:not(.ggfc-mobile) .detail-match-fullscreen .match-player-records .match-count-cell input{width:38px}
+ html:not(.ggfc-mobile) .detail-match-fullscreen .match-player-records .match-count-cell button{width:17px;padding:0;font-size:15px}
+ html:not(.ggfc-mobile) .detail-match-fullscreen .match-player-records .match-count-cell input{width:32px;font-size:11px}
  html:not(.ggfc-mobile) .detail-match-fullscreen .match-split-handle+.match-record-scroll .detail-table th:first-child{position:sticky;left:0;z-index:2;background:#fff}
  html:not(.ggfc-mobile) .detail-match-fullscreen .match-split-handle+.match-record-scroll .detail-table thead th:first-child{background:#edf2f8}
  html:not(.ggfc-mobile) .detail-match-fullscreen .match-split-handle+.match-record-scroll .detail-table tfoot th:first-child{background:#f0f5fb}

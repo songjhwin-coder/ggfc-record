@@ -7172,6 +7172,7 @@ function renderActiveView(v,options={}){
     if(document.getElementById('playerCardMask')?.classList.contains('on'))closePlayerCard();
   }
   if(activeView==='abilityaudit'&&next!==activeView)window.GGFCAbilityAudit?.stop(true);
+  if(activeView==='counterreviews'&&next!==activeView)window.GGFCCounterReviews?.stop();
   activeView=next;syncMenuNavigation();selectMenuView(next);
   const deferred=options.interactive&&deferredMemberViews.has(next);
   if((options.swipePrepared||deferred)&&mobilePageSwipe?.isPrepared(next))return;

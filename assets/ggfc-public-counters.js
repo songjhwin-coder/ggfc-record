@@ -32,6 +32,7 @@ window.GGFCPublicCounters=(()=>{
     renderPending=false;renderAll();
     if(typeof playerCardHistoryState!=='undefined'&&playerCardHistoryState&&document.querySelector('#playerCardMask')?.classList.contains('on'))openPlayerCard(playerCardHistoryState.player,playerCardHistoryState.query);
    }
+   if(renderPending)window.GGFCCounterReviews?.onPublicChanged();
    window.GGFCMatchRecords?.onPublicChanged();refreshPanel();
   });
  }
@@ -134,6 +135,7 @@ window.GGFCPublicCounters=(()=>{
   let timer;try{return await Promise.race([task,new Promise(resolve=>timer=setTimeout(()=>resolve({ok:false,message:'기기 저장 · 공유 응답 대기 중'}),12000))]);}finally{clearTimeout(timer);}
  }
  function refreshPanel(){
+  window.GGFCCounterReviews?.refreshPublicStatus();
   const el=document.getElementById('publicCounterStatus');if(!el)return;
   const pending=window.GGFCMatchRecords?.pendingCount||0;
   el.textContent=(error?'공유 읽기 실패 · 규칙·연결 확인':writeError?'공유 저장 실패 · '+(/permission/i.test(writeError)?'Firebase 규칙·연결 확인':writeError):loaded?'공유 읽기 연결 · '+entries.size+'건':'공유 카운트 연결 대기')+(pending?' · 이 기기 전송 대기 '+pending+'명':'')+(lastSharedAt?' · 최근 저장 성공 '+new Date(lastSharedAt).toLocaleTimeString('ko-KR'):'')+(context().ready?'':' · 오프라인 또는 DB 동기화 중');
