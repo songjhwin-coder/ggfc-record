@@ -4178,5 +4178,16 @@ body:not(.admin-mode) #v-interleague :is(.note,.head>p){display:none!important}
 .counter-review-filters{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
 .counter-review-data{margin-top:14px}
 .counter-review-data .tablewrap{margin-bottom:18px}
-.counter-review-data td,.counter-review-data th{white-space:nowrap}
-.counter-review-data button{margin-block:8px}
+.counter-review-ranking td,.counter-review-ranking th{white-space:normal;font-variant-numeric:tabular-nums}
+.counter-review-ranking .counter-review-player{color:inherit;background:none;border:0;padding:7px 0;font:inherit;font-weight:750;text-align:left;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.counter-review-ranking .counter-review-player:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+.counter-review-ranking .counter-review-detail-cell{padding:12px;text-align:left;background:var(--soft)}
+.counter-review-detail h4{margin:0 0 8px}
+.counter-review-detail h5{margin:0 0 5px;font-size:inherit}
+.counter-review-fixture{margin-top:8px;padding:10px 12px;border:1px solid var(--border);border-radius:8px}
+.counter-review-fixture ul{list-style:none;padding:0;margin:0}
+.counter-review-fixture li{padding:5px 0;overflow-wrap:anywhere}
+.counter-review-fixture li+li{border-top:1px solid var(--border)}
+.counter-review-fixture time{display:block;font-size:.85em}
+.counter-review-more{margin-top:8px}
+@media(max-width:520px){.counter-review-ranking :is(th,td):not(.counter-review-detail-cell){padding:7px 5px;font-size:12px}}

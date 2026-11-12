@@ -6,7 +6,7 @@ window.GGFCCounterReviews=(()=>{
  const storedName=()=>{try{return localStorage.getItem(nameKey)||'';}catch{return '';}};
  const idOf=r=>verifiedFixtureKey({...r,id:r.matchId});
  let reviewer=storedName(),rosterSource=null,names=[],message='',flushing=false,retry=false;
- const volatile=new Map(),pageSize=80,view={year:'',half:'',member:'',match:'',reviewLimit:pageSize,sharedLimit:pageSize,loading:false,rows:[],error:''};
+ const volatile=new Map(),pageSize=80,view={year:'',half:'',expanded:'',detailLimit:pageSize,loading:false,rows:[],error:''};
  let subscription=null;
  function available(){
   const source=DB.roster;
@@ -102,83 +102,96 @@ window.GGFCCounterReviews=(()=>{
 
  const byId=suffix=>document.getElementById('counterReview'+suffix);
  const formatTime=ms=>new Date(ms).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',hour12:false});
- function options(el,items,value,empty=''){
-  const html=(empty?'<option value="">'+empty+'</option>':'')+items.map(([key,label])=>'<option value="'+esc(key)+'">'+esc(label)+'</option>').join('');
-  if(el.dataset.options!==html){el.innerHTML=html;el.dataset.options=html;}
-  el.value=value;
-  if(el.selectedIndex===-1)el.selectedIndex=0;
-  return el.value;
+ function fixtureHalf(match){
+  return matchHalfKey(match)||latestDbPeriodContext(match.date)?.half||'';
  }
- function matchesLabel(row){return [normDate(row.date),row.comp,row.round,row.no,teamDisplayName(row.home)+' vs '+teamDisplayName(row.away)].join(' · ');}
- function fixtureHalf(row,match){
-  return (match&&matchHalfKey(match))||normHalf(row.half)||latestDbPeriodContext(row.date)?.half||'';
- }
- function inPeriod(row,fixtures){
-  if(normDate(row.date).slice(0,4)!==view.year)return false;
-  return fixtureHalf(row,fixtures.get(idOf(row)))===view.half;
- }
- function sortRecords(rows){
-  return rows.sort((a,b)=>normDate(b.date).localeCompare(normDate(a.date))||b.savedAt-a.savedAt);
+ function periodFixtures(){
+  const verified=verifiedRecords(),byId=new Map(),fixtures=new Map();
+  for(const match of verified.matches){
+   if(!String(match.comp||'').trim()||normDate(match.date).slice(0,4)!==view.year||fixtureHalf(match)!==view.half)continue;
+   byId.set(match.id,match);
+  }
+  for(const row of verified.attendance){
+   const match=byId.get(row.id);
+   if(!match||!window.GGFCMatchRecords?.canEdit(match,{player:row.player,att:true,ownGoal:isOwnGoalPlayer(row.player)}))continue;
+   fixtures.set(verifiedFixtureKey(match),match);
+   byId.delete(row.id);
+  }
+  return fixtures;
  }
  function history(fixtures){
   const latest=new Map();
   for(const row of view.rows){
-   if(!row.player||!row.reviewer||!Number.isFinite(row.savedAt)||!inPeriod(row,fixtures))continue;
+   if(!row.player||!row.reviewer||!Number.isFinite(row.savedAt))continue;
    const actor=normalizePlayerMatchKey(row.reviewer),fixture=idOf(row);
+   if(!actor||!fixtures.has(fixture))continue;
    const key=JSON.stringify([actor,fixture,teamRecordTeamKey(row.team),normalizePlayerMatchKey(row.player)]);
    const prior=latest.get(key);
    if(!prior||row.savedAt>prior.savedAt)latest.set(key,{...row,actor,fixture});
   }
-  return sortRecords([...latest.values()]);
+  return [...latest.values()].sort((a,b)=>normDate(b.date).localeCompare(normDate(a.date))||b.savedAt-a.savedAt);
  }
- function sharedRecords(fixtures){
-  return sortRecords(liveCounterTeamPlayerRecords.filter(row=>inPeriod(row,fixtures))
-   .map(row=>({...row,fixture:row.fixtureKey,counts:row.values})));
+ function participationRanking(rows){
+  const players=new Map();
+  for(const row of draftRosterRows(view.year)){
+   const name=String(row.player).trim(),actor=normalizePlayerMatchKey(name);
+   if(actor&&!players.has(actor))players.set(actor,{actor,name,fixtures:new Set(),rows:[]});
+  }
+  for(const row of rows){
+   if(!players.has(row.actor))players.set(row.actor,{actor:row.actor,name:row.reviewer,fixtures:new Set(),rows:[]});
+   const player=players.get(row.actor);
+   player.fixtures.add(row.fixture);player.rows.push(row);
+  }
+  return [...players.values()].sort((a,b)=>b.fixtures.size-a.fixtures.size||b.rows.length-a.rows.length||compareNamesKo(a.name,b.name));
  }
- function recordsTable(rows,limit,kind){
-  const named=kind==='review';
-  if(!rows.length)return '<p class="empty">선택한 조건의 '+(named?'이름이 남은 참여 내역':'공유 저장 기록')+'이 없습니다.</p>';
-  return '<div class="tablewrap"><table><thead><tr><th>대진</th><th>팀</th><th>기록 대상 선수</th>'+(named?'<th>참여자</th>':'')+
-   metrics.map(([,label])=>'<th>'+label+'</th>').join('')+'<th>공유 저장 시각</th></tr></thead><tbody>'+
-   rows.slice(0,limit).map(r=>'<tr><td>'+esc(matchesLabel(r))+'</td><td>'+esc(teamDisplayName(r.team))+'</td><th scope="row">'+esc(r.player)+'</th>'+
-    (named?'<td>'+esc(r.reviewer)+'</td>':'')+metrics.map(([key])=>'<td>'+esc(Number.isSafeInteger(r.counts?.[key])?r.counts[key]+'회':'—')+'</td>').join('')+
-    '<td>'+esc(formatTime(r.savedAt))+'</td></tr>').join('')+'</tbody></table></div>'+
-   (rows.length>limit?'<button type="button" class="btn" data-counter-review-more="'+kind+'">더 보기</button>':'');
+ function matchLabel(match){
+  return [normDate(match.date),match.comp,match.round,match.no,teamDisplayName(match.home)+' vs '+teamDisplayName(match.away)].join(' · ');
  }
- function refreshPublicStatus(){
-  if(!adminAccess()||activeView!=='counterreviews')return;
-  const el=byId('PublicStatus'),ready=!!window.GGFCPublicCounters?.ready;
-  el.hidden=ready;
-  el.textContent=ready?'':liveCounterTeamPlayerRecords.length?'공유 카운트 연결 확인 중 · 마지막으로 받은 공유 기록을 표시합니다.':'공유 카운트 연결 확인 중 · 공유 저장 현황을 확인하려면 서버 연결이 필요합니다.';
+ function participantDetails(player,fixtures){
+  const groups=new Map();
+  for(const row of player.rows){
+   if(!groups.has(row.fixture))groups.set(row.fixture,[]);
+   groups.get(row.fixture).push(row);
+  }
+  let remaining=view.detailLimit;
+  return '<section class="counter-review-detail" aria-label="'+esc(player.name)+' 공유 저장 내역"><h4>'+esc(player.name)+' 공유 저장 내역 · '+player.rows.length+'건</h4>'+
+   (!player.rows.length?'<p class="note">이 반기에 이름을 남긴 공유 저장 내역이 없습니다.</p>':'')+
+   [...groups].map(([fixture,rows])=>{
+    if(remaining<=0)return '';
+    const visible=rows.slice(0,remaining);
+    remaining-=visible.length;
+    return '<section class="counter-review-fixture"><h5>'+esc(matchLabel(fixtures.get(fixture)))+' · '+rows.length+'건</h5><ul>'+
+     visible.map(row=>'<li><strong>'+esc(row.player)+'</strong> · '+esc(teamDisplayName(row.team))+
+      ' · '+metrics.filter(([key])=>Number.isSafeInteger(row.counts?.[key])).map(([key,label])=>label+' '+row.counts[key]+'회').join(' · ')+
+      '<time datetime="'+new Date(row.savedAt).toISOString()+'">'+esc(formatTime(row.savedAt))+'</time></li>').join('')+
+     '</ul></section>';
+   }).join('')+
+   (player.rows.length>view.detailLimit?'<button type="button" class="btn counter-review-more" data-counter-review-more>더 보기</button>':'')+'</section>';
  }
  function draw(){
   if(!adminAccess()||activeView!=='counterreviews')return;
-  refreshPublicStatus();
   const box=byId('Data'),status=byId('Status'),refresh=byId('Refresh');
   refresh.disabled=view.loading;
-  status.textContent=view.loading?'이름이 남은 참여 내역 불러오는 중…':view.error;
-  const fixtures=new Map(verifiedRecords().matches.map(m=>[verifiedFixtureKey(m),m]));
-  const shared=sharedRecords(fixtures),rows=history(fixtures),summary=new Map(),matches=new Map();
-  for(const r of [...shared,...rows])if(!matches.has(r.fixture))matches.set(r.fixture,matchesLabel(r));
-  for(const r of rows){
-   if(!summary.has(r.actor))summary.set(r.actor,{name:r.reviewer,rows:0,fixtures:new Set(),last:0});
-   const s=summary.get(r.actor);s.rows++;s.fixtures.add(r.fixture);s.last=Math.max(s.last,r.savedAt);
-  }
-  const ranking=[...summary].sort((a,b)=>b[1].rows-a[1].rows||b[1].fixtures.size-a[1].fixtures.size||compareNamesKo(a[1].name,b[1].name));
-  view.member=options(byId('Member'),ranking.map(([key,s])=>[key,s.name]),view.member,'전체');
-  view.match=options(byId('Match'),[...matches],view.match,'전체');
-  const visibleShared=shared.filter(r=>!view.match||r.fixture===view.match);
-  const visibleReviews=rows.filter(r=>(!view.member||r.actor===view.member)&&(!view.match||r.fixture===view.match));
-  const namedUnavailable=view.loading||!!view.error;
-  box.innerHTML='<section aria-labelledby="counterSharedHeading"><h3 id="counterSharedHeading">대진별 공유 저장 현황 · '+visibleShared.length+'건</h3>'+
-   '<p class="note">공유 저장된 기록 대상 선수와 최신 카운트입니다. 이름 선택 기능 도입 전이나 이름 없이 저장한 기록도 표시됩니다.</p>'+
-   (visibleShared.length||window.GGFCPublicCounters?.ready?recordsTable(visibleShared,view.sharedLimit,'shared'):'')+'</section>'+
-   '<section aria-labelledby="counterNamedHeading"><h3 id="counterNamedHeading">참여자별 현황 · '+ranking.length+'명</h3>'+
-   (ranking.length?'<div class="tablewrap"><table><thead><tr><th>참여자</th><th>확인한 선수 기록</th><th>참여 대진</th><th>최근 공유 저장</th></tr></thead><tbody>'+
-    ranking.map(([,r])=>'<tr><th scope="row">'+esc(r.name)+'</th><td>'+r.rows+'건</td><td>'+r.fixtures.size+'경기</td><td>'+esc(formatTime(r.last))+'</td></tr>').join('')+
-    '</tbody></table></div>':namedUnavailable?'':'<p class="empty">이 반기에 이름을 선택해 저장한 참여자가 없습니다.</p>')+
-   '<h3>대진별 확인 내역 · '+visibleReviews.length+'건</h3>'+
-   (visibleReviews.length||!namedUnavailable?recordsTable(visibleReviews,view.reviewLimit,'review'):'')+'</section>';
+  status.textContent=view.loading?'공유 참여 내역 불러오는 중…':view.error;
+  if(view.error||view.loading&&!view.rows.length){box.replaceChildren();return;}
+  const fixtures=periodFixtures();
+  if(!fixtures.size){box.innerHTML='<p class="empty">선택한 반기에 기록할 수 있는 완료 대진이 없습니다.</p>';return;}
+  const players=participationRanking(history(fixtures)),previousFocus=document.activeElement?.dataset.counterReviewPlayer;
+  if(!players.length){box.innerHTML='<p class="empty">선택한 연도의 선수 명단이나 참여 내역이 없습니다.</p>';return;}
+  const rate=count=>pct(count,fixtures.size).toLocaleString('ko-KR',{maximumFractionDigits:1})+'%';
+  let rank=0,prior=null;
+  box.innerHTML='<h3>선수별 참여 순위</h3><p class="note">기록 가능한 완료 대진 '+fixtures.size+'경기 · 참여율이 같으면 기록 건수순</p>'+
+   '<div class="tablewrap"><table class="counter-review-ranking"><thead><tr><th scope="col">순위</th><th scope="col">선수</th>'+
+   '<th scope="col">참여 대진 / 전체</th><th scope="col">기록 건수</th><th scope="col">참여율</th></tr></thead><tbody>'+
+   players.map((player,index)=>{
+    if(!prior||player.fixtures.size!==prior.fixtures.size||player.rows.length!==prior.rows.length)rank=index+1;
+    prior=player;
+    const expanded=view.expanded===player.actor,count=player.fixtures.size;
+    return '<tr><td>'+(count?rank:'—')+'</td><th scope="row"><button type="button" class="counter-review-player" data-counter-review-player="'+esc(player.actor)+'" aria-expanded="'+expanded+'"'+
+     (expanded?' aria-controls="counterReviewDetail"':'')+'>'+esc(player.name)+'</button></th><td>'+count+' / '+fixtures.size+'경기</td><td>'+player.rows.length+'건</td><td><strong>'+rate(count)+'</strong></td></tr>'+
+     (expanded?'<tr id="counterReviewDetail"><td colspan="5" class="counter-review-detail-cell">'+participantDetails(player,fixtures)+'</td></tr>':'');
+   }).join('')+'</tbody></table></div>';
+  if(previousFocus)[...box.querySelectorAll('[data-counter-review-player]')].find(el=>el.dataset.counterReviewPlayer===previousFocus)?.focus({preventScroll:true});
  }
  function stop(){
   if(subscription){
@@ -215,35 +228,33 @@ window.GGFCCounterReviews=(()=>{
  function refreshAdminAccess(){
   if(adminAccess()||!view.year)return;
   stop();
-  view.year=view.half=view.member=view.match=view.error='';
-  byId('Data').replaceChildren();byId('Status').textContent='';byId('PublicStatus').hidden=true;
-  options(byId('Member'),[],'','전체');options(byId('Match'),[],'','전체');
+  view.year=view.half=view.expanded=view.error='';
+  byId('Data').replaceChildren();byId('Status').textContent='';
  }
  function render(){
   if(!adminAccess()){refreshAdminAccess();return;}
   const year=byId('Year'),half=byId('Half'),matches=verifiedRecords().matches;
   if(!view.year){
-   const latestSaved=liveCounterTeamPlayerRecords.reduce((latest,row)=>!latest||normDate(row.date)>normDate(latest.date)?row:latest,null);
-   const day=normDate(latestSaved?.date)||latestMatchDate()||recordToday();
-   const match=latestSaved?matches.find(m=>verifiedFixtureKey(m)===latestSaved.fixtureKey):matches.find(m=>normDate(m.date)===day);
-   view.year=day.slice(0,4);view.half=fixtureHalf(latestSaved||{date:day},match)||'H1';
+   const day=latestMatchDate()||recordToday(),match=matches.find(m=>normDate(m.date)===day);
+   view.year=day.slice(0,4);view.half=fixtureHalf(match||{date:day})||'H1';
   }
-  const years=[...new Set([view.year,...matches.map(m=>normDate(m.date).slice(0,4)),...liveCounterTeamPlayerRecords.map(r=>normDate(r.date).slice(0,4))].filter(Boolean))].sort().reverse();
-  options(year,years.map(y=>[y,y+'년']),view.year);half.value=view.half;
-  const resetFilters=()=>{view.member=view.match='';view.reviewLimit=view.sharedLimit=pageSize;};
-  year.onchange=()=>{view.year=year.value;resetFilters();load();};
-  half.onchange=()=>{view.half=half.value;resetFilters();draw();};
-  byId('Member').onchange=event=>{view.member=event.target.value;view.reviewLimit=pageSize;draw();};
-  byId('Match').onchange=event=>{view.match=event.target.value;view.reviewLimit=view.sharedLimit=pageSize;draw();};
+  const years=[...new Set([view.year,...matches.map(m=>normDate(m.date).slice(0,4))].filter(Boolean))].sort().reverse();
+  const yearOptions=years.map(y=>'<option value="'+esc(y)+'">'+esc(y)+'년</option>').join('');
+  if(year.dataset.options!==yearOptions){year.innerHTML=yearOptions;year.dataset.options=yearOptions;}
+  year.value=view.year;half.value=view.half;
+  const resetDetails=()=>{view.expanded='';view.detailLimit=pageSize;};
+  year.onchange=()=>{view.year=year.value;resetDetails();load();};
+  half.onchange=()=>{view.half=half.value;resetDetails();draw();};
   byId('Refresh').onclick=()=>load(true);
   byId('Data').onclick=event=>{
-   const kind=event.target.closest('[data-counter-review-more]')?.dataset.counterReviewMore;
-   if(!kind)return;
-   if(kind==='shared')view.sharedLimit+=pageSize;else view.reviewLimit+=pageSize;
+   const player=event.target.closest('[data-counter-review-player]')?.dataset.counterReviewPlayer;
+   if(player){view.expanded=view.expanded===player?'':player;view.detailLimit=pageSize;}
+   else if(event.target.closest('[data-counter-review-more]'))view.detailLimit+=pageSize;
+   else return;
    draw();
   };
   if(subscription)draw();
   load();
  }
- return {selected,reviewerHtml,queue,flush,render,stop,refreshAdminAccess,refreshPublicStatus,onPublicChanged:draw};
+ return {selected,reviewerHtml,queue,flush,render,stop,refreshAdminAccess};
 })();
