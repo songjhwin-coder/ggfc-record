@@ -5,7 +5,7 @@ window.GGFCCounterReviews=(()=>{
  const context=()=>GGFC.publicCounterContext(),adminAccess=()=>admin&&GGFC.authorized&&!window.GGFC_MEMBER_PREVIEW;
  const storedName=()=>{try{return localStorage.getItem(nameKey)||'';}catch{return '';}};
  const idOf=r=>verifiedFixtureKey({...r,id:r.matchId});
- let reviewer=storedName(),rosterSource=null,names=[],message='',flushing=false,retry=false;
+ let reviewer=storedName(),rosterSource=null,names=[],message='',retryAvailable=false,flushing=false,retry=false;
  const volatile=new Map(),pageSize=80,view={year:'',half:'',expanded:'',detailLimit:pageSize,loading:false,rows:[],error:''};
  let subscription=null;
  function available(){
@@ -26,11 +26,14 @@ window.GGFCCounterReviews=(()=>{
   const active=selected();
   return '<div class="match-counter-reviewer"><label>참여자 이름 <select data-counter-reviewer><option value="">선택 안 함</option>'+
    available().map(([key,name])=>'<option value="'+esc(key)+'"'+(key===active?' selected':'')+'>'+esc(name)+'</option>').join('')+'</select></label>'+
-   '<small>본인 이름을 선택하고 공유 저장하면 관리자 화면에 참여자로 표시됩니다. 이미 확정된 기록도 확인 후 공유 저장할 수 있습니다.</small><small role="status" data-counter-review-note>'+esc(message)+'</small></div>';
+   '<small>참여 현황에 반영하려면 본인 이름을 먼저 선택하세요. 이미 확정된 기록도 횟수를 그대로 두고 공유 저장할 수 있습니다.</small>'+
+   '<small role="status" data-counter-review-note>'+esc(message)+'</small>'+
+   '<button type="button" class="btn sm" data-counter-review-retry'+(retryAvailable?'':' hidden')+'>참여 내역 다시 보내기</button></div>';
  }
- function feedback(value){
-  message=value;
+ function feedback(value,canRetry=false){
+  message=value;retryAvailable=canRetry;
   document.querySelectorAll('[data-counter-review-note]').forEach(el=>{el.textContent=message;});
+  document.querySelectorAll('[data-counter-review-retry]').forEach(el=>{el.hidden=!retryAvailable;});
  }
  function pending(){
   const rows=new Map(volatile);
@@ -43,7 +46,11 @@ window.GGFCCounterReviews=(()=>{
   return rows;
  }
  function queue({m,team,row},member,counts){
-  if(!member||!counts||!metrics.slice(0,3).every(([key])=>Number.isSafeInteger(counts[key])))return;
+  if(!member)return;
+  if(!counts||!metrics.slice(0,3).every(([key])=>Number.isSafeInteger(counts[key]))){
+   feedback('참여 내역을 만들 수 없습니다. 기록 항목을 확인한 뒤 다시 공유 저장하세요.');
+   return;
+  }
   const match=Object.fromEntries(['id','date','comp','round','no','home','away'].map(key=>[key,m[key]]));
   const date=normDate(m.date),half=matchHalfKey(m)||(+date.slice(5,7)<=6?'H1':'H2');
   const key=outboxPrefix+encodeURIComponent(JSON.stringify([verifiedFixtureKey(m),teamRecordTeamKey(team),normalizePlayerMatchKey(row.player),member]));
@@ -53,12 +60,18 @@ window.GGFCCounterReviews=(()=>{
   if(flushing)retry=true;else void flush();
  }
  async function flush(){
-  const c=context();
-  if(flushing||!c.ready||!c.reviewRef)return;
+  if(flushing)return;
   const rows=pending();
-  if(!rows.size)return;
+  if(!rows.size){
+   if(retryAvailable)feedback('이 기기에 전송 대기 중인 참여 내역이 없습니다.');
+   return;
+  }
+  const c=context();
+  if(!c.ready||!c.reviewRef){feedback('참여 내역 '+rows.size+'건 공유 대기 · 서버 연결을 확인하세요.',true);return;}
   flushing=true;
-  let sent=0,waiting=0;
+  feedback('참여 내역 '+rows.size+'건 전송 중…');
+  let sent=0;
+  const failures=new Set();
   const roster=new Map();
   for(const [i,row] of Object.entries(c.roster||{})){
    const key=normalizePlayerMatchKey(row?.player||'');
@@ -67,7 +80,7 @@ window.GGFCCounterReviews=(()=>{
   try{
    for(const [key,item] of rows){
     const source=window.GGFCPublicCounters?.sourceFor(c.records,item.match,item.team,item.player),actor=roster.get(item.reviewer);
-    if(!source||!actor){waiting++;continue;}
+    if(!source||!actor){failures.add('경기·선수 명단 확인');continue;}
     const {m,a,mi,ai}=source,entry=[c.revision,mi,ai,actor.i].join('_');
     const value={
      sourceRevision:c.revision,matchIndex:String(mi),attendanceIndex:String(ai),reviewerIndex:String(actor.i),
@@ -80,14 +93,17 @@ window.GGFCCounterReviews=(()=>{
      if(volatile.get(key)===item)volatile.delete(key);
      try{if(localStorage.getItem(key)===JSON.stringify(item))localStorage.removeItem(key);}catch{/* Replaying the same row is safe. */}
     }catch(error){
-     waiting++;
-     if(/permission/i.test(error?.code||error?.message||'')){waiting+=rows.size-sent-waiting;break;}
+     failures.add(/permission/i.test(error?.code||error?.message||'')?'Firebase 규칙 또는 DB 확인':'서버 연결 확인');
     }
    }
-   feedback(waiting?'참여 내역 공유 대기 · 연결 또는 Firebase 규칙 확인':sent?'참여 내역 공유 완료':message);
+   const waiting=rows.size-sent;
+   feedback(waiting?
+    (sent?'참여 내역 '+sent+'건 공유 완료 · ':'')+'참여 내역 '+waiting+'건 공유 대기 · '+[...failures].join(' · '):
+    '참여 내역 공유 완료 · '+sent+'건',!!waiting);
   }finally{
    flushing=false;
-   if(retry){retry=false;void flush();}
+   const current=context();
+   if(retry||current.ready&&c.revision!==current.revision){retry=false;void flush();}
   }
  }
  document.addEventListener('change',event=>{
@@ -97,6 +113,9 @@ window.GGFCCounterReviews=(()=>{
   try{if(reviewer)localStorage.setItem(nameKey,reviewer);else localStorage.removeItem(nameKey);}catch{/* Selection works for this page. */}
   window.GGFCMatchRecords?.refreshPermissions();
   void flush();
+ });
+ document.addEventListener('click',event=>{
+  if(event.target.closest('[data-counter-review-retry]'))void flush();
  });
  window.addEventListener('online',()=>void flush());
 
@@ -176,7 +195,10 @@ window.GGFCCounterReviews=(()=>{
   if(view.error||view.loading&&!view.rows.length){box.replaceChildren();return;}
   const fixtures=periodFixtures();
   if(!fixtures.size){box.innerHTML='<p class="empty">선택한 반기에 기록할 수 있는 완료 대진이 없습니다.</p>';return;}
-  const players=participationRanking(history(fixtures)),previousFocus=document.activeElement?.dataset.counterReviewPlayer;
+  const rows=history(fixtures),players=participationRanking(rows),previousFocus=document.activeElement?.dataset.counterReviewPlayer;
+  if(!view.loading&&!rows.length)status.textContent=view.rows.length?
+   '서버 참여 내역 '+view.rows.length+'건을 받았으나 선택한 반기의 집계 대진과 연결된 내역은 없습니다.':
+   '선택한 연도에 저장자 이름이 남은 참여 내역이 없습니다.';
   if(!players.length){box.innerHTML='<p class="empty">선택한 연도의 선수 명단이나 참여 내역이 없습니다.</p>';return;}
   const rate=count=>pct(count,fixtures.size).toLocaleString('ko-KR',{maximumFractionDigits:1})+'%';
   let rank=0,prior=null;

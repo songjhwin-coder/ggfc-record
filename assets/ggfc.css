@@ -4175,6 +4175,7 @@ body:not(.admin-mode) #v-interleague :is(.note,.head>p){display:none!important}
 .sb-measurement-reset .sb-measurement-actions{margin-top:12px}
 .match-counter-reviewer{margin:0 0 12px;padding:10px;border:1px solid var(--border);border-radius:10px}
 .match-counter-reviewer small{display:block;margin-top:4px}
+.match-counter-reviewer [data-counter-review-retry]{margin-top:6px}
 .counter-review-filters{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
 .counter-review-data{margin-top:14px}
 .counter-review-data .tablewrap{margin-bottom:18px}

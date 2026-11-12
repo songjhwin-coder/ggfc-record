@@ -31,6 +31,9 @@ window.GGFCMatchRecords=(()=>{
   }
   return statuses.get(key)||(drafts.has(key)?'미저장':localRows.has(key)?'기기 저장 · 공유 대기':'');
  }
+ function countSavedMessage(local,message){
+  return local.reportParticipation&&!local.reviewer?message+' · 참여자 이름 미선택':message;
+ }
  function saveLabel(key){return saving.has(key)?'저장 중…':conflicts.has(key)?'내 값 저장':'공유 저장';}
  function displayedValue(m,team,r,k,empty=0){const key=appTeamRecordKey(m,team,r.player),d=drafts.get(key),local=localRows.get(key);return d&&own(d.values,k)?d.values[k]:local&&own(local.values,k)?pendingValue(local,r,k):r.recordValues[k]??empty;}
  function sourceText(key,r,k){const local=localRows.get(key);return own(drafts.get(key)?.values||{},k)?'미저장':local&&own(local.values,k)&&!(defaulted(local,k)&&metric(r.recordValues[k])!==null)?'공유 대기':(r.counterFields||[]).includes(k)?'공유 기록 · 확정':(r.appFields||[]).includes(k)?'앱 기록 · 확정':metric(r.recordValues[k])!==null?'DB · 확정':'미확정';}
@@ -119,13 +122,13 @@ window.GGFCMatchRecords=(()=>{
    if(result.ok){
     queueReview(key,c,local.reviewer,values);
     const next=new Map(localRows);next.delete(key);
-    statuses.set(key,writeLocal(next)?result.preserved?'기존 확정 기록 유지':'공유 반영 완료':'공유 완료 · 기기 대기 기록 정리 필요');
+    statuses.set(key,countSavedMessage(local,writeLocal(next)?result.preserved?'기존 확정 기록 유지':'공유 반영 완료':'공유 완료 · 기기 대기 기록 정리 필요'));
    }else if(result.conflicts)conflicts.set(key,result.conflicts);
    else statuses.set(key,result.message);
    return result.ok;
   }finally{saving.delete(key);requestRecordRefresh(key);updateRowState(key);if(!batch.running&&document.getElementById('v-data')?.classList.contains('on'))renderBatchControls();}
  }
- async function saveRow(key,{confirmMissing=true,reviewer=''}={}){
+ async function saveRow(key,{confirmMissing=true,reviewer='',reportParticipation=false}={}){
   if(!confirmMissing&&!signedIn())return false;
   const local=localRows.get(key),draft=drafts.get(key),c=context(key);
   if(!c||saving.has(key)||!draft&&!local&&(!confirmMissing||!hasMissing(c.row)&&!reviewer))return false;
@@ -146,7 +149,7 @@ window.GGFCMatchRecords=(()=>{
    if(confirmMissing&&reviewer)queueReview(key,c,reviewer);
    return !!(confirmMissing&&reviewer);
   }
-  const record={fixtureKey:verifiedFixtureKey(c.m),team:c.team,player:c.row.player,values,baseValues,seenValues,defaultFields:[...defaultFields],shareStamp:local?.shareStamp??null,reviewer:confirmMissing?reviewer||local?.reviewer||'':local?.reviewer||''};
+  const record={fixtureKey:verifiedFixtureKey(c.m),team:c.team,player:c.row.player,values,baseValues,seenValues,defaultFields:[...defaultFields],shareStamp:local?.shareStamp??null,reviewer:confirmMissing?reviewer||local?.reviewer||'':local?.reviewer||'',reportParticipation:reportParticipation||local?.reportParticipation===true};
   const next=new Map(localRows);next.set(key,record);
   if(!writeLocal(next)){statuses.set(key,'기기 저장 실패 · 입력은 유지됩니다');updateRowState(key);toast('기기 저장 공간을 확인하세요. 입력한 카운트는 현재 화면에 유지됩니다.');return false;}
   drafts.delete(key);conflicts.delete(key);statuses.set(key,'기기 저장 · 공유 대기');
@@ -154,7 +157,7 @@ window.GGFCMatchRecords=(()=>{
  }
  function cancel(key){if(saving.has(key))return;drafts.delete(key);statuses.delete(key);batch.preview=null;refreshMatchDetailRecords();GGFC.refreshUI();}
  function clearLocal(key){if(saving.has(key))return;const next=new Map(localRows);next.delete(key);if(!writeLocal(next)){toast('기기 저장 상태를 확인하세요.');return;}drafts.delete(key);statuses.delete(key);conflicts.delete(key);refreshMatchDetailRecords();GGFC.refreshUI();}
- function reconcile(){for(const [key,local] of localRows){if(drafts.has(key)||saving.has(key))continue;const shared=window.GGFCPublicCounters?.latest(key);if(!window.GGFCPublicCounters?.sameValues(shared,local.values,local.defaultFields))continue;const c=local.reviewer&&context(key);if(c)queueReview(key,c,local.reviewer);const next=new Map(localRows);next.delete(key);if(writeLocal(next)){conflicts.delete(key);statuses.set(key,'공유 반영 완료');}}}
+ function reconcile(){for(const [key,local] of localRows){if(drafts.has(key)||saving.has(key))continue;const shared=window.GGFCPublicCounters?.latest(key);if(!window.GGFCPublicCounters?.sameValues(shared,local.values,local.defaultFields))continue;const c=local.reviewer&&context(key);if(c)queueReview(key,c,local.reviewer);const next=new Map(localRows);next.delete(key);if(writeLocal(next)){conflicts.delete(key);statuses.set(key,countSavedMessage(local,'공유 반영 완료'));}}}
  async function retryPending(){window.GGFCCounterReviews?.flush();if(!window.GGFCPublicCounters?.ready)return;for(const key of [...localRows.keys()])if(!drafts.has(key))await publishLocal(key);}
  function batchPlan(date){
   date=normDate(date);const matches=verifiedRecords().matches.filter(m=>normDate(m.date)===date),rows=[],seen=new Set();let count=0,skipped=0;
@@ -226,7 +229,7 @@ window.GGFCMatchRecords=(()=>{
    const button=e.target.closest('[data-match-count-step]'),input=button.closest('.match-count-cell').querySelector('input'),current=input.value===''?0:Number(input.value),next=Math.max(0,current+Number(button.dataset.matchCountStep));
    if(Number.isSafeInteger(next)&&next<=10000)change(input,next);return;
   }
-  if(el&&e.target.closest('[data-match-record-save]')){saveRow(el.dataset.matchRecordRow,{reviewer:window.GGFCCounterReviews?.selected()||''}).catch(()=>toast('공유 저장 상태를 확인해 주세요.'));return;}
+  if(el&&e.target.closest('[data-match-record-save]')){saveRow(el.dataset.matchRecordRow,{reviewer:window.GGFCCounterReviews?.selected()||'',reportParticipation:true}).catch(()=>toast('공유 저장 상태를 확인해 주세요.'));return;}
   if(el&&e.target.closest('[data-match-record-cancel]'))cancel(el.dataset.matchRecordRow);
   if(el&&e.target.closest('[data-match-record-clear-local]'))clearLocal(el.dataset.matchRecordRow);
  });
