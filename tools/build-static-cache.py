@@ -25,15 +25,18 @@ p=root/'assets/ggfc-app.js';s=p.read_text();p.write_text(re.sub(r'(assets/ggfc-e
 # Generate the audit worker from the same calculation source, then hash lazy URLs.
 subprocess.run(['node',str(root/'tools/build-ability-audit.cjs')],check=True)
 p=root/'assets/ggfc-app.js';s=p.read_text();p.write_text(re.sub(r'(assets/ggfc-ability-audit[\w.-]*\.(?:js|css))\?v=([\w.-]+)',update_ref,s))
-for name in ['index.html','mobile.html','install.html']:
+entry_pages=('index.html','mobile.html','install.html','offline.html')
+reference_files=(*entry_pages,'manifest.webmanifest')
+versioned_ref=r'((?:assets/[\w./-]+\.(?:js|css)|icons/[\w./-]+\.png))\?v=([\w.-]+)'
+for name in reference_files:
  p=root/name;s=p.read_text()
- s=re.sub(r'(assets/[\w.-]+\.(?:js|css))\?v=([\w.-]+)',update_ref,s)
+ s=re.sub(versioned_ref,update_ref,s)
  parts=re.split(r'(<[^>]*>)',s)
  s=''.join(re.sub(r'(?<![\d.])3\.\d+\.\d+(?![\d.])',version,part) if i%2==0 else part for i,part in enumerate(parts))
  p.write_text(s)
 urls={}
-for name in ['index.html','mobile.html','install.html','assets/ggfc-app.js']:
- for m in re.finditer(r'(assets/[\w./-]+\.(?:js|css))\?v=([\w.-]+)',(root/name).read_text()):urls[m[1]]=m[0]
+for name in (*reference_files,'assets/ggfc-app.js'):
+ for m in re.finditer(versioned_ref,(root/name).read_text()):urls[m[1]]=m[0]
 for folder in ['assets','icons']:
  for p in sorted((root/folder).rglob('*')):
   if p.suffix in ['.js','.css','.svg','.woff','.png']:urls.setdefault(p.relative_to(root).as_posix(),p.relative_to(root).as_posix())

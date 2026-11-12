@@ -23,10 +23,11 @@ for p in [*r.glob('assets/*.js'),r/'service-worker.js',r/'firebase-config.js']:
  subprocess.run(['node','--check',str(p)],check=True,capture_output=True)
 m=json.loads((r/'manifest.webmanifest').read_text());assert m['scope']=='./' and m['start_url']=='./index.html' and m['display']=='standalone'
 assert any(i.get('purpose')=='maskable' for i in m['icons'])
-for i in m['icons']:assert (r/i['src']).exists()
+for i in m['icons']:assert (r/unquote(urlsplit(i['src']).path)).is_file()
 s=(r/'service-worker.js').read_text();assets=json.loads(re.search(r'const ASSETS = (\[.*?\]);',s,re.S)[1])
 lazy=json.loads(re.search(r'const LAZY_ASSETS = (\[.*?\]);',s,re.S)[1])
 assert not any('ggfc-ability-audit' in a['url'] for a in assets),'Audit must not be preloaded'
+assert {i['src'] for i in m['icons']} <= {a['url'] for a in assets},'Manifest icons must be precached'
 assets+=lazy
 for a in assets:
  p=r/a['url'].split('?')[0];assert p.is_file(),a['url'];assert hashlib.sha256(p.read_bytes()).hexdigest()==a['sha256'],'Stale service worker: '+a['url']
