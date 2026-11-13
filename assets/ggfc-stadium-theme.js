@@ -5,7 +5,7 @@ window.GGFCStadiumTheme=(()=>{
   const preview=document.getElementById('stadiumThemePreview'),button=document.getElementById('stadiumThemeSave');
   const status=document.getElementById('stadiumThemeStatus');
   let saved='stadium',draft=null,saving=false;
-  const normalize=value=>value==='champions'||value==='premier'?value:'stadium';
+  const normalize=value=>value==='champions'||value==='premier'||value==='ggfc-gold'?value:'stadium';
   function configure(value){
     saved=normalize(value);
     if(saved==='stadium')delete root.dataset.stadiumTheme;

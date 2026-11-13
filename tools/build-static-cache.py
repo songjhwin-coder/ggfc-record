@@ -22,6 +22,11 @@ def update_ref(m):
  return filename+'?v='+revision
 p=root/'assets/ggfc-sync.js';s=p.read_text();p.write_text(re.sub(r"window.GGFC_VERSION='[^']+'",f"window.GGFC_VERSION='{version}'",s))
 p=root/'assets/ggfc-app.js';s=p.read_text();p.write_text(re.sub(r'(assets/ggfc-export\.css)\?v=([\w.-]+)',update_ref,s))
+# Update the theme's relative raster URL while retaining the hashed PWA entry.
+p=root/'assets/ggfc-theme.css';s=p.read_text()
+theme_mark='assets/ggfc-gold-mark.png'
+theme_ref=theme_mark+'?v='+digest(root/theme_mark)[:16]
+p.write_text(re.sub(r'ggfc-gold-mark\.png(?:\?v=[\w.-]+)?',theme_ref.split('/',1)[1],s))
 # Generate the audit worker from the same calculation source, then hash lazy URLs.
 subprocess.run(['node',str(root/'tools/build-ability-audit.cjs')],check=True)
 p=root/'assets/ggfc-app.js';s=p.read_text();p.write_text(re.sub(r'(assets/ggfc-ability-audit[\w.-]*\.(?:js|css))\?v=([\w.-]+)',update_ref,s))
@@ -40,6 +45,7 @@ for name in (*reference_files,'assets/ggfc-app.js'):
 for folder in ['assets','icons']:
  for p in sorted((root/folder).rglob('*')):
   if p.suffix in ['.js','.css','.svg','.woff','.png']:urls.setdefault(p.relative_to(root).as_posix(),p.relative_to(root).as_posix())
+urls[theme_mark]=theme_ref
 for name in ['index.html','mobile.html','install.html','offline.html','manifest.webmanifest','app-version.json']:urls[name]=name
 lazy_names={'assets/ggfc-ability-audit.js','assets/ggfc-ability-audit.css','assets/ggfc-ability-audit-worker.js'}
 assets=[{'url':url,'sha256':digest(root/name)} for name,url in sorted(urls.items()) if name not in lazy_names]
