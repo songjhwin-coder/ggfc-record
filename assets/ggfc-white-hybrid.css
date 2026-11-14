@@ -1,6 +1,45 @@
 /* The existing stadium presets own brand backgrounds. This stylesheet colors
    light-mode content; export documents load their original styles separately. */
 @media screen {
+  #ggfcSidebar :is(.theme-policy-note,.theme-use-default) {
+    display:block;
+    width:100%;
+    margin:0 0 8px;
+    color:#e2ebf8;
+    font-size:12px;
+    text-align:start;
+  }
+  #ggfcSidebar :is(.theme-policy-note,.theme-use-default)[hidden] {display:none}
+  #ggfcSidebar .theme-use-default {
+    min-height:36px;
+    padding:6px 12px;
+    border:1px solid #ffffff35;
+    border-radius:8px;
+    background:transparent;
+    cursor:pointer;
+  }
+  #ggfcSidebar .theme-policy-note {padding-inline:12px}
+  #ggfcSidebar #themeToggle:disabled {cursor:default}
+  #appearancePanel .appearance-options {display:flex;align-items:center;flex-wrap:wrap;gap:10px 24px}
+  #appearancePanel .appearance-options label {display:flex;align-items:center;gap:8px}
+  #appearancePanel .appearance-options select {max-width:100%}
+  #appearancePreview {
+    display:grid;
+    gap:6px;
+    max-width:320px;
+    padding:12px;
+    margin:12px 0;
+    border:1px solid #e5e5e5;
+    border-radius:8px;
+    background:#fff;
+    color:#050505;
+  }
+  #appearancePreview span {padding:8px;border-radius:5px;background:#dedede}
+  #appearancePreview[data-mode="dark"] {background:#0e1724;color:#f4f7fc;border-color:#374b62}
+  #appearancePreview[data-mode="dark"] span {background:#24364b}
+}
+
+@media screen {
   html:not([data-theme="dark"]) {
     --ggfc-hybrid-black:#050505;
     --ggfc-hybrid-gold:#C8A36C;

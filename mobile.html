@@ -5,7 +5,7 @@
 <script defer src="assets/ggfc-browser-handoff.js?v=9aa37103839739b5"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>GGFC 모바일 기록센터 · 3.25.115</title>
-<script>try{if(localStorage.getItem("ggfc-theme")==="dark")document.documentElement.dataset.theme="dark";}catch{}</script>
+<script src="assets/ggfc-appearance.js?v=39b1b66cfbb74bbb"></script>
 <link rel="stylesheet" href="assets/ggfc.css?v=81e18cb8c514c754">
 <link rel="stylesheet" href="assets/ggfc-startup.css?v=026c02cbc9a0bd71">
 <link rel="manifest" href="manifest.webmanifest">
@@ -19,7 +19,7 @@
 <link rel="stylesheet" href="assets/ggfc-admin-password.css?v=f284d067731ebc1b">
 <link rel="stylesheet" href="assets/ggfc-thumbnail.css?v=27f57c4a8fde4ae3">
 <link rel="stylesheet" href="assets/ggfc-theme.css?v=f37d687c4fc25e7a">
-<link rel="stylesheet" href="assets/ggfc-white-hybrid.css?v=5719e226c60b20b0">
+<link rel="stylesheet" href="assets/ggfc-white-hybrid.css?v=e97ffcd2cd824d6c">
 </head>
 <body class="sidebar-collapsed">
 <section id="ggfcStartup" class="ggfc-startup" aria-label="GGFC 앱 시작 화면" hidden>
@@ -42,7 +42,9 @@
     <label for="compFilter">대회 선택</label>
     <select class="select" id="compFilter" aria-label="대회 선택"></select>
   </div>
-  <button type="button" id="themeToggle" class="sidebar-theme-toggle" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 15A9 9 0 0 1 9 3.2 9 9 0 1 0 20.8 15Z"/></svg><span>다크 모드</span><span class="theme-switch" aria-hidden="true"></span></button>
+  <button type="button" id="themeToggle" class="sidebar-theme-toggle" aria-pressed="false" aria-describedby="themePolicyNotice"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 15A9 9 0 0 1 9 3.2 9 9 0 1 0 20.8 15Z"/></svg><span>다크 모드</span><span class="theme-switch" aria-hidden="true"></span></button>
+  <button type="button" id="themeUseDefault" class="theme-use-default" hidden>관리자 기본값 사용</button>
+  <p class="theme-policy-note" id="themePolicyNotice" hidden>관리자가 테마를 지정했습니다.</p>
   <button type="button" id="ggfcMusicToggle" class="sidebar-theme-toggle" aria-pressed="false" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l11-2v13M9 18a3 2 0 1 1-6 0 3 2 0 1 1 6 0Zm11-2a3 2 0 1 1-6 0 3 2 0 1 1 6 0Z"/></svg><span>배경 음악</span><span class="theme-switch" aria-hidden="true"></span></button>
   <button type="button" id="ggfcMobileMute" class="sidebar-theme-toggle" aria-pressed="false" title="이 기기의 배경 음악과 카드 효과음을 함께 끕니다" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4zm5 4 5 6m0-6-5 6"/></svg><span>앱 소리 음소거</span><span class="theme-switch" aria-hidden="true"></span></button>
   <p class="sidebar-music-status" id="ggfcMusicStatus" role="status" hidden></p>
@@ -145,6 +147,18 @@
         <label for="musicSettingsURL">또는 MP3 주소<input id="musicSettingsURL" type="url" placeholder="https://…" autocomplete="off"></label>
         <div class="startup-settings-actions"><button id="musicSettingsSave" class="btn primary" type="submit" disabled>음악 설정 저장</button><button id="musicSettingsDefault" class="btn" type="button">기본곡 선택</button></div>
         <p class="note" id="musicSettingsStatus" role="status"></p>
+      </form>
+    </section>
+    <section class="card" id="appearancePanel" style="margin-bottom:16px" aria-labelledby="appearanceTitle" hidden>
+      <div class="dashboard-block-title"><div><div class="sec-t" id="appearanceTitle">앱 테마 설정</div><p class="dashboard-block-note">현재 공유 기본값 · <strong id="appearanceCurrent"></strong></p></div></div>
+      <form id="appearanceForm">
+        <div class="appearance-options">
+          <label>기본 화면 테마 <select id="appearanceDefault"><option value="light">White Hybrid</option><option value="dark">기존 Dark</option></select></label>
+          <label><input type="checkbox" id="appearanceAllowOverride" checked> 회원별 테마 변경 허용</label>
+        </div>
+        <div id="appearancePreview" data-mode="light"><strong>미리보기</strong><span id="appearancePreviewLabel">White Hybrid</span></div>
+        <div class="startup-settings-actions"><button type="submit" id="appearanceSave" class="btn primary" disabled>공유 저장</button><button type="button" id="appearanceCancel" class="btn" disabled>변경 취소</button></div>
+        <p class="note" id="appearanceStatus" role="status"></p>
       </form>
     </section>
     <section class="card" id="stadiumThemePanel" style="margin-bottom:16px" hidden>
@@ -1134,8 +1148,8 @@
 <input type="file" id="soccerbeeFilepick" accept=".xlsx" hidden>
 
 <script defer src="firebase-config.js"></script>
-<script defer src="assets/ggfc-sync.js?v=02afb689fb1a6dca"></script>
-<script defer src="assets/ggfc-mobile.js?v=a32da1367a5577ee"></script>
+<script defer src="assets/ggfc-sync.js?v=3891661fe07c93f8"></script>
+<script defer src="assets/ggfc-mobile.js?v=b8cf873c1194f238"></script>
 <script defer src="assets/ggfc-details.js?v=3c6ea09bd139db9f"></script>
 <script defer src="assets/ggfc-squad.js?v=f8751dcc7f0973f2"></script>
 <script defer src="assets/ggfc-card-design.js?v=3.25.31"></script>

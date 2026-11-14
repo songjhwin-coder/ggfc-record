@@ -5,9 +5,10 @@ const GGFC = (() => {
   const state={checking:true,ready:false,serverSeen:false,connected:false,authorized:false,user:null,revision:0,dirty:false,saving:false,busy:0,conflict:false,serial:0,latest:null,hasLatest:false,error:'',status:'공유 기록을 확인하고 있습니다…',savedAt:null,authGeneration:0};
   let database=null,auth=null,dataRef=null,readTimer=null,saveTimer=null,editLease=false;
   let started=false,connectionPromise=null,lastSnapshotText=null,cacheSavedAt=null,cacheWarning='';
+  let appearanceConflict=false;
   const CACHE_VERSION=2,CACHE_MAX_AGE=180*86400000;
-  const hasSettingsDraft=()=>!!((typeof GGFCPlayerPhotos!=='undefined'&&GGFCPlayerPhotos.dirty)||window.GGFCStartup?.dirty||window.GGFCMusicSettings?.dirty||window.GGFCStadiumTheme?.dirty||window.GGFCSoccerBeeRoster?.dirty||window.GGFCMatchRecords?.cloudEditing||(typeof squadAppearanceDirty!=='undefined'&&squadAppearanceDirty)||(typeof menuSettingsDirty!=='undefined'&&menuSettingsDirty)||(typeof careerFrameSettingsDirty!=='undefined'&&careerFrameSettingsDirty)||(typeof analysisStartSettingsDirty!=='undefined'&&analysisStartSettingsDirty)||(typeof cardDesignSettingsDirty!=='undefined'&&cardDesignSettingsDirty));
-  function discardSettingsDraft(){if(typeof GGFCPlayerPhotos!=='undefined')GGFCPlayerPhotos.discard();window.GGFCStartup?.discard();window.GGFCMusicSettings?.discard();window.GGFCStadiumTheme?.discard();window.GGFCSoccerBeeRoster?.discard();window.GGFCThumbnail?.discard();window.GGFCMatchRecords?.discard();if(typeof squadAppearanceDirty!=='undefined'){squadAppearanceDirty=false;squadAppearanceDraft=null;}if(typeof menuSettingsDirty!=='undefined'){menuSettingsDirty=false;menuEditorDraft=null;}if(typeof cardDesignSettingsDirty!=='undefined')cardDesignSettingsDirty=false;if(typeof careerFrameSettingsDirty!=='undefined')careerFrameSettingsDirty=false;if(typeof analysisStartSettingsDirty!=='undefined')analysisStartSettingsDirty=false;}
+  const hasSettingsDraft=()=>!!((typeof GGFCPlayerPhotos!=='undefined'&&GGFCPlayerPhotos.dirty)||window.GGFCStartup?.dirty||window.GGFCMusicSettings?.dirty||window.GGFCStadiumTheme?.dirty||window.GGFCAppearance?.dirty||window.GGFCSoccerBeeRoster?.dirty||window.GGFCMatchRecords?.cloudEditing||(typeof squadAppearanceDirty!=='undefined'&&squadAppearanceDirty)||(typeof menuSettingsDirty!=='undefined'&&menuSettingsDirty)||(typeof careerFrameSettingsDirty!=='undefined'&&careerFrameSettingsDirty)||(typeof analysisStartSettingsDirty!=='undefined'&&analysisStartSettingsDirty)||(typeof cardDesignSettingsDirty!=='undefined'&&cardDesignSettingsDirty));
+  function discardSettingsDraft(){if(typeof GGFCPlayerPhotos!=='undefined')GGFCPlayerPhotos.discard();window.GGFCStartup?.discard();window.GGFCMusicSettings?.discard();window.GGFCStadiumTheme?.discard();window.GGFCAppearance?.discard();window.GGFCSoccerBeeRoster?.discard();window.GGFCThumbnail?.discard();window.GGFCMatchRecords?.discard();if(typeof squadAppearanceDirty!=='undefined'){squadAppearanceDirty=false;squadAppearanceDraft=null;}if(typeof menuSettingsDirty!=='undefined'){menuSettingsDirty=false;menuEditorDraft=null;}if(typeof cardDesignSettingsDirty!=='undefined')cardDesignSettingsDirty=false;if(typeof careerFrameSettingsDirty!=='undefined')careerFrameSettingsDirty=false;if(typeof analysisStartSettingsDirty!=='undefined')analysisStartSettingsDirty=false;}
   const fields=['matches','attendance','goals','saves','fouls','moms','specials','roster','soccerbee'];
   const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
   const copy=v=>JSON.parse(JSON.stringify(v));
@@ -95,13 +96,23 @@ const GGFC = (() => {
     window.GGFCPublicCounters?.refreshUI();
     window.GGFCMatchRecords?.refreshPermissions();
     window.GGFCSharedRecordStatus?.refreshAdminAccess();
+    window.GGFCAppearance?.render();
   }
   function status(text){state.status=text;refreshUI();}
+  function adoptWire(raw,fromCache=false){
+    state.revision=Number(raw?.meta?.revision)||0;state.savedAt=raw?.meta?.savedAt||null;
+    state.ready=true;state.error='';
+    lastSnapshotText=JSON.stringify(raw);
+    if(!fromCache)cacheSnapshot(raw);
+    acceptAppearance(raw,fromCache);
+  }
+  function acceptAppearance(raw,fromCache=false){
+    window.GGFCAppearance?.accept(raw?.settings?.appearance,fromCache);
+  }
   function applySnapshot(raw,first=false,fromCache=false){
     const next=merge(raw);
     DB=Object.assign(blankDB(),next);abilityPriorYearPoolCache=null;if(typeof v319CareerCache!=='undefined')v319CareerCache={key:'',map:null};
-    state.revision=Number(raw?.meta?.revision)||0;state.savedAt=raw?.meta?.savedAt||null;
-    state.ready=true;state.error='';
+    adoptWire(raw,fromCache);
     window.GGFCStartup?.configure(DB.settings?.startupScreen);
     ensureAbilityData();
     if(first){latestDbPeriodSignature='';applyLatestDbPeriodDefaults(true);}
@@ -109,8 +120,6 @@ const GGFC = (() => {
     // receive() defers live updates while a settings form is being edited.
     // Otherwise, stale editor caches must not hide freshly received settings.
     repAdminDrafts={};
-    lastSnapshotText=JSON.stringify(raw);
-    if(!fromCache)cacheSnapshot(raw);
     try{performance.mark(fromCache?'ggfc-cache-render-start':'ggfc-live-render-start');}catch(e){}
     const date=state.savedAt?new Date(state.savedAt):null;
     const stamp=date&&!isNaN(date.getTime())?date.toLocaleString('ko-KR'):'';
@@ -123,6 +132,27 @@ const GGFC = (() => {
       openPlayerCard(playerCardHistoryState.player,playerCardHistoryState.query);
     }
   }
+  // Transactions bump the shared revision even when only presentation settings change.
+  function appearanceOnlyUpdate(raw){
+    if(!lastSnapshotText||!raw?.meta)return false;
+    const data=wire=>{
+      const {appearance,...settings}=wire.settings||{};
+      return {records:wire.records,players:wire.players,settings};
+    };
+    const prior=JSON.parse(lastSnapshotText);
+    return !!prior&&JSON.stringify(data(raw))===JSON.stringify(data(prior));
+  }
+  function applyAppearanceSnapshot(raw){
+    DB.settings={...DB.settings};
+    if(own(raw.settings||{},'appearance'))DB.settings.appearance=copy(raw.settings.appearance);
+    else delete DB.settings.appearance;
+    adoptWire(raw);
+    status('공유 기록 최신 상태');
+  }
+  function applyIncoming(raw){
+    if(state.ready&&appearanceOnlyUpdate(raw))applyAppearanceSnapshot(raw);
+    else applySnapshot(raw,!state.ready);
+  }
   function receive(raw){
     clearTimeout(readTimer);state.checking=false;state.latest=raw;state.hasLatest=true;state.serverSeen=true;
     const rev=Number(raw?.meta?.revision)||0;
@@ -131,13 +161,25 @@ const GGFC = (() => {
       refreshUI();return;
     }
     try{
+      if(appearanceConflict&&!hasSettingsDraft()){
+        state.conflict=false;
+        appearanceConflict=false;
+      }
       if(state.ready&&JSON.stringify(raw)===lastSnapshotText){
-        state.error='';cacheSnapshot(raw);status('최신 기록 · 변경 없음');
+        state.error='';cacheSnapshot(raw);acceptAppearance(raw);status('최신 기록 · 변경 없음');
         try{performance.mark('ggfc-data-ready');}catch(e){}
         return;
       }
-      applySnapshot(raw,!state.ready);
+      applyIncoming(raw);
     }catch(e){state.error='공유 기록을 읽지 못했습니다: '+e.message;refreshUI();}
+  }
+  function resumeAfterAppearanceDraft(){
+    const queued=state.hasLatest&&Number(state.latest?.meta?.revision||0)!==state.revision;
+    if(queued&&!state.dirty&&!state.saving&&!state.busy&&!editLease&&!hasSettingsDraft()&&state.conflict){
+      appearanceConflict=false;
+      state.conflict=false;
+      receive(state.latest);
+    }else refreshUI();
   }
   function markChanged(){
     if(!canEdit())return false;
@@ -145,15 +187,17 @@ const GGFC = (() => {
     clearTimeout(saveTimer);saveTimer=setTimeout(()=>flush(),300);
     return true;
   }
-  async function flush(){
-    if(state.saving||state.busy||!state.dirty||!canEdit())return false;
+  async function flush(options){
+    const appearance=window.GGFCAppearance?.normalize(options?.appearance);
+    if(options?.appearance&&!appearance)return false;
+    if(state.saving||state.busy||!canEdit()||(appearance?state.dirty||editLease:!state.dirty))return false;
     const uid=state.user?.uid;
     if(!uid)return false;
     const serial=state.serial, expected=state.revision;
     let value;
     try{
-      value=split(DB,expected+1,uid,firebase.database.ServerValue.TIMESTAMP);
-      if(new TextEncoder().encode(JSON.stringify(value)).length>8*1024*1024)throw new Error('기록 크기가 8 MB를 넘습니다. 사진은 이미지 URL로 등록해 주세요.');
+      if(!appearance)value=split(DB,expected+1,uid,firebase.database.ServerValue.TIMESTAMP);
+      if(value&&new TextEncoder().encode(JSON.stringify(value)).length>8*1024*1024)throw new Error('기록 크기가 8 MB를 넘습니다. 사진은 이미지 URL로 등록해 주세요.');
     }catch(e){state.error='공유 저장 실패: '+e.message;refreshUI();return false;}
     state.saving=true;refreshUI();
     const slow=setTimeout(()=>{if(state.saving){state.status='서버 응답을 기다리고 있습니다.';document.querySelector('#cloudStatusText').textContent='공유 저장 응답 대기 중 · 창을 닫지 말고 연결을 확인해 주세요.';}},12000);
@@ -161,27 +205,46 @@ const GGFC = (() => {
       const result=await dataRef.transaction(current=>{
         const actual=Number(current?.meta?.revision)||0;
         if(actual!==expected)return undefined;
+        if(appearance){
+          const previous=current||split(blankDB(),0,uid,firebase.database.ServerValue.TIMESTAMP);
+          return {...previous,settings:{...previous.settings,appearance},
+            meta:{...previous.meta,revision:expected+1,updatedBy:uid,savedAt:firebase.database.ServerValue.TIMESTAMP}};
+        }
         const next=copy(value);
         // Preserve historical metadata not owned by the record editor.
         if(current?.adminLog)next.adminLog=current.adminLog;
         return next;
       },undefined,false);
-      if(!result.committed){state.conflict=true;return false;}
+      if(!result.committed){state.conflict=true;appearanceConflict=!!appearance;return false;}
       const raw=result.snapshot.val();
-      state.revision=Number(raw.meta.revision);state.savedAt=raw.meta.savedAt;cacheSnapshot(raw);
+      state.revision=Number(raw.meta.revision);state.savedAt=raw.meta.savedAt;
       if(!state.hasLatest || Number(state.latest?.meta?.revision||0)<=state.revision){state.latest=raw;state.hasLatest=true;}
-      if(serial===state.serial){
-        state.dirty=false;state.error='';
-        try{localStorage.removeItem(KEY);}catch(e){}
-        status('공유 저장 완료 · 회원 화면에 자동 반영됩니다.');
-        toast('공유 저장 완료');
+      if(appearance)applyAppearanceSnapshot(raw);
+      else{
+        cacheSnapshot(raw);
+        acceptAppearance(raw);
+        if(serial===state.serial){
+          lastSnapshotText=JSON.stringify(raw);
+          state.dirty=false;state.error='';
+          try{localStorage.removeItem(KEY);}catch(e){}
+          status('공유 저장 완료 · 회원 화면에 자동 반영됩니다.');
+          toast('공유 저장 완료');
+        }
       }
       // A different administrator may commit immediately after our transaction.
       if(state.hasLatest && Number(state.latest?.meta?.revision)>state.revision){
-        if(state.dirty)state.conflict=true;else applySnapshot(state.latest);
+        if(state.dirty)state.conflict=true;
+        else applyIncoming(state.latest);
       }
       return true;
-    }catch(e){state.error='공유 저장 실패 · '+(String(e.code||'').includes('PERMISSION')||String(e.code||'').includes('permission')?'관리자 비밀번호로 다시 로그인하고 초기 공유 설정을 확인해 주세요.':e.message);return false;}
+    }catch(e){
+      const reason=/permission/i.test(String(e.code||''))?'관리자 비밀번호로 다시 로그인하고 공유 권한을 확인해 주세요.':e.message;
+      if(appearance){
+        if(state.hasLatest&&Number(state.latest?.meta?.revision||0)>state.revision)state.conflict=true;
+        throw new Error(reason);
+      }
+      state.error='공유 저장 실패 · '+reason;return false;
+    }
     finally{clearTimeout(slow);state.saving=false;refreshUI();if(state.dirty&&canEdit())saveTimer=setTimeout(()=>flush(),300);}
   }
   async function reload(){
@@ -190,7 +253,7 @@ const GGFC = (() => {
     if(!dataRef){location.reload();return;}
     try{
       const snap=await dataRef.get();
-      state.dirty=false;state.conflict=false;state.error='';editLease=false;discardSettingsDraft();repAdminDrafts={};
+      state.dirty=false;state.conflict=false;appearanceConflict=false;state.error='';editLease=false;discardSettingsDraft();repAdminDrafts={};
       state.latest=snap.val();state.hasLatest=true;state.serverSeen=true;applySnapshot(snap.val(),true);
     }catch(e){state.error='서버 기록을 받지 못했습니다. 연결과 설정을 확인해 주세요.';refreshUI();}
   }
@@ -255,7 +318,7 @@ const GGFC = (() => {
       if((state.dirty||editLease||hasSettingsDraft()||window.GGFCThumbnail?.dirty||window.GGFCOperator?.pending)&&!confirm('공유하지 않은 변경이 있습니다. 로그아웃하면 서버 기록으로 돌아갑니다. 계속할까요?'))return;
       try{
         await auth.signOut();
-        state.user=null;state.authorized=false;state.dirty=false;state.conflict=false;editLease=false;discardSettingsDraft();setAdmin(false);
+        state.user=null;state.authorized=false;state.dirty=false;state.conflict=false;appearanceConflict=false;editLease=false;discardSettingsDraft();setAdmin(false);
         if(state.hasLatest)applySnapshot(state.latest,true);
         clearPassword();toast('로그아웃했습니다. 회원 열람 모드입니다.');
       }catch(e){toast('로그아웃하지 못했습니다. 다시 시도해 주세요.');}
@@ -326,6 +389,7 @@ const GGFC = (() => {
     for(const type of ['click','change','input'])document.addEventListener(type,e=>{
       // Preview is read-only; its own handler still requires an authenticated administrator.
       if(type==='click'&&e.target.closest?.('button[data-menu-preview]'))return;
+      if(type==='click'&&e.target.closest?.('#appearanceCancel'))return;
       if(e.target.closest?.('#v-thumbnail')&&!e.target.closest?.('[data-operator-admin]')&&(window.GGFCOperator?.canModify?.()||(e.target.closest?.('#ytReconnect')&&window.GGFCOperator?.canUse())))return;
       if(e.target.closest?.(selectors) && !canEdit()){
         e.preventDefault();e.stopImmediatePropagation();toast('관리자 인증과 서버 연결을 확인해 주세요.');
@@ -446,6 +510,7 @@ const GGFC = (() => {
       if(window.GGFCMusicSettings?.draft)draft.settings.backgroundMusic=window.GGFCMusicSettings.draft;
       if(window.GGFCMusicSettings?.volumeDraft)draft.settings.audioVolumes=window.GGFCMusicSettings.volumeDraft;
       if(window.GGFCStadiumTheme?.draft)draft.settings.stadiumTheme=window.GGFCStadiumTheme.draft;
+      if(window.GGFCAppearance?.draft)draft.settings.appearance=window.GGFCAppearance.draft;
       const soccerBeeDraft=window.GGFCSoccerBeeRoster?.draft;
       if(soccerBeeDraft)draft.settings.soccerbeeMeasurement=soccerBeeDraft;
       if(window.GGFCThumbnail?.dirty&&window.GGFCThumbnail.draft)draft.settings.youtubeThumbnail=window.GGFCThumbnail.draft;
@@ -479,6 +544,6 @@ const GGFC = (() => {
     const records=Number(state.latest?.meta?.revision)===state.revision?state.latest?.records:null;
     return {ref:database?database.ref('ggfc/teamCounterRecords/v1'):null,revision:state.revision,records,ready:!!records&&state.ready&&state.serverSeen&&state.connected&&!state.dirty&&!state.saving&&!state.conflict&&!state.error&&navigator.onLine!==false};
   }
-  return {publicCounterContext,get editing(){return editLease||hasSettingsDraft()||!!window.GGFCThumbnail?.dirty||!!window.GGFCOperator?.pending;},get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving||state.busy>0;},canEdit,adminPasswordStatus,changeAdminPassword,get passwordChanging(){return passwordBusy;},normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,signIn,loginOrLogout,closeLogin,togglePassword};
+  return {publicCounterContext,get editing(){return editLease||hasSettingsDraft()||!!window.GGFCThumbnail?.dirty||!!window.GGFCOperator?.pending;},get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving||state.busy>0;},canEdit,adminPasswordStatus,changeAdminPassword,get passwordChanging(){return passwordBusy;},normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,resumeAfterAppearanceDraft,signIn,loginOrLogout,closeLogin,togglePassword};
 })();
 window.GGFC_VERSION='3.25.115';
