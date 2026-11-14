@@ -5828,17 +5828,17 @@ function renderTeamPointsChart(list,info){
   if(ticks[ticks.length-1]!==yMax) ticks.push(yMax);
   const fmtDate=d=>{ const p=String(d||"").split("-"); return p.length===3?(Number(p[1])+"/"+Number(p[2])):d; };
   const grid=ticks.map(v=>
-    '<line x1="'+left+'" y1="'+y(v)+'" x2="'+(width-right)+'" y2="'+y(v)+'" stroke="rgba(255,255,255,.13)" stroke-width="1"/>'+ 
-    '<text x="'+(left-10)+'" y="'+(y(v)+4)+'" text-anchor="end" fill="rgba(255,255,255,.72)" font-size="12">'+v+'</text>'
+    '<line class="team-points-chart-grid" x1="'+left+'" y1="'+y(v)+'" x2="'+(width-right)+'" y2="'+y(v)+'" stroke="rgba(255,255,255,.13)" stroke-width="1"/>'+
+    '<text class="team-points-chart-axis" x="'+(left-10)+'" y="'+(y(v)+4)+'" text-anchor="end" fill="rgba(255,255,255,.72)" font-size="12">'+v+'</text>'
   ).join("");
   const xlabels=dates.map((d,i)=>
-    '<line x1="'+x(i)+'" y1="'+top+'" x2="'+x(i)+'" y2="'+(top+plotH)+'" stroke="rgba(255,255,255,.055)" stroke-width="1"/>'+ 
-    '<text x="'+x(i)+'" y="'+(height-27)+'" text-anchor="middle" fill="rgba(255,255,255,.78)" font-size="12">'+esc(fmtDate(d))+'</text>'
+    '<line class="team-points-chart-grid" x1="'+x(i)+'" y1="'+top+'" x2="'+x(i)+'" y2="'+(top+plotH)+'" stroke="rgba(255,255,255,.055)" stroke-width="1"/>'+
+    '<text class="team-points-chart-axis" x="'+x(i)+'" y="'+(height-27)+'" text-anchor="middle" fill="rgba(255,255,255,.78)" font-size="12">'+esc(fmtDate(d))+'</text>'
   ).join("");
   const paths=series.map(s=>{
     const pts=s.vals.map((v,i)=>x(i).toFixed(1)+','+y(v).toFixed(1)).join(' ');
-    const circles=s.vals.map((v,i)=>'<circle cx="'+x(i)+'" cy="'+y(v)+'" r="4.2" fill="'+s.color+'" stroke="#241c2a" stroke-width="2"><title>'+esc(teamDisplayName(s.team))+' · '+esc(dates[i])+' · 누적 '+v+'점</title></circle>').join('');
-    const under=s.team==="D져스"?'<polyline points="'+pts+'" fill="none" stroke="rgba(0,0,0,.65)" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>':'';
+    const circles=s.vals.map((v,i)=>'<circle class="team-points-chart-dot" cx="'+x(i)+'" cy="'+y(v)+'" r="4.2" fill="'+s.color+'" stroke="#241c2a" stroke-width="2"><title>'+esc(teamDisplayName(s.team))+' · '+esc(dates[i])+' · 누적 '+v+'점</title></circle>').join('');
+    const under=s.team==="D져스"?'<polyline class="team-points-chart-halo" points="'+pts+'" fill="none" stroke="rgba(0,0,0,.65)" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>':'';
     return under+'<polyline points="'+pts+'" fill="none" stroke="'+s.color+'" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round"/>'+circles;
   }).join("");
 
@@ -5871,15 +5871,15 @@ function renderTeamPointsChart(list,info){
     const logoHtml=logo
       ? '<image href="'+esc(logo)+'" x="'+logoX+'" y="'+(e.labelY-logoSize/2)+'" width="'+logoSize+'" height="'+logoSize+'" preserveAspectRatio="xMidYMid meet"><title>'+esc(teamDisplayName(e.team))+'</title></image>'
       : '<g><circle cx="'+(logoX+logoSize/2)+'" cy="'+e.labelY+'" r="'+(logoSize/2)+'" fill="'+e.color+'" stroke="rgba(255,255,255,.65)"/><text x="'+(logoX+logoSize/2)+'" y="'+(e.labelY+4)+'" text-anchor="middle" fill="'+(e.team==="D져스"?'#241c2a':'#fff')+'" font-size="11" font-weight="900">'+esc(Array.from(teamDisplayName(e.team))[0]||'?')+'</text></g>';
-    const score='<text x="'+scoreX+'" y="'+(e.labelY+5)+'" fill="#fff" font-size="15" font-weight="900" paint-order="stroke" stroke="#241c2a" stroke-width="4" stroke-linejoin="round">'+e.value+'점</text>';
+    const score='<text class="team-points-chart-value" x="'+scoreX+'" y="'+(e.labelY+5)+'" fill="#fff" font-size="15" font-weight="900" paint-order="stroke" stroke="#241c2a" stroke-width="4" stroke-linejoin="round">'+e.value+'점</text>';
     return connector+logoHtml+score;
   }).join('');
 
   const svg='<div class="team-points-chart-wrap"><svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="팀별 일자별 승점 누적 그래프">'+
-    '<rect x="0" y="0" width="'+width+'" height="'+height+'" rx="14" fill="#241c2a"/>'+ 
+    '<rect class="team-points-chart-surface" x="0" y="0" width="'+width+'" height="'+height+'" rx="14" fill="#241c2a"/>'+
     grid+xlabels+
-    '<line x1="'+left+'" y1="'+(top+plotH)+'" x2="'+(width-right)+'" y2="'+(top+plotH)+'" stroke="rgba(255,255,255,.34)" stroke-width="1.2"/>'+ 
-    '<text x="18" y="'+(top+plotH/2)+'" transform="rotate(-90 18 '+(top+plotH/2)+')" text-anchor="middle" fill="rgba(255,255,255,.74)" font-size="12">누적 승점</text>'+ 
+    '<line class="team-points-chart-grid" x1="'+left+'" y1="'+(top+plotH)+'" x2="'+(width-right)+'" y2="'+(top+plotH)+'" stroke="rgba(255,255,255,.34)" stroke-width="1.2"/>'+
+    '<text class="team-points-chart-axis" x="18" y="'+(top+plotH/2)+'" transform="rotate(-90 18 '+(top+plotH/2)+')" text-anchor="middle" fill="rgba(255,255,255,.74)" font-size="12">누적 승점</text>'+
     paths+endpointLabels+'</svg></div>';
   const legend='<div class="team-points-chart-legend">'+series.map(s=>'<span><i style="background:'+s.color+'"></i>'+teamChip(s.team)+'</span>').join('')+'</div>';
   box.innerHTML=svg+legend;
