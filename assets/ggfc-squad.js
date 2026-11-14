@@ -139,6 +139,7 @@ function squadMovementHtml(currentRow,previousRow,previousDate,currentDate){
 function renderTeamSquad(){
   if(!renderCalculationCache)return withRenderCalculationCache(renderTeamSquad);
  const root=document.getElementById('teamSquadContent'),filter=document.getElementById('teamSquadComp'),changeSelect=document.getElementById('teamSquadChangeDate');if(!root)return;
+ squadCompactObserver?.disconnect();
  renderSquadAppearanceEditor();
  const exportButton=document.getElementById('squadExportButton');if(exportButton){exportButton.onclick=()=>exportTeamSquadImage(exportButton);exportButton.disabled=squadExportBusy;}
  const today=squadToday();
@@ -174,12 +175,47 @@ function renderTeamSquad(){
   return leagueHead+'<section class="ts-team" data-team="'+esc(t.team)+'"><header class="ts-team-header'+(staffPortraits?' has-staff':'')+'">'+watermark+'<div class="ts-team-summary"><div class="ts-team-brand">'+(logo?'<img class="ts-team-logo" src="'+esc(logo)+'" alt="'+esc(t.team)+' 로고">':'<span class="ts-logo-fallback">'+esc(t.team.slice(0,2))+'</span>')+'<div class="ts-team-copy"><span class="ts-team-kicker">TEAM SQUAD</span><h3>'+esc(teamDisplayName(t.team))+'</h3><p class="ts-basis-note">스쿼드 적용일 '+esc(t.date)+' · 능력치 기준 '+esc(model.abilityAsOf)+' · '+t.members.length+'명</p><span class="ts-overall"><span>TEAM CURRENT</span><strong class="ts-current-score">'+value(t.total)+'</strong> '+squadStars(t.total)+'</span></div></div><div class="ts-team-bars">'+bars+'</div></div>'+(staffPortraits?'<div class="ts-staff-showcase" aria-label="감독 및 코치"><span class="ts-staff-kicker">COACHING STAFF</span><div class="ts-staff-stack">'+staffPortraits+'</div></div>':'')+'</header>'+movement+'<div class="ts-roster-title"><div><h4>등록 선수 명단</h4><span>전력 산정 '+t.evaluated+'/'+t.members.length+'명 · 감독·코치 우선 표시</span></div><label class="ts-roster-switch"><input type="checkbox" data-ts-roster-toggle aria-controls="'+rosterId+'"><span class="ts-switch-track" aria-hidden="true"><i></i></span><b>명단 보기</b></label></div><div class="ts-roster ts-card-gallery" data-team-index="'+teamIndex+'" id="'+rosterId+'" hidden>'+(rows||'<p class="empty">등록된 구성원이 없습니다.</p>')+'</div></section>';
  }).join('');
  applySquadAppearance();syncSquadExportTeams(model);
+ syncMobileSquadRoster(root,model,query);
  root.querySelectorAll('[data-ts-roster-toggle]').forEach(input=>{
   const panel=document.getElementById(input.getAttribute('aria-controls'));if(!panel)return;
   const label=input.closest('.ts-roster-switch')?.querySelector('b');
   const sync=()=>{if(input.checked&&!panel.dataset.cardsReady){const team=model.teams[Number(panel.dataset.teamIndex)],careerMap=v319CareerStatsMap(query.asOf);panel.replaceChildren(...team.members.map(member=>squadPlayerCard(member,team.team,query,careerMap)));panel.dataset.cardsReady='1';}panel.hidden=!input.checked;input.setAttribute('aria-expanded',String(input.checked));if(label)label.textContent=input.checked?'명단 숨기기':'명단 보기';};
   input.addEventListener('change',sync);sync();
  });
+}
+
+function syncMobileSquadRoster(root,model,query){
+ const html=document.documentElement;
+ const sync=()=>{
+  const compact=html.classList.contains('ggfc-mobile')&&html.dataset.theme!=='dark';
+  root.querySelectorAll('.ts-roster-title').forEach((title,index)=>{
+   const next=title.nextElementSibling;
+   if(next?.classList.contains('ts-mobile-roster')){
+    if(!compact)next.remove();
+   }else if(compact)title.insertAdjacentHTML('afterend',squadCompactRoster(model.teams[index].members,query));
+  });
+ };
+ squadCompactObserver=new MutationObserver(sync);
+ squadCompactObserver.observe(html,{attributes:true,attributeFilter:['class','data-theme']});
+ sync();
+}
+let squadCompactObserver=null;
+
+function squadCompactRoster(members,query){
+ if(!members.length)return '';
+ const heading='<li class="ts-mobile-roster-heading" aria-hidden="true"><span>번호</span><span>선수명</span><span>포지션</span><span>OVR</span></li>';
+ const rows=members.map(member=>{
+  const number=esc(String(member.roster?.no??'')||'—');
+  const position=esc(member.roster?.pos||member.position||'—');
+  const ovr=member.ability?.currentOvr??'—';
+  const role=member.role&&member.role!=='선수'?'<small>'+esc(squadRoleLabel(member.role))+'</small>':'';
+  const face=playerFaceChip(member.name,false,query.year);
+  const link=playerCardLink(member.name,face,query);
+  return '<li class="ts-mobile-roster-row"><span aria-label="등번호 '+number+'">'+number+'</span>'+
+    '<div class="ts-mobile-roster-name">'+link+role+'</div><span class="ts-mobile-position" aria-label="포지션 '+position+'">'+position+'</span>'+
+    '<strong aria-label="OVR '+ovr+'">'+ovr+'</strong></li>';
+ }).join('');
+ return '<ul class="ts-mobile-roster" aria-label="등록 선수 명단" data-export-ignore>'+heading+rows+'</ul>';
 }
 
 function squadPlayerCard(member,team,query,careerMap){
@@ -195,7 +231,7 @@ function squadPlayerCard(member,team,query,careerMap){
  ['Pac','Sho','Pas','Dri','Def','Phy'].forEach(k=>text('playerCardStat'+k,ability?Math.floor(ability[k.toLowerCase()]):'—'));
  const tier=careerFrameState(careerMap[member.name]||{}).tier;card.dataset.careerTier=tier.id;text('playerCardFrameBadge',tier.name);
  const logo=teamLogo(team),club=card.querySelector('.ggfc-player-card-club');club.style.backgroundImage=logo?'url('+JSON.stringify(logo)+')':'none';club.textContent=logo?'':teamDisplayName(team);club.title=teamDisplayName(team);
- const brand=card.querySelector('.ggfc-player-card-brand-logo'),hLogo=headerLogo();brand.style.backgroundImage=hLogo?'url('+JSON.stringify(hLogo)+')':'none';brand.textContent=hLogo?'':'GGFC';
+ const brand=card.querySelector('.ggfc-player-card-brand-logo');brand.style.backgroundImage='url('+JSON.stringify(headerLogo()||appBrandLogo())+')';brand.textContent='';
  const mark=card.querySelector('.ggfc-player-card-watermark');mark.style.backgroundImage=logo?'url('+JSON.stringify(logo)+')':'none';mark.textContent='';
  const wrap=card.querySelector('.ggfc-player-card-photo-wrap'),cutout=normalizePlayerPhotoUrl(uploadedPlayerPhoto(member.name)||roster.photoCutout),photo=cutout||roster.photo;
  wrap.title='';wrap.dataset.photoState='empty';wrap.dataset.photoKind=cutout?'cutout':'original';wrap.innerHTML='<div class="ggfc-player-card-photo-fallback">'+esc(playerInitials(member.name))+'</div>';

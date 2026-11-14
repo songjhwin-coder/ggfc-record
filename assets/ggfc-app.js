@@ -1682,17 +1682,13 @@ function teamDisplayName(name){
   return String(DB.settings.teamNames[key]||key).trim() || key;
 }
 function headerLogo(key="brand"){ ensureLogoSettings(); return safeLogoSrc(key==="secondary"?DB.settings.headerLogoSecondary:DB.settings.headerLogo); }
-function defaultHeaderLogoHtml(){
-  return '<svg class="logo header-logo-fallback" viewBox="0 0 48 48" aria-hidden="true">'+
-    '<path d="M7 8h24L18 21H5z" fill="#37003c"/>'+
-    '<path d="M18 21 34 5h9L27 25l15 15H29z" fill="#37003c"/>'+
-    '<path d="M6 39 19 25l8 8-6 6z" fill="#37003c"/>'+
-    '<circle cx="34" cy="13" r="4" fill="#00ff85"/></svg>';
+function appBrandLogo(){
+  return document.querySelector('link[rel="apple-touch-icon"]').getAttribute('href');
 }
 function renderHeaderLogo(){
   const box=$("#topBrandLogo"); if(!box) return;
-  const src=headerLogo();
-  box.innerHTML=src?'<img src="'+src+'" alt="헤더 로고">':defaultHeaderLogoHtml();
+  const src=headerLogo()||appBrandLogo();
+  box.innerHTML='<img src="'+src+'" alt="GGFC 로고">';
   const second=headerLogo('secondary');
   for(const id of ['topSecondaryLogo']){
     const el=document.getElementById(id);if(!el)continue;
@@ -4057,8 +4053,8 @@ function openPlayerCard(player,query){
   updatePlayerCardTeamRibbons(club.closest(".ggfc-player-card"));
 
   const brand=$("#playerCardBrandLogo");
-  brand.style.backgroundImage=hLogo?'url("'+hLogo+'")':'none';
-  brand.textContent=hLogo?'':displaySettings().brandTitle.slice(0,4);
+  brand.style.backgroundImage='url("'+(hLogo||appBrandLogo())+'")';
+  brand.textContent='';
   const watermark=$("#playerCardWatermark");
   watermark.style.backgroundImage=hLogo?'url("'+hLogo+'")':(tLogo?'url("'+tLogo+'")':'none');
 
