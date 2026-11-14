@@ -338,9 +338,80 @@
     color:var(--ggfc-hybrid-black);
     border-top-color:var(--ggfc-hybrid-gold-text);
   }
-  html.ggfc-mobile:not([data-theme="dark"])[data-stadium-theme] #mainContent #dashResultHeader #dashLeagueSummaryTitle {
-    color:var(--ggfc-hybrid-white);
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent :is(.il-tabs,.at-filters,.tm-tabs,.tm-page-tabs,.ability-sort-toolbar) button[aria-pressed="true"] {
+    background:var(--ggfc-hybrid-gold);
+    color:var(--ggfc-hybrid-black);
+    border-color:var(--ggfc-hybrid-gold-text);
   }
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash #dashResultHeader {
+    background:var(--ggfc-hybrid-white);
+    border-color:var(--ggfc-hybrid-border);
+    color:var(--ggfc-hybrid-black);
+  }
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash #dashResultHeader :is(.dashboard-result-league,#dashLeagueSummaryTitle) {
+    color:var(--ggfc-hybrid-black);
+  }
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash #dashResultHeader .dashboard-result-date {
+    color:var(--ggfc-hybrid-muted);
+  }
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash #dashResultHeader .dashboard-result-round {
+    background:var(--ggfc-hybrid-gold);
+    color:var(--ggfc-hybrid-black);
+  }
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash #dashLeagueSummary .league-overview {
+    /* Replace the generic mobile rule that forces league grids to one column. */
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:8px;
+  }
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #dashLeagueSummary .league-zone .league-zone-head {
+    min-height:36px;
+    padding:4px 6px;
+    gap:4px;
+    background:var(--ggfc-hybrid-white)!important;
+    box-shadow:none;
+  }
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #dashLeagueSummary .league-zone-title {
+    color:var(--ggfc-hybrid-black);
+    font-size:clamp(12px,3.65vw,16px);
+    overflow-wrap:anywhere;
+  }
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #dashLeagueSummary .league-zone-head .league-symbol {
+    width:24px;
+    height:24px;
+    flex-basis:24px;
+    font-size:12px;
+  }
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #dashLeagueSummary .league-zone-head .league-symbol:not(.has-logo) {
+    color:var(--ggfc-hybrid-black);
+    background:var(--ggfc-hybrid-light);
+    box-shadow:none;
+  }
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #dashLeagueSummary .league-team-grid {
+    grid-template-columns:minmax(0,1fr);
+    background:var(--ggfc-hybrid-white);
+  }
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #dashLeagueSummary .league-team-card {
+    display:grid;
+    grid-template-columns:25px minmax(0,1fr);
+    align-items:center;
+    justify-items:start;
+    gap:2px 4px;
+    padding:4px;
+  }
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #dashLeagueSummary .league-team-card .league-crest {
+    grid-row:span 3;
+    width:24px;
+    height:24px;
+    margin:0;
+    font-size:9px;
+  }
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #dashLeagueSummary .league-team-name {
+    white-space:normal;
+    text-align:start;
+    overflow-wrap:anywhere;
+  }
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #dashLeagueSummary .league-team-card .league-team-rule {display:none}
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #dashLeagueSummary .league-team-card :is(.league-team-wdl,.league-team-goals) {margin:0;font-size:10px}
   html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash .record-day-body {
     padding:8px;
   }
@@ -396,18 +467,32 @@
     padding:4px 5px;
     border-radius:5px;
     background:var(--ggfc-hybrid-light);
-    font-size:18px;
+    font-size:20px;
     font-variant-numeric:tabular-nums;
   }
   html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash .record-day .fixture-score-value span {padding:0}
   html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash .record-day .fixture-team-scorers {margin-top:4px;font-size:10px}
 
   html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-squad .ts-current-score {font-size:30px}
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-squad .ts-mobile-roster {
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-squad .ts-team-header .ts-team-bars {
+    gap:8px;
+  }
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-squad .ts-axis {margin-bottom:0}
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-squad .ts-axis .ts-bar {height:5px;margin:3px 0}
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-squad .ts-mobile-roster:not([hidden]) {
     display:block;
     margin:0;
     padding:0 10px 10px;
+  }
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-squad .ts-mobile-roster ul {
+    margin:0;
+    padding:0;
     list-style:none;
+  }
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-squad .ts-mobile-roster [data-squad-layout] {
+    display:block;
+    min-height:44px;
+    margin:0 0 7px auto;
   }
   html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-squad :is(.ts-mobile-roster-heading,.ts-mobile-roster-row) {
     display:grid;
