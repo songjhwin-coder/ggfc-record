@@ -97,6 +97,7 @@ const GGFC = (() => {
     window.GGFCMatchRecords?.refreshPermissions();
     window.GGFCSharedRecordStatus?.refreshAdminAccess();
     window.GGFCAppearance?.render();
+    window.GGFCHome?.syncStatus();
   }
   function status(text){state.status=text;refreshUI();}
   function adoptWire(raw,fromCache=false){
@@ -544,6 +545,10 @@ const GGFC = (() => {
     const records=Number(state.latest?.meta?.revision)===state.revision?state.latest?.records:null;
     return {ref:database?database.ref('ggfc/teamCounterRecords/v1'):null,revision:state.revision,records,ready:!!records&&state.ready&&state.serverSeen&&state.connected&&!state.dirty&&!state.saving&&!state.conflict&&!state.error&&navigator.onLine!==false};
   }
-  return {publicCounterContext,get editing(){return editLease||hasSettingsDraft()||!!window.GGFCThumbnail?.dirty||!!window.GGFCOperator?.pending;},get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving||state.busy>0;},canEdit,adminPasswordStatus,changeAdminPassword,get passwordChanging(){return passwordBusy;},normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,resumeAfterAppearanceDraft,signIn,loginOrLogout,closeLogin,togglePassword};
+  return {publicCounterContext,get recordStatus(){
+    const offline=navigator.onLine===false;
+    if(state.ready)return offline||state.error||!state.connected||!state.serverSeen?'cached':'ready';
+    return offline?'offline':state.error?'unavailable':'loading';
+  },get editing(){return editLease||hasSettingsDraft()||!!window.GGFCThumbnail?.dirty||!!window.GGFCOperator?.pending;},get authorized(){return state.authorized;},get pending(){return state.dirty||state.saving||state.busy>0;},canEdit,adminPasswordStatus,changeAdminPassword,get passwordChanging(){return passwordBusy;},normalizeDB,split,merge,transformKeys,refreshUI,start,markChanged,flush,receive,reload,resumeAfterAppearanceDraft,signIn,loginOrLogout,closeLogin,togglePassword};
 })();
 window.GGFC_VERSION='3.25.115';

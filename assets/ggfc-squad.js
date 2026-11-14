@@ -73,7 +73,7 @@ function teamSquadCardQuery(competition,asOf){
  }
  return resolvePlayerCardQuery({year:selected.slice(0,4),mode:'SEASON',start:selected.slice(0,4)+'-01-01',end:selected,asOf:selected,allCompetitions:true});
 }
-function teamSquadModel(competition,asOf=squadToday()){
+function teamSquadModel(competition,asOf=squadToday(),team=''){
  const cutoff=squadSafeDate(asOf,squadToday()),snapshot=latestTeamSquadRows(competition,cutoff),cardQuery=teamSquadCardQuery(competition,cutoff),ratingDate=cardQuery.asOf,year=cardQuery.year,cache=new Map(),enabled=abilitySystemEnabled();
  const known=new Map();
  (DB.roster||[]).filter(r=>!r.year||String(r.year)<=year).forEach(r=>{if(r.player&&!known.has(normalizePlayerMatchKey(r.player)))known.set(normalizePlayerMatchKey(r.player),r.player);});
@@ -85,7 +85,8 @@ function teamSquadModel(competition,asOf=squadToday()){
   const valid=ability&&['pac','sho','pas','dri','def','phy'].every(k=>Number.isFinite(ability[k]));
   const row={name:canonical||name,roster,ability:valid?ability:null,position:normalizeAbilityPosition(roster?.pos),reason:!canonical?'선수명단 미등록':!eligible?'참여 시작 전':!enabled?'능력치 기능 꺼짐':!valid?'자료 부족':''};cache.set(key,row);return row;
  };
- const teams=snapshot.rows.map(s=>{
+ const rows=team?snapshot.rows.filter(row=>row.team===team):snapshot.rows;
+ const teams=rows.map(s=>{
   const members=[],seen=new Set();
   (s.members||[]).forEach(m=>{const key=normalizePlayerMatchKey(m.player);if(!key||seen.has(key)||isOwnGoalPlayer(m.player))return;seen.add(key);members.push({...ratings(m.player),role:m.role||'선수'});});
   const evaluated=members.filter(m=>m.ability);

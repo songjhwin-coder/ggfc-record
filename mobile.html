@@ -20,6 +20,7 @@
 <link rel="stylesheet" href="assets/ggfc-thumbnail.css?v=27f57c4a8fde4ae3">
 <link rel="stylesheet" href="assets/ggfc-theme.css?v=f37d687c4fc25e7a">
 <link rel="stylesheet" href="assets/ggfc-white-hybrid.css?v=5c01320bbbc0f11d">
+<link rel="stylesheet" href="assets/ggfc-home.css?v=db2a91d77a4755af">
 </head>
 <body class="sidebar-collapsed">
 <section id="ggfcStartup" class="ggfc-startup" aria-label="GGFC 앱 시작 화면" hidden>
@@ -62,6 +63,7 @@
     <button data-v="maker"><svg class="sidebar-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="2" width="18" height="20" rx="2"/><path d="M3 12h18M8 2v4h8V2m-8 20v-4h8v4"/><circle cx="12" cy="12" r="3"/></svg><span>팀 메이커</span></button>
     <button data-v="alltime"><svg class="sidebar-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 21V11h5v10m1 0V3h5v18m1 0v-7h5v7M2 21h21"/></svg><span>GG 역대 기록</span></button>
     <button data-v="leadership"><svg class="sidebar-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m3 7 4 4 5-8 5 8 4-4-3 12H6zm3 12h12M8 15h8"/></svg><span>GG 역대 운영진</span></button>
+    <button data-v="home"><svg class="sidebar-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m3 10 9-7 9 7v10H3zM9 20v-7h6v7"/></svg><span>홈</span></button>
     <div class="sidebar-admin-title">ADMIN</div>
     <button data-v="photos" id="playerPhotosTab" class="admin-menu-tab" hidden><svg class="sidebar-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8" cy="9" r="2"/><path d="m3 18 6-5 4 3 4-5 5 7"/></svg><span>선수 사진 관리</span></button>
     <button data-v="cardsettings" class="admin-menu-tab" hidden><svg class="sidebar-menu-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M5 18v-1a4 4 0 0 1 8 0v1m2-10h3m-3 4h3m-3 4h3"/></svg><span>선수 카드 설정</span></button>
@@ -211,6 +213,26 @@
     </div>
   </section>
 
+  <section class="view" id="v-home" aria-labelledby="ggfcHomeTitle">
+    <div class="home-layout">
+      <header class="home-intro">
+        <div class="home-brand" data-home-brand><img width="30" height="30" alt=""><span>GGFC RECORD</span></div>
+        <h1 id="ggfcHomeTitle">환영합니다!</h1>
+        <p>GGFC 경기 기록과 선수 정보를 확인하세요.</p>
+      </header>
+      <p class="home-status" data-home-status role="status" hidden></p>
+      <div data-home-teams>
+        <h2>시즌 팀 정보</h2>
+        <div data-home-slot="team-select"></div>
+        <div data-home-slot="team" aria-live="polite"></div>
+      </div>
+      <nav class="home-shortcuts" data-home-slot="shortcuts" aria-label="주요 메뉴 바로가기"></nav>
+      <div>
+        <h2>최근 경기</h2>
+        <div data-home-slot="matches"></div>
+      </div>
+    </div>
+  </section>
   <section class="view" id="v-closed"><div class="card menu-closed"><h2>GGFC</h2><p id="closedMenuMessage">현재 공개된 메뉴가 없습니다.</p><button class="btn" type="button" onclick="document.getElementById('lockBtn').click()">관리자 로그인</button></div></section>
   <section class="view" id="v-leadership"><div class="head"><h2>GG 역대 운영진</h2><p>GGFC를 함께 만들어 온 역대 운영진을 소개합니다.</p></div><div id="leadershipContent"></div></section>
   <section class="view" id="v-alltime"><div class="head"><h2>GG 역대 기록</h2><p>GGFC의 역대 득점·출전·우승 기록을 함께 돌아봅니다.</p></div><div id="allTimeContent"></div></section>
@@ -1148,10 +1170,10 @@
 <input type="file" id="soccerbeeFilepick" accept=".xlsx" hidden>
 
 <script defer src="firebase-config.js"></script>
-<script defer src="assets/ggfc-sync.js?v=3891661fe07c93f8"></script>
+<script defer src="assets/ggfc-sync.js?v=0b9b05f5f49de83a"></script>
 <script defer src="assets/ggfc-mobile.js?v=b8cf873c1194f238"></script>
 <script defer src="assets/ggfc-details.js?v=3c6ea09bd139db9f"></script>
-<script defer src="assets/ggfc-squad.js?v=6b7fef068b14f813"></script>
+<script defer src="assets/ggfc-squad.js?v=0973fe6ab1ddad28"></script>
 <script defer src="assets/ggfc-card-design.js?v=3.25.31"></script>
 <script defer src="assets/ggfc-alltime.js?v=898aa7b903e24445"></script>
 <script defer src="assets/ggfc-maker.js?v=a97229a8dee10780"></script>
@@ -1159,7 +1181,8 @@
 <script defer src="assets/ggfc-interleague.js?v=23d440a21040c34c"></script>
 <script defer src="assets/ggfc-player-photos.js?v=c41c32b27c46991b"></script>
 <script defer src="assets/ggfc-soccerbee-roster.js?v=783284d29021f5ac"></script>
-<script defer src="assets/ggfc-app.js?v=d12a47755244e2ec"></script>
+<script defer src="assets/ggfc-home.js?v=0451eb89a6f3e605"></script>
+<script defer src="assets/ggfc-app.js?v=996fb86aeb1275de"></script>
 <script defer src="assets/ggfc-public-counters.js?v=8e29a3706a3888dc"></script>
 <script defer src="assets/ggfc-counter-reviews.js?v=e231e6093b17a02a"></script>
 <script defer src="assets/ggfc-match-records.js?v=82331ad389467640"></script>

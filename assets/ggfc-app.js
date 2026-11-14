@@ -6921,7 +6921,7 @@ function renderScreenSettings(){
   if(!admin)return;
   renderDisplaySettings();renderLogoManager();window.GGFCStartup?.renderSettings();window.GGFCMusicSettings?.render();window.GGFCStadiumTheme?.render();
 }
-let activeView='dash';
+let activeView=location.hash==='#home'?'home':'dash';
 let memberPreviewActive=false,memberPreviewTarget='',memberPreviewRestoring=false;
 /* Weekly Best 5: deterministic match-day selection, never writes awards or abilities. */
 let best5Date='',best5Group='ALL';
@@ -6988,7 +6988,7 @@ const MEMBER_MENUS=[
  {id:'goalkeeper',label:'골레이로 랭킹'}, {id:'ability',label:'선수 OVR 현황'},
  {id:'chem',label:'베스트 듀오'}, {id:'best5',label:'주간 베스트 5'},
  {id:'maker',label:'팀 메이커'}, {id:'alltime',label:'GG 역대 기록'},
- {id:'leadership',label:'GG 역대 운영진'}, {id:'team',label:'팀 상태',defaultOpen:false}
+ {id:'leadership',label:'GG 역대 운영진'}, {id:'team',label:'팀 상태',defaultOpen:false}, {id:'home',label:'홈'}
 ];
 const ADMIN_MENUS=[
  {id:'menus',label:'메뉴 공개 관리'}, {id:'photos',label:'선수 사진 관리'}, {id:'cardsettings',label:'선수 카드 설정'}, {id:'screensettings',label:'화면 설정'}, {id:'soccerbeeroster',label:'사커비 측정 명단'}, {id:'counterreviews',label:'경기기록 공유 참여 현황'}, {id:'abilityguide',label:'능력치 운영 안내'}, {id:'abilityaudit',label:'능력치 변동 분석'},
@@ -7194,7 +7194,7 @@ function renderAbilityAudit(){
 }
 
 function renderMenuContent(next){
-  const renderers={thumbnail:()=>window.GGFCThumbnail?.render(),abilityaudit:renderAbilityAudit,photos:renderPlayerPhotoManager,cardsettings:renderCardSettings,screensettings:renderScreenSettings,interleague:renderInterleagueStats,menus:renderMenuManagement,closed:renderMenusClosed,goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide,soccerbeeroster:renderSoccerBeeMeasurementRoster,counterreviews:()=>window.GGFCSharedRecordStatus?.render()};
+  const renderers={home:()=>window.GGFCHome.render(),thumbnail:()=>window.GGFCThumbnail?.render(),abilityaudit:renderAbilityAudit,photos:renderPlayerPhotoManager,cardsettings:renderCardSettings,screensettings:renderScreenSettings,interleague:renderInterleagueStats,menus:renderMenuManagement,closed:renderMenusClosed,goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide,soccerbeeroster:renderSoccerBeeMeasurementRoster,counterreviews:()=>window.GGFCSharedRecordStatus?.render()};
   return withRenderCalculationCache(renderers[next]);
 }
 // Recheck calculation inputs on every render, including edits made in place.
