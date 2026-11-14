@@ -4186,12 +4186,13 @@ function fixtureMomHtml(m){
     (names.length?names.map(name=>'<span class="fixture-mom-name">'+esc(name)+'</span>').join(''):'<span class="fixture-mom-name">미등록</span>')+'</div>';
 }
 function fixtureScoreRow(m,homeSc,awaySc,variant){
+  const homeResult=matchResult(m,m.home),awayResult=homeResult==='W'?'L':homeResult==='L'?'W':homeResult;
   return '<div class="fixture-score-row '+(variant||'')+'">'+
-    '<div class="fixture-team-copy home"><div class="fixture-team-name">'+esc(teamDisplayName(m.home))+'</div><div class="fixture-team-scorers'+(homeSc?'':' none')+'">'+(homeSc||'득점자 없음')+'</div></div>'+
+    '<div class="fixture-team-copy home" data-match-result="'+(homeResult||'')+'"><div class="fixture-team-name">'+esc(teamDisplayName(m.home))+'</div><div class="fixture-team-scorers'+(homeSc?'':' none')+'">'+(homeSc||'득점자 없음')+'</div></div>'+
     '<div class="fixture-logo-wrap">'+fixtureLogoHtml(m.home)+'</div>'+
     '<div class="fixture-score-center"><div class="fixture-score-value">'+num(m.hs)+' <span>-</span> '+num(m.as)+'</div>'+fixtureMomHtml(m)+'</div>'+
     '<div class="fixture-logo-wrap">'+fixtureLogoHtml(m.away)+'</div>'+
-    '<div class="fixture-team-copy away"><div class="fixture-team-name">'+esc(teamDisplayName(m.away))+'</div><div class="fixture-team-scorers'+(awaySc?'':' none')+'">'+(awaySc||'득점자 없음')+'</div></div>'+
+    '<div class="fixture-team-copy away" data-match-result="'+(awayResult||'')+'"><div class="fixture-team-name">'+esc(teamDisplayName(m.away))+'</div><div class="fixture-team-scorers'+(awaySc?'':' none')+'">'+(awaySc||'득점자 없음')+'</div></div>'+
   '</div>';
 }
 function matchVideoBadgeHtml(m){
@@ -6494,7 +6495,7 @@ function monthlyLineChart(rows){
     const legend='<g class="monthly-chart-legend">'+series.map((S,i)=>{
       const lx=L+i*88, ly=22;
       return '<line class="'+S.cls+'" x1="'+lx+'" y1="'+ly+'" x2="'+(lx+22)+'" y2="'+ly+'" stroke="'+S.color+'"></line>'+ 
-        '<circle cx="'+(lx+11)+'" cy="'+ly+'" r="3.5" fill="'+S.color+'"></circle>'+ 
+        '<circle class="'+S.cls+'" cx="'+(lx+11)+'" cy="'+ly+'" r="3.5" fill="'+S.color+'"></circle>'+
         '<text x="'+(lx+30)+'" y="'+ly+'" fill="'+S.color+'">'+S.label+'</text>';
     }).join('')+'</g>';
     const axisLabels=rows.map((r,i)=>{

@@ -155,7 +155,7 @@ function matchDetailRecordsHtml(data,playerKey){
   const summary='<div class="match-detail-summary"><div class="match-detail-navigation"><button type="button" class="match-detail-back" data-match-back>← 경기 목록으로</button><span>PC에서는 ESC · 휴대폰에서는 뒤로가기로 닫기</span></div><div class="detail-match-meta">'+meta.map(v=>'<span>'+esc(v)+'</span>').join('')+'</div>'+
     '<div class="detail-scoreboard">'+data.teams.map((t,i)=>
       (i===1?'<div class="detail-score"><b>'+num(m.hs)+' <span>:</span> '+num(m.as)+'</b>'+fixtureMomHtml(m)+'</div>':'')+
-      '<div class="detail-score-team">'+fixtureLogoHtml(t.team)+'<strong>'+esc(teamDisplayName(t.team))+'</strong><span>'+detailResultLabel(t.result)+' · 승점 '+t.points+(t.group?' · '+esc(leagueGroupLabel(t.group)):'')+'</span></div>'
+      '<div class="detail-score-team">'+fixtureLogoHtml(t.team)+'<strong>'+esc(teamDisplayName(t.team))+'</strong><span data-match-result="'+esc(t.result||'')+'">'+detailResultLabel(t.result)+' · 승점 '+t.points+(t.group?' · '+esc(leagueGroupLabel(t.group)):'')+'</span></div>'
     ).join('')+'</div>'+matchYoutubeButtonsHtml(m,false)+(window.GGFCMatchRecords?.permissionMarkerHtml()||'')+(forfeitText(m)?'<p class="detail-notice">'+esc(forfeitText(m))+' · 승패와 승점은 몰수패 판정을 적용합니다.</p>':'');
   const teamSections=mode=>'<div class="detail-team-columns">'+data.teams.map(t=>{
     const opening='<section class="detail-section"><h3>'+teamChip(t.team)+'</h3>';
@@ -344,12 +344,12 @@ function comparisonRadar(players){
   const keys=COMPARE_ABILITIES.slice(1),cx=160,cy=155,r=100;
   const point=(i,f)=>{const theta=-Math.PI/2+i*Math.PI/3;return [cx+Math.cos(theta)*r*f,cy+Math.sin(theta)*r*f];};
   const polygon=f=>keys.map((_,i)=>point(i,f).join(',')).join(' ');
-  let shapes=[.25,.5,.75,1].map(f=>'<polygon points="'+polygon(f)+'" fill="none" stroke="#d6e0ec" stroke-width="1"/>').join('');
-  shapes+=keys.map(([key,label],i)=>{const [x,y]=point(i,1),[lx,ly]=point(i,1.27);return '<line x1="'+cx+'" y1="'+cy+'" x2="'+x+'" y2="'+y+'" stroke="#d6e0ec"/><text x="'+lx+'" y="'+ly+'" text-anchor="middle" dominant-baseline="middle" fill="#405875" font-size="12" font-weight="750">'+label+'</text>';}).join('');
+  let shapes=[.25,.5,.75,1].map(f=>'<polygon class="compare-radar-grid" points="'+polygon(f)+'" fill="none" stroke="#d6e0ec" stroke-width="1"/>').join('');
+  shapes+=keys.map(([key,label],i)=>{const [x,y]=point(i,1),[lx,ly]=point(i,1.27);return '<line class="compare-radar-grid" x1="'+cx+'" y1="'+cy+'" x2="'+x+'" y2="'+y+'" stroke="#d6e0ec"/><text x="'+lx+'" y="'+ly+'" text-anchor="middle" dominant-baseline="middle" fill="#405875" font-size="12" font-weight="750">'+label+'</text>';}).join('');
   players.forEach((p,index)=>{
     if(!p.ability)return;
     const color=index===0?'#245a93':'#cf2947',points=keys.map(([key],i)=>point(i,Math.max(0,Math.min(100,Math.floor(num(p.ability[key]))))/100).join(',')).join(' ');
-    shapes+='<polygon points="'+points+'" fill="'+color+'" fill-opacity=".12" stroke="'+color+'" stroke-width="2.2"'+(index===1?' stroke-dasharray="6 3"':'')+'><title>'+esc(p.name)+'</title></polygon>';
+    shapes+='<polygon class="'+(index===0?'compare-radar-base':'compare-radar-other')+'" points="'+points+'" fill="'+color+'" fill-opacity=".12" stroke="'+color+'" stroke-width="2.2"'+(index===1?' stroke-dasharray="6 3"':'')+'><title>'+esc(p.name)+'</title></polygon>';
   });
   return '<svg class="compare-radar" viewBox="0 0 320 310" role="img" aria-label="'+esc(players[0].name+'와 '+players[1].name+'의 6개 능력치 비교, 0부터 100')+'">'+shapes+'</svg>';
 }

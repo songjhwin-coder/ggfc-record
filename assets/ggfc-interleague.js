@@ -67,7 +67,7 @@ function interleagueRate(row,field='w'){return row.p?(row[field]/row.p*100).toFi
 let interleagueChartSequence=0;
 function interleagueOutcomesHtml(row){
  const outcomes=[['w','승',['#68c4e7','#568bda','#9cc66a']],['d','무',['#f0d34e','#efa35b','#dc715c']],['l','패',['#8b65df','#b568c2','#df8d93']]],radius=46,circumference=2*Math.PI*radius,id='il-outcome-'+(++interleagueChartSequence);
- const definitions='<defs>'+outcomes.map(([field,,colors])=>'<linearGradient id="'+id+'-'+field+'" x1="0" y1="0" x2="1" y2="1">'+colors.map((color,i)=>'<stop offset="'+i*50+'%" stop-color="'+color+'"/>').join('')+'</linearGradient>').join('')+'</defs>';
+ const definitions='<defs>'+outcomes.map(([field,,colors])=>'<linearGradient data-il-outcome="'+field+'" id="'+id+'-'+field+'" x1="0" y1="0" x2="1" y2="1">'+colors.map((color,i)=>'<stop offset="'+i*50+'%" stop-color="'+color+'"/>').join('')+'</linearGradient>').join('')+'</defs>';
  let offset=0;
  const segments=outcomes.map(([field])=>{
   if(!row.p||!row[field])return '';
@@ -76,7 +76,7 @@ function interleagueOutcomesHtml(row){
   offset+=length;return segment;
  }).join('');
  const description=row.p?'총 '+row.p+'경기 · '+outcomes.map(([field,label])=>label+' '+row[field]+'경기 '+interleagueRate(row,field)).join(' · '):'승·무·패 비율 · 경기 기록 없음';
- return '<div class="il-outcomes"><svg class="il-donut" viewBox="0 0 120 120" role="img" aria-label="'+esc(description)+'">'+definitions+'<circle class="il-donut-track" cx="60" cy="60" r="46" fill="none" stroke-width="16"/>'+segments+'<text class="il-donut-label" x="60" y="56" text-anchor="middle">승·무·패</text><text class="il-donut-total" x="60" y="75" text-anchor="middle">'+(row.p?row.p+'경기':'기록 없음')+'</text></svg><ul class="il-outcome-legend">'+outcomes.map(([field,label,colors])=>'<li><span class="il-outcome-label"><i style="background:linear-gradient(135deg,'+colors.join(',')+')" aria-hidden="true"></i>'+label+'</span><span>'+row[field]+'경기</span><strong>'+interleagueRate(row,field)+'</strong></li>').join('')+'</ul></div>';
+ return '<div class="il-outcomes"><svg class="il-donut" viewBox="0 0 120 120" role="img" aria-label="'+esc(description)+'">'+definitions+'<circle class="il-donut-track" cx="60" cy="60" r="46" fill="none" stroke-width="16"/>'+segments+'<text class="il-donut-label" x="60" y="56" text-anchor="middle">승·무·패</text><text class="il-donut-total" x="60" y="75" text-anchor="middle">'+(row.p?row.p+'경기':'기록 없음')+'</text></svg><ul class="il-outcome-legend">'+outcomes.map(([field,label,colors])=>'<li><span class="il-outcome-label"><i data-il-outcome="'+field+'" style="background:linear-gradient(135deg,'+colors.join(',')+')" aria-hidden="true"></i>'+label+'</span><span>'+row[field]+'경기</span><strong>'+interleagueRate(row,field)+'</strong></li>').join('')+'</ul></div>';
 }
 function interleagueMetrics(row){return '<div class="il-metrics">'+[['경기',row.p],['승',row.w],['무',row.d],['패',row.l],['득점',row.gf],['실점',row.ga]].map(([label,n])=>'<div><span>'+label+'</span><b>'+n+'</b></div>').join('')+'</div>';}
 function interleagueTable(rows,first='팀',pick=false){
