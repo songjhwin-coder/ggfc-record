@@ -487,121 +487,6 @@
     background:var(--ggfc-hybrid-gold);
     color:var(--ggfc-hybrid-black);
   }
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash #dashLeagueSummary .league-overview {
-    /* Replace the generic mobile rule that forces league grids to one column. */
-    grid-template-columns:repeat(2,minmax(0,1fr))!important;
-    gap:8px;
-  }
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #dashLeagueSummary .league-zone .league-zone-head {
-    min-height:36px;
-    padding:4px 6px;
-    gap:4px;
-    background:var(--ggfc-hybrid-white)!important;
-    box-shadow:none;
-  }
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #dashLeagueSummary .league-zone-title {
-    color:var(--ggfc-hybrid-black);
-    font-size:clamp(12px,3.65vw,16px);
-    overflow-wrap:anywhere;
-  }
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #dashLeagueSummary .league-zone-head .league-symbol {
-    width:24px;
-    height:24px;
-    flex-basis:24px;
-    font-size:12px;
-  }
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #dashLeagueSummary .league-zone-head .league-symbol:not(.has-logo) {
-    color:var(--ggfc-hybrid-black);
-    background:var(--ggfc-hybrid-light);
-    box-shadow:none;
-  }
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #dashLeagueSummary .league-team-grid {
-    grid-template-columns:minmax(0,1fr);
-    background:var(--ggfc-hybrid-white);
-  }
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #dashLeagueSummary .league-team-card {
-    display:grid;
-    grid-template-columns:25px minmax(0,1fr);
-    align-items:center;
-    justify-items:start;
-    gap:2px 4px;
-    padding:4px;
-  }
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #dashLeagueSummary .league-team-card .league-crest {
-    grid-row:span 3;
-    width:24px;
-    height:24px;
-    margin:0;
-    font-size:9px;
-  }
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #dashLeagueSummary .league-team-name {
-    white-space:normal;
-    text-align:start;
-    overflow-wrap:anywhere;
-  }
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #dashLeagueSummary .league-team-card .league-team-rule {display:none}
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #dashLeagueSummary .league-team-card :is(.league-team-wdl,.league-team-goals) {margin:0;font-size:10px}
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash .record-day-body {
-    padding:8px;
-  }
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash .record-day .ground-match {
-    padding:5px 4px 8px;
-    border-color:var(--ggfc-hybrid-border);
-    border-radius:0;
-    min-height:54px;
-  }
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash .record-day .ground-match-meta {
-    min-height:32px;
-    margin:0 40px;
-    align-content:center;
-  }
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash .record-day .match-video-badge {
-    top:0;
-    right:0;
-    width:44px;
-    height:44px;
-  }
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash .record-day .fixture-score-row {
-    grid-template-columns:minmax(0,1fr) 26px minmax(56px,auto) 26px minmax(0,1fr);
-    grid-template-rows:auto;
-    align-items:start;
-    gap:4px;
-    min-height:0;
-    padding:5px 0 0;
-  }
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash .record-day .fixture-logo-wrap:nth-child(2) {grid-column:2;grid-row:1}
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash .record-day .fixture-logo-wrap:nth-child(4) {grid-column:4;grid-row:1}
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash .record-day :is(.fixture-logo-wrap,.fixture-team-logo,.fixture-logo-fallback) {
-    width:26px;height:26px;
-  }
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash .record-day .fixture-logo-fallback {font-size:10px}
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash .record-day .fixture-score-center {
-    grid-column:3;grid-row:1;padding:0;
-  }
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash .record-day .fixture-team-copy.home {
-    grid-column:1;grid-row:1;text-align:right;
-  }
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash .record-day .fixture-team-copy.away {
-    grid-column:5;grid-row:1;text-align:left;
-  }
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash .record-day .fixture-team-name {
-    min-height:26px;
-    align-content:center;
-    line-height:1.25;
-  }
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash .record-day .fixture-score-value {
-    min-width:0;
-    width:max-content;
-    margin:auto;
-    padding:4px 5px;
-    border-radius:5px;
-    background:var(--ggfc-hybrid-light);
-    font-size:20px;
-    font-variant-numeric:tabular-nums;
-  }
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash .record-day .fixture-score-value span {padding:0}
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash .record-day .fixture-team-scorers {margin-top:4px;font-size:10px}
-
   html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-squad .ts-current-score {font-size:30px}
   html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-squad .ts-team-header .ts-team-bars {
     gap:8px;
@@ -680,7 +565,6 @@
     padding:14px 16px;
     margin-bottom:16px;
     background:var(--dash-paper);
-    border:1px solid var(--dash-edge);
     border-radius:12px;
   }
   html:not([data-theme="dark"]) #mainContent #v-dash > .dashboard-main-head::before {
@@ -698,7 +582,6 @@
   }
   html:not([data-theme="dark"]) #mainContent #v-dash #dashResultHeader {
     background:var(--dash-paper);
-    border:1px solid var(--dash-edge);
     padding:12px 14px;
     border-radius:10px;
   }
@@ -760,9 +643,6 @@
   html:not([data-theme="dark"]) #mainContent #v-dash #dashRecent > .record-export-section {
     margin:0;
     min-width:0;
-    padding:12px;
-    border:1px solid var(--dash-edge);
-    border-radius:12px;
     background:var(--dash-paper);
   }
   html:not([data-theme="dark"]) #mainContent #v-dash :is(.record-period-head,.dashboard-block-title) {
@@ -899,7 +779,7 @@
     html:not([data-theme="dark"],.ggfc-mobile) #mainContent #v-dash .record-standing-table .team-logo-sm {width:26px;height:26px}
   }
 
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash #dashRecent > .record-export-section {padding:8px}
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash #dashRecent > #exportTeamStandingSection {padding-inline:1px}
   html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash .record-summary-grid {gap:7px}
   html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash :is(#dashTeamPointRank,.record-standing-table) .team-chip {
     white-space:normal;
@@ -917,5 +797,206 @@
   }
   html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash #dashTeamPointRank th:nth-child(2) {width:21%}
   html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash #dashTeamPointRank th:nth-child(n+3) {width:auto}
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash .record-day .fixture-score-value {padding:3px 5px}
+}
+
+/* Keep the league summary and matchday list compact on the live Overview. */
+@media screen {
+  #mainContent #v-dash > :is(.card,.dashboard-main-head),
+  #mainContent #v-dash :is(#dashResultHeader,#exportDayDetailsSection,#exportTeamStandingSection,.dashboard-ranking-grid>.ranking-card,.dashboard-ranking-side>.ranking-card) {
+    border:0;
+    box-shadow:none;
+  }
+  #mainContent #v-dash .ranking-card::before {content:none}
+  #mainContent #v-dash #exportDayDetailsSection {
+    --match-crest:36px;
+    --match-line:var(--ggfc-hybrid-border,var(--line));
+    --match-accent:var(--ggfc-hybrid-gold-text,var(--blue));
+    padding:0;
+  }
+  #mainContent #v-dash #exportDayDetailsSection :is(.record-day,.ground-panel,.record-attendance) {
+    border:0;
+    box-shadow:none;
+  }
+  #mainContent #v-dash #exportDayDetailsSection .record-day {border-radius:6px}
+  #mainContent #v-dash #exportDayDetailsSection .record-day-body {padding:6px 0 10px}
+  #mainContent #v-dash #exportDayDetailsSection .ground-title {
+    justify-content:flex-start;
+    height:auto;
+    min-height:30px;
+    font-size:13px;
+    padding:5px 8px;
+    border:0;
+  }
+  #mainContent #v-dash #exportDayDetailsSection .ground-content {padding:0 4px}
+  #mainContent #v-dash #exportDayDetailsSection .comp-group + .comp-group {margin-top:4px}
+  #mainContent #v-dash #exportDayDetailsSection .comp-title {
+    margin:0;
+    padding:5px 4px;
+    background:none;
+    border-radius:0;
+    border-bottom:1px solid var(--match-line);
+    color:var(--ggfc-hybrid-muted,var(--text2));
+    text-align:left;
+    font-size:12px;
+  }
+  #mainContent #v-dash #exportDayDetailsSection .ground-match {
+    margin:0;
+    padding:5px 26px 7px 6px;
+    min-height:0;
+    border:0;
+    border-radius:0;
+  }
+  #mainContent #v-dash #exportDayDetailsSection .ground-match + .ground-match {
+    border-top:1px solid var(--match-line);
+  }
+  #mainContent #v-dash #exportDayDetailsSection .ground-match[role="button"]:hover {
+    background-color:var(--ggfc-hybrid-light,var(--soft));
+    box-shadow:none;
+  }
+  #mainContent #v-dash #exportDayDetailsSection .ground-match:focus-visible {outline-offset:-2px}
+  #mainContent #v-dash #exportDayDetailsSection .ground-match[role="button"]::after {
+    content:"";
+    position:absolute;
+    inset-inline-end:11px;
+    inset-block-end:17px;
+    width:6px;
+    height:6px;
+    border:solid var(--match-accent);
+    border-width:0 2px 2px 0;
+    transform:rotate(-45deg);
+    pointer-events:none;
+  }
+  #mainContent #v-dash #exportDayDetailsSection .ground-match .ground-match-meta {
+    min-height:0;
+    margin:0 0 4px;
+    padding:0 14px 0 0;
+    justify-content:flex-start;
+    align-items:baseline;
+    flex-wrap:wrap;
+    gap:2px 5px;
+    font-size:11px;
+  }
+  #mainContent #v-dash #exportDayDetailsSection .match-video-badge {
+    top:0;
+    right:0;
+    width:40px;
+    height:32px;
+  }
+  #mainContent #v-dash #exportDayDetailsSection .ground-fixture {
+    grid-template-columns:minmax(0,1fr) var(--match-crest) minmax(58px,auto) var(--match-crest) minmax(0,1fr);
+    grid-template-rows:auto;
+    align-items:start;
+    gap:4px;
+    min-height:0;
+    padding:0;
+  }
+  #mainContent #v-dash #exportDayDetailsSection .ground-fixture > * {grid-row:1}
+  #mainContent #v-dash #exportDayDetailsSection .ground-fixture .fixture-team-copy.home {grid-column:1;text-align:right}
+  #mainContent #v-dash #exportDayDetailsSection .ground-fixture .fixture-logo-wrap:nth-child(2) {grid-column:2}
+  #mainContent #v-dash #exportDayDetailsSection .ground-fixture .fixture-score-center {grid-column:3;padding:0;max-width:90px}
+  #mainContent #v-dash #exportDayDetailsSection .ground-fixture .fixture-logo-wrap:nth-child(4) {grid-column:4}
+  #mainContent #v-dash #exportDayDetailsSection .ground-fixture .fixture-team-copy.away {grid-column:5;text-align:left}
+  #mainContent #v-dash #exportDayDetailsSection .ground-fixture :is(.fixture-logo-wrap,.fixture-team-logo,.fixture-logo-fallback) {
+    width:var(--match-crest);
+    height:var(--match-crest);
+  }
+  #mainContent #v-dash #exportDayDetailsSection .ground-fixture .fixture-logo-fallback {font-size:10px}
+  #mainContent #v-dash #exportDayDetailsSection .ground-fixture .fixture-team-name {
+    min-height:var(--match-crest);
+    display:grid;
+    align-content:center;
+    font-size:clamp(12px,3.3vw,14px);
+    line-height:1.2;
+    overflow-wrap:anywhere;
+  }
+  #mainContent #v-dash #exportDayDetailsSection .ground-fixture .fixture-team-scorers {
+    margin-top:3px;
+    font-size:10px;
+    line-height:1.4;
+    overflow-wrap:anywhere;
+  }
+  #mainContent #v-dash #exportDayDetailsSection .ground-fixture .fixture-score-value {
+    display:grid;
+    grid-auto-flow:column;
+    justify-content:center;
+    align-items:center;
+    min-height:var(--match-crest);
+    width:max-content;
+    margin-inline:auto;
+    padding:2px 6px;
+    font-size:18px;
+  }
+  #mainContent #v-dash #exportDayDetailsSection .ground-fixture .fixture-score-value span {padding-inline:3px}
+  #mainContent #v-dash #exportDayDetailsSection .ground-fixture .fixture-mom {
+    flex-direction:row;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:3px;
+    margin-top:3px;
+    font-size:10px;
+  }
+  #mainContent #v-dash #exportDayDetailsSection .ground-fixture .empty-mom .fixture-mom-name {font-size:10px}
+
+  .ggfc-mobile #mainContent #v-dash > .card {padding-inline:2px}
+  .ggfc-mobile #mainContent #v-dash #exportMatchResultSection {padding-block-end:0}
+  .ggfc-mobile #mainContent #v-dash #dashLeagueSummary .league-overview {
+    grid-template-columns:minmax(0,1fr);
+    gap:9px;
+  }
+  .ggfc-mobile #mainContent #v-dash #dashLeagueSummary .league-zone {
+    border:0;
+    box-shadow:none;
+  }
+  .ggfc-mobile #mainContent #v-dash #dashLeagueSummary .league-zone-head {
+    min-height:34px;
+    padding:4px 8px;
+    gap:6px;
+  }
+  .ggfc-mobile #mainContent #v-dash #dashLeagueSummary .league-zone-title {font-size:15px}
+  .ggfc-mobile #mainContent #v-dash #dashLeagueSummary .league-symbol {
+    width:24px;
+    height:24px;
+    flex:0 0 24px;
+    font-size:12px;
+  }
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash #dashLeagueSummary .league-symbol:not(.has-logo) {
+    color:var(--ggfc-hybrid-gold-text);
+    box-shadow:none;
+  }
+  .ggfc-mobile #mainContent #v-dash #dashLeagueSummary .league-team-grid {
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    padding:5px;
+    gap:5px;
+  }
+  .ggfc-mobile #mainContent #v-dash #dashLeagueSummary .league-team-card {
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:6px 3px;
+    border-radius:7px;
+  }
+  .ggfc-mobile #mainContent #v-dash #dashLeagueSummary .league-crest {
+    width:clamp(44px,15vw,68px);
+    margin:0 auto 3px;
+  }
+  .ggfc-mobile #mainContent #v-dash #dashLeagueSummary .league-team-name {
+    flex:1;
+    white-space:normal;
+    overflow-wrap:anywhere;
+    font-size:clamp(12px,3.35vw,14px);
+  }
+  .ggfc-mobile #mainContent #v-dash #dashLeagueSummary .league-team-rule {
+    width:100%;
+    margin:4px 0;
+  }
+  .ggfc-mobile #mainContent #v-dash #dashLeagueSummary :is(.league-team-wdl,.league-team-goals) {
+    margin:0;
+    font-size:11px;
+    line-height:1.35;
+  }
+  .ggfc-mobile #mainContent #v-dash #exportDayDetailsSection {--match-crest:30px}
+  .ggfc-mobile #mainContent #v-dash #exportDayDetailsSection .match-video-badge {
+    width:44px;
+    height:44px;
+  }
 }
