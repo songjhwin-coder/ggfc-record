@@ -408,7 +408,7 @@ const TEMPLATE = [
   { name:"팀스쿼드", head:"날짜,대회,반기,그룹,팀,감독,코치,"+Array.from({length:15},(_,i)=>'선수'+(i+1)).join(','), rows:[['2026-03-01','정규리그','상반기','A','A특공대','박감독','','김철수','최민수','이준호','박도윤','장민석'],['2026-03-01','정규리그','상반기','A','풀파워','정감독','','이영호','한지훈','권태현','오세훈'],['2026-03-01','정규리그','상반기','B','어우씨','강감독','','정우성','배진우','신동혁','고상철'],['2026-03-01','정규리그','상반기','B','D져스','윤감독','','윤성민','임재훈','노경환','서지호','문태일']], desc:"날짜부터 다음 변경 전까지 적용할 팀별 전체 명단입니다. 반기·그룹은 필수이며 경기 분류의 기준입니다. 대회는 정규리그(공통 명단)를 그대로 사용해도 됩니다. 감독·코치도 포함하며, 선수1~15를 지원합니다. 실제 출석은 경기기록의 선수 칸으로 판단합니다." },
   { name:"스페셜기록", head:SCHEMA.specials.head, sample:SCHEMA.specials.sample, desc:SHEET_DESC.specials }
 ];
-const LABEL = Object.assign({ unified:"경기기록", roster:"선수명단", rosterDraft:"선수명단", allTime:"역대기록", leadership:"역대 운영진", squads:"팀스쿼드" }, SHEET_OF);
+const LABEL = Object.assign({ unified:"경기기록", roster:"선수명단", rosterDraft:"선수명단", allTime:"역대기록", leadership:"역대 운영진", championships:"우승기록", squads:"팀스쿼드" }, SHEET_OF);
 
 function isOwnGoalPlayer(name){
   const key=String(name??'').normalize('NFKC').toUpperCase().replace(/[\s._-]/g,'');
@@ -650,6 +650,7 @@ function rowsToObjects(rows){
 }
 function detectKind(name, headers){
   const nm=String(name||""); const h=headers.join(",");
+  if(/우승\s*기록/.test(nm)||(/우승명/.test(h)&&/우승팀/.test(h)&&/감독/.test(h)))return "championships";
   if(/역대\s*운영진/.test(nm)||(/운영년도|운영연도/.test(h)&&/기수/.test(h)&&/이름/.test(h)))return "leadership";
   if(/역대\s*기록/.test(nm)||(/통합\s*경기수/.test(h)&&/통합\s*득점/.test(h)))return "allTime";
   if(/팀\s*별\s*기록지/.test(nm)||(/유효슛/.test(h)&&/키패스/.test(h)&&/수비성공/.test(h)))return null; // Archive-only Excel sheet.
@@ -1060,6 +1061,7 @@ function applyUnified(objs){
 }
 function applyRows(kind, objs){
   if(kind==="leadership")return applyLeadershipRows(objs);
+  if(kind==="championships")return window.GGFCManagers.importChampionships(objs);
   if(kind==="allTime")return applyAllTimeRows(objs);
   if(kind==="squads") return applySquadRows(objs);
   if(kind==="unified") return applyUnified(objs);
@@ -1158,9 +1160,10 @@ async function importXlsx(buf){
     const rawRows=sheetRows(doc,shared,styles,links),objs=rowsToObjects(rawRows);
     const headers=rawRows[Math.max(0,workbookHeaderRowIndex(rawRows))]||[];
     const kind=detectKind(sh.getAttribute('name'),objs.length?Object.keys(objs[0]):headers);
-    if(!objs.length&&!['allTime','leadership'].includes(kind))continue;
+    if(!objs.length&&!['allTime','leadership','championships'].includes(kind))continue;
     if(kind==='allTime')validateAllTimeHeaders(headers);
     if(kind==='leadership')validateLeadershipHeaders(headers);
+    if(kind==='championships')window.GGFCManagers.validateHeaders(headers);
     if(kind)sheets.push({kind,objs});
   }
   return applyWorkbookSheets(sheets);
@@ -4196,10 +4199,6 @@ function fixtureScoreRow(m,variant,showHighlights=true){
     '<div class="fixture-score-center"><div class="fixture-score-value">'+num(m.hs)+' <span>-</span> '+num(m.as)+'</div>'+(showHighlights?fixtureMomHtml(m):'')+'</div>'+
     '<div class="fixture-logo-wrap">'+fixtureLogoHtml(m.away)+'</div>'+teamCopy(m.away,'away',awayResult)+'</div>';
 }
-function matchVideoBadgeHtml(m){
-  const available=matchYoutubeUrls(m).length>0,label=available?'유튜브 경기 영상 보기':'등록된 유튜브 영상 없음';
-  return '<button type="button" class="match-video-badge '+(available?'has-video':'no-video')+'" data-match-video-badge data-export-ignore data-html2canvas-ignore="true" aria-label="'+label+'" title="'+label+'"'+(available?'':' disabled aria-disabled="true"')+'><svg viewBox="0 0 24 18" aria-hidden="true" focusable="false"><rect x="1" y="1" width="22" height="16" rx="4" fill="currentColor"/><path d="m10 5 6 4-6 4z" fill="#fff"/></svg></button>';
-}
 function groundMatchCard(m){
   const meta=[];
   if(m.round) meta.push(esc(m.round));
@@ -4208,7 +4207,6 @@ function groundMatchCard(m){
   if(fouls.home+fouls.away>0) meta.push("파울 "+fouls.home+":"+fouls.away);
   if(forfeitText(m)) meta.push(esc(forfeitText(m)));
   return '<div class="ground-match fixture-match-card match-detail-card"'+matchDetailAttrs(m)+'>'+
-    matchVideoBadgeHtml(m)+
     '<div class="ground-match-meta">'+(meta.length?meta.map(x=>'<span>'+x+'</span>').join('<span>·</span>'):'<span>&nbsp;</span>')+'</div>'+
     fixtureScoreRow(m,'ground-fixture',false)+
     '</div>';
@@ -6690,6 +6688,7 @@ function buildRecordXlsx(){
     { name:UNI.name, head:UNI.head, rows:mrows },
     exportAllTimeSheet(),
     exportLeadershipSheet(),
+    window.GGFCManagers.exportChampionships(),
     { name:"선수명단", head:"연도,팀,등번호,선수,영문이름,포지션,비고,사진(URL),사진(URL) 배경삭제,시즌,시작일자,출석,팀경기수,출석률,득점누계,어시스트누계,개인파울누계,선방누계,MOM누계",
       rows: rs.map(r=>{
         const raw=(DB.roster||[]).find(x=>String(x.player||"").trim()===String(r.player||"").trim() && String(x.year||"").trim()===String(r.year||"").trim()) ||
@@ -6909,6 +6908,7 @@ function renderData(){
     ["앱 공유 카운트", teamPlayerRecordLinks().matched.length, "확인 필요 "+teamPlayerRecordLinks().issues.length+"행"],
     ["팀스쿼드", squadRows().length, '<span class="muted">적용일별 감독·코치·선수 명단</span>'],
     ["역대 운영진", leadershipRows().length, "운영년도·기수별 운영진 · 진행 중 기수 우선 표시"],
+    ["우승기록", window.GGFCManagers.championshipCount(), "감독 기록의 우승 집계 · 엑셀 우승기록 시트"],
     ["역대기록", allTimeRows().length, "2019~2025 보관 자료 · 전체 누적에서 2026년 이후 득점·출전 자동 가산"],
     ["스페셜 기록", DB.specials.length, '<span class="muted">우승·MVP 등</span>']
   ]);
@@ -6994,7 +6994,7 @@ const MEMBER_MENUS=[
  {id:'goalkeeper',label:'골레이로 랭킹'}, {id:'ability',label:'선수 OVR 현황'},
  {id:'chem',label:'베스트 듀오'}, {id:'best5',label:'주간 베스트 5'},
  {id:'maker',label:'팀 메이커'}, {id:'alltime',label:'GG 역대 기록'},
- {id:'leadership',label:'GG 역대 운영진'}, {id:'team',label:'팀 상태',defaultOpen:false}, {id:'home',label:'홈'}
+ {id:'leadership',label:'GG 역대 운영진'}, {id:'manager',label:'감독 기록'}, {id:'team',label:'팀 상태',defaultOpen:false}, {id:'home',label:'홈'}
 ];
 const ADMIN_MENUS=[
  {id:'menus',label:'메뉴 공개 관리'}, {id:'photos',label:'선수 사진 관리'}, {id:'cardsettings',label:'선수 카드 설정'}, {id:'screensettings',label:'화면 설정'}, {id:'soccerbeeroster',label:'사커비 측정 명단'}, {id:'counterreviews',label:'경기기록 공유 참여 현황'}, {id:'abilityguide',label:'능력치 운영 안내'}, {id:'abilityaudit',label:'능력치 변동 분석'},
@@ -7201,7 +7201,7 @@ function renderAbilityAudit(){
 }
 
 function renderMenuContent(next){
-  const renderers={home:()=>window.GGFCHome.render(),thumbnail:()=>window.GGFCThumbnail?.render(),abilityaudit:renderAbilityAudit,photos:renderPlayerPhotoManager,cardsettings:renderCardSettings,screensettings:renderScreenSettings,interleague:renderInterleagueStats,menus:renderMenuManagement,closed:renderMenusClosed,goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide,soccerbeeroster:renderSoccerBeeMeasurementRoster,counterreviews:()=>window.GGFCSharedRecordStatus?.render()};
+  const renderers={home:()=>window.GGFCHome.render(),manager:()=>window.GGFCManagers.render(),thumbnail:()=>window.GGFCThumbnail?.render(),abilityaudit:renderAbilityAudit,photos:renderPlayerPhotoManager,cardsettings:renderCardSettings,screensettings:renderScreenSettings,interleague:renderInterleagueStats,menus:renderMenuManagement,closed:renderMenusClosed,goalkeeper:renderGoalkeeperRanking,leadership:renderLeadership,alltime:renderAllTimeRecords,maker:renderTeamBalance,tactics:renderTeamTactics,best5:renderBest5,insights:renderInsights,dash:renderDash,team:renderTeam,squad:renderTeamSquad,player:renderPlayer,ability:renderAbility,chem:renderChem,data:renderData,rep:renderRepresentativeAdminView,abilitycfg:renderAbilityConfig,abilityguide:renderAbilityGuide,soccerbeeroster:renderSoccerBeeMeasurementRoster,counterreviews:()=>window.GGFCSharedRecordStatus?.render()};
   return withRenderCalculationCache(renderers[next]);
 }
 // Recheck calculation inputs on every render, including edits made in place.

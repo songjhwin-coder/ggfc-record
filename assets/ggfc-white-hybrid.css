@@ -62,27 +62,6 @@
     color:var(--ggfc-hybrid-black);
   }
 
-  /* Desktop light navigation uses the content palette. Mobile uses the shared brand bars. */
-  html:not(.ggfc-mobile,[data-theme="dark"],[data-stadium-theme]) #ggfcTopbar {
-    background:var(--ggfc-hybrid-white);
-    border-color:var(--ggfc-hybrid-border);
-  }
-  html:not(.ggfc-mobile,[data-theme="dark"],[data-stadium-theme]) #ggfcTopbar .topbar-brand,
-  html:not(.ggfc-mobile,[data-theme="dark"]) #ggfcTopbar :is(.topbar-toggle,.top-menu-nav button) {
-    color:var(--ggfc-hybrid-black);
-  }
-  html:not(.ggfc-mobile,[data-theme="dark"]) #ggfcTopbar :is(.topbar-toggle,.top-menu-nav button) {
-    background:var(--ggfc-hybrid-light);
-    border-color:transparent;
-  }
-  html:not(.ggfc-mobile,[data-theme="dark"]) #ggfcTopbar .top-menu-nav button.on {
-    background:var(--ggfc-hybrid-gold);
-    border-color:var(--ggfc-hybrid-gold-text);
-  }
-  html:not(.ggfc-mobile,[data-theme="dark"]) #ggfcTopbar :is(.topbar-toggle,.top-menu-nav button:not(.on)):hover {
-    background:var(--ggfc-hybrid-selected);
-  }
-
   html:not([data-theme="dark"],[data-stadium-theme]) #mainContent :is(.view>.head,#dashResultHeader,.at-hero,.lh-hero) {
     background:var(--ggfc-hybrid-white);
     border-color:var(--ggfc-hybrid-border);
@@ -740,14 +719,6 @@
   html:not([data-theme="dark"]) #mainContent #v-dash .headtohead-cell .l {background:color-mix(in srgb,var(--ggfc-hybrid-down) 35%,var(--dash-paper))}
 
   @media (min-width:1200px) {
-    html:not([data-theme="dark"],.ggfc-mobile) #mainContent #v-dash #dashRecent {
-      grid-template-columns:minmax(0,1fr) minmax(0,1.55fr);
-      align-items:start;
-    }
-    html:not([data-theme="dark"],.ggfc-mobile) #mainContent #v-dash #dashRecent > :not(.record-export-section) {grid-column:1/-1}
-    html:not([data-theme="dark"],.ggfc-mobile) #mainContent #v-dash #dashRecent .ground-grid {
-      grid-template-columns:minmax(0,1fr);
-    }
     html:not([data-theme="dark"],.ggfc-mobile) #mainContent #v-dash .record-standing-table .team-league-standing {min-width:680px}
     html:not([data-theme="dark"],.ggfc-mobile) #mainContent #v-dash .record-standing-table :is(th,td,td.num) {
       padding:9px 5px;
@@ -830,18 +801,19 @@
   #mainContent #v-dash #exportDayDetailsSection .ground-content {padding:0 4px}
   #mainContent #v-dash #exportDayDetailsSection .comp-group + .comp-group {margin-top:4px}
   #mainContent #v-dash #exportDayDetailsSection .comp-title {
-    margin:0;
-    padding:5px 4px;
-    background:none;
-    border-radius:0;
-    border-bottom:1px solid var(--match-line);
-    color:var(--ggfc-hybrid-muted,var(--text2));
-    text-align:left;
+    margin:6px 0 2px;
+    padding:6px 8px;
+    background:var(--ggfc-hybrid-light,var(--soft));
+    border:1px solid var(--match-line);
+    border-radius:8px;
+    color:var(--ggfc-hybrid-black,var(--text));
+    text-align:center;
     font-size:12px;
+    font-weight:850;
   }
   #mainContent #v-dash #exportDayDetailsSection .ground-match {
     margin:0;
-    padding:5px 26px 7px 6px;
+    padding:5px 26px 7px;
     min-height:0;
     border:0;
     border-radius:0;
@@ -869,18 +841,12 @@
   #mainContent #v-dash #exportDayDetailsSection .ground-match .ground-match-meta {
     min-height:0;
     margin:0 0 4px;
-    padding:0 14px 0 0;
+    padding:0;
     justify-content:flex-start;
     align-items:baseline;
     flex-wrap:wrap;
     gap:2px 5px;
     font-size:11px;
-  }
-  #mainContent #v-dash #exportDayDetailsSection .match-video-badge {
-    top:0;
-    right:0;
-    width:40px;
-    height:32px;
   }
   #mainContent #v-dash #exportDayDetailsSection .ground-fixture {
     grid-template-columns:minmax(0,1fr) var(--match-crest) minmax(58px,auto) var(--match-crest) minmax(0,1fr);
@@ -985,10 +951,7 @@
     line-height:1.35;
   }
   .ggfc-mobile #mainContent #v-dash #exportDayDetailsSection {--match-crest:30px}
-  .ggfc-mobile #mainContent #v-dash #exportDayDetailsSection .match-video-badge {
-    width:44px;
-    height:44px;
-  }
+
 }
 
 /* Reuse the home monogram as a decoration on live menu screens. */

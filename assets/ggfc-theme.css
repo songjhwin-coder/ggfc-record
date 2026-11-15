@@ -332,3 +332,22 @@
 .ggfc-mobile #ggfcDetailDialog.detail-match-fullscreen {
   border-bottom:env(safe-area-inset-bottom,0px) solid var(--ggfc-chrome-edge);
 }
+
+@media screen {
+  html:not(.ggfc-mobile) #ggfcTopbar {border-bottom-color:var(--ggfc-mobile-nav-edge,#355274)}
+  html:not(.ggfc-mobile) #ggfcTopbar #memberPreviewToggle {
+    color:#fff7e8;background:#ffffff16;border-color:var(--ggfc-mobile-nav-edge,#355274);
+  }
+  html:not(.ggfc-mobile,[data-stadium-theme]) #ggfcTopbar {
+    background:var(--stadium-stripes-dark);
+  }
+  html:not(.ggfc-mobile,[data-stadium-theme]) #ggfcTopbar :is(.topbar-brand,.topbar-toggle,.top-menu-nav button) {
+    color:#edf3fa;
+  }
+  html:not(.ggfc-mobile,[data-stadium-theme]) #ggfcTopbar :is(.topbar-toggle,.top-menu-nav button:is(.on,:hover)) {
+    background:#ffffff19;
+  }
+  html:not(.ggfc-mobile,[data-stadium-theme]) #ggfcTopbar .top-menu-nav button.on {
+    border-bottom-color:#8dc6ff;
+  }
+}

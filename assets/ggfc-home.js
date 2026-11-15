@@ -7,7 +7,7 @@ window.GGFCHome=(()=>{
     ['chem','선수 분석과 듀오 기록']
   ];
   let root,selectedTeam='',lastRecords,lastDataKey='',competition='',squadDate='';
-  let round=null,matches=[],squads=[];
+  let round=null,squads=[];
   const displayedTeam=()=>selectedTeam||round?.standings[0]?.team||'';
 
   function update(slot,html){
@@ -60,11 +60,12 @@ window.GGFCHome=(()=>{
       return sameCompetition&&(latest.round>0
         ? day.startsWith(year+'-')&&number===latest.round&&matchHalfKey(m)===half
         : day===date);
-    }).map(({m})=>m);
-    const attendance=teamAttendanceCounts(scope);
-    const standings=statsFromMatches(scope).map(t=>({...t,attendance:attendance[t.team]||0,diff:t.gf-t.ga}));
+    });
+    const games=scope.map(({m})=>m);
+    const attendance=teamAttendanceCounts(games);
+    const standings=statsFromMatches(games).map(t=>({...t,attendance:attendance[t.team]||0,diff:t.gf-t.ga}));
     standings.sort((a,b)=>b.pts-a.pts||b.attendance-a.attendance||b.diff-a.diff||compareNamesKo(a.team,b.team));
-    return {date,year,number:latest.round,competition,standings};
+    return {date,year,number:latest.round,competition,standings,matches:scope};
   }
 
   function renderTeam(){
@@ -125,8 +126,7 @@ window.GGFCHome=(()=>{
     if(!ready){update('matches','');return;}
     const team=displayedTeam();
     const canOpen=menuViewAllowed('dash');
-    const recent=team?matches.filter(({m,date})=>(m.home===team||m.away===team)&&!matchCompletionReason(m)&&
-      (!round||date.startsWith(round.year+'-'))).slice(0,3):[];
+    const recent=team?(round?.matches||[]).filter(({m})=>m.home===team||m.away===team):[];
     update('matches',recent.length?'<ul class="home-matches">'+recent.map(({m,date})=>{
       const scoreHome=matchScore(m.hs),scoreAway=matchScore(m.as);
       const detail=canOpen?matchDetailAttrs(m):'';
@@ -138,7 +138,7 @@ window.GGFCHome=(()=>{
         '<strong class="home-score">'+scoreHome+'<span aria-hidden="true"> : </span><span class="home-sr"> 대 </span>'+scoreAway+'</strong>'+
         '<span class="home-match-team away">'+crest(m.away)+'<b>'+esc(teamDisplayName(m.away))+'</b></span>'+
         (detail?'<span class="home-match-arrow" aria-hidden="true">›</span>':'')+'</div></div></li>';
-    }).join('')+'</ul>':'<p class="home-empty">'+(team?'해당 팀의 완료 경기 기록이 없습니다.':'팀을 선택하면 최근 경기 기록을 볼 수 있습니다.')+'</p>');
+    }).join('')+'</ul>':'<p class="home-empty">'+(team?'선택한 팀의 마지막 라운드 경기 기록이 없습니다.':'팀을 선택하면 최근 경기 기록을 볼 수 있습니다.')+'</p>');
   }
 
   function onNavigation(event){
@@ -182,7 +182,7 @@ window.GGFCHome=(()=>{
     if(lastRecords===records&&lastDataKey===key)return;
     lastRecords=records;
     lastDataKey=key;
-    matches=ready?recordBaseMatches().map(m=>({m,date:normDate(m.date),round:recordMatchRoundNumber(m),game:parseInt(m.round,10)||0}))
+    const matches=ready?recordBaseMatches().map(m=>({m,date:normDate(m.date),round:recordMatchRoundNumber(m),game:parseInt(m.round,10)||0}))
       .filter(({date})=>date&&date<=today)
       .sort((a,b)=>b.date.localeCompare(a.date)||b.round-a.round||b.game-a.game):[];
     round=latestRound(matches);
