@@ -663,3 +663,259 @@
     justify-self:center;padding:3px 5px;border-radius:4px;background:var(--ggfc-hybrid-light);color:var(--ggfc-hybrid-gold-text);overflow-wrap:anywhere;
   }
 }
+
+/* Live Overview only. The poster has a separate document and stylesheet. */
+@media screen {
+  html:not([data-theme="dark"]) #mainContent #v-dash {
+    --dash-edge:var(--ggfc-hybrid-border);
+    --dash-paper:var(--ggfc-hybrid-white);
+    --dash-soft:var(--ggfc-hybrid-light);
+    --dash-ink:var(--ggfc-hybrid-black);
+    --dash-muted:var(--ggfc-hybrid-muted);
+    --dash-gold:var(--ggfc-hybrid-gold);
+    --dash-gold-text:var(--ggfc-hybrid-gold-text);
+    --dash-gold-tint:color-mix(in srgb,var(--dash-gold) 18%,var(--dash-paper));
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash > .dashboard-main-head {
+    padding:14px 16px;
+    margin-bottom:16px;
+    background:var(--dash-paper);
+    border:1px solid var(--dash-edge);
+    border-radius:12px;
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash > .dashboard-main-head::before {
+    color:var(--dash-gold-text);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash > .dashboard-main-head::after {
+    background:none;
+    border-color:transparent;
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash :is(.dashboard-main-head h2,#dashResultHeader .dashboard-result-league,#dashLeagueSummaryTitle) {
+    color:var(--dash-ink);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash :is(.dashboard-main-head p,#dashResultHeader .dashboard-result-date) {
+    color:var(--dash-muted);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash #dashResultHeader {
+    background:var(--dash-paper);
+    border:1px solid var(--dash-edge);
+    padding:12px 14px;
+    border-radius:10px;
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash .dashboard-result-round {
+    background:var(--dash-gold);
+    color:var(--dash-ink);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash :is(#dashTopLatest,.dashboard-export-btn,.record-query .btn.primary) {
+    background:var(--dash-gold);
+    border-color:var(--dash-gold);
+    color:var(--dash-ink);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash :is(#dashTopLatest,.dashboard-export-btn,.record-query .btn.primary):hover:not(:disabled) {
+    background:var(--dash-gold-tint);
+    border-color:var(--dash-gold);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash :is(.dashboard-date-controls,.record-query) :is(select,input[type="date"],.btn) {
+    min-height:40px;
+    max-width:100%;
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash :is(.dashboard-date-controls,.record-query) :is(select,input[type="date"]) {
+    min-width:0;
+    background:var(--dash-soft);
+    border-color:var(--dash-edge);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash .record-query {
+    border:1px solid var(--dash-edge);
+    border-radius:10px;
+    background:var(--dash-paper);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash :is(.record-field>label,.record-season-title,.record-period-label,.ranking-basis) {
+    color:var(--dash-muted);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash :is(.record-field,.record-inline-fields,.record-range-fields,.dashboard-period-grid>*) {
+    min-width:0;
+  }
+
+  html:not([data-theme="dark"]) #mainContent #v-dash :is(.record-summary-grid,.record-analysis-note) {margin-bottom:0}
+  html:not([data-theme="dark"]) #mainContent #v-dash .record-summary-item {
+    padding:12px;
+    box-shadow:none;
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash .record-summary-item::before {background:var(--dash-gold);width:3px}
+  html:not([data-theme="dark"]) #mainContent #v-dash .record-summary-item .v {
+    color:var(--dash-gold-text);
+    font-variant-numeric:tabular-nums;
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash .record-summary-item .s {
+    color:var(--dash-muted);
+    overflow:visible;
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash #dashRecent {
+    display:grid;
+    gap:14px;
+    grid-template-columns:minmax(0,1fr);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash #dashRecent > .record-export-section {
+    margin:0;
+    min-width:0;
+    padding:12px;
+    border:1px solid var(--dash-edge);
+    border-radius:12px;
+    background:var(--dash-paper);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash :is(.record-period-head,.dashboard-block-title) {
+    border-bottom:1px solid var(--dash-edge);
+    padding-bottom:9px;
+    margin-bottom:12px;
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash :is(.record-period-head,.dashboard-block-title,.export-section-head) .sec-t {
+    font-size:clamp(16px,2.5vw,20px);
+    line-height:1.45;
+    letter-spacing:-.025em;
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash .record-day {
+    border-radius:10px;
+    box-shadow:none;
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash .record-day > summary {
+    min-height:44px;
+    color:var(--dash-ink);
+    gap:7px;
+    padding:8px;
+    flex-wrap:wrap;
+    cursor:pointer;
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash .record-day[open] > summary .record-day-switch {
+    background:var(--dash-gold-text);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash :is(.league-zone,.league-team-card,.ground-panel,.record-attendance-league) {
+    border-color:var(--dash-edge);
+    border-radius:8px;
+    box-shadow:none;
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash :is(.league-zone-title,.record-day-date,.record-attendance-title) {color:var(--dash-ink)}
+  html:not([data-theme="dark"]) #mainContent #v-dash .league-team-rule {background:var(--dash-edge)}
+  html:not([data-theme="dark"]) #mainContent #v-dash :is(.ground-title,#dashLeagueSummary .league-zone .league-zone-head) {
+    background:var(--dash-soft)!important;
+    color:var(--dash-ink);
+    border-color:var(--dash-edge);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash #dashLeagueSummary .league-zone .league-zone-head {border-bottom:1px solid var(--dash-edge)}
+  html:not([data-theme="dark"]) #mainContent #v-dash .ground-title {padding:6px 9px}
+  html:not([data-theme="dark"]) #mainContent #v-dash .ground-grid {gap:10px}
+  html:not([data-theme="dark"]) #mainContent #v-dash .record-day .ground-match {border-color:var(--dash-edge);min-width:0}
+  html:not([data-theme="dark"]) #mainContent #v-dash .record-day .fixture-score-value {
+    padding:3px 7px;
+    border-radius:6px;
+    background:var(--dash-gold-tint);
+    color:var(--dash-gold-text);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash :is(.fixture-team-name,.fixture-team-scorers,.league-team-name,.rep-award-team) {
+    overflow-wrap:anywhere;
+  }
+
+  html:not([data-theme="dark"]) #mainContent #v-dash :is(.dashboard-ranking-guide,.ranking-card) {
+    border-color:var(--dash-edge);
+    border-radius:12px;
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash .ranking-card::before {
+    background:var(--dash-edge);
+    height:2px;
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash .tablewrap:has(table) {
+    border-color:var(--dash-edge);
+    border-radius:8px;
+    overscroll-behavior-x:contain;
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash table {font-variant-numeric:tabular-nums}
+  html:not([data-theme="dark"]) #mainContent #v-dash thead th {
+    background:var(--dash-soft);
+    border-color:var(--dash-edge);
+    color:var(--dash-ink);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash tbody tr.overview-leader td:not(.league-standing-cell) {
+    background:var(--dash-gold-tint);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash tbody .rank.top:not(:has(.overview-rank-medal)) {
+    background:var(--dash-gold-tint);
+    color:var(--dash-gold-text);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash
+  :is(.team-league-standing,#dashAttendanceRank,#dashScorers,#dashAssists,#dashTeamPointRank,#dashPlayerPointRank) tbody td.num:last-child b,
+  html:not([data-theme="dark"]) #mainContent #v-dash :is(.team-league-standing td.num b,#dashTeamPointRank td:nth-child(5) b,.rep-award-pts) {
+    color:var(--dash-gold-text);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash .rep-point:not(.zero) {
+    background:var(--dash-gold-tint);
+    color:var(--dash-gold-text);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash :is(.rep-point.zero,.rep-status-chip.off,.headtohead-cell.diagonal) {
+    background:var(--dash-soft);
+    color:var(--dash-muted);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash .rep-breakdown summary {
+    padding-block:8px;
+    color:var(--dash-gold-text);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash .rep-segment-head {flex-wrap:wrap}
+  html:not([data-theme="dark"]) #mainContent #v-dash .rep-segment-head > span:last-child {color:var(--dash-muted)}
+  html:not([data-theme="dark"]) #mainContent #v-dash .rep-mode-chip:not(.ind) {background:var(--dash-gold-tint);color:var(--dash-gold-text)}
+  html:not([data-theme="dark"]) #mainContent #v-dash .rep-award-team {white-space:normal}
+  html:not([data-theme="dark"]) #mainContent #v-dash .headtohead-table tbody th {background:var(--dash-paper);color:var(--dash-ink)}
+  html:not([data-theme="dark"]) #mainContent #v-dash .headtohead-cell :is(.w,.d,.l) {
+    padding:2px 4px;
+    border-radius:4px;
+    color:var(--dash-ink);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-dash .headtohead-cell .w {background:color-mix(in srgb,var(--ggfc-hybrid-up) 35%,var(--dash-paper))}
+  html:not([data-theme="dark"]) #mainContent #v-dash .headtohead-cell .d {background:var(--dash-soft)}
+  html:not([data-theme="dark"]) #mainContent #v-dash .headtohead-cell .l {background:color-mix(in srgb,var(--ggfc-hybrid-down) 35%,var(--dash-paper))}
+
+  @media (min-width:1200px) {
+    html:not([data-theme="dark"],.ggfc-mobile) #mainContent #v-dash #dashRecent {
+      grid-template-columns:minmax(0,1fr) minmax(0,1.55fr);
+      align-items:start;
+    }
+    html:not([data-theme="dark"],.ggfc-mobile) #mainContent #v-dash #dashRecent > :not(.record-export-section) {grid-column:1/-1}
+    html:not([data-theme="dark"],.ggfc-mobile) #mainContent #v-dash #dashRecent .ground-grid {
+      grid-template-columns:minmax(0,1fr);
+    }
+    html:not([data-theme="dark"],.ggfc-mobile) #mainContent #v-dash .record-standing-table .team-league-standing {min-width:680px}
+    html:not([data-theme="dark"],.ggfc-mobile) #mainContent #v-dash .record-standing-table :is(th,td,td.num) {
+      padding:9px 5px;
+      font-size:13px;
+    }
+    html:not([data-theme="dark"],.ggfc-mobile) #mainContent #v-dash .record-standing-table :is(thead th:first-child,.league-standing-cell) {
+      width:78px;
+      min-width:78px;
+    }
+    html:not([data-theme="dark"],.ggfc-mobile) #mainContent #v-dash .record-standing-table :is(.league-standing-emblem img,.league-standing-fallback) {
+      width:52px;
+      height:52px;
+    }
+    html:not([data-theme="dark"],.ggfc-mobile) #mainContent #v-dash .record-standing-table .team-chip {font-size:13px;gap:4px}
+    html:not([data-theme="dark"],.ggfc-mobile) #mainContent #v-dash .record-standing-table .team-logo-sm {width:26px;height:26px}
+  }
+
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash #dashRecent > .record-export-section {padding:8px}
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash .record-summary-grid {gap:7px}
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash :is(#dashTeamPointRank,.record-standing-table) .team-chip {
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash #dashTeamPointRank .team-chip {
+    flex-direction:column;
+    gap:3px;
+  }
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash #dashTeamPointRank .team-chip > span:not(.dot) {
+    display:inline;
+    max-width:100%;
+    font-size:12px;
+    text-align:center;
+  }
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash #dashTeamPointRank th:nth-child(2) {width:21%}
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash #dashTeamPointRank th:nth-child(n+3) {width:auto}
+  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash .record-day .fixture-score-value {padding:3px 5px}
+}
