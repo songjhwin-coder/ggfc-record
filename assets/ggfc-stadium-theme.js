@@ -5,13 +5,13 @@ window.GGFCStadiumTheme=(()=>{
   const preview=document.getElementById('stadiumThemePreview'),button=document.getElementById('stadiumThemeSave');
   const status=document.getElementById('stadiumThemeStatus');
   const defaultPreset='ggfc-gold';
-  const chromeColors={stadium:'#061f44',champions:'#060d29',premier:'#26042e','ggfc-gold':'#100e11'};
+  const chromeColors={'k-league':'#061f44',champions:'#060d29',premier:'#26042e','ggfc-gold':'#100e11'};
   const themeColor=document.querySelector('meta[name="theme-color"]');
   let saved=defaultPreset,draft=null,saving=false;
   const normalize=value=>typeof value==='string'&&Object.hasOwn(chromeColors,value)?value:defaultPreset;
   function configure(value){
     saved=normalize(value);
-    if(saved==='stadium')delete root.dataset.stadiumTheme;
+    if(saved==='k-league')delete root.dataset.stadiumTheme;
     else if(root.dataset.stadiumTheme!==saved)root.dataset.stadiumTheme=saved;
     const color=chromeColors[saved];
     if(themeColor.content!==color){

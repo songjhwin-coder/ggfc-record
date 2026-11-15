@@ -64,7 +64,7 @@
   position:fixed;inset:auto 0 0;width:auto;height:var(--ggfc-bottom-nav-h);gap:2px;box-sizing:border-box;
   padding:4px max(6px,env(safe-area-inset-right,0px)) 0 max(6px,env(safe-area-inset-left,0px));
   background:var(--stadium-pattern);border-top:1px solid #355274;box-shadow:0 -4px 15px #06162d38;
-  scrollbar-width:thin;scrollbar-color:#58759b transparent;
+  scrollbar-width:thin;scrollbar-color:var(--ggfc-mobile-nav-edge,#58759b) transparent;
 }
 .ggfc-mobile #ggfcTopbar .top-menu-nav {
   background:var(--stadium-pattern);
@@ -212,7 +212,7 @@
   padding:16px 20px;border-radius:10px;border:1px solid #45639c;
   background:var(--stadium-pattern);color:#f4f8ff;font-size:16px;font-weight:850;
 }
-.stadium-theme-preview[data-style="stadium"] {--stadium-pattern:var(--stadium-stripes)}
+.stadium-theme-preview[data-style="k-league"] {--stadium-pattern:var(--stadium-stripes)}
 
 @media screen {
   :root[data-stadium-theme="champions"],.stadium-theme-preview[data-style="champions"] {
@@ -328,4 +328,7 @@
 
 .ggfc-mobile #ggfcTopbar {
   border-top:env(safe-area-inset-top,0px) solid var(--ggfc-chrome-edge);
+}
+.ggfc-mobile #ggfcDetailDialog.detail-match-fullscreen {
+  border-bottom:env(safe-area-inset-bottom,0px) solid var(--ggfc-chrome-edge);
 }

@@ -885,7 +885,7 @@
   #mainContent #v-dash #exportDayDetailsSection .ground-fixture {
     grid-template-columns:minmax(0,1fr) var(--match-crest) minmax(58px,auto) var(--match-crest) minmax(0,1fr);
     grid-template-rows:auto;
-    align-items:start;
+    align-items:center;
     gap:4px;
     min-height:0;
     padding:0;
@@ -909,12 +909,6 @@
     line-height:1.2;
     overflow-wrap:anywhere;
   }
-  #mainContent #v-dash #exportDayDetailsSection .ground-fixture .fixture-team-scorers {
-    margin-top:3px;
-    font-size:10px;
-    line-height:1.4;
-    overflow-wrap:anywhere;
-  }
   #mainContent #v-dash #exportDayDetailsSection .ground-fixture .fixture-score-value {
     display:grid;
     grid-auto-flow:column;
@@ -927,15 +921,11 @@
     font-size:18px;
   }
   #mainContent #v-dash #exportDayDetailsSection .ground-fixture .fixture-score-value span {padding-inline:3px}
-  #mainContent #v-dash #exportDayDetailsSection .ground-fixture .fixture-mom {
-    flex-direction:row;
-    flex-wrap:wrap;
-    justify-content:center;
-    gap:3px;
-    margin-top:3px;
-    font-size:10px;
+  #ggfcDetailDialog .detail-scorers {
+    display:grid;gap:2px;margin-top:6px;text-align:center;
+    color:var(--ggfc-hybrid-muted,var(--text2));font-size:12px;line-height:1.45;
+    overflow-wrap:anywhere;
   }
-  #mainContent #v-dash #exportDayDetailsSection .ground-fixture .empty-mom .fixture-mom-name {font-size:10px}
 
   .ggfc-mobile #mainContent #v-dash > .card {padding-inline:2px}
   .ggfc-mobile #mainContent #v-dash #exportMatchResultSection {padding-block-end:0}

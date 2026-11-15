@@ -4184,22 +4184,23 @@ function fixtureMomHtml(m){
   return '<div class="fixture-mom'+(names.length?'':' empty-mom')+'"><span class="fixture-mom-label">MOM</span>'+
     (names.length?names.map(name=>'<span class="fixture-mom-name">'+esc(name)+'</span>').join(''):'<span class="fixture-mom-name">미등록</span>')+'</div>';
 }
-function fixtureScoreRow(m,homeSc,awaySc,variant){
+function fixtureScoreRow(m,variant,showHighlights=true){
   const homeResult=matchResult(m,m.home),awayResult=homeResult==='W'?'L':homeResult==='L'?'W':homeResult;
-  return '<div class="fixture-score-row '+(variant||'')+'">'+
-    '<div class="fixture-team-copy home" data-match-result="'+(homeResult||'')+'"><div class="fixture-team-name">'+esc(teamDisplayName(m.home))+'</div><div class="fixture-team-scorers'+(homeSc?'':' none')+'">'+(homeSc||'득점자 없음')+'</div></div>'+
+  const teamCopy=(team,side,result)=>{
+    const scorers=showHighlights?teamScorers(m,team,true):'';
+    return '<div class="fixture-team-copy '+side+'" data-match-result="'+(result||'')+'"><div class="fixture-team-name">'+esc(teamDisplayName(team))+'</div>'+
+      (showHighlights?'<div class="fixture-team-scorers'+(scorers?'':' none')+'">'+(scorers||'득점자 없음')+'</div>':'')+'</div>';
+  };
+  return '<div class="fixture-score-row '+variant+'">'+teamCopy(m.home,'home',homeResult)+
     '<div class="fixture-logo-wrap">'+fixtureLogoHtml(m.home)+'</div>'+
-    '<div class="fixture-score-center"><div class="fixture-score-value">'+num(m.hs)+' <span>-</span> '+num(m.as)+'</div>'+fixtureMomHtml(m)+'</div>'+
-    '<div class="fixture-logo-wrap">'+fixtureLogoHtml(m.away)+'</div>'+
-    '<div class="fixture-team-copy away" data-match-result="'+(awayResult||'')+'"><div class="fixture-team-name">'+esc(teamDisplayName(m.away))+'</div><div class="fixture-team-scorers'+(awaySc?'':' none')+'">'+(awaySc||'득점자 없음')+'</div></div>'+
-  '</div>';
+    '<div class="fixture-score-center"><div class="fixture-score-value">'+num(m.hs)+' <span>-</span> '+num(m.as)+'</div>'+(showHighlights?fixtureMomHtml(m):'')+'</div>'+
+    '<div class="fixture-logo-wrap">'+fixtureLogoHtml(m.away)+'</div>'+teamCopy(m.away,'away',awayResult)+'</div>';
 }
 function matchVideoBadgeHtml(m){
   const available=matchYoutubeUrls(m).length>0,label=available?'유튜브 경기 영상 보기':'등록된 유튜브 영상 없음';
   return '<button type="button" class="match-video-badge '+(available?'has-video':'no-video')+'" data-match-video-badge data-export-ignore data-html2canvas-ignore="true" aria-label="'+label+'" title="'+label+'"'+(available?'':' disabled aria-disabled="true"')+'><svg viewBox="0 0 24 18" aria-hidden="true" focusable="false"><rect x="1" y="1" width="22" height="16" rx="4" fill="currentColor"/><path d="m10 5 6 4-6 4z" fill="#fff"/></svg></button>';
 }
 function groundMatchCard(m){
-  const homeSc=teamScorers(m,m.home,true), awaySc=teamScorers(m,m.away,true);
   const meta=[];
   if(m.round) meta.push(esc(m.round));
   if(m.no) meta.push(esc(m.no));
@@ -4209,7 +4210,7 @@ function groundMatchCard(m){
   return '<div class="ground-match fixture-match-card match-detail-card"'+matchDetailAttrs(m)+'>'+
     matchVideoBadgeHtml(m)+
     '<div class="ground-match-meta">'+(meta.length?meta.map(x=>'<span>'+x+'</span>').join('<span>·</span>'):'<span>&nbsp;</span>')+'</div>'+
-    fixtureScoreRow(m,homeSc,awaySc,'ground-fixture')+
+    fixtureScoreRow(m,'ground-fixture',false)+
     '</div>';
 }
 function groundPanel(code, list){
@@ -5727,10 +5728,10 @@ function renderDash(){
 function matchCard(m){
   const pending=matchCompletionReason(m);
   if(pending)return '<div class="match fixture-match-card"><div class="top"><span>'+esc(m.date)+'</span><span class="pill">'+esc(pending)+'</span></div><div>'+teamChip(m.home)+' <b>'+(matchScore(m.hs)??'—')+' : '+(matchScore(m.as)??'—')+'</b> '+teamChip(m.away)+'</div></div>';
-  const homeSc=teamScorers(m,m.home,true), awaySc=teamScorers(m,m.away,true), fouls=matchTeamFouls(m);
+  const fouls=matchTeamFouls(m);
   return '<div class="match fixture-match-card">'+
     '<div class="top"><span class="pill">'+esc(matchCompetition(m))+'</span>'+(m.round?'<span class="pill">'+esc(m.round)+'</span>':'')+(m.no?'<span class="pill">'+esc(m.no)+' 경기</span>':'')+(matchHalfKey(m)?'<span class="pill">'+halfLabel(matchHalfKey(m))+'</span>':'')+(forfeitText(m)?'<span class="pill l">'+esc(forfeitText(m))+'</span>':'')+'<span>'+esc(m.date||"")+'</span><span class="muted">파울 '+fouls.home+':'+fouls.away+'</span></div>'+
-    fixtureScoreRow(m,homeSc,awaySc,'calendar-fixture')+
+    fixtureScoreRow(m,'calendar-fixture')+
     '</div>';
 }
 function calendarDayLabel(list,date){
@@ -7021,6 +7022,7 @@ function memberMenuOpen(id){
 }
 function menuViewAllowed(v){const id=canonicalMenu(v);return [...MEMBER_MENUS,...ADMIN_MENUS].some(m=>m.id===id)&&(admin||(id==='thumbnail'&&window.GGFCOperator?.active)||memberMenuOpen(id)||(memberPreviewActive&&id===memberPreviewTarget&&MEMBER_MENUS.some(m=>m.id===id)));}
 function menuFallbackView(){
+ if(document.documentElement.classList.contains('ggfc-mobile')&&memberMenuOpen('home'))return 'home';
  const nav=navigationSettings();if(memberMenuOpen(nav.home))return nav.home;
  return orderedMenus(false,nav).find(m=>memberMenuOpen(m.id))?.id||(admin?'dash':'closed');
 }
@@ -7083,7 +7085,7 @@ function renderMenuManagement(){
  const root=document.getElementById('menuManagement');if(!root||!admin)return;
  if(!menuSettingsDirty)menuEditorDraft=null;const d=menuDraft();
  const row=(m,i,isAdmin)=>'<div class="menu-editor-row" data-menu-row="'+m.id+'" data-menu-group="'+(isAdmin?'admin':'member')+'"><button class="menu-drag" type="button" aria-label="'+esc(menuLabel(m.id,d.navigation))+' 순서 이동" title="잡아서 위아래로 이동">⠿</button><div class="menu-editor-name"><label for="menuName-'+m.id+'">'+esc(m.label)+'</label><input id="menuName-'+m.id+'" data-menu-name="'+m.id+'" value="'+esc(menuLabel(m.id,d.navigation))+'" maxlength="32" aria-label="'+esc(m.label)+' 메뉴 이름"></div><div class="menu-move-buttons"><button type="button" data-menu-move="'+m.id+'" data-direction="-1" aria-label="'+esc(m.label)+' 위로">↑</button><button type="button" data-menu-move="'+m.id+'" data-direction="1" aria-label="'+esc(m.label)+' 아래로">↓</button></div>'+(isAdmin?'<span class="menu-locked-badge">관리자 전용</span>':'<button type="button" class="menu-publish-toggle" role="switch" aria-checked="'+d.visibility[m.id]+'" aria-label="'+esc(m.label)+' 열람모드 공개" data-menu-publish="'+m.id+'"><span class="menu-publish-track" aria-hidden="true"><i></i></span><span>'+(d.visibility[m.id]?'공개':'비공개')+'</span></button>')+(isAdmin?'':'<button class="btn sm menu-preview-button" type="button" data-menu-preview="'+m.id+'">열람 미리보기</button>')+'</div>';
- root.innerHTML='<div class="menu-publish-summary"><strong id="menuOpenCount">'+MEMBER_MENUS.filter(m=>d.visibility[m.id]).length+' / '+MEMBER_MENUS.length+' 메뉴 공개</strong><span>손잡이를 드래그하거나 ↑↓로 순서를 이동하세요. 이름·첫 화면·공개 여부를 편집한 뒤 설정 저장을 누르세요.</span></div><label class="menu-home-label" for="menuHomeSelect">접속 시 첫 화면<select id="menuHomeSelect"></select><small>메뉴 주소 없이 접속할 때 적용됩니다. 지정한 메뉴가 비공개이면 공개된 메뉴 중 첫 번째 메뉴를 엽니다.</small></label><div class="menu-editor-list" data-menu-list="member">'+orderedMenus(false,d.navigation).map((m,i)=>row(m,i,false)).join('')+'</div><details class="menu-publish-locked"><summary>관리자 전용 메뉴 · 이름과 순서 변경</summary><p>이 메뉴는 공개되지 않습니다. 관리자 메뉴 안에서 순서를 변경할 수 있습니다.</p><div class="menu-editor-list" data-menu-list="admin">'+orderedMenus(true,d.navigation).map((m,i)=>row(m,i,true)).join('')+'</div></details><div class="menu-editor-actions"><span id="menuEditorStatus" role="status">'+(menuSettingsDirty?'저장 전 변경':'현재 저장된 설정')+'</span><div><button type="button" class="btn" id="menuEditorReload">저장값 다시 불러오기</button><button type="button" class="btn primary" id="menuEditorSave">설정 저장</button></div></div><p class="note" id="menuMoveAnnouncement" aria-live="polite"></p>';
+ root.innerHTML='<div class="menu-publish-summary"><strong id="menuOpenCount">'+MEMBER_MENUS.filter(m=>d.visibility[m.id]).length+' / '+MEMBER_MENUS.length+' 메뉴 공개</strong><span>손잡이를 드래그하거나 ↑↓로 순서를 이동하세요. 이름·첫 화면·공개 여부를 편집한 뒤 설정 저장을 누르세요.</span></div><label class="menu-home-label" for="menuHomeSelect">접속 시 첫 화면<select id="menuHomeSelect"></select><small>모바일은 공개된 홈을 먼저 엽니다. PC와 홈이 비공개인 모바일은 이 설정을 사용합니다.</small></label><div class="menu-editor-list" data-menu-list="member">'+orderedMenus(false,d.navigation).map((m,i)=>row(m,i,false)).join('')+'</div><details class="menu-publish-locked"><summary>관리자 전용 메뉴 · 이름과 순서 변경</summary><p>이 메뉴는 공개되지 않습니다. 관리자 메뉴 안에서 순서를 변경할 수 있습니다.</p><div class="menu-editor-list" data-menu-list="admin">'+orderedMenus(true,d.navigation).map((m,i)=>row(m,i,true)).join('')+'</div></details><div class="menu-editor-actions"><span id="menuEditorStatus" role="status">'+(menuSettingsDirty?'저장 전 변경':'현재 저장된 설정')+'</span><div><button type="button" class="btn" id="menuEditorReload">저장값 다시 불러오기</button><button type="button" class="btn primary" id="menuEditorSave">설정 저장</button></div></div><p class="note" id="menuMoveAnnouncement" aria-live="polite"></p>';
  const swipe=d.mobileSwipe;
  root.insertAdjacentHTML('afterbegin','<fieldset class="ggfc-ui-settings"><legend>모바일 메뉴 스와이프</legend><label><input id="menuSwipeEnabled" type="checkbox" '+(swipe.enabled?'checked':'')+'> 좌우 스와이프로 메뉴 이동</label><label>민감도<select id="menuSwipeSensitivity"><option value="low">낮음 · 길게 밀기</option><option value="normal">보통 · 기존 기준</option><option value="high">높음 · 짧게 밀기</option></select></label><p class="note">모든 회원에게 적용됩니다. 표 가로 스크롤, 버튼, 입력칸, 그래프 및 세로 스크롤은 우선 보호합니다. 아래 설정 저장 버튼으로 적용하세요.</p></fieldset>');
  document.getElementById('menuSwipeSensitivity').value=swipe.sensitivity;
@@ -8576,8 +8578,9 @@ function initRecordTableScrolling(){
 
 /* ---------- boot ---------- */
 // setAdmin already renders the loaded database once.
-load();setAdmin(false);
-if(location.hash)goTab(location.hash.slice(1),{startup:true});
+load();
+activeView=resolveMenuView(menuInitialRoute||menuFallbackView());
+setAdmin(false);
 initMemberUI();initMemberPreviewUI();initRecordTableScrolling();GGFC.start();
 
 /* Release 3.25.61: bounded participation growth and evidence-based match FORM. */

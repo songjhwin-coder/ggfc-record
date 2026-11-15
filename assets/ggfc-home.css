@@ -24,8 +24,7 @@
   #v-home h1 {margin:12px 0 3px;font-size:clamp(1.45rem,5.8vw,2rem);line-height:1.25}
   #v-home h2 {margin:0 0 9px;font-size:1.04rem}
   #v-home .home-intro p,#v-home .home-status,#v-home .home-empty {color:var(--home-muted);margin:0;font-size:.85rem}
-  #v-home .home-status,#v-home .home-empty,#v-home .home-team-hint {padding:10px 12px;border-radius:8px;background:var(--home-soft)}
-  #v-home .home-team-hint {margin:0;color:var(--home-muted);font-size:.8rem}
+  #v-home .home-status,#v-home .home-empty {padding:10px 12px;border-radius:8px;background:var(--home-soft)}
   #v-home .home-status[hidden],#v-home [data-home-teams][hidden],#v-home [data-home-slot="shortcuts"]:empty {display:none}
   #v-home .home-team-picker {
     display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;
@@ -53,6 +52,13 @@
     display:grid;gap:1px;justify-items:end;padding-inline-start:10px;border-inline-start:1px solid var(--home-border);
   }
   #v-home .home-team-score strong {color:var(--home-accent);font-size:1.42rem;line-height:1.1;font-variant-numeric:tabular-nums}
+  #v-home .home-team-metrics {
+    grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+    margin:0;padding:8px 0;background:var(--home-soft);border-radius:7px;text-align:center;
+  }
+  #v-home .home-team-metrics div+div {border-inline-start:1px solid var(--home-border)}
+  #v-home .home-team-metrics dt {color:var(--home-muted);font-size:.74rem}
+  #v-home .home-team-metrics dd {margin:0;color:var(--home-accent);font-weight:850;font-variant-numeric:tabular-nums}
   #v-home .home-basis {grid-column:1/-1;margin:0}
   #v-home .home-team-link {grid-column:1/-1;justify-self:start;padding:6px 0;color:var(--home-accent);font-size:.84rem;font-weight:750}
   #v-home .home-shortcuts {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
