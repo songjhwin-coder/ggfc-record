@@ -1682,12 +1682,15 @@ function teamDisplayName(name){
   return String(DB.settings.teamNames[key]||key).trim() || key;
 }
 function headerLogo(key="brand"){ ensureLogoSettings(); return safeLogoSrc(key==="secondary"?DB.settings.headerLogoSecondary:DB.settings.headerLogo); }
-function appBrandLogo(){
+function appInterfaceLogo(){
   return document.querySelector('link[rel="apple-touch-icon"]').getAttribute('href');
+}
+function appBrandLogo(){
+  return document.querySelector('link[rel="apple-touch-icon"]').dataset.cardBrandSrc||appInterfaceLogo();
 }
 function renderHeaderLogo(){
   const box=$("#topBrandLogo"); if(!box) return;
-  const src=headerLogo()||appBrandLogo();
+  const src=headerLogo()||appInterfaceLogo();
   box.innerHTML='<img src="'+src+'" alt="GGFC 로고">';
   const second=headerLogo('secondary');
   for(const id of ['topSecondaryLogo']){

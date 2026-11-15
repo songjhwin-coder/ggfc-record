@@ -1,5 +1,6 @@
 /* Blue-black stadium stripes are shared by the main navy surfaces. */
 :root {
+  --ggfc-monogram:url("ggfc-gold-mark-lafc.png?v=ece31fc4d16b4826");
   --stadium-pattern:var(--stadium-stripes);
   --stadium-stripes:
     linear-gradient(125deg, transparent 47%, #6e9dd41c 47% 54%, transparent 54% 58%, #6e9dd40e 58% 66%, transparent 66%),
@@ -269,7 +270,7 @@
 
 @media screen {
   :root[data-stadium-theme="ggfc-gold"],.stadium-theme-preview[data-style="ggfc-gold"] {
-    --ggfc-gold-accent:#efc96b;
+    --ggfc-gold-accent:#C39E6D;
     --ggfc-gold-text:#fff7e3;
     --stadium-pattern:
       radial-gradient(ellipse at 84% 0%,#ae772742,transparent 65%),
@@ -279,10 +280,10 @@
   .stadium-theme-preview[data-style="ggfc-gold"] {
     background:
       var(--ggfc-gold-veil,linear-gradient(90deg,#0b0a0edb 14%,#0b0a0ea1 58%,#0b0a0e3b)),
-      url("ggfc-gold-mark.png?v=71bedb763314292d") var(--ggfc-gold-position,right 4% center) / var(--ggfc-gold-size,clamp(120px,24vw,320px)) auto no-repeat,
+      var(--ggfc-monogram) var(--ggfc-gold-position,right 4% center) / var(--ggfc-gold-size,clamp(120px,24vw,320px)) auto no-repeat,
       var(--stadium-pattern);
     color:var(--ggfc-gold-text);
-    border-color:#8e6b37;
+    border-color:#8A6640;
   }
   [data-stadium-theme="ggfc-gold"] .ggfc-sidebar {
     --ggfc-gold-size:250px;
@@ -303,8 +304,8 @@
   }
   [data-stadium-theme="ggfc-gold"].ggfc-mobile #ggfcTopbar .top-menu-nav {background:var(--stadium-pattern);border-top-color:#8e6b37}
   [data-stadium-theme="ggfc-gold"] #ggfcTopbar .topbar-toggle,
-  [data-stadium-theme="ggfc-gold"] #ggfcTopbar .top-menu-nav button:is(.on,:hover) {background:#efc96b25}
+  [data-stadium-theme="ggfc-gold"] #ggfcTopbar .top-menu-nav button:is(.on,:hover) {background:#C39E6D25}
   [data-stadium-theme="ggfc-gold"] #ggfcTopbar .top-menu-nav button.on {border-color:var(--ggfc-gold-accent)}
   [data-stadium-theme="ggfc-gold"] #dashResultHeader .dashboard-result-round {background:var(--ggfc-gold-accent);color:#241708}
-  [data-stadium-theme="ggfc-gold"] :is(#dashResultHeader .dashboard-result-date,.lh-hero span,.head p) {color:#f3dba6}
+  [data-stadium-theme="ggfc-gold"] :is(#dashResultHeader .dashboard-result-date,.lh-hero span,.head p) {color:#D8B07F}
 }

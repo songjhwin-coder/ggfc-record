@@ -24,9 +24,9 @@ p=root/'assets/ggfc-sync.js';s=p.read_text();p.write_text(re.sub(r"window.GGFC_V
 p=root/'assets/ggfc-app.js';s=p.read_text();p.write_text(re.sub(r'(assets/ggfc-export\.css)\?v=([\w.-]+)',update_ref,s))
 # Update the theme's relative raster URL while retaining the hashed PWA entry.
 p=root/'assets/ggfc-theme.css';s=p.read_text()
-theme_mark='assets/ggfc-gold-mark.png'
+theme_mark='assets/ggfc-gold-mark-lafc.png'
 theme_ref=theme_mark+'?v='+digest(root/theme_mark)[:16]
-p.write_text(re.sub(r'ggfc-gold-mark\.png(?:\?v=[\w.-]+)?',theme_ref.split('/',1)[1],s))
+p.write_text(re.sub(r'ggfc-gold-mark-lafc\.png(?:\?v=[\w.-]+)?',theme_ref.split('/',1)[1],s))
 # Generate the audit worker from the same calculation source, then hash lazy URLs.
 subprocess.run(['node',str(root/'tools/build-ability-audit.cjs')],check=True)
 p=root/'assets/ggfc-app.js';s=p.read_text();p.write_text(re.sub(r'(assets/ggfc-ability-audit[\w.-]*\.(?:js|css))\?v=([\w.-]+)',update_ref,s))
@@ -42,9 +42,13 @@ for name in reference_files:
 urls={}
 for name in (*reference_files,'assets/ggfc-app.js'):
  for m in re.finditer(versioned_ref,(root/name).read_text()):urls[m[1]]=m[0]
+# The unmodified large icons and watermark are source assets kept for rollback.
+# The original 192px icon remains referenced by the player card.
+brand_sources={'assets/ggfc-gold-mark.png','icons/ggfc-crest-512.png','icons/ggfc-crest-maskable-512.png'}
 for folder in ['assets','icons']:
  for p in sorted((root/folder).rglob('*')):
-  if p.suffix in ['.js','.css','.svg','.woff','.png']:urls.setdefault(p.relative_to(root).as_posix(),p.relative_to(root).as_posix())
+  name=p.relative_to(root).as_posix()
+  if p.suffix in ['.js','.css','.svg','.woff','.png'] and name not in brand_sources:urls.setdefault(name,name)
 urls[theme_mark]=theme_ref
 for name in ['index.html','mobile.html','install.html','offline.html','manifest.webmanifest','app-version.json']:urls[name]=name
 lazy_names={'assets/ggfc-ability-audit.js','assets/ggfc-ability-audit.css','assets/ggfc-ability-audit-worker.js'}

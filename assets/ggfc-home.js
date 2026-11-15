@@ -134,7 +134,7 @@ window.GGFCHome=(()=>{
   function render(){
     if(!root){
       root=document.getElementById('v-home');
-      root.querySelector('[data-home-brand] img').src=appBrandLogo();
+      root.querySelector('[data-home-brand] img').src=appInterfaceLogo();
       root.addEventListener('click',onNavigation);
       root.addEventListener('change',event=>{
         if(event.target.id!=='ggfcHomeTeamSelect')return;

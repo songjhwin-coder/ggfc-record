@@ -42,12 +42,12 @@
 @media screen {
   html:not([data-theme="dark"]) {
     --ggfc-hybrid-black:#050505;
-    --ggfc-hybrid-gold:#C8A36C;
+    --ggfc-hybrid-gold:#C39E6D;
     --ggfc-hybrid-muted:#55565A;
     --ggfc-hybrid-white:#FFFFFF;
     --ggfc-hybrid-light:#F2F2F2;
     --ggfc-hybrid-selected:#DEDEDE;
-    --ggfc-hybrid-gold-text:#8B6333;
+    --ggfc-hybrid-gold-text:#8A6640;
     --ggfc-hybrid-border:#E5E5E5;
     --ggfc-hybrid-up:#61BC9B;
     --ggfc-hybrid-compare:#83A9D8;
@@ -76,10 +76,10 @@
     border-color:transparent;
   }
   html:not([data-theme="dark"]) #ggfcTopbar .top-menu-nav button.on {
-    background:var(--ggfc-hybrid-selected);
-    border-color:var(--ggfc-hybrid-muted);
+    background:var(--ggfc-hybrid-gold);
+    border-color:var(--ggfc-hybrid-gold-text);
   }
-  html:not([data-theme="dark"]) #ggfcTopbar :is(.topbar-toggle,.top-menu-nav button):hover {
+  html:not([data-theme="dark"]) #ggfcTopbar :is(.topbar-toggle,.top-menu-nav button:not(.on)):hover {
     background:var(--ggfc-hybrid-selected);
   }
   html:not([data-theme="dark"],[data-stadium-theme]).ggfc-mobile #ggfcTopbar .top-menu-nav {
@@ -189,15 +189,16 @@
     border-color:var(--ggfc-hybrid-gold);
     color:var(--ggfc-hybrid-black);
   }
-  html:not([data-theme="dark"]) #mainContent :is(.il-tabs,.at-filters,.tm-tabs,.tm-page-tabs,.ability-sort-toolbar) button {
+  html:not([data-theme="dark"]) #mainContent :is(.il-tabs,.at-filters,.at-subnav,.tm-tabs,.tm-page-tabs,.tm-style-buttons,.ability-sort-toolbar,.sb-measurement-rounds) button {
     background:var(--ggfc-hybrid-light);
     color:var(--ggfc-hybrid-black);
     border-color:var(--ggfc-hybrid-border);
   }
-  html:not([data-theme="dark"]) #mainContent :is(.il-tabs,.at-filters,.tm-tabs,.tm-page-tabs,.ability-sort-toolbar) button[aria-pressed="true"] {
-    background:var(--ggfc-hybrid-selected);
+  html:not([data-theme="dark"]) #mainContent :is(.il-tabs,.at-filters,.at-subnav,.tm-tabs,.tm-page-tabs,.tm-style-buttons,.ability-sort-toolbar,.sb-measurement-rounds) button:is([aria-pressed="true"],.primary) {
+    background:var(--ggfc-hybrid-gold);
     color:var(--ggfc-hybrid-black);
-    border-color:var(--ggfc-hybrid-muted);
+    border-color:var(--ggfc-hybrid-gold-text);
+    box-shadow:none;
   }
   html:not([data-theme="dark"]) :is(#mainContent,#ggfcTopbar,#ggfcDetailDialog,#duoDialog,.admin-password-dialog,.yt-login-dialog) :is(button,input,select,textarea,summary,a):focus-visible {
     outline-color:var(--ggfc-hybrid-gold-text);
@@ -215,8 +216,7 @@
   html:not([data-theme="dark"]) #mainContent :is(.ability-table tbody td:nth-child(3),.member-ovr) .ability-score:not(.unassessed) {
     color:var(--ggfc-hybrid-gold-text);
   }
-  html:not([data-theme="dark"]) #mainContent :is(.fixture-team-name,.fixture-score-value,.tournament-team-score),
-  html:not([data-theme="dark"]) #ggfcDetailDialog .detail-score>b {
+  html:not([data-theme="dark"]) #mainContent :is(.fixture-team-name,.tournament-team-score) {
     color:var(--ggfc-hybrid-black);
   }
   html:not([data-theme="dark"]) :is(#mainContent,#ggfcDetailDialog) :is(.il-result,.detail-score-team [data-match-result],.ability-form-inline.normal,.ts-form.normal) {
@@ -328,6 +328,140 @@
   }
   html:not([data-theme="dark"]) #mainContent .team-points-chart-dot {stroke:var(--ggfc-hybrid-white)}
   html:not([data-theme="dark"]) #mainContent .team-points-chart-halo {stroke:var(--ggfc-hybrid-border)}
+
+  /* Record screens use the common light palette, including under the GGFC Gold preset. */
+  html:not([data-theme="dark"]):is(:not([data-stadium-theme]),[data-stadium-theme="ggfc-gold"]) #mainContent
+  :is(#v-leadership,#v-alltime,#v-insights,#v-interleague,#v-goalkeeper,#v-best5,#v-team,
+      #v-player,#v-ability,#v-chem,#v-maker,#v-menus,#v-data,#v-screensettings,#v-photos,
+      #v-cardsettings,#v-soccerbeeroster,#v-counterreviews,#v-abilityguide,#v-abilityaudit,#v-abilitycfg,#v-rep,#v-thumbnail)
+  :is(.head,.lh-hero,.at-hero,.insight-page-head) {
+    background:var(--ggfc-hybrid-white);
+    color:var(--ggfc-hybrid-black);
+    border-color:var(--ggfc-hybrid-border);
+    box-shadow:none;
+  }
+  html:not([data-theme="dark"]):is(:not([data-stadium-theme]),[data-stadium-theme="ggfc-gold"]) #mainContent
+  :is(.lh-hero,.at-hero,.insight-page-head) :is(h2,h3,p) {color:var(--ggfc-hybrid-black)}
+  html:not([data-theme="dark"]):is(:not([data-stadium-theme]),[data-stadium-theme="ggfc-gold"]) #mainContent
+  :is(.at-hero>strong,.at-hero span,.lh-hero span,.insight-page-head .eyebrow) {color:var(--ggfc-hybrid-gold-text)}
+  html:not([data-theme="dark"])[data-stadium-theme="ggfc-gold"] #mainContent
+  .view:not(#v-dash,#v-squad)>.head :is(h2,p) {color:var(--ggfc-hybrid-black)}
+  html:not([data-theme="dark"])[data-stadium-theme="ggfc-gold"] #mainContent
+  .view:not(#v-dash,#v-squad)>.head::before {color:var(--ggfc-hybrid-gold-text)}
+  html:not([data-theme="dark"])[data-stadium-theme="ggfc-gold"] #mainContent
+  .view:not(#v-dash,#v-squad)>.head::after {background:none;border-color:transparent}
+
+  html:not([data-theme="dark"]) #mainContent
+  :is(.lh-kpis>div,.lh-term,.lh-person,.v319-story-item,.v319-player-achievement-card,.v319-achievement,
+      .chemistry-map-card,.chem-side-section,.chem-side-profile,.chem-hub-card,.tm-top-controls,.tm-person,
+      .sb-measurement-group,.counter-review-detail,.counter-review-fixture,.ability-table-wrap) {
+    background:var(--ggfc-hybrid-white);
+    color:var(--ggfc-hybrid-black);
+    border-color:var(--ggfc-hybrid-border);
+  }
+  html:not([data-theme="dark"]) #mainContent
+  :is(.lh-term>header,.lh-term.is-current>header,.lh-status,.at-admin-note,.at-audit,.v319-insight-empty,
+      .v319-story-icon,.v319-list-icon,.chemistry-map-tools,.chemistry-map-canvas,.chem-side-partner:hover,
+      .tm-roster-panel summary,.tm-bench,.ggfc-ui-settings,.ability-config-actions,.sb-measurement-attempt,
+      .menu-editor-actions,.counter-review-detail-cell,.ability-config-badge) {
+    background:var(--ggfc-hybrid-light);
+    border-color:var(--ggfc-hybrid-border);
+    color:var(--ggfc-hybrid-black);
+  }
+  html:not([data-theme="dark"]) #mainContent
+  :is(.lh-status,.lh-kpis span,.lh-term-label,.at-table-caption span,.v319-story-text,.best5-control-note,
+      .il-metrics span,.chem-side-person small,.chem-side-base span,.tm-selection-count span,.menu-editor-name label) {
+    color:var(--ggfc-hybrid-muted);
+  }
+  html:not([data-theme="dark"]) #mainContent :is(.lh-term h3,.lh-person h4,.chem-side-name,.chem-side-section h3) {
+    color:var(--ggfc-hybrid-black);
+  }
+  html:not([data-theme="dark"]) #mainContent .chem-side-profile .player-face-name {color:var(--ggfc-hybrid-black)!important}
+  html:not([data-theme="dark"]) #mainContent
+  :is(.lh-kpis strong,.lh-person .lh-role,.at-podium strong,.v319-story-kicker,.best5-score-details summary,
+      .tm-selection-count b,.chem-side-eyebrow,.chem-side-base b,.chem-side-partner>strong,.chem-hub-card>strong) {
+    color:var(--ggfc-hybrid-gold-text);
+  }
+  html:not([data-theme="dark"]) #mainContent .lh-term.is-current {border-color:var(--ggfc-hybrid-gold)}
+  html:not([data-theme="dark"]) #mainContent .lh-president-icon [fill] {fill:var(--ggfc-hybrid-gold)}
+  html:not([data-theme="dark"]) #mainContent .lh-president-icon [stroke] {stroke:var(--ggfc-hybrid-gold-text)}
+  html:not([data-theme="dark"]) #mainContent
+  :is(.lh-term.is-current .lh-status,.chem-side-partner>strong,.chem-hub-card>strong) {
+    background:var(--ggfc-hybrid-gold);
+    color:var(--ggfc-hybrid-black);
+  }
+  html:not([data-theme="dark"]) #mainContent :is(.v319-list-row,.best5-score-details,.chem-side-partner,.chem-side-base,.tm-tabs,.tm-person,.il-outcome-legend li) {
+    border-color:var(--ggfc-hybrid-border);
+  }
+  html:not([data-theme="dark"]) #mainContent :is(.at-table tbody .at-active,.il-metrics div) {
+    background:var(--ggfc-hybrid-light);
+    color:var(--ggfc-hybrid-gold-text);
+  }
+  html:not([data-theme="dark"]) #mainContent :is(.at-table thead .at-active,#appearancePreview[data-mode="light"] span) {
+    background:var(--ggfc-hybrid-gold);
+    color:var(--ggfc-hybrid-black);
+  }
+
+  /* Preserve team, medal, grade and tactical pitch colors. */
+  html:not([data-theme="dark"]) #mainContent :is(#v-maker,#v-menus,#v-screensettings,#v-soccerbeeroster,#v-abilitycfg,#v-cardsettings,#v-rep)
+  input:is([type="checkbox"],[type="radio"]) {accent-color:var(--ggfc-hybrid-gold-text)}
+  html:not([data-theme="dark"]) #mainContent #v-abilityaudit :is(.aa-summary>div,.aa-detail,.aa-form-summary>span,.aa-form-projection,.aa-daily-summary>span) {
+    background:var(--ggfc-hybrid-light);
+    border-color:var(--ggfc-hybrid-border);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-abilityaudit :is(.aa-summary b,.aa-form-explain h4,.aa-kicker) {
+    color:var(--ggfc-hybrid-gold-text);
+  }
+
+  /* Graph colors are display-only. Existing metric-specific series keep their colors. */
+  html:not([data-theme="dark"]) #mainContent #v-chem :is(.chem-map-orbit,.chem-map-orbit-three) {
+    stroke:var(--ggfc-hybrid-border);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-chem
+  :is(.chem-map-center .chem-map-center-ring,.chem-map-center-label-bg,.chem-map-link.is-base-best-link,
+      .chem-map-node.is-base-best .chem-map-node-ring,.chem-base-best-bg) {stroke:var(--ggfc-hybrid-gold)}
+  html:not([data-theme="dark"]) #mainContent #v-chem
+  :is(.chem-map-link:not(.is-base-best-link),.chem-map-best-link.chem-rank-2,.chem-map-best-node.chem-level-3 .chem-map-best-node-ring) {
+    stroke:var(--ggfc-hybrid-compare);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-chem
+  :is(.chem-map-center-ring,.chem-map-center-fallback,.chem-map-center-label-bg,.chem-base-best-bg) {
+    fill:var(--ggfc-hybrid-black);
+  }
+  html:not([data-theme="dark"]) #mainContent #v-chem .chem-base-best-label {fill:var(--ggfc-hybrid-gold)}
+  html:not([data-theme="dark"]) #mainContent #v-chem .chem-side-profile::after {border-color:var(--ggfc-hybrid-border)}
+  html:not([data-theme="dark"]) #mainContent #v-chem .chem-side-profile .player-face-chip.large .player-face {
+    box-shadow:0 0 0 3px var(--ggfc-hybrid-gold);
+  }
+
+  /* History and radar are adjacent to the player card and outside the card artwork. */
+  html:not([data-theme="dark"]) #playerCardHexShape {stroke:var(--ggfc-hybrid-gold)}
+  html:not([data-theme="dark"]) #playerCardHexGrad stop:nth-child(1) {stop-color:rgb(216 176 127 / .8)}
+  html:not([data-theme="dark"]) #playerCardHexGrad stop:nth-child(2) {stop-color:rgb(195 158 109 / .38)}
+  html:not([data-theme="dark"]) #playerCardHexGrad stop:last-child {stop-color:rgb(138 102 64 / .1)}
+  html:not([data-theme="dark"]) #playerCardHexGlow feDropShadow {flood-color:var(--ggfc-hybrid-gold)}
+  html:not([data-theme="dark"]) #playerCardHexPanel :is(.ggfc-player-stat-point,.ggfc-player-stat-label,.ggfc-player-stat-value) {color:#D8B07F}
+  html:not([data-theme="dark"]) :is(#playerCardHistoryPlot,#playerCardSoccerBeePlot) svg>g:first-of-type line[stroke="#dbe4ee"] {
+    stroke:var(--ggfc-hybrid-border);
+  }
+  html:not([data-theme="dark"]) #playerCardSoccerBeePlot .player-card-sb-line {stroke:var(--ggfc-hybrid-gold)}
+  html:not([data-theme="dark"]) #playerCardSoccerBeePlot circle {fill:var(--ggfc-hybrid-gold)}
+  html:not([data-theme="dark"]) #playerCardMask .pc-series-delta.up {color:var(--ggfc-hybrid-black);background:var(--ggfc-hybrid-up)}
+  html:not([data-theme="dark"]) #playerCardMask .pc-series-delta.down {color:var(--ggfc-hybrid-black);background:var(--ggfc-hybrid-down)}
+
+
+  html:not([data-theme="dark"]) #playerCardMask .season-growth-track .positive {background:var(--ggfc-hybrid-up)}
+  html:not([data-theme="dark"]) #playerCardMask .season-growth-track .negative {background:var(--ggfc-hybrid-down)}
+  html:not([data-theme="dark"]) #playerCardOvrPanel .ovr-grid {stroke:var(--ggfc-hybrid-border);stroke-opacity:.35}
+  html:not([data-theme="dark"]) #playerCardOvrPanel .ovr-line {stroke:var(--ggfc-hybrid-gold)}
+  html:not([data-theme="dark"]) #playerCardOvrPanel .ovr-dot {fill:var(--ggfc-hybrid-gold)}
+  html:not([data-theme="dark"]) :is(#mainContent .fixture-score-value,#ggfcDetailDialog .detail-score>b) {
+    color:var(--ggfc-hybrid-gold-text);
+  }
+  html:not([data-theme="dark"]) #ggfcDetailDialog :is(.match-detail-summary,.match-record-scroll,.match-player-records,.match-count-cell button) {
+    background:var(--ggfc-hybrid-light);
+    border-color:var(--ggfc-hybrid-border);
+  }
 }
 
 .ts-mobile-roster {display:none}
@@ -337,11 +471,6 @@
     background:var(--ggfc-hybrid-gold);
     color:var(--ggfc-hybrid-black);
     border-top-color:var(--ggfc-hybrid-gold-text);
-  }
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent :is(.il-tabs,.at-filters,.tm-tabs,.tm-page-tabs,.ability-sort-toolbar) button[aria-pressed="true"] {
-    background:var(--ggfc-hybrid-gold);
-    color:var(--ggfc-hybrid-black);
-    border-color:var(--ggfc-hybrid-gold-text);
   }
   html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash #dashResultHeader {
     background:var(--ggfc-hybrid-white);

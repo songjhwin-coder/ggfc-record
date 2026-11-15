@@ -12,19 +12,19 @@
   "orientation": "any",
   "icons": [
     {
-      "src": "icons/ggfc-crest-192.png?v=c93cebcc7d6663ef",
+      "src": "icons/ggfc-crest-lafc-192.png?v=241e06e1f96164aa",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icons/ggfc-crest-512.png?v=d7e5143e0dc2d82c",
+      "src": "icons/ggfc-crest-lafc-512.png?v=14c9a3ae631e2279",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icons/ggfc-crest-maskable-512.png?v=fbf7677a5b33662e",
+      "src": "icons/ggfc-crest-lafc-maskable-512.png?v=4a47f9624f294c41",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

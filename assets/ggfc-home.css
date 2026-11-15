@@ -16,7 +16,7 @@
   }
   #v-home .home-intro::after {
     content:"";position:absolute;z-index:-1;inset:0 0 0 auto;width:min(42%,240px);
-    background:url("ggfc-gold-mark.png?v=71bedb763314292d") right -22px center / contain no-repeat;
+    background:var(--ggfc-monogram) right -22px center / contain no-repeat;
     opacity:.15;pointer-events:none;
   }
   #v-home .home-brand {display:flex;align-items:center;gap:8px;font-size:.82rem;font-weight:850}
@@ -96,7 +96,7 @@
   #v-home .home-match-team.away {justify-content:flex-start;text-align:left}
   #v-home .home-match-team b {font-size:.8rem;overflow-wrap:anywhere}
   #v-home .home-score {
-    min-width:48px;padding:2px 5px;border-radius:5px;background:var(--home-soft);
+    color:var(--home-accent);min-width:48px;padding:2px 5px;border-radius:5px;background:var(--home-soft);
     font-size:1.02rem;font-variant-numeric:tabular-nums;text-align:center;white-space:nowrap;
   }
   #v-home .home-match-arrow {position:absolute;inset-inline-end:0;color:var(--home-accent);font-size:1.15rem}
