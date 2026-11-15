@@ -5672,7 +5672,9 @@ function recordAttendanceBlock(list){
   ["A","B"].forEach(code=>grouped[code].sort((a,b)=>leagueTeamDisplayOrder(a[0])-leagueTeamDisplayOrder(b[0]) || a[0].localeCompare(b[0])));
   const col=code=>'<div class="record-attendance-league"><div class="record-attendance-league-title">'+leagueGroupLabel(code)+'</div>'+
     (grouped[code].length?grouped[code].map(([team,players])=>
-      '<div class="record-attendance-item">'+teamChip(team)+' <span class="muted">('+players.length+'명 출석)</span><br><span class="squad-names">'+squadAttendanceHtml(list,team)+'</span></div>'
+      '<div class="record-attendance-item">'+teamChip(team)+' <span class="muted">('+players.length+'명 출석)</span>'+
+      '<button type="button" class="record-attendance-toggle" aria-expanded="false" aria-label="'+esc(teamDisplayName(team)+' 출석 명단')+'" data-export-ignore></button>'+
+      '<br><span class="squad-names">'+squadAttendanceHtml(list,team)+'</span></div>'
     ).join(""):'<div class="record-attendance-item muted">출석 기록 없음</div>')+'</div>';
   return '<div class="record-attendance"><div class="record-attendance-title export-section-head"><span>출석 명단 <small>굵은 이름: 실제 출석</small></span></div><div class="record-attendance-grid">'+col("A")+col("B")+'</div></div>';
 }
@@ -7794,6 +7796,10 @@ $("#seasonReset").onclick=()=>{
 $("#dashTopDate").onchange=e=>setDashboardDate(e.target.value);
 $("#dashTopDateSel").onchange=e=>setDashboardDate(e.target.value);
 $("#dashTopLatest").onclick=()=>{ dashDate=dashboardMatchDates()[0]||""; setDashboardDate(dashDate); };
+$("#dashRecent").addEventListener('click',event=>{
+  const toggle=event.target.closest('.record-attendance-toggle');
+  if(toggle)toggle.setAttribute('aria-expanded',String(toggle.getAttribute('aria-expanded')!=='true'));
+});
 $("#recordMode").onchange=e=>{ recordMode=e.target.value; recordSegment="ALL"; refreshRecordLinkedViews(); };
 $("#recordYear").onchange=e=>{
   recordYear=e.target.value;

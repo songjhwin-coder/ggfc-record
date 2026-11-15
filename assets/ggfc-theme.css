@@ -2,6 +2,10 @@
 :root {
   --ggfc-monogram:url("ggfc-gold-mark-lafc.png?v=ece31fc4d16b4826");
   --stadium-pattern:var(--stadium-stripes);
+  --stadium-stripes-dark:
+    linear-gradient(125deg, transparent 47%, #6e9dd419 47% 54%, transparent 54% 58%, #6e9dd40b 58% 66%, transparent 66%),
+    repeating-linear-gradient(125deg, transparent 0 40px, #8db5e309 40px 41px, transparent 41px 81px),
+    linear-gradient(115deg, #101c2d, #132841 58%, #1b334e);
   --stadium-stripes:
     linear-gradient(125deg, transparent 47%, #6e9dd41c 47% 54%, transparent 54% 58%, #6e9dd40e 58% 66%, transparent 66%),
     repeating-linear-gradient(125deg, transparent 0 40px, #8db5e30a 40px 41px, transparent 41px 81px),
@@ -37,6 +41,7 @@
 .ability-config-field select {width:100%;min-height:39px;padding:8px 10px;font:inherit;font-size:13px;font-weight:800}
 
 .ggfc-mobile {
+  --ggfc-chrome-edge:#100e11;
   --ggfc-topbar-h:calc(54px + env(safe-area-inset-top,0px));
   --ggfc-bottom-nav-h:calc(62px + env(safe-area-inset-bottom,0px));
   scroll-padding-bottom:calc(var(--ggfc-bottom-nav-h) + 10px);
@@ -44,13 +49,27 @@
 .ggfc-mobile body {padding-bottom:var(--ggfc-bottom-nav-h)}
 .ggfc-mobile .ggfc-topbar {
   height:var(--ggfc-topbar-h);grid-template-rows:minmax(0,1fr);
-  padding:env(safe-area-inset-top,0px) max(12px,env(safe-area-inset-right,0px)) 0 max(12px,env(safe-area-inset-left,0px));
+  padding:0 max(12px,env(safe-area-inset-right,0px)) 0 max(12px,env(safe-area-inset-left,0px));
+  background-color:var(--ggfc-chrome-edge);
+  border-color:var(--ggfc-mobile-nav-edge,#355274);
 }
+.ggfc-mobile:not([data-stadium-theme]) #ggfcTopbar {
+  --stadium-pattern:var(--stadium-stripes-dark);
+  background-image:var(--stadium-pattern);
+  border-bottom-color:#355274;
+}
+.ggfc-mobile:not([data-stadium-theme]) #ggfcTopbar :is(.topbar-brand,.topbar-toggle){color:#edf3fa}
+.ggfc-mobile:not([data-stadium-theme]) #ggfcTopbar .topbar-toggle {background:#ffffff19}
 .ggfc-mobile .top-menu-nav {
   position:fixed;inset:auto 0 0;width:auto;height:var(--ggfc-bottom-nav-h);gap:2px;box-sizing:border-box;
-  padding:4px max(6px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(6px,env(safe-area-inset-left,0px));
+  padding:4px max(6px,env(safe-area-inset-right,0px)) 0 max(6px,env(safe-area-inset-left,0px));
   background:var(--stadium-pattern);border-top:1px solid #355274;box-shadow:0 -4px 15px #06162d38;
   scrollbar-width:thin;scrollbar-color:#58759b transparent;
+}
+.ggfc-mobile #ggfcTopbar .top-menu-nav {
+  background:var(--stadium-pattern);
+  border-top-color:var(--ggfc-mobile-nav-edge,#355274);
+  border-bottom:env(safe-area-inset-bottom,0px) solid var(--ggfc-chrome-edge);
 }
 .ggfc-mobile .top-menu-nav:empty {display:none}
 .ggfc-mobile .top-menu-nav button {
@@ -72,10 +91,7 @@
     --pl-purple:#91b8e0;--pl-purple-2:#223953;--pl-purple-3:#112339;--pl-lilac:var(--soft);
     --blue:#8ec1ff;--blue-soft:#203a59;--green:#77d6ad;--green-soft:#153b35;
     --red:#ff98a3;--red-soft:#462836;--shadow:0 3px 12px #0002;
-    --stadium-stripes:
-      linear-gradient(125deg, transparent 47%, #6e9dd419 47% 54%, transparent 54% 58%, #6e9dd40b 58% 66%, transparent 66%),
-      repeating-linear-gradient(125deg, transparent 0 40px, #8db5e309 40px 41px, transparent 41px 81px),
-      linear-gradient(115deg, #101c2d, #132841 58%, #1b334e);
+    --stadium-stripes:var(--stadium-stripes-dark);
   }
   html[data-theme="dark"] body,
   [data-theme="dark"] :is(.swipe-backdrop,.swipe-viewport,section.view.swipe-page,section.view.swipe-loading,.ggfc-detail-dialog) {
@@ -129,8 +145,6 @@
   [data-theme="dark"] :is(.fixture-logo-fallback,.record-tag,.rep-point.zero,.rank,.day.sel) {
     background-color:var(--surface2);color:var(--text);
   }
-  [data-theme="dark"].ggfc-mobile .top-menu-nav button {color:#d0deef;background-color:transparent}
-  [data-theme="dark"].ggfc-mobile .top-menu-nav button:is(.on,:hover) {color:#fff;background-color:#ffffff19}
 }
 @media print {
   .sidebar-theme-toggle {display:none!important}
@@ -202,6 +216,7 @@
 
 @media screen {
   :root[data-stadium-theme="champions"],.stadium-theme-preview[data-style="champions"] {
+    --ggfc-mobile-nav-edge:#5c85bd;
     --champions-base:linear-gradient(110deg,#060d29 12%,#09153c 66%,#13153e);
     --stadium-pattern:radial-gradient(ellipse at 90% 0%,#2859ad45,transparent 70%),var(--champions-base);
   }
@@ -245,6 +260,7 @@
 
 @media screen {
   :root[data-stadium-theme="premier"],.stadium-theme-preview[data-style="premier"] {
+    --ggfc-mobile-nav-edge:#a865b8;
     --premier-accent:#83f5d3;
     --premier-text:#fff7ff;
     --stadium-pattern:
@@ -270,6 +286,7 @@
 
 @media screen {
   :root[data-stadium-theme="ggfc-gold"],.stadium-theme-preview[data-style="ggfc-gold"] {
+    --ggfc-mobile-nav-edge:#8e6b37;
     --ggfc-gold-accent:#C39E6D;
     --ggfc-gold-text:#fff7e3;
     --stadium-pattern:
@@ -302,10 +319,13 @@
   [data-stadium-theme="ggfc-gold"] :is(#ggfcTopbar .topbar-brand,#ggfcTopbar .topbar-toggle,#ggfcTopbar .top-menu-nav button,#dashResultHeader .dashboard-result-league,#dashResultHeader .sec-t) {
     color:var(--ggfc-gold-text);
   }
-  [data-stadium-theme="ggfc-gold"].ggfc-mobile #ggfcTopbar .top-menu-nav {background:var(--stadium-pattern);border-top-color:#8e6b37}
   [data-stadium-theme="ggfc-gold"] #ggfcTopbar .topbar-toggle,
   [data-stadium-theme="ggfc-gold"] #ggfcTopbar .top-menu-nav button:is(.on,:hover) {background:#C39E6D25}
   [data-stadium-theme="ggfc-gold"] #ggfcTopbar .top-menu-nav button.on {border-color:var(--ggfc-gold-accent)}
   [data-stadium-theme="ggfc-gold"] #dashResultHeader .dashboard-result-round {background:var(--ggfc-gold-accent);color:#241708}
   [data-stadium-theme="ggfc-gold"] :is(#dashResultHeader .dashboard-result-date,.lh-hero span,.head p) {color:#D8B07F}
+}
+
+.ggfc-mobile #ggfcTopbar {
+  border-top:env(safe-area-inset-top,0px) solid var(--ggfc-chrome-edge);
 }

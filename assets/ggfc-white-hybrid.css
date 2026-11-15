@@ -62,34 +62,25 @@
     color:var(--ggfc-hybrid-black);
   }
 
-  /* The existing top navigation is fixed to the bottom on phones. */
-  html:not([data-theme="dark"],[data-stadium-theme]) #ggfcTopbar {
+  /* Desktop light navigation uses the content palette. Mobile uses the shared brand bars. */
+  html:not(.ggfc-mobile,[data-theme="dark"],[data-stadium-theme]) #ggfcTopbar {
     background:var(--ggfc-hybrid-white);
     border-color:var(--ggfc-hybrid-border);
   }
-  html:not([data-theme="dark"],[data-stadium-theme]) #ggfcTopbar .topbar-brand,
-  html:not([data-theme="dark"]) #ggfcTopbar :is(.topbar-toggle,.top-menu-nav button) {
+  html:not(.ggfc-mobile,[data-theme="dark"],[data-stadium-theme]) #ggfcTopbar .topbar-brand,
+  html:not(.ggfc-mobile,[data-theme="dark"]) #ggfcTopbar :is(.topbar-toggle,.top-menu-nav button) {
     color:var(--ggfc-hybrid-black);
   }
-  html:not([data-theme="dark"]) #ggfcTopbar :is(.topbar-toggle,.top-menu-nav button) {
+  html:not(.ggfc-mobile,[data-theme="dark"]) #ggfcTopbar :is(.topbar-toggle,.top-menu-nav button) {
     background:var(--ggfc-hybrid-light);
     border-color:transparent;
   }
-  html:not([data-theme="dark"]) #ggfcTopbar .top-menu-nav button.on {
+  html:not(.ggfc-mobile,[data-theme="dark"]) #ggfcTopbar .top-menu-nav button.on {
     background:var(--ggfc-hybrid-gold);
     border-color:var(--ggfc-hybrid-gold-text);
   }
-  html:not([data-theme="dark"]) #ggfcTopbar :is(.topbar-toggle,.top-menu-nav button:not(.on)):hover {
+  html:not(.ggfc-mobile,[data-theme="dark"]) #ggfcTopbar :is(.topbar-toggle,.top-menu-nav button:not(.on)):hover {
     background:var(--ggfc-hybrid-selected);
-  }
-  html:not([data-theme="dark"],[data-stadium-theme]).ggfc-mobile #ggfcTopbar .top-menu-nav {
-    background:var(--ggfc-hybrid-white);
-    border-color:var(--ggfc-hybrid-border);
-    scrollbar-color:var(--ggfc-hybrid-muted) transparent;
-    box-shadow:0 -4px 15px #0505050d;
-  }
-  html:not([data-theme="dark"]).ggfc-mobile #ggfcTopbar .top-menu-nav button.on {
-    border-bottom-color:transparent;
   }
 
   html:not([data-theme="dark"],[data-stadium-theme]) #mainContent :is(.view>.head,#dashResultHeader,.at-hero,.lh-hero) {
@@ -467,11 +458,6 @@
 .ts-mobile-roster {display:none}
 
 @media screen {
-  html.ggfc-mobile:not([data-theme="dark"]) #ggfcTopbar .top-menu-nav button.on {
-    background:var(--ggfc-hybrid-gold);
-    color:var(--ggfc-hybrid-black);
-    border-top-color:var(--ggfc-hybrid-gold-text);
-  }
   html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash #dashResultHeader {
     background:var(--ggfc-hybrid-white);
     border-color:var(--ggfc-hybrid-border);
@@ -779,7 +765,6 @@
     html:not([data-theme="dark"],.ggfc-mobile) #mainContent #v-dash .record-standing-table .team-logo-sm {width:26px;height:26px}
   }
 
-  html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash #dashRecent > #exportTeamStandingSection {padding-inline:1px}
   html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash .record-summary-grid {gap:7px}
   html.ggfc-mobile:not([data-theme="dark"]) #mainContent #v-dash :is(#dashTeamPointRank,.record-standing-table) .team-chip {
     white-space:normal;
@@ -802,16 +787,31 @@
 /* Keep the league summary and matchday list compact on the live Overview. */
 @media screen {
   #mainContent #v-dash > :is(.card,.dashboard-main-head),
-  #mainContent #v-dash :is(#dashResultHeader,#exportDayDetailsSection,#exportTeamStandingSection,.dashboard-ranking-grid>.ranking-card,.dashboard-ranking-side>.ranking-card) {
+  #mainContent #v-dash :is(.dashboard-ranking-grid>.ranking-card,.dashboard-ranking-side>.ranking-card) {
     border:0;
     box-shadow:none;
   }
   #mainContent #v-dash .ranking-card::before {content:none}
+  #mainContent #v-dash :is(#dashResultHeader,#exportDayDetailsSection,#exportTeamStandingSection) {
+    border:1px solid var(--ggfc-hybrid-border,var(--border));
+    border-radius:12px;
+    box-shadow:none;
+  }
+  #mainContent #v-dash #dashResultHeader {
+    position:relative;
+    isolation:isolate;
+    overflow:hidden;
+    background-color:var(--ggfc-hybrid-white,var(--canvas));
+    background-image:none;
+  }
+  #mainContent #v-dash #exportTeamStandingSection {padding:8px}
+  #mainContent #v-dash #exportDayDetailsSection .ground-fixture .fixture-team-name {box-shadow:none}
+  .record-attendance-toggle {display:none}
   #mainContent #v-dash #exportDayDetailsSection {
     --match-crest:36px;
     --match-line:var(--ggfc-hybrid-border,var(--line));
     --match-accent:var(--ggfc-hybrid-gold-text,var(--blue));
-    padding:0;
+    padding:8px;
   }
   #mainContent #v-dash #exportDayDetailsSection :is(.record-day,.ground-panel,.record-attendance) {
     border:0;
@@ -998,5 +998,52 @@
   .ggfc-mobile #mainContent #v-dash #exportDayDetailsSection .match-video-badge {
     width:44px;
     height:44px;
+  }
+}
+
+/* Reuse the home monogram as a decoration on live menu screens. */
+@media screen {
+  html.ggfc-mobile {background-color:var(--ggfc-chrome-edge)}
+  #mainContent .view:not(#v-home,#v-dash,#v-closed,.swipe-page) {position:relative}
+  #mainContent :is(#dashResultHeader,.view:not(#v-home,#v-dash,#v-closed))::after {
+    content:"";position:absolute;inset:0 0 auto auto;pointer-events:none;
+    width:min(42%,240px);height:110px;
+    background:var(--ggfc-monogram) right -18px center / contain no-repeat;
+    opacity:.10;
+  }
+  #mainContent #v-dash #dashResultHeader::after {height:100%;z-index:-1;opacity:.15}
+  .ggfc-mobile #mainContent #v-dash .dashboard-date-controls {
+    max-width:420px;
+    margin-inline:auto;
+    gap:6px;
+  }
+  .ggfc-mobile #mainContent #v-dash .dashboard-date-controls :is(#dashTopDate,#dashTopDateSel,#dashTopLatest) {
+    min-height:36px;
+    padding-block:4px;
+    font-size:13px;
+    line-height:1.4;
+  }
+  .ggfc-mobile #mainContent #v-dash .record-attendance-item:has(>.record-attendance-toggle) {
+    position:relative;
+    min-height:44px;
+    padding:8px 38px 8px 6px;
+  }
+  .ggfc-mobile #mainContent #v-dash .record-attendance-toggle {
+    position:absolute;inset:0 0 auto;
+    display:flex;align-items:center;justify-content:flex-end;
+    width:100%;height:44px;padding:0 14px;
+    background:transparent;border:0;color:var(--ggfc-hybrid-gold-text,var(--blue));
+    cursor:pointer;
+  }
+  .ggfc-mobile #mainContent #v-dash .record-attendance-toggle::after {
+    content:"";width:7px;height:7px;border:solid currentColor;border-width:0 2px 2px 0;
+    transform:translateY(-2px) rotate(45deg);
+  }
+  .ggfc-mobile #mainContent #v-dash .record-attendance-toggle[aria-expanded="true"]::after {
+    transform:translateY(2px) rotate(225deg);
+  }
+  .ggfc-mobile #mainContent #v-dash .record-attendance-toggle[aria-expanded="false"] ~ :is(br,.squad-names) {display:none}
+  .ggfc-mobile #mainContent #v-dash .record-attendance-toggle:focus-visible {
+    outline:2px solid currentColor;outline-offset:-2px;
   }
 }
