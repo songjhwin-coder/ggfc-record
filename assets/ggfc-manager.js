@@ -137,8 +137,9 @@ window.GGFCManagers=(()=>{
         }
         const opponent=sides[1-i].manager;
         if(opponent&&opponent.id!==manager.id){
-          if(!manager.opponents.has(opponent.id))manager.opponents.set(opponent.id,{name:opponent.name,games:0,W:0,D:0,L:0});
+          if(!manager.opponents.has(opponent.id))manager.opponents.set(opponent.id,{name:opponent.name,teams:new Map(),games:0,W:0,D:0,L:0});
           const record=manager.opponents.get(opponent.id);
+          addTeam(record,sides[1-i].team,date);
           record.games++;
           record[result]++;
         }
@@ -169,9 +170,9 @@ window.GGFCManagers=(()=>{
         if(!manager)return;
         const rank=ranking.ranks[i],date=normDate(match.date);
         const best=manager.best;
-        // Prefer a finalized half if the director also has a provisional placement.
-        if(!best||(best.provisional&&!provisional)||
-           (best.provisional===provisional&&(rank<best.rank||(rank===best.rank&&date>best.date)))){
+        const preferredTie=best&&rank===best.rank&&
+          ((best.provisional&&!provisional)||(best.provisional===provisional&&date>best.date));
+        if(!best||rank<best.rank||preferredTie){
           manager.best={rank,date,year,half,points:team.representative,provisional};
         }
       });
@@ -188,12 +189,22 @@ window.GGFCManagers=(()=>{
   }
 
   function rate(n,denominator){return denominator?pct(n,denominator)+'%':'—';}
+  function teamMark(team){
+    const name=teamDisplayName(team),logo=teamLogo(team);
+    return logo?'<img src="'+esc(logo)+'" alt="'+esc(name)+' 로고">':
+      '<span role="img" aria-label="'+esc(name)+'">'+esc(teamInitials(name))+'</span>';
+  }
+
   function opponentsHtml(d){
     const opponents=[...d.opponents.values()].sort((a,b)=>b.games-a.games||compareNamesKo(a.name,b.name));
     return '<section class="manager-opponents"><h3>'+icon('versus')+'상대 감독 전적</h3>'+
-      (opponents.length?'<ul>'+opponents.map(o=>'<li><b>'+esc(o.name)+'</b><span>'+o.games+'경기</span>'+
+      (opponents.length?'<ul>'+opponents.map(o=>{
+        const teams=[...o.teams].sort((a,b)=>b[1].localeCompare(a[1])||compareNamesKo(a[0],b[0]));
+        return '<li><div class="manager-opponent-name"><span class="manager-opponent-logos">'+
+          teams.map(([team])=>teamMark(team)).join('')+'</span><b>'+esc(o.name)+'</b></div><span>'+o.games+'경기</span>'+
         '<span class="manager-wdl">'+o.W+'승 '+o.D+'무 '+o.L+'패</span>'+
-        '<strong aria-label="승률 '+rate(o.W,o.games)+'">'+rate(o.W,o.games)+'</strong></li>').join('')+'</ul>':
+        '<strong aria-label="승률 '+rate(o.W,o.games)+'">'+rate(o.W,o.games)+'</strong></li>';
+      }).join('')+'</ul>':
         '<p>양 팀 감독이 확인된 맞대결 기록이 없습니다.</p>')+'</section>';
   }
 
@@ -205,9 +216,7 @@ window.GGFCManagers=(()=>{
     const archive=allTimeRows().find(row=>key(row.player)===d.id);
     const portrait=atPhoto({player:d.name,photo:roster?.photoCutout||archive?.photoCutout,photoCutout:roster?.photo||archive?.photo});
     const team=firstTeam?teamDisplayName(firstTeam):'';
-    const logo=firstTeam?teamLogo(firstTeam):'';
-    const emblem='<span class="manager-emblem">'+(logo?'<img src="'+esc(logo)+'" alt="'+esc(team)+' 로고">':
-      firstTeam?'<span aria-hidden="true">'+teamInitials(team)+'</span>':'')+'</span>';
+    const emblem='<span class="manager-emblem">'+(firstTeam?teamMark(firstTeam):'')+'</span>';
     const best=d.best;
     const basis=best?[best.year+' '+halfLabel(best.half), '합산 '+best.points+'점',best.provisional?'잠정':''].filter(Boolean).join(' · '):'';
     const metrics=[
@@ -271,7 +280,7 @@ window.GGFCManagers=(()=>{
       (director?cardHtml(director,hasTitles)+recordHtml(director,hasTitles)+
         '<details class="manager-method"><summary>집계 기준</summary><p>경기일 팀 스쿼드의 감독을 기준으로 선택 시즌의 완료 경기를 집계합니다. 승률은 승리 경기 ÷ 담당 경기이며, 승점은 경기별 승점에서 삭감을 뺀 합계입니다. 감독 득점은 해당 팀을 맡았던 경기에서 본인 이름으로 등록된 득점입니다.</p>'+
         '<p>팀 출석률은 출석 기록이 있는 담당 경기에서 스쿼드 구성원의 출석 합계 ÷ 스쿼드 인원 합계입니다. 본인 출석률은 같은 경기에서 감독 본인이 출석한 비율입니다.</p>'+
-        '<p>최고 순위는 경기 결과의 반기별 팀 순위를 따릅니다. 확정된 대표승점과 개별승점을 합산하며, 동점이면 누적 참석수와 누적 승점을 적용합니다. 순위는 팀의 반기 마지막 경기 담당 감독에게 연결합니다. 진행 중이거나 대표승점 미확정 구간이 남으면 잠정 순위로 표시하며, 최고 순위에는 확정 순위를 우선합니다.</p>'+
+        '<p>최고 순위는 조회 범위에서 상반기와 하반기 팀 순위를 비교해 가장 높은 순위를 표시합니다. 반기별로 확정된 대표승점과 개별승점을 합산하며, 동점이면 누적 참석수와 누적 승점을 적용합니다. 순위는 팀의 반기 마지막 경기 담당 감독에게 연결됩니다. 진행 중이거나 대표승점 미확정 구간이 남으면 잠정으로 표시하고, 순위가 같으면 확정된 반기를 우선합니다.</p>'+
         '<p>우승은 엑셀 우승기록 시트의 날짜와 감독 기준입니다.</p></details>':
         '<p class="note">선택한 시즌에 등록된 감독 기록이 없습니다.</p>');
     for(const [id,update] of [['managerSeason',value=>{season=value;}],['managerSelect',value=>{selected=value;}]]){

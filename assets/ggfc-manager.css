@@ -55,7 +55,10 @@
   padding:7px 0;border-top:1px solid #44362b;font-size:12px;color:#dcccb9;
   font-variant-numeric:tabular-nums;
 }
-.manager-opponents li>b {color:#fff7e8;overflow-wrap:anywhere}
+.manager-opponent-name,.manager-opponent-logos {display:flex;flex-wrap:wrap;align-items:center;gap:3px 5px;min-width:0}
+.manager-opponent-name b {color:#fff7e8;overflow-wrap:anywhere}
+.manager-opponent-logos :is(img,span) {width:20px;height:20px;object-fit:contain}
+.manager-opponent-logos span {display:grid;place-items:center;border-radius:4px;background:#382b21;color:#dfbb87;font-size:9px}
 .manager-opponents li>strong {
   padding:2px 5px;background:#3a2c20;border-radius:4px;color:#f0cb90;text-align:center;
 }
