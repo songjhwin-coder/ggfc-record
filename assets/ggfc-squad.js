@@ -168,7 +168,15 @@ function renderTeamSquad(){
  root.innerHTML=model.teams.map((t,teamIndex)=>{
   const logo=teamLogo(t.team), year=query.year, rosterId='teamSquadRoster'+teamIndex;
   const watermark=logo?'<img class="ts-team-watermark" src="'+esc(logo)+'" alt="" aria-hidden="true" loading="lazy" decoding="async" onerror="this.hidden=true">':'';
-  const bars=TEAM_SQUAD_AXES.map(a=>'<div class="ts-axis '+a.id+'"><div class="ts-axis-heading"><b>'+a.code+' · '+a.label+'</b><strong>'+value(t.scores[a.id])+'</strong></div><div class="ts-bar" role="meter" aria-label="'+esc(t.team+' '+a.label)+'" aria-valuemin="0" aria-valuemax="100"'+(Number.isFinite(t.scores[a.id])?' aria-valuenow="'+t.scores[a.id].toFixed(1)+'"':'')+'><i style="width:'+(t.scores[a.id]??0)+'%"></i></div>'+squadStars(t.scores[a.id])+'</div>').join('');
+  const bars=TEAM_SQUAD_AXES.map(a=>{
+   const score=t.scores[a.id], formatted=value(score), label=esc(t.team+' '+a.label);
+   const meter=Number.isFinite(score)
+    ? 'role="meter" aria-label="'+label+'" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+formatted+'"'
+    : 'role="img" aria-label="'+label+' 미평가"';
+   // The previous bar used the same score as a percentage.
+   const progress=score>0?'<circle class="ts-axis-progress" cx="50" cy="50" r="45" pathLength="100" stroke-dasharray="'+score+' 100" stroke-linecap="round" transform="rotate(-90 50 50)"/>':'';
+   return '<div class="ts-axis '+a.id+'"><div class="ts-axis-ring" '+meter+'><svg viewBox="0 0 100 100" fill="none" stroke-width="9" aria-hidden="true" focusable="false"><circle class="ts-axis-track" cx="50" cy="50" r="45"/>'+progress+'</svg><strong class="ts-axis-value" aria-hidden="true">'+formatted+'</strong></div><b class="ts-axis-label">'+a.label+'</b>'+squadStars(score)+'</div>';
+  }).join('');
   const staffPortraits=t.staff.slice(0,2).map(m=>squadStaffPortrait(m,year)).join('');
   const rows='<p class="note">선수카드를 불러오는 중입니다.</p>';
   const leagueHead=teamIndex===0||model.teams[teamIndex-1].league!==t.league?'<header class="ts-league-heading" data-league="'+esc(t.league)+'">'+(t.league?leagueSymbolHtml(t.league):'')+'<div><h2>'+esc(t.league?leagueGroupLabel(t.league):'리그 미지정')+'</h2><span>조회일 기준 · '+model.teams.filter(x=>x.league===t.league).length+'팀</span></div></header>':'';
