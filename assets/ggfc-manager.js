@@ -5,7 +5,23 @@ window.GGFCManagers=(()=>{
   const titleRows=()=>Array.isArray(championships()?.rows)?championships().rows:[];
   const championshipCount=()=>titleRows().length;
   const key=name=>normalizePlayerMatchKey(name);
-  let selected='',cached=null,exporting=false;
+  let selected='',season='ALL',cached=null,exporting=false;
+
+  const iconPaths={
+    win:'<path d="M3 18l6-6 4 4 7-8m-5 0h5v5"/>',
+    trophy:'<path d="M8 3h8v5a4 4 0 0 1-8 0zm0 2H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4m-4 1v6m-4 3h8"/>',
+    rank:'<path d="M3 20v-6h6m0 6V8h6v12m0-9h6v9M3 20h18m-9-18 1.4 1.5L12 5l-1.4-1.5z"/>',
+    team:'<circle cx="8" cy="7" r="3"/><circle cx="17" cy="8" r="2.5"/><path d="M2 21v-3a6 6 0 0 1 12 0v3m2-7a5 5 0 0 1 6 5v2"/>',
+    person:'<circle cx="8" cy="7" r="3"/><path d="M2 21v-3a6 6 0 0 1 10-4m3 4 2 2 5-5"/>',
+    points:'<path d="m12 3 2.7 5.6 6.3.9-4.5 4.4 1 6.2-5.5-2.9-5.5 2.9 1.1-6.2L3 9.5l6.3-.9z"/>',
+    goals:'<circle cx="12" cy="12" r="9"/><path d="m12 8 3.8 2.8-1.4 4.5H9.6l-1.4-4.5zM12 3v5m8.3 1.3-4.5 1.5m-1.4 4.5 2.7 3.9m-7.5-3.9-2.7 3.9m1.3-8.4L3.7 9.3"/>',
+    ownGoals:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 3v2m0 14v2M3 12h2m14 0h2"/>',
+    conceded:'<path d="M12 3 4 6v5c0 5 3 8 8 10 5-2 8-5 8-10V6zm-3 9h6"/>',
+    versus:'<path d="M4 7h15m-4-4 4 4-4 4m5 6H5m4-4-4 4 4 4"/>'
+  };
+  function icon(name){
+    return '<svg class="manager-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dfbb87" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+iconPaths[name]+'</svg>';
+  }
 
   function validateHeaders(headers){
     const normalized=headers.map(value=>String(value).normalize('NFKC').replace(/\s/g,''));
@@ -48,12 +64,27 @@ window.GGFCManagers=(()=>{
 
   function model(){
     const wire=verifiedRecords(),squads=squadRows(),titles=championships(),today=recordToday();
-    if(cached?.wire===wire&&cached.squads===squads&&cached.titles===titles&&cached.today===today)return cached.result;
-    const directors=new Map(),attendance=new Map(),leagueSeasons=new Map(),rosters=new WeakMap();
+    const seasonSettings=JSON.stringify(DB.settings?.seasons||{});
+    if(cached?.wire!==wire||cached.squads!==squads||cached.titles!==titles||cached.seasonSettings!==seasonSettings||cached.today!==today){
+      const years=new Set();
+      for(const rows of [wire.matches,squads,titleRows()]){
+        for(const row of rows){
+          const date=normDate(row.date);
+          if(/^\d{4}-\d{2}-\d{2}$/.test(date)&&date<=today)years.add(date.slice(0,4));
+        }
+      }
+      cached={wire,squads,titles,seasonSettings,today,years:[...years].sort().reverse(),views:new Map(),rankings:new Map()};
+    }
+    if(season!=='ALL'&&!cached.years.includes(season))season='ALL';
+    if(cached.views.has(season))return cached.views.get(season);
+    const inSeason=date=>date&&date<=today&&(season==='ALL'||date.slice(0,4)===season);
+    const fixtures=wire.matches.filter(m=>inSeason(normDate(m.date)));
+    const goalsByPlayer=analysisGoalLookup(fixtures);
+    const directors=new Map(),attendance=new Map(),leagueSeasons=new Set(),rosters=new WeakMap();
     const get=(name)=>{
       const id=key(name);
       if(!directors.has(id))directors.set(id,{id,name,teams:new Map(),opponents:new Map(),titles:[],best:null,
-        games:0,W:0,D:0,L:0,points:0,gf:0,ga:0,teamPresent:0,teamSlots:0,personalPresent:0,attendanceGames:0});
+        games:0,W:0,D:0,L:0,points:0,gf:0,ga:0,goals:0,teamPresent:0,teamSlots:0,personalPresent:0,attendanceGames:0});
       return directors.get(id);
     };
     for(const record of wire.attendance){
@@ -69,29 +100,20 @@ window.GGFCManagers=(()=>{
       if(!row.teams.has(team)||date>row.teams.get(team))row.teams.set(team,date);
     };
     for(const squad of squads){
-      if(!squad.date||squad.date>today)continue;
+      if(!inSeason(squad.date))continue;
       const name=matchDirector(squad);
       if(name)addTeam(get(name),squad.team,squad.date);
     }
-    for(const match of wire.matches){
+    for(const match of fixtures){
       const date=normDate(match.date);
-      if(!date||date>today)continue;
       const id=detailMatchKey(match.id);
       const sides=[match.home,match.away].map(team=>{
         const squad=squadAtMatch(match,team),name=matchDirector(squad);
         return {team,squad,manager:name?get(name):null};
       });
       if(isLeagueFamilyComp(match.comp)){
-        const half=matchHalfKey(match)||normHalf(match.half)||calendarHalfKey(date);
-        if(half){
-          const season=date.slice(0,4)+'-'+half;
-          if(!leagueSeasons.has(season))leagueSeasons.set(season,{matches:[],last:new Map()});
-          const period=leagueSeasons.get(season);
-          period.matches.push(match);
-          sides.forEach(({team,manager})=>{
-            if(!period.last.has(team)||date>=period.last.get(team).date)period.last.set(team,{date,manager});
-          });
-        }
+        const half=matchHalfKey(match);
+        if(half)leagueSeasons.add(date.slice(0,4)+'-'+half);
       }
       sides.forEach(({team,squad,manager},i)=>{
         if(!manager)return;
@@ -102,6 +124,7 @@ window.GGFCManagers=(()=>{
         manager.points+=detailMatchPoints(match,team)-matchPointDeduction(match,team);
         manager.gf+=num(i===0?match.hs:match.as);
         manager.ga+=num(i===0?match.as:match.hs);
+        manager.goals+=goalsByPlayer(id,team,manager.name);
         addTeam(manager,team,date);
         const present=attendance.get(id)?.get(team);
         if(present?.size){
@@ -121,67 +144,104 @@ window.GGFCManagers=(()=>{
         }
       });
     }
-    for(const [season,period] of leagueSeasons){
-      const membership=leagueMembershipForList(period.matches),position={A:0,B:0};
-      for(const team of statsFromMatches(period.matches)){
-        const group=membership[team.team]==='B'?'B':'A';
-        const rank=++position[group];
-        const final=period.last.get(team.team),manager=final?.manager;
-        if(manager&&(!manager.best||rank<manager.best.rank||(rank===manager.best.rank&&final.date>manager.best.date)))
-          manager.best={rank,date:final.date,season:season.slice(0,4),half:season.slice(5),group,team:team.team};
+    for(const period of leagueSeasons){
+      if(!cached.rankings.has(period)){
+        const [year,half]=period.split('-');
+        cached.rankings.set(period,halfTeamRanking({year,half}));
       }
+      const ranking=cached.rankings.get(period);
+      if(!Object.keys(ranking.detail.totals).length)continue;
+      const {year,half,end,list}=ranking.scope;
+      const latest=new Map();
+      for(const match of list){
+        const date=normDate(match.date);
+        for(const team of [match.home,match.away]){
+          if(!latest.has(team)||date>=normDate(latest.get(team).date))latest.set(team,match);
+        }
+      }
+      const provisional=end>today||ranking.detail.segments.some(segment=>segment.enabled&&segment.inQuery&&
+        segment.mode==='REP'&&segment.start<=today&&!segment.complete);
+      ranking.teams.forEach((team,i)=>{
+        const match=latest.get(team.team);
+        if(!match)return;
+        const name=matchDirector(squadAtMatch(match,team.team));
+        const manager=directors.get(key(name));
+        if(!manager)return;
+        const rank=ranking.ranks[i],date=normDate(match.date);
+        const best=manager.best;
+        // Prefer a finalized half if the director also has a provisional placement.
+        if(!best||(best.provisional&&!provisional)||
+           (best.provisional===provisional&&(rank<best.rank||(rank===best.rank&&date>best.date)))){
+          manager.best={rank,date,year,half,points:team.representative,provisional};
+        }
+      });
     }
     for(const title of titleRows()){
-      if(title.date>today)continue;
+      if(!inSeason(title.date))continue;
       const director=get(title.director);
       director.titles.push(title);
       addTeam(director,title.team,title.date);
     }
-    const result={hasTitles:!!titles,rows:[...directors.values()].sort((a,b)=>b.games-a.games||compareNamesKo(a.name,b.name))};
-    cached={wire,squads,titles,today,result};
+    const result={years:cached.years,hasTitles:!!titles,rows:[...directors.values()].sort((a,b)=>b.games-a.games||compareNamesKo(a.name,b.name))};
+    cached.views.set(season,result);
     return result;
   }
 
   function rate(n,denominator){return denominator?pct(n,denominator)+'%':'—';}
+  function opponentsHtml(d){
+    const opponents=[...d.opponents.values()].sort((a,b)=>b.games-a.games||compareNamesKo(a.name,b.name));
+    return '<section class="manager-opponents"><h3>'+icon('versus')+'상대 감독 전적</h3>'+
+      (opponents.length?'<ul>'+opponents.map(o=>'<li><b>'+esc(o.name)+'</b><span>'+o.games+'경기</span>'+
+        '<span class="manager-wdl">'+o.W+'승 '+o.D+'무 '+o.L+'패</span>'+
+        '<strong aria-label="승률 '+rate(o.W,o.games)+'">'+rate(o.W,o.games)+'</strong></li>').join('')+'</ul>':
+        '<p>양 팀 감독이 확인된 맞대결 기록이 없습니다.</p>')+'</section>';
+  }
+
   function cardHtml(d,hasTitles){
     const teams=[...d.teams].sort((a,b)=>b[1].localeCompare(a[1])||compareNamesKo(a[0],b[0]));
     const [firstTeam,date]=teams[0]||[];
-    const year=date?.slice(0,4)||'';
+    const year=season==='ALL'?date?.slice(0,4)||'':season;
     const roster=selectPlayerRoster(d.name,year);
     const archive=allTimeRows().find(row=>key(row.player)===d.id);
     const portrait=atPhoto({player:d.name,photo:roster?.photoCutout||archive?.photoCutout,photoCutout:roster?.photo||archive?.photo});
+    const team=firstTeam?teamDisplayName(firstTeam):'';
+    const logo=firstTeam?teamLogo(firstTeam):'';
+    const emblem='<span class="manager-emblem">'+(logo?'<img src="'+esc(logo)+'" alt="'+esc(team)+' 로고">':
+      firstTeam?'<span aria-hidden="true">'+teamInitials(team)+'</span>':'')+'</span>';
+    const best=d.best;
+    const basis=best?[best.year+' '+halfLabel(best.half), '합산 '+best.points+'점',best.provisional?'잠정':''].filter(Boolean).join(' · '):'';
     const metrics=[
-      ['승률',rate(d.W,d.games),d.games+'경기 · '+d.W+'승 '+d.D+'무 '+d.L+'패'],
-      ['우승',hasTitles?d.titles.length+'회':'—'],
-      ['최고 순위',d.best?d.best.rank+'위':'—',d.best?[d.best.season,halfLabel(d.best.half),leagueGroupLabel(d.best.group)].join(' ') :''],
-      ['팀 출석률',rate(d.teamPresent,d.teamSlots),d.teamSlots?d.teamPresent+' / '+d.teamSlots:''],
-      ['본인 출석률',rate(d.personalPresent,d.attendanceGames),d.attendanceGames?d.personalPresent+' / '+d.attendanceGames+'경기':''],
-      ['승점',d.games?d.points+'점':'—'],
-      ['득점',d.games?d.gf+'골':'—'],
-      ['실점',d.games?d.ga+'골':'—']
+      ['win','승률',rate(d.W,d.games),d.games+'경기 · '+d.W+'승 '+d.D+'무 '+d.L+'패'],
+      ['trophy','우승',hasTitles?d.titles.length+'회':'—'],
+      ['rank','최고 순위',best?best.rank+'위':'—',basis],
+      ['team','팀 출석률',rate(d.teamPresent,d.teamSlots),d.teamSlots?d.teamPresent+' / '+d.teamSlots:''],
+      ['person','본인 출석률',rate(d.personalPresent,d.attendanceGames),d.attendanceGames?d.personalPresent+' / '+d.attendanceGames+'경기':''],
+      ['points','승점',d.games?d.points+'점':'—'],
+      ['goals','팀 득점',d.games?d.gf+'골':'—'],
+      ['ownGoals','감독 득점',d.games?d.goals+'골':'—'],
+      ['conceded','팀 실점',d.games?d.ga+'골':'—']
     ];
     return '<article class="manager-card" id="managerCard"><header class="manager-card-top">'+portrait+
-      '<div><p>GGFC RECORD</p><h2>'+esc(d.name)+'</h2><span>감독 · '+esc(firstTeam?teamDisplayName(firstTeam):'팀 미등록')+'</span></div></header>'+
-      '<ul class="manager-teams" aria-label="담당 팀">'+teams.map(([team])=>'<li>'+teamChip(team)+'</li>').join('')+'</ul>'+
-      '<dl class="manager-metrics">'+metrics.map(([label,value,note])=>'<div><dt>'+label+'</dt><dd><strong>'+value+
-      '</strong>'+(note?'<small>'+esc(note)+'</small>':'')+'</dd></div>').join('')+'</dl></article>';
+      '<div><p>GGFC RECORD</p><h2>'+esc(d.name)+'</h2><span>감독'+(team?' · '+esc(team):'')+'</span>'+
+      '<small class="manager-season-label">'+(season==='ALL'?'전체 시즌':season+' 시즌')+'</small></div>'+emblem+'</header>'+
+      (teams.length>1?'<ul class="manager-teams" aria-label="그 외 담당 팀">'+teams.slice(1).map(([team])=>'<li>'+teamChip(team)+'</li>').join('')+'</ul>':'')+
+      '<dl class="manager-metrics">'+metrics.map(([symbol,label,value,note],i)=>'<div'+(i>=6?' class="manager-score-metric"':'')+'><dt>'+
+      icon(symbol)+label+'</dt><dd><strong>'+value+'</strong>'+(note?'<small>'+esc(note)+'</small>':'')+'</dd></div>').join('')+
+      '</dl>'+opponentsHtml(d)+'</article>';
   }
 
   function recordHtml(d,hasTitles){
-    const opponents=[...d.opponents.values()].sort((a,b)=>b.games-a.games||compareNamesKo(a.name,b.name));
     const wins=d.titles.slice().sort((a,b)=>b.date.localeCompare(a.date));
-    return '<div class="manager-records"><section><h2>상대 감독 전적</h2>'+
-      (opponents.length?'<div class="tablewrap"><table><thead><tr><th scope="col">상대 감독</th><th scope="col">경기</th><th scope="col">승</th><th scope="col">무</th><th scope="col">패</th><th scope="col">승률</th></tr></thead><tbody>'+
-        opponents.map(o=>'<tr><th scope="row">'+esc(o.name)+'</th><td>'+o.games+'</td><td>'+o.W+'</td><td>'+o.D+'</td><td>'+o.L+'</td><td>'+rate(o.W,o.games)+'</td></tr>').join('')+
-        '</tbody></table></div>':'<p class="note">양 팀 감독이 확인된 맞대결 기록이 없습니다.</p>')+'</section><section><h2>우승 이력</h2>'+
+    return '<section class="manager-records"><h2>우승 이력</h2>'+
       (wins.length?'<ul class="manager-titles">'+wins.map(t=>'<li><strong>'+esc(t.name)+'</strong><span>'+esc([t.date,halfLabel(t.half),teamDisplayName(t.team)].join(' · '))+'</span></li>').join('')+'</ul>':
-        '<p class="note">'+(hasTitles?'등록된 우승 이력이 없습니다.':'관리자가 엑셀의 우승기록 시트를 등록하면 표시됩니다.')+'</p>')+'</section></div>';
+        '<p class="note">'+(hasTitles?'등록된 우승 이력이 없습니다.':'관리자가 엑셀의 우승기록 시트를 등록하면 표시됩니다.')+'</p>')+'</section>';
   }
 
   async function saveCard(button,name){
     const card=document.getElementById('managerCard');
     if(exporting||!card)return;
     exporting=true;button.disabled=true;
+    const exportSeason=season;
     const stage=document.createElement('div');stage.className='manager-export-stage';stage.setAttribute('aria-hidden','true');
     try{
       const copy=card.cloneNode(true);copy.removeAttribute('id');
@@ -190,7 +250,7 @@ window.GGFCManagers=(()=>{
       await containDashboardLogoImages(copy);
       const canvas=await renderer(copy,{backgroundColor:'#100e11',scale:2,useCORS:true,logging:false});
       const png=await new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?.size?resolve(blob):reject(new Error('PNG 변환 실패')),'image/png'));
-      downloadBlob('GGFC_감독_'+exportSafeName(name)+'.png',png);
+      downloadBlob('GGFC_감독_'+exportSafeName(name)+(exportSeason==='ALL'?'':'_'+exportSeason)+'.png',png);
       toast(missing?'이미지 저장 완료 · 불러오지 못한 사진은 대체 표시':'감독 카드 이미지 저장 완료');
     }catch(error){toast(error.message||'감독 카드 이미지를 저장하지 못했습니다.');}
     finally{stage.remove();exporting=false;button.disabled=false;}
@@ -198,17 +258,27 @@ window.GGFCManagers=(()=>{
 
   function render(){
     const root=document.getElementById('managerRecords');
-    const {rows,hasTitles}=model();
+    const {rows,years,hasTitles}=model();
     const director=rows.find(row=>row.id===selected)||rows[0];
     selected=director?.id||'';
-    root.innerHTML='<header class="manager-view-head"><h1 id="managerTitle">'+esc(menuLabel('manager'))+'</h1></header>'+
-      (director?'<div class="manager-controls"><label for="managerSelect">감독 선택<select id="managerSelect">'+
+    const options=[['ALL','전체 시즌'],...years.map(year=>[year,year+'년'])];
+    const controls='<div class="manager-controls"><label for="managerSeason">시즌 선택<select id="managerSeason">'+
+      options.map(([id,label])=>'<option value="'+id+'"'+(id===season?' selected':'')+'>'+label+'</option>').join('')+
+      '</select></label>'+(director?'<label for="managerSelect">감독 선택<select id="managerSelect">'+
         rows.map(row=>'<option value="'+esc(row.id)+'"'+(row.id===selected?' selected':'')+'>'+esc(row.name)+'</option>').join('')+
-        '</select></label><button class="btn" type="button" data-manager-save>카드 PNG 저장</button></div>'+cardHtml(director,hasTitles)+recordHtml(director,hasTitles)+
-        '<details class="manager-method"><summary>집계 기준</summary><p>경기일 팀 스쿼드의 감독을 기준으로 완료 경기를 집계합니다. 승률은 승리 경기 ÷ 담당 경기이며, 승점은 경기별 승점에서 삭감을 뺀 합계입니다.</p><p>팀 출석률은 출석 기록이 있는 담당 경기에서 스쿼드 구성원의 출석 합계 ÷ 스쿼드 인원 합계입니다. 본인 출석률은 같은 경기에서 감독 본인이 출석한 비율입니다. 최고 순위는 각 시즌 반기 마지막 감독의 리그별 팀 순위 중 가장 높은 순위입니다. 진행 중인 반기는 집계일 현재 순위입니다.</p><p>우승은 엑셀 우승기록 시트의 감독을 기준으로 집계합니다.</p></details>':
-        '<p class="note">팀 스쿼드 또는 우승기록에 등록된 감독이 없습니다.</p>');
-    const select=root.querySelector('#managerSelect');
-    if(select){select.onchange=()=>{selected=select.value;render();root.querySelector('#managerSelect').focus({preventScroll:true});};}
+        '</select></label><button class="btn" type="button" data-manager-save>카드 PNG 저장</button>':'')+'</div>';
+    root.innerHTML='<header class="manager-view-head"><h1 id="managerTitle">'+esc(menuLabel('manager'))+'</h1></header>'+controls+
+      (director?cardHtml(director,hasTitles)+recordHtml(director,hasTitles)+
+        '<details class="manager-method"><summary>집계 기준</summary><p>경기일 팀 스쿼드의 감독을 기준으로 선택 시즌의 완료 경기를 집계합니다. 승률은 승리 경기 ÷ 담당 경기이며, 승점은 경기별 승점에서 삭감을 뺀 합계입니다. 감독 득점은 해당 팀을 맡았던 경기에서 본인 이름으로 등록된 득점입니다.</p>'+
+        '<p>팀 출석률은 출석 기록이 있는 담당 경기에서 스쿼드 구성원의 출석 합계 ÷ 스쿼드 인원 합계입니다. 본인 출석률은 같은 경기에서 감독 본인이 출석한 비율입니다.</p>'+
+        '<p>최고 순위는 경기 결과의 반기별 팀 순위를 따릅니다. 확정된 대표승점과 개별승점을 합산하며, 동점이면 누적 참석수와 누적 승점을 적용합니다. 순위는 팀의 반기 마지막 경기 담당 감독에게 연결합니다. 진행 중이거나 대표승점 미확정 구간이 남으면 잠정 순위로 표시하며, 최고 순위에는 확정 순위를 우선합니다.</p>'+
+        '<p>우승은 엑셀 우승기록 시트의 날짜와 감독 기준입니다.</p></details>':
+        '<p class="note">선택한 시즌에 등록된 감독 기록이 없습니다.</p>');
+    for(const [id,update] of [['managerSeason',value=>{season=value;}],['managerSelect',value=>{selected=value;}]]){
+      const select=root.querySelector('#'+id);
+      if(!select)continue;
+      select.onchange=()=>{update(select.value);render();root.querySelector('#'+id)?.focus({preventScroll:true});};
+    }
     const save=root.querySelector('[data-manager-save]');
     if(save)save.onclick=()=>saveCard(save,director.name);
   }
