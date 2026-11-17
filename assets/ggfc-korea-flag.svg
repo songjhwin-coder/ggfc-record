@@ -1,1 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 60"><rect width="90" height="60" rx="2" fill="#fff"/><g transform="translate(45 30) rotate(33.69)"><circle r="15" fill="#cd2e3a"/><path d="M-15 0a15 15 0 0 0 30 0a7.5 7.5 0 0 1-15 0a7.5 7.5 0 0 0-15 0" fill="#0047a0"/></g><g fill="#111"><g transform="translate(18 15) rotate(-56)"><path d="M-8-6H8v3H-8zM-8-1.5H8v3H-8zM-8 3H8v3H-8z"/></g><g transform="translate(72 45) rotate(-56)"><path d="M-8-6h7v3h-7zM1-6h7v3H1zM-8-1.5h7v3h-7zM1-1.5h7v3H1zM-8 3h7v3h-7zM1 3h7v3H1z"/></g><g transform="translate(72 15) rotate(56)"><path d="M-8-6h7v3h-7zM1-6h7v3H1zM-8-1.5H8v3H-8zM-8 3h7v3h-7zM1 3h7v3H1z"/></g><g transform="translate(18 45) rotate(56)"><path d="M-8-6H8v3H-8zM-8-1.5h7v3h-7zM1-1.5h7v3H1zM-8 3H8v3H-8z"/></g></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-36 -24 72 48">
+  <title>대한민국 국기</title>
+  <path fill="#fff" d="M-36-24h72v48h-72z"/>
+  <g transform="rotate(33.6900675)">
+    <circle r="12" fill="#cd2e3a"/>
+    <path fill="#0047a0" d="M-12 0a12 12 0 0 0 24 0 6 6 0 0 0-12 0 6 6 0 0 1-12 0Z"/>
+  </g>
+  <g fill="none" stroke="#000" stroke-width="2">
+    <!-- 건 (upper left) and 곤 (lower right) -->
+    <g transform="rotate(-56.3099325)">
+      <path d="M-6-25H6M-6-22H6M-6-19H6"/>
+      <path d="M-6 19H-.5M.5 19H6M-6 22H-.5M.5 22H6M-6 25H-.5M.5 25H6"/>
+    </g>
+    <!-- 감 (upper right) and 리 (lower left) -->
+    <g transform="rotate(56.3099325)">
+      <path d="M-6-25H-.5M.5-25H6M-6-22H6M-6-19H-.5M.5-19H6"/>
+      <path d="M-6 19H6M-6 22H-.5M.5 22H6M-6 25H6"/>
+    </g>
+  </g>
+</svg>

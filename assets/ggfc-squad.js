@@ -181,7 +181,7 @@ function renderTeamSquad(){
   const rows='<p class="note">선수카드를 불러오는 중입니다.</p>';
   const leagueHead=teamIndex===0||model.teams[teamIndex-1].league!==t.league?'<header class="ts-league-heading" data-league="'+esc(t.league)+'">'+(t.league?leagueSymbolHtml(t.league):'')+'<div><h2>'+esc(t.league?leagueGroupLabel(t.league):'리그 미지정')+'</h2><span>조회일 기준 · '+model.teams.filter(x=>x.league===t.league).length+'팀</span></div></header>':'';
   const movement=squadMovementHtml(t,previousMap.get(t.team),changeInfo.previous,changeInfo.current);
-  return leagueHead+'<section class="ts-team" data-team="'+esc(t.team)+'"><header class="ts-team-header'+(staffPortraits?' has-staff':'')+'">'+watermark+'<div class="ts-team-summary"><div class="ts-team-brand">'+(logo?'<img class="ts-team-logo" src="'+esc(logo)+'" alt="'+esc(t.team)+' 로고">':'<span class="ts-logo-fallback">'+esc(t.team.slice(0,2))+'</span>')+'<div class="ts-team-copy"><span class="ts-team-kicker">TEAM SQUAD</span><h3>'+esc(teamDisplayName(t.team))+'</h3><p class="ts-basis-note">스쿼드 적용일 '+esc(t.date)+' · 능력치 기준 '+esc(model.abilityAsOf)+' · '+t.members.length+'명</p><span class="ts-overall"><span>TEAM CURRENT</span><strong class="ts-current-score">'+value(t.total)+'</strong> '+squadStars(t.total)+'</span></div></div><div class="ts-team-bars">'+bars+'</div></div>'+(staffPortraits?'<div class="ts-staff-showcase" aria-label="감독 및 코치"><span class="ts-staff-kicker">COACHING STAFF</span><div class="ts-staff-stack">'+staffPortraits+'</div></div>':'')+'</header>'+movement+'<div class="ts-roster-title"><div><h4>등록 선수 명단</h4><span>전력 산정 '+t.evaluated+'/'+t.members.length+'명 · 감독·코치 우선 표시</span></div><label class="ts-roster-switch"><input type="checkbox" data-ts-roster-toggle aria-controls="'+rosterId+'"><span class="ts-switch-track" aria-hidden="true"><i></i></span><b>명단 보기</b></label></div><div class="ts-roster ts-card-gallery" data-team-index="'+teamIndex+'" id="'+rosterId+'" hidden>'+(rows||'<p class="empty">등록된 구성원이 없습니다.</p>')+'</div></section>';
+  return leagueHead+'<section class="ts-team" data-team="'+esc(t.team)+'"><header class="ts-team-header'+(staffPortraits?' has-staff':'')+'">'+watermark+'<div class="ts-team-summary"><div class="ts-team-brand">'+(logo?'<img class="ts-team-logo" src="'+esc(logo)+'" alt="'+esc(t.team)+' 로고">':'<span class="ts-logo-fallback">'+esc(t.team.slice(0,2))+'</span>')+'<div class="ts-team-copy"><div class="ts-team-identity"><span class="ts-team-kicker">TEAM SQUAD</span><h3>'+esc(teamDisplayName(t.team))+'</h3><p class="ts-basis-note">스쿼드 적용일 '+esc(t.date)+' · 능력치 기준 '+esc(model.abilityAsOf)+' · '+t.members.length+'명</p></div><span class="ts-overall"><span>TEAM CURRENT</span><strong class="ts-current-score">'+value(t.total)+'</strong> '+squadStars(t.total)+'</span></div></div><div class="ts-team-bars">'+bars+'</div></div>'+(staffPortraits?'<div class="ts-staff-showcase" aria-label="감독 및 코치"><span class="ts-staff-kicker">COACHING STAFF</span><div class="ts-staff-stack">'+staffPortraits+'</div></div>':'')+'</header>'+movement+'<div class="ts-roster-title"><div><h4>등록 선수 명단</h4><span>전력 산정 '+t.evaluated+'/'+t.members.length+'명 · 감독·코치 우선 표시</span></div><label class="ts-roster-switch"><input type="checkbox" data-ts-roster-toggle aria-controls="'+rosterId+'"><span class="ts-switch-track" aria-hidden="true"><i></i></span><b>명단 보기</b></label></div><div class="ts-roster ts-card-gallery" data-team-index="'+teamIndex+'" id="'+rosterId+'" hidden>'+(rows||'<p class="empty">등록된 구성원이 없습니다.</p>')+'</div></section>';
  }).join('');
  applySquadAppearance();syncSquadExportTeams(model);
  const html=document.documentElement;
@@ -193,8 +193,8 @@ function renderTeamSquad(){
   let compact=null,showCards=false;
   const ensureCards=()=>{
    if(panel.dataset.cardsReady)return;
-   const careerMap=v319CareerStatsMap(query.asOf);
-   panel.replaceChildren(...team.members.map(member=>squadPlayerCard(member,team.team,query,careerMap)));
+   const careerMap=v319CareerStatsMap(query.asOf),editionYear=latestMatchDate().slice(0,4);
+   panel.replaceChildren(...team.members.map(member=>squadPlayerCard(member,team.team,query,careerMap,editionYear)));
    panel.dataset.cardsReady='1';
   };
   const ensureCompact=()=>{
@@ -251,21 +251,20 @@ function squadCompactRoster(members,query,id){
   '<ul aria-label="등록 선수 명단">'+heading+rows+'</ul></div>';
 }
 
-function squadPlayerCard(member,team,query,careerMap){
+function squadPlayerCard(member,team,query,careerMap,editionYear){
  const source=document.querySelector('#playerCardContainer .ggfc-player-card');
  const button=document.createElement('button');button.type='button';button.className='ts-player-card-button';button.setAttribute('aria-label',member.name+' '+squadRoleLabel(member.role)+' 선수카드 보기');
  if(!source){button.textContent=member.name;button.onclick=()=>openPlayerCard(member.name,query);return button;}
  const card=source.cloneNode(true),roster=playerCardRoster(member.name,query)||member.roster||{},ability=member.ability;
  card.removeAttribute('style');
  const text=(id,value)=>{const el=card.querySelector('#'+id);if(el)el.textContent=value;};
- text('playerCardYear',playerCardYearShort(query.year));text('playerCardName',String(roster.engName||'').trim()||member.name);
+ text('playerCardName',String(roster.engName||'').trim()||member.name);
  card.querySelector('.ggfc-player-card-name').title=String(roster.engName||'').trim()||member.name;
  text('playerCardOVR',ability?ability.currentOvr:'—');text('playerCardPosition',roster.pos||'PLAYER');
  ['Pac','Sho','Pas','Dri','Def','Phy'].forEach(k=>text('playerCardStat'+k,ability?Math.floor(ability[k.toLowerCase()]):'—'));
  const tier=careerFrameState(careerMap[member.name]||{}).tier;card.dataset.careerTier=tier.id;text('playerCardFrameBadge',tier.name);
  const logo=teamLogo(team),club=card.querySelector('.ggfc-player-card-club');club.style.backgroundImage=logo?'url('+JSON.stringify(logo)+')':'none';club.textContent=logo?'':teamDisplayName(team);club.title=teamDisplayName(team);
- const brand=card.querySelector('.ggfc-player-card-brand-logo');brand.style.backgroundImage='url('+JSON.stringify(headerLogo()||appBrandLogo())+')';brand.textContent='';
- const mark=card.querySelector('.ggfc-player-card-watermark');mark.style.backgroundImage=logo?'url('+JSON.stringify(logo)+')':'none';mark.textContent='';
+ applyPlayerCardBranding(card,editionYear);
  const wrap=card.querySelector('.ggfc-player-card-photo-wrap'),cutout=normalizePlayerPhotoUrl(uploadedPlayerPhoto(member.name)||roster.photoCutout),photo=cutout||roster.photo;
  wrap.title='';wrap.dataset.photoState='empty';wrap.dataset.photoKind=cutout?'cutout':'original';wrap.innerHTML='<div class="ggfc-player-card-photo-fallback">'+esc(playerInitials(member.name))+'</div>';
  if(normalizePlayerPhotoUrl(photo)){

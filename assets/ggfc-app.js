@@ -1895,6 +1895,13 @@ function playerCardYearShort(year){
   const y=String(year||"").replace(/\D/g,"");
   return y.length>=4?y.slice(-2):(y||"--");
 }
+function applyPlayerCardBranding(card,editionYear=latestMatchDate().slice(0,4)){
+  const logo=appBrandLogo(), brand=card.querySelector('.ggfc-player-card-brand-logo');
+  card.querySelector('.ggfc-player-card-brand-year').textContent=playerCardYearShort(editionYear);
+  brand.style.backgroundImage='url('+JSON.stringify(headerLogo()||logo)+')';
+  brand.textContent='';
+  card.querySelector('.ggfc-player-card-watermark').style.backgroundImage='url('+JSON.stringify(logo)+')';
+}
 function playerCardAbilityNumber(v){
   const n=parseInt(String(v??"").trim(),10);
   return Number.isFinite(n)?Math.max(0,Math.min(100,n)):null;
@@ -4011,7 +4018,7 @@ function openPlayerCard(player,query){
   const team=playerSquadDisplayTeam(name,cardInfo);
   const uploaded=uploadedPlayerPhoto(name),cutout=normalizePlayerPhotoUrl(uploaded||roster.photoCutout);
   const photo=cutout||(roster.photo||"" );
-  const tLogo=teamLogo(team), hLogo=headerLogo();
+  const tLogo=teamLogo(team);
   const pos=String(roster.pos||"").trim()||"PLAYER";
   const displayName=String(roster.engName||"").trim()||name;
   const year=cardInfo.year, playerCardCutoff=cardInfo.asOf;
@@ -4020,7 +4027,6 @@ function openPlayerCard(player,query){
   const abilities=abilityCalc?[abilityCalc.pac,abilityCalc.sho,abilityCalc.pas,abilityCalc.dri,abilityCalc.def,abilityCalc.phy].map(v=>Math.floor(v)):[null,null,null,null,null,null];
   const labels=["Pac","Sho","Pas","Dri","Def","Phy"];
 
-  $("#playerCardYear").textContent=playerCardYearShort(year);
   $("#playerCardName").textContent=displayName;
   $("#playerCardName").title=displayName;
   $("#playerCardOVR").textContent=ovr===null?"—":String(ovr);
@@ -4056,13 +4062,9 @@ function openPlayerCard(player,query){
   club.style.backgroundImage=tLogo?'url("'+tLogo+'")':'none';
   club.textContent=tLogo?'':(team?teamDisplayName(team):'GGFC');
   club.title=team?teamDisplayName(team):"";
-  updatePlayerCardTeamRibbons(club.closest(".ggfc-player-card"));
-
-  const brand=$("#playerCardBrandLogo");
-  brand.style.backgroundImage='url("'+(hLogo||appBrandLogo())+'")';
-  brand.textContent='';
-  const watermark=$("#playerCardWatermark");
-  watermark.style.backgroundImage=hLogo?'url("'+hLogo+'")':(tLogo?'url("'+tLogo+'")':'none');
+  const card=club.closest(".ggfc-player-card");
+  updatePlayerCardTeamRibbons(card);
+  applyPlayerCardBranding(card);
 
   const mask=$("#playerCardMask");
   if(!mask.classList.contains('on')){playerCardReturnFocus=document.activeElement;playerCardBodyOverflow=document.body.style.overflow;}

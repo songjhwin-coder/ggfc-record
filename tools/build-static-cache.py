@@ -32,7 +32,7 @@ subprocess.run(['node',str(root/'tools/build-ability-audit.cjs')],check=True)
 p=root/'assets/ggfc-app.js';s=p.read_text();p.write_text(re.sub(r'(assets/ggfc-ability-audit[\w.-]*\.(?:js|css))\?v=([\w.-]+)',update_ref,s))
 entry_pages=('index.html','mobile.html','install.html','offline.html')
 reference_files=(*entry_pages,'manifest.webmanifest')
-versioned_ref=r'((?:assets/[\w./-]+\.(?:js|css)|icons/[\w./-]+\.png))\?v=([\w.-]+)'
+versioned_ref=r'((?:assets/[\w./-]+\.(?:js|css|svg)|icons/[\w./-]+\.png))\?v=([\w.-]+)'
 for name in reference_files:
  p=root/name;s=p.read_text()
  s=re.sub(versioned_ref,update_ref,s)

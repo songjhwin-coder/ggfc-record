@@ -50,6 +50,7 @@ function renderPlayerCardDesignPreview(){
   const portrait=document.createElement('img');portrait.className='ggfc-player-card-photo';portrait.src='assets/ggfc-card-preview.svg';portrait.alt='디자인 확인용 선수 실루엣';photo.append(portrait);
   const club=card.querySelector('.ggfc-player-card-club');club.style.backgroundImage='none';club.textContent='GGFC';club.title='팀명';
   const design=document.getElementById('cardDesignSelect').value;
+  applyPlayerCardBranding(card);
   applyPlayerCardDesign(card,design);box.replaceChildren(card);
   const description=document.getElementById('cardDesignDescription');if(description)description.textContent=CARD_DESIGN_DESCRIPTIONS[design]||CARD_DESIGN_DESCRIPTIONS.classic;
 }

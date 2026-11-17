@@ -1601,7 +1601,7 @@ body.admin-mode .admin-only-chem-pair{display:block!important}
 .ggfc-player-card-left{position:absolute;top:0;bottom:0;left:0;width:100px;padding-top:100px;display:flex;flex-direction:column;align-items:center;z-index:10;background:rgba(0,0,0,.3);border-right:1px solid rgba(255,255,255,.1);backdrop-filter:blur(4px)}
 .ggfc-player-card-ovr{font-size:3.5rem;font-weight:700;line-height:1;color:#00ff85;text-shadow:0 0 10px rgba(0,255,133,.5)}
 .ggfc-player-card-pos{font-size:1.7rem;font-weight:700;margin:4px 0 12px;color:#fff;text-transform:uppercase}
-.ggfc-player-card-national{font-size:34px;line-height:1;margin-bottom:9px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
+.ggfc-player-card-national{display:block;width:36px;height:24px;object-fit:contain;margin-bottom:9px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
 .ggfc-player-card-club{width:72px;height:72px;background:transparent center/contain no-repeat;filter:drop-shadow(0 2px 5px rgba(0,0,0,.8));display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:900;text-align:center}
 .ggfc-player-card-photo-wrap{position:absolute;top:100px;right:35px;width:225px;height:225px;z-index:5}
 .ggfc-player-card-photo{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover;-webkit-mask-image:radial-gradient(circle at center,#000 60%,transparent 100%);mask-image:radial-gradient(circle at center,#000 60%,transparent 100%);filter:contrast(1.1) saturate(1.1)}
@@ -2332,7 +2332,7 @@ tr:nth-child(1) .rank.top{background:var(--kl-red);color:#fff}
 .ggfc-player-card-rating-label{color:#b5cce5;font-size:12px;font-weight:800;letter-spacing:2px;margin-bottom:5px}
 .ggfc-player-card-ovr{font-size:62px;line-height:1;font-weight:850;letter-spacing:-2px;color:#fff;text-shadow:none;font-variant-numeric:tabular-nums}
 .ggfc-player-card-pos{font-size:19px;line-height:1.3;margin:7px 0 13px;color:#ffb4bf;max-width:100%;overflow-wrap:anywhere;text-align:center}
-.ggfc-player-card-national{font-size:25px;margin-bottom:14px;filter:none}
+.ggfc-player-card-national{margin-bottom:14px;filter:none}
 .ggfc-player-card-club{width:62px;height:62px;padding:5px;background-color:#fff;border:5px solid #fff;border-radius:6px;color:#061f44;filter:none;font-size:11px;overflow-wrap:anywhere;line-height:1.3}
 .ggfc-player-card-photo-wrap{top:92px;right:24px;width:250px;height:266px;border-radius:6px;overflow:hidden;background:#29486d}
 .ggfc-player-card-photo{object-fit:cover;object-position:center 30%;-webkit-mask-image:none;mask-image:none;filter:none}
@@ -2989,7 +2989,7 @@ body:not(.admin-mode) .view>.head>p,body:not(.admin-mode) .view>.insight-page-he
 .ggfc-player-card:is([data-design="neon"],[data-design="stadium"]) .ggfc-player-card-photo-fallback{border-radius:0;background:radial-gradient(ellipse at 50% 50%,#23548d,#11294300);font-size:66px;color:#c3e7ff}
 .ggfc-player-card:is([data-design="neon"],[data-design="stadium"]) .ggfc-player-card-name{top:398px;left:52px;width:296px;padding:0 0 10px;color:#fff;font-size:var(--neon-name-size,34px);line-height:1.15;letter-spacing:.3px;z-index:20;text-shadow:0 3px 8px #000;overflow:hidden}
 .ggfc-player-card:is([data-design="neon"],[data-design="stadium"]) .ggfc-player-card-name::after{display:none}
-.ggfc-player-card:is([data-design="neon"],[data-design="stadium"]) .ggfc-player-card-national{position:absolute;top:448px;left:111px;width:40px;font-size:29px;margin:0;z-index:20}
+.ggfc-player-card:is([data-design="neon"],[data-design="stadium"]) .ggfc-player-card-national{position:absolute;top:448px;left:111px;width:40px;height:28px;margin:0;z-index:20}
 .ggfc-player-card:is([data-design="neon"],[data-design="stadium"]) .ggfc-player-card-club{position:absolute;top:438px;left:253px;width:42px;height:42px;border:0;border-radius:3px;padding:2px;background-color:transparent;color:#d8eeff;font-size:9px;z-index:20;filter:drop-shadow(0 2px 5px #000)}
 .ggfc-player-card:is([data-design="neon"],[data-design="stadium"]) .ggfc-player-card-watermark{top:76.5%;left:50%;width:36px;height:36px;opacity:.9;filter:none;z-index:16}
 .ggfc-player-card:is([data-design="neon"],[data-design="stadium"]) .ggfc-player-card-stats{top:487px;left:66px;width:268px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;z-index:20}
@@ -3010,7 +3010,6 @@ body:not(.admin-mode) .view>.head>p,body:not(.admin-mode) .view>.insight-page-he
 .card-design-preview .ggfc-player-card,.ggfc-mobile .card-design-preview .ggfc-player-card{width:400px!important;height:600px!important;transform:scale(.6)!important;transform-origin:top left;animation:none}
 @media(max-width:700px){.card-design-settings{grid-template-columns:minmax(0,1fr)}.card-design-settings .display-name-actions{flex-wrap:wrap}}
 .ggfc-player-card:is([data-design="neon"],[data-design="stadium"]) .ggfc-player-card-photo-wrap:has(>.ggfc-player-card-photo)>.ggfc-player-card-photo-fallback{visibility:hidden}
-.ggfc-player-card:is([data-design="neon"],[data-design="stadium"]) .ggfc-player-card-national{font-size:0;height:28px;background:url('ggfc-korea-flag.svg') center/contain no-repeat}
 .ggfc-player-card:is([data-design="neon"],[data-design="stadium"]) .ggfc-player-card-watermark[style*="none"]::after{content:'GGFC';font-size:12px;font-weight:900;letter-spacing:1px;display:grid;place-items:center;height:100%;color:#a7dbfa}
 .ggfc-player-card:is([data-design="neon"],[data-design="stadium"])[data-career-tier="BRONZE"] .neon-frame-art{filter:drop-shadow(0 0 8px #be885b70)}
 .ggfc-player-card:is([data-design="neon"],[data-design="stadium"])[data-career-tier="SILVER"] .neon-frame-art{filter:drop-shadow(0 0 8px #bfdfef70)}
@@ -3055,7 +3054,7 @@ body:not(.admin-mode) .view>.head>p,body:not(.admin-mode) .view>.insight-page-he
 .ggfc-player-card[data-card-family="jewel"] .ggfc-player-card-photo-wrap:has(>.ggfc-player-card-photo)>.ggfc-player-card-photo-fallback{visibility:hidden}
 .ggfc-player-card[data-card-family="jewel"] .ggfc-player-card-name{top:368px;left:52px;width:296px;padding:0;color:#fff;font-size:var(--neon-name-size,34px);line-height:1.2;letter-spacing:.2px;z-index:20;text-shadow:0 2px 6px #0008;overflow:hidden}
 .ggfc-player-card[data-card-family="jewel"] .ggfc-player-card-name::after{display:none}
-.ggfc-player-card[data-card-family="jewel"] .ggfc-player-card-national{position:absolute;top:483px;left:114px;width:34px;height:24px;margin:0;font-size:0;background:url('ggfc-korea-flag.svg') center/contain no-repeat;z-index:20}
+.ggfc-player-card[data-card-family="jewel"] .ggfc-player-card-national{position:absolute;top:483px;left:114px;width:34px;height:24px;margin:0;z-index:20}
 .ggfc-player-card[data-card-family="jewel"] .ggfc-player-card-club{position:absolute;top:477px;left:253px;width:38px;height:38px;border:0;border-radius:3px;padding:2px;background-color:transparent;color:#f3e4c4;font-size:9px;z-index:20;filter:drop-shadow(0 1px 3px #0006)}
 .ggfc-player-card[data-card-family="jewel"] .ggfc-player-card-watermark{top:82.5%;left:50%;width:34px;height:34px;opacity:.95;filter:none;z-index:16}
 .ggfc-player-card[data-card-family="jewel"] .ggfc-player-card-watermark[style*="none"]::after{content:'GGFC';font-size:11px;font-weight:900;letter-spacing:1px;display:grid;place-items:center;height:100%;color:#f3e4c4}
@@ -3760,7 +3759,6 @@ body:not(.admin-mode) .squad-export-admin{display:none!important}
 }
 #v-squad .ts-axis-label{color:var(--ggfc-hybrid-black,inherit);font-size:13px;line-height:1.3}
 html[data-theme="dark"] #v-squad .ts-axis-ring{--ts-ring-track:var(--border,#374b62)}
-html[data-theme="dark"] #v-squad .ts-axis-value{color:#f4debb}
 /* Preserve the export height of the old rated and unrated three-row layouts. */
 #v-squad .squad-share-heading + #teamSquadContent .ts-team-bars{min-height:220px;align-content:center}
 #v-squad .squad-share-heading + #teamSquadContent .ts-team-bars:has(>.ts-axis>.ts-unrated){min-height:224.5px}
@@ -3809,133 +3807,54 @@ body:not(.admin-mode) #playerRecordQueryPanel{display:none!important}
 #v-dash #dashLeagueSummary .league-zone .league-zone-head{background:linear-gradient(115deg,#121d2e 0%,#1d2c40 60%,#2b3c50 100%)!important;color:#f5f7fa!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.09)}
 #v-dash #dashLeagueSummary .league-zone-title{color:#f5f7fa;letter-spacing:-.035em}
 
-/* Mobile squad: identity, gauges, and two-column coaching staff. */
+/* Mobile squad: crest, team identity and staff above the three power gauges. */
 @media(max-width:820px){
- #v-squad .ts-team-header{padding:18px 14px;gap:18px 12px;align-items:center}
- #v-squad .ts-team-header.has-staff{grid-template-columns:minmax(0,1fr) minmax(0,.95fr)}
- #v-squad .ts-team-summary{display:contents}
- #v-squad .ts-team-summary .ts-team-brand{grid-column:1 / -1;grid-row:1;grid-template-columns:70px minmax(0,1fr);align-items:center;gap:14px}
- #v-squad .ts-team-summary .ts-team-logo{width:70px;height:85px}
- #v-squad .ts-team-summary .ts-team-copy h3{margin-bottom:7px;font-size:22px;line-height:1.3}
- #v-squad .ts-team-summary .ts-overall{gap:6px 9px}
- #v-squad .ts-team-summary .ts-overall>span:first-child{width:auto;font-size:10px;letter-spacing:.02em}
- #v-squad .ts-team-summary .ts-overall>.ts-stars{width:100%}
+ #v-squad .ts-team-header{
+  --ts-mobile-crest:clamp(56px,16vw,76px);
+  grid-template-columns:var(--ts-mobile-crest) minmax(0,1fr);
+  padding:16px 12px;gap:9px 10px;
+ }
+ #v-squad .ts-team-header.has-staff{grid-template-columns:var(--ts-mobile-crest) minmax(0,1fr) minmax(0,42%)}
+ #v-squad .ts-team-summary,
+ #v-squad .ts-team-summary .ts-team-brand,
+ #v-squad .ts-team-summary .ts-team-copy{display:contents}
+ #v-squad .ts-team-brand>:is(.ts-team-logo,.ts-logo-fallback){
+  grid-area:1/1;width:100%;height:auto;aspect-ratio:1;
+ }
+ #v-squad .ts-team-brand>:is(.ts-team-logo,.ts-logo-fallback),
+ #v-squad .ts-team-identity,
+ #v-squad .ts-team-summary .ts-overall{position:relative;z-index:1;min-width:0}
+ #v-squad .ts-team-identity{grid-area:1/2}
+ #v-squad .ts-team-identity .ts-team-kicker{font-size:9px;letter-spacing:.05em}
+ #v-squad .ts-team-summary .ts-team-identity h3{margin:4px 0 0;font-size:clamp(17px,4.8vw,22px);line-height:1.25}
+ #v-squad .ts-team-identity .ts-basis-note{margin:4px 0 0;overflow-wrap:anywhere}
+ #v-squad .ts-team-summary .ts-overall{grid-area:2/1/3/3;align-self:start;gap:3px 8px}
+ #v-squad .ts-team-summary .ts-overall>span:first-child{width:100%;font-size:10px;letter-spacing:.02em}
+ #v-squad .ts-team-summary .ts-overall>.ts-stars{width:auto}
+ #v-squad .ts-overall .ts-star,#v-squad .ts-overall .ts-star svg{width:12px;height:12px}
+ #v-squad .ts-overall .ts-star>span{height:12px}
  #v-squad .ts-team-summary .ts-current-score{font-size:27px}
- #v-squad .ts-team-summary .ts-team-bars{grid-row:2;grid-column:1 / -1;align-self:center;gap:15px}
+ #v-squad .ts-team-summary .ts-team-bars{grid-area:3/1/4/-1;align-self:center;gap:15px;margin-top:5px}
  #v-squad .ts-axis-ring{width:min(100%,clamp(68px,20vw,90px))}
  #v-squad .ts-axis-value{font-size:clamp(18px,5.2vw,23px)}
- #v-squad .ts-team-header>.ts-staff-showcase{grid-row:3;grid-column:1 / -1;align-self:center;justify-content:center;padding:18px 0 0;margin:0}
- #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-kicker{top:0;left:0;right:0;text-align:center;font-size:7px;letter-spacing:.07em}
- #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-stack{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:end;gap:0;padding:7px 4px 8px 0;min-height:0;isolation:isolate}
- #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-manager{grid-row:1;grid-column:1;position:relative;z-index:3;align-self:end;width:calc(100% + 20px);margin:0}
- #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-coach{grid-row:1;grid-column:2;position:relative;z-index:2;align-self:end;width:calc(100% + 12px);margin:0 0 0 -26px}
- #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-manager .ts-staff-photo{width:calc(100% * var(--ts-manager-scale,1));max-width:150%;height:auto;aspect-ratio:171.6 / 218.4}
- #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-coach .ts-staff-photo{width:calc(90% * var(--ts-coach-scale,1));max-width:150%;height:auto;aspect-ratio:148.2 / 195}
- #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-caption{position:relative;z-index:4;margin:5px auto 0;min-width:0;padding:0;line-height:1.25;max-width:100%;width:max-content}
+ #v-squad .ts-team-header>.ts-staff-showcase{grid-area:1/3/3/4;min-height:0;padding:0;justify-content:center}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-kicker{position:static;text-align:center;font-size:8px;letter-spacing:.04em}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-stack{
+  grid-template-columns:minmax(0,var(--ts-manager-col,1.18fr)) minmax(0,var(--ts-coach-col,1fr));gap:6px;padding:4px 0 0;
+ }
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-person{grid-row:1;width:100%;margin:0}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-manager{grid-column:1}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-coach{grid-column:2}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-person:only-child{grid-column:1/-1;width:50%;justify-self:center}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-manager .ts-staff-photo{width:calc(95% * var(--ts-manager-scale,1));aspect-ratio:4/5}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-coach .ts-staff-photo{width:calc(95% * var(--ts-coach-scale,1));aspect-ratio:4/5}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-caption{max-width:100%;min-width:0;margin:3px auto 0;padding:0;text-align:center}
  #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-caption span{font-size:8px}
- #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-caption b{font-size:10px;margin-top:3px;white-space:nowrap}
-}
-
-/* V3.25.55: give mobile staff portraits the right three quarters of the row.
-   2x portrait targets fit proportionally when the physical viewport is narrower. */
-@media(max-width:820px){
- #v-squad .ts-team-header.has-staff{grid-template-columns:minmax(74px,.7fr) minmax(0,2fr);column-gap:12px}
- #v-squad .ts-team-header.has-staff .ts-team-bars{min-width:0;gap:17px}
- #v-squad .ts-team-summary .ts-axis-heading{font-size:10px;gap:3px;flex-wrap:wrap;align-items:baseline}
- #v-squad .ts-team-summary .ts-axis-heading strong{font-size:16px;line-height:1.25}
- #v-squad .ts-team-summary .ts-axis .ts-stars{gap:1px}
- #v-squad .ts-team-summary .ts-axis .ts-star,#v-squad .ts-team-summary .ts-axis .ts-star svg{width:10px;height:10px}
- #v-squad .ts-team-summary .ts-axis .ts-star>span{height:10px}
- #v-squad .ts-team-summary .ts-axis .ts-stars>b{font-size:9px;margin-left:3px}
- #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-stack{grid-template-columns:minmax(0,var(--ts-manager-col,1.18fr)) minmax(0,var(--ts-coach-col,1fr));width:74%;margin-inline:auto;padding:8px 0;gap:10px;isolation:isolate}
- #v-squad .ts-team-header>.ts-staff-showcase :is(.ts-staff-manager,.ts-staff-coach){width:100%;min-width:0;max-width:100%;margin:0;align-self:end;z-index:1}
- #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-manager{grid-column:1;grid-row:1}
- #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-coach{grid-column:2;grid-row:1}
- #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-manager .ts-staff-photo{width:calc(343.2px * var(--ts-manager-scale,1));max-width:100%;height:auto;aspect-ratio:171.6 / 218.4}
- #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-coach .ts-staff-photo{width:calc(296.4px * var(--ts-coach-scale,1));max-width:100%;height:auto;aspect-ratio:148.2 / 195}
- #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-caption{margin:6px auto 0;text-align:center}
- #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-caption span{font-size:9px}
- #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-caption b{font-size:11px}
+ #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-caption b{font-size:10px;margin-top:3px;white-space:normal;overflow-wrap:anywhere}
 }
 
 /* V3.25.56: stack the result header's two logos, primary above additional. */
 #dashResultHeader .dashboard-result-logos{flex-direction:column;align-items:center;justify-content:center;gap:8px}
-/* Keep the mobile portrait columns; enlarge image scale and window height 30%.
-   Side regions outside the window remain clipped to prevent portrait overlap. */
-@media(max-width:820px){
- #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-manager .ts-staff-photo{aspect-ratio:171.6 / 283.92}
- #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-coach .ts-staff-photo{aspect-ratio:148.2 / 253.5}
- #v-squad .ts-team-header>.ts-staff-showcase .ts-staff-photo img{width:130%;max-width:none;height:100%;left:-15%;right:auto;top:0;bottom:auto;object-fit:contain;object-position:center bottom}
-}
-
-/* V3.25.58: Overview header and text-based TOP 5 improvements. */
-#dashResultHeader .dashboard-result-secondary-logo{width:78px;height:83.2px}
-@media(max-width:720px){#dashResultHeader .dashboard-result-secondary-logo{width:62.4px;height:67.6px}}
-.standing-deduction{color:#b44248;font-weight:800;white-space:nowrap}
-.atr-changes{width:100%;padding:12px 6px 0;margin-top:auto}
-.atr-changes .ability-riser-deltas{justify-content:center;gap:6px}
-.atr-changes .ability-riser-delta{white-space:nowrap}
-.atr-changes>small{display:block;text-align:center;color:#617487;font-size:10px;line-height:1.5;margin-top:10px}
-
-/* V3.25.60: president emblem within the existing leadership cards. */
-.lh-person .lh-role{display:inline-flex;align-items:center;justify-content:center;gap:5px;line-height:1.5}
-.lh-president-icon{display:inline-block;width:20px;height:20px;flex:none;vertical-align:middle}
-.lh-hero+.lh-history{margin-top:24px}
-/* Local member preview and explicit sidebar pin. */
-#sidebarResizeHandle{display:none}
-html:not(.ggfc-mobile) body:not(.sidebar-collapsed) #sidebarResizeHandle{display:grid;place-items:center;position:fixed;left:calc(var(--ggfc-sidebar-w) - 5px);top:var(--ggfc-topbar-h);bottom:0;width:10px;z-index:19;cursor:ew-resize;touch-action:none;user-select:none}
-#sidebarResizeHandle::before{content:"";position:absolute;inset:0 4px;background:#91accb66}
-#sidebarResizeHandle span{position:relative;display:grid;place-items:center;width:16px;height:48px;border:1px solid #8da9c8;border-radius:8px;background:#d9e6f3;color:#183c60;font-size:12px;box-shadow:0 1px 4px #09234825}
-#sidebarResizeHandle:hover::before,#sidebarResizeHandle:focus-visible::before{background:#8db6df}
-#sidebarResizeHandle:focus-visible{outline:2px solid #8db6df;outline-offset:1px}
-.sidebar-resizing,.sidebar-resizing *{cursor:ew-resize!important;user-select:none!important}
-.sidebar-resizing>main{transition:none!important}
-.sidebar-resizing iframe{pointer-events:none!important}
-@media print{#sidebarResizeHandle{display:none!important}}
-.topbar-admin-actions{display:flex;align-items:center;flex:none}
-.topbar-admin-actions[hidden],#memberPreviewToggle[hidden],#memberPreviewBar[hidden]{display:none!important}
-#memberPreviewToggle{white-space:nowrap;font-size:12px;min-height:38px;padding:8px 12px}
-.member-preview-bar{position:fixed;top:calc(var(--ggfc-topbar-h) + 8px);right:28px;left:calc(var(--ggfc-sidebar-w) + 28px);z-index:1200;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:#eaf4fb;color:#143959;border:1px solid #a8c7df;border-radius:8px;box-shadow:0 3px 12px #09234812;font-size:13px}
-.sidebar-collapsed .member-preview-bar{left:28px}
-.member-preview-bar button{flex:none;font-size:12px}
-body.member-preview>main{padding-top:calc(var(--ggfc-topbar-h) + 94px)!important}
-body.member-preview #lockBtn,body.member-preview #memberLogin,body.member-preview .member-admin{display:none!important}
-.sidebar-tools{display:flex;align-items:center;gap:8px;margin-bottom:-8px;color:#c2cddd;flex:none}
-.sidebar-tools>span{margin-right:auto;font-size:10px;font-weight:800;letter-spacing:.12em}
-.sidebar-tools button{display:grid;place-items:center;width:36px;height:36px;flex:none;border:1px solid #ffffff30;border-radius:6px;color:#e3edf6;background:#ffffff0b;cursor:pointer;padding:7px}
-.sidebar-tools svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.sidebar-tools #sidebarDismiss{font-size:24px;line-height:1}
-.sidebar-tools #sidebarPin.is-pinned{background:#dcebf7;color:#153754;border-color:#dcebf7}
-.sidebar-tools #sidebarPin.is-pinned svg{fill:#8eb3d1}
-.menu-editor-row{grid-template-columns:38px minmax(0,1fr) 72px 100px 110px}
-.menu-preview-button{font-size:11px;white-space:nowrap}
-body:not(.admin-mode) .il-rules{display:none!important}
-.ggfc-mobile .ggfc-topbar{grid-template-columns:minmax(0,1fr) auto}
-.ggfc-mobile .topbar-brand-row{grid-column:1;grid-row:1;min-width:0;gap:8px;overflow:hidden}
-.ggfc-mobile .top-menu-nav{grid-column:1/-1;grid-row:2;min-width:0}
-.ggfc-mobile .topbar-admin-actions{grid-column:2;grid-row:1;margin-left:5px}
-.ggfc-mobile #memberPreviewToggle{font-size:11px;padding:7px;min-height:36px;max-width:76px;white-space:normal}
-.ggfc-mobile .member-preview-bar{left:12px;right:12px;gap:8px;font-size:11px;padding:8px 10px}
-.ggfc-mobile .member-preview-bar button{font-size:11px;padding:7px;max-width:128px}
-.ggfc-mobile body.member-preview>#mainContent{padding-top:calc(var(--ggfc-topbar-h) + 94px)!important}
-@media(max-width:820px){.menu-editor-row{grid-template-columns:32px minmax(0,1fr) 88px}.menu-preview-button{grid-column:2/4;justify-self:start}.menu-editor-row:has(.menu-preview-button) .menu-drag{grid-row:1/4}}
-@media print{.member-preview-bar,.sidebar-tools,.topbar-admin-actions{display:none!important}}
-
-/* V3.25.64: ratings queries and administrator registration */
-.ability-control-grid.ability-query-grid{grid-template-columns:minmax(130px,.6fr) minmax(230px,1fr) auto}.ability-registration-grid{display:grid;grid-template-columns:minmax(240px,1fr) auto;gap:14px;align-items:end}.ability-registration-grid .record-field{min-width:0}.ability-registration-grid+.note{margin-top:14px}body:not(.admin-mode) #abilityRegistrationControls{display:none!important}@media(max-width:620px){.ability-control-grid.ability-query-grid,.ability-registration-grid{grid-template-columns:minmax(0,1fr)}.ability-registration-grid .ability-actions{justify-content:flex-start}}
-
-/* V3.25.72: explicit mobile dialog height; do not rely on an auto flex basis. */
-.ggfc-detail-body{flex:1 1 auto;min-width:0;-webkit-overflow-scrolling:touch}
-@media(max-width:620px){
- .ggfc-detail-dialog{height:calc(var(--ggfc-detail-viewport,100vh) - 12px);max-height:calc(var(--ggfc-detail-viewport,100vh) - 12px);min-height:0;box-sizing:border-box}
-}
-.ggfc-mobile .ggfc-detail-dialog{height:calc(var(--ggfc-detail-viewport,100vh) - 12px);max-height:calc(var(--ggfc-detail-viewport,100vh) - 12px);min-height:0;box-sizing:border-box}
-
-/* Start card entry after layout, on a separate layer from the card's size scaling. */
-#playerCardMask.on #playerCardContainer{opacity:1;transform:none;filter:none;animation:none}
-#playerCardMask.on #playerCardContainer.card-waiting{opacity:0}
-#playerCardMask.on #playerCardContainer.card-revealing{animation:ggfc-card-visible-entry .84s cubic-bezier(.22,.7,.25,1) both}
-@keyframes ggfc-card-visible-entry{from{opacity:0;transform:translate3d(0,20px,0) scale(.92)}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
 .player-card-motion-status{font-size:11px;color:#d3dfed;max-width:180px}
 .player-card-motion-status[hidden]{display:none}
 @media(prefers-reduced-motion:reduce){#playerCardMask.on #playerCardContainer.card-waiting,#playerCardMask.on #playerCardContainer.card-revealing{opacity:1;transform:none;animation:none!important}}
@@ -3943,6 +3862,22 @@ body:not(.admin-mode) .il-rules{display:none!important}
 /* Overview ground strips: compact, understated navy. */
 #v-dash .ground-title{height:36.4px;min-height:0;padding:0 17px;display:flex;align-items:center;justify-content:center;line-height:1.2;background:linear-gradient(115deg,#13263d,#1c344f);color:#f6f8fc;border-bottom:1px solid #354c64;font-weight:800}
 #v-squad .ts-league-heading .league-symbol{background:#fff}
+/* League headings in the squad view. The export uses its existing heading style. */
+#mainContent #v-squad .ts-league-heading{
+ --ts-league-surface:#f2f2f2;
+ --ts-league-edge:#e0e0e0;
+ background:var(--ts-league-surface);border:1px solid var(--ts-league-edge);
+ border-top-width:4px;color:#050505;
+}
+#mainContent #v-squad .ts-league-heading[data-league="B"]{--ts-league-surface:#f1edf7;--ts-league-edge:#dbd0e7}
+#mainContent #v-squad .ts-league-heading .league-symbol{background:none;box-shadow:none;border-color:transparent}
+html[data-theme="dark"] #mainContent #v-squad .ts-league-heading{--ts-league-surface:#253145;--ts-league-edge:#3c4c64;color:var(--text)}
+html[data-theme="dark"] #mainContent #v-squad .ts-league-heading[data-league="B"]{--ts-league-surface:#302940;--ts-league-edge:#4d4160}
+@media(max-width:820px){
+ #mainContent #v-squad .ts-league-heading{gap:10px;padding:8px 11px}
+ #mainContent #v-squad .ts-league-heading .league-symbol{width:44px;height:42px}
+ #mainContent #v-squad .ts-league-heading h2{font-size:clamp(15px,4.4vw,21px)}
+}
 
 /* Explanatory notes are administrator-only. Keep data, empty states and search controls. */
 body:not(.admin-mode) #v-ability :is(.note,.dashboard-block-note,.ability-half-meta,.ability-delta-note,.head>p),
