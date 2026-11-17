@@ -1,5 +1,5 @@
 /* Read-only interleague/team history. Uses the existing validated fixtures and result rules. */
-let interleagueState={tab:'leagues',year:'ALL',half:'ALL',team:'',competition:'ALL',page:1};
+let interleagueState={tab:'leagues',year:'ALL',half:'ALL',team:'',competition:'ALL',page:1,historyOpen:false};
 const INTERLEAGUE_PAGE_SIZE=30;
 function interleagueRangeMatch(m,state){
  const date=normDate(m.date);
@@ -39,17 +39,17 @@ function interleagueModel(state=interleagueState){
   row.winRate=row.w/row.p*100;return row;
  };
  const league={A:empty('A'),B:empty('B')},byYear=new Map(),interTeams=new Map();
- const benefits=interleagueBenefitTeams(source.goals),interIds=new Set();
- const squadSize=(m,team)=>benefits.get(m.id)?.has(team)?5:6;
+ const benefits=interleagueBenefitTeams(source.goals),challengeSizes=new Map();
  const sizeRows=()=>({5:empty('5명'),6:empty('6명')});
  const leagueSizes={A:sizeRows(),B:sizeRows()},teamSizes=new Map();
  for(const m of inter){
-  interIds.add(m.id);
+  const challenge=matchTeamGroup(m,m.home)==='B'?m.home:m.away;
+  const size=benefits.get(m.id)?.has(challenge)?5:6;
+  challengeSizes.set(m.id,size);
   const year=normDate(m.date).slice(0,4);if(!byYear.has(year))byYear.set(year,{year,A:empty('A'),B:empty('B')});
   for(const team of [m.home,m.away]){
    const code=matchTeamGroup(m,team);add(league[code],m,team);add(byYear.get(year)[code],m,team);
    if(!interTeams.has(team))interTeams.set(team,empty(team));add(interTeams.get(team),m,team);
-   const size=squadSize(m,team);
    if(!teamSizes.has(team))teamSizes.set(team,sizeRows());
    add(leagueSizes[code][size],m,team);add(teamSizes.get(team)[size],m,team);
   }
@@ -61,7 +61,7 @@ function interleagueModel(state=interleagueState){
  for(const m of history){add(total,m,team);const other=m.home===team?m.away:m.home;if(!opponents.has(other))opponents.set(other,empty(other));add(opponents.get(other),m,team);}
  const sortRows=rows=>rows.sort((a,b)=>b.w-a.w||b.p-a.p||compareNamesKo(a.key,b.key));
  const sortMatches=rows=>rows.slice().sort((a,b)=>normDate(b.date).localeCompare(normDate(a.date))||num(b.no)-num(a.no)||String(a.id).localeCompare(String(b.id)));
- return {valid,inter:sortMatches(inter),league,leagueSizes,teamSizes,interIds,squadSize,years:[...byYear.values()].sort((a,b)=>b.year.localeCompare(a.year)),interTeams:sortRows([...interTeams.values()]),teams,team,total,opponents:sortRows([...opponents.values()]),history:sortMatches(history),excluded,classification,legacy,conflicts:source.issues.filter(x=>x.blocked&&(!state.year||state.year==='ALL'||normDate(x.date).slice(0,4)===state.year)).length};
+ return {valid,inter:sortMatches(inter),league,leagueSizes,teamSizes,challengeSizes,years:[...byYear.values()].sort((a,b)=>b.year.localeCompare(a.year)),interTeams:sortRows([...interTeams.values()]),teams,team,total,opponents:sortRows([...opponents.values()]),history:sortMatches(history),excluded,classification,legacy,conflicts:source.issues.filter(x=>x.blocked&&(!state.year||state.year==='ALL'||normDate(x.date).slice(0,4)===state.year)).length};
 }
 function interleagueRate(row,field='w'){return row.p?(row[field]/row.p*100).toFixed(1)+'%':'—';}
 let interleagueChartSequence=0;
@@ -85,12 +85,12 @@ function interleagueTable(rows,first='팀',pick=false){
   pick?'<button type="button" class="il-team-link" data-il-team="'+esc(r.key)+'">'+teamChip(r.key)+'</button>':teamChip(r.key),r.p,r.w,r.d,r.l,'<b>'+interleagueRate(r)+'</b>',interleagueRate(r,'d'),interleagueRate(r,'l'),r.gf,r.ga,r.gf-r.ga]));
 }
 function interleagueSizeTable(groups){
- const headers=[{t:'구분'},{t:'경기'},{t:'승률'},{t:'무승부율'},{t:'패율'}];
+ const headers=[{t:'구분 · 챌린지 인원'},{t:'경기'},{t:'승률'},{t:'무승부율'},{t:'패율'}];
  const rows=groups.flatMap(([label,sizes])=>[6,5].map(size=>{
   const row=sizes?.[size]||{p:0,w:0,d:0,l:0};
   return [esc(label)+'<small>'+size+'명</small>',row.p,...['w','d','l'].map(field=>'<strong>'+interleagueRate(row,field)+'</strong><small>'+row[field]+'경기</small>')];
  }));
- return '<section class="card" data-il-size-stats><h3 class="sec-t">인원별 인터리그 전적</h3><p class="note">득점 기록에 베네핏 골이 있는 팀은 5명, 없는 팀은 6명으로 집계합니다.</p><div class="tablewrap il-scroll" tabindex="0" role="region" aria-label="인원별 인터리그 전적">'+tbl(headers,rows)+'</div></section>';
+ return '<section class="card" data-il-size-stats><h3 class="sec-t">인원별 인터리그 전적</h3><p class="note">챌린지팀이 베네핏을 받은 대진은 5명, 베네핏 기록이 없는 대진은 6명으로 분류합니다. 슈퍼리그와 챌린지리그 모두 같은 대진을 기준으로 집계합니다.</p><div class="tablewrap il-scroll" tabindex="0" role="region" aria-label="인원별 인터리그 전적">'+tbl(headers,rows)+'</div></section>';
 }
 function interleagueMatchesHtml(list,model,team=''){
  if(!list.length)return '<div class="empty">조회 조건에 해당하는 경기 기록이 없습니다.</div>';
@@ -101,7 +101,8 @@ function interleagueMatchesHtml(list,model,team=''){
   const reference=team||(matchTeamGroup(m,m.home)==='A'?m.home:m.away),result=matchResult(m,reference),group=t=>{
    const code=matchTeamGroup(m,t),tags=[];
    if(code)tags.push(leagueGroupLabel(code));
-   if(model.interIds.has(m.id))tags.push(model.squadSize(m,t)+'명');
+   const size=model.challengeSizes.get(m.id);
+   if(code==='B'&&size)tags.push(size===5?'5명 · 베네핏 적용':'6명');
    return tags.length?'<small>'+esc(tags.join(' · '))+'</small>':'';
   };
   return [esc(normDate(m.date)),esc(matchCompetition(m))+'<small>'+esc(m.round||'')+(m.no?' · '+esc(m.no)+'경기':'')+'</small>',teamChip(m.home)+group(m.home),'<b>'+Number(m.hs)+' : '+Number(m.as)+'</b>'+(forfeitText(m)?'<small>'+esc(forfeitText(m))+'</small>':''),teamChip(m.away)+group(m.away),'<span class="il-result '+result+'">'+label(result)+'</span>'];
@@ -109,7 +110,9 @@ function interleagueMatchesHtml(list,model,team=''){
 }
 function renderInterleagueStats(){
  const root=document.getElementById('interleagueContent');if(!root)return;
- const s=interleagueState,years=[...new Set(verifiedRecords().matches.map(m=>normDate(m.date).slice(0,4)).filter(x=>/^\d{4}$/.test(x)))].sort().reverse();
+ const s=interleagueState,previousHistory=root.querySelector('[data-il-history]');
+ if(previousHistory)s.historyOpen=previousHistory.open;
+ const years=[...new Set(verifiedRecords().matches.map(m=>normDate(m.date).slice(0,4)).filter(x=>/^\d{4}$/.test(x)))].sort().reverse();
  if(s.year!=='ALL'&&!years.includes(s.year))s.year='ALL';
  const competitions=[...new Set(verifiedRecords().matches.map(matchCompetition))].filter(Boolean).sort(compareNamesKo);
  if(!['ALL','INTER',...competitions].includes(s.competition))s.competition='ALL';
@@ -122,7 +125,7 @@ function renderInterleagueStats(){
   root.innerHTML+='<div class="il-overview">'+['A','B'].map(code=>{const row=model.league[code],logo=leagueLogo(code);return '<article class="card il-league il-league-'+code+'"><div class="il-league-title">'+(logo?'<img src="'+esc(logo)+'" alt="" loading="lazy">':'')+'<h3>'+esc(leagueGroupLabel(code))+'</h3></div><div class="il-rate"><strong>'+interleagueRate(row)+'</strong><span>인터리그 승률</span></div>'+interleagueMetrics(row)+interleagueOutcomesHtml(row)+'</article>';}).join('')+'</div>';
   root.innerHTML+=interleagueSizeTable(['A','B'].map(code=>[leagueGroupLabel(code),model.leagueSizes[code]]));
   root.innerHTML+='<div class="card"><div class="sec-t">시즌별 리그 전적 <small>총 '+model.inter.length+'경기</small></div><div class="tablewrap il-scroll" tabindex="0" role="region" aria-label="시즌별 리그 전적 · 좌우 스크롤">'+(model.years.length?tbl([{t:'시즌'},{t:'경기'},{t:'슈퍼 승·무·패'},{t:'슈퍼 승률'},{t:'슈퍼 무승부율'},{t:'슈퍼 패율'},{t:'챌린지 승·무·패'},{t:'챌린지 승률'},{t:'챌린지 무승부율'},{t:'챌린지 패율'}],model.years.map(r=>[r.year,r.A.p,r.A.w+'승 '+r.A.d+'무 '+r.A.l+'패',interleagueRate(r.A),interleagueRate(r.A,'d'),interleagueRate(r.A,'l'),r.B.w+'승 '+r.B.d+'무 '+r.B.l+'패',interleagueRate(r.B),interleagueRate(r.B,'d'),interleagueRate(r.B,'l')])):'<div class="empty">집계 가능한 인터리그가 없습니다.</div>')+'</div></div>';
-  root.innerHTML+='<div class="card"><div class="sec-t">팀별 인터리그 전적</div><p class="note">팀을 선택하면 해당 팀의 인터리그 역대 전적으로 이동합니다. 팀의 소속이 바뀌어도 팀별 합계는 이어집니다.</p><div class="tablewrap il-scroll" tabindex="0" role="region" aria-label="팀별 인터리그 전적 · 좌우 스크롤">'+interleagueTable(model.interTeams,'팀',true)+'</div></div><div class="card"><div class="sec-t">인터리그 경기 이력</div>'+interleagueMatchesHtml(model.inter,model)+'</div>';
+  root.innerHTML+='<div class="card"><div class="sec-t">팀별 인터리그 전적</div><p class="note">팀을 선택하면 해당 팀의 인터리그 역대 전적으로 이동합니다. 팀의 소속이 바뀌어도 팀별 합계는 이어집니다.</p><div class="tablewrap il-scroll" tabindex="0" role="region" aria-label="팀별 인터리그 전적 · 좌우 스크롤">'+interleagueTable(model.interTeams,'팀',true)+'</div></div><details class="card il-history" data-il-history'+(s.historyOpen?' open':'')+'><summary class="sec-t">인터리그 경기 이력 <small>'+model.inter.length+'경기</small></summary>'+interleagueMatchesHtml(model.inter,model)+'</details>';
  }else{
   root.innerHTML+='<div class="card"><div class="il-team-summary"><h3>'+teamChip(model.team||'팀 없음')+'</h3><div class="il-rate"><strong>'+interleagueRate(model.total)+'</strong><span>승률</span></div></div>'+interleagueMetrics(model.total)+interleagueOutcomesHtml(model.total)+'<p class="note">'+esc(s.competition==='ALL'?'전체 대회':s.competition==='INTER'?'인터리그만':s.competition)+' · 등록된 경기기록 범위의 통산 전적입니다.</p></div>'+interleagueSizeTable([[teamDisplayName(model.team)||'팀',model.teamSizes.get(model.team)]])+'<div class="card"><div class="sec-t">상대팀별 전적</div><div class="tablewrap il-scroll" tabindex="0" role="region" aria-label="상대팀별 전적 · 좌우 스크롤">'+interleagueTable(model.opponents,'상대팀')+'</div></div><div class="card"><div class="sec-t">'+esc(teamDisplayName(model.team))+' 경기 이력</div>'+interleagueMatchesHtml(model.history,model,model.team)+'</div>';
  }

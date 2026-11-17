@@ -199,10 +199,18 @@ function showGGFCDetail(kind,title,html,trigger){
   dialog.classList.toggle('detail-match-fullscreen',kind==='match');
   if(kind!=='match')releaseMatchDetailNavigation();
   document.querySelector('#ggfcDetailTitle').textContent=title;
-  const body=document.querySelector('#ggfcDetailBody');body.classList.remove('detail-refreshing');body.innerHTML=html;body.scrollTop=0;
-  document.querySelector('#ggfcDetailClose').setAttribute('aria-label',title+' 닫기');
+  const header=dialog.querySelector('.ggfc-detail-header'),body=document.querySelector('#ggfcDetailBody');
+  if(header.parentElement!==dialog)dialog.prepend(header);
+  body.classList.remove('detail-refreshing');body.innerHTML=html;body.scrollTop=0;
+  if(kind==='match')body.querySelector('.match-video-dock')?.append(header);
+  const close=dialog.querySelector('#ggfcDetailClose');
+  close.setAttribute('aria-label',title+' 닫기');
   if(!wasOpen){dialog.showModal();document.body.style.overflow='hidden';}
-  if(kind==='match'){rememberMatchDetailNavigation();dialog.querySelector('[data-match-back]').focus({preventScroll:true});}
+  if(kind==='match'){
+    rememberMatchDetailNavigation();
+    const back=header.querySelector('[data-match-back]');
+    (back.getClientRects().length?back:close).focus({preventScroll:true});
+  }
   syncGGFCDetailViewport();
   if(detailMotionEnabled()){
     const target=wasOpen?body:dialog;void target.offsetWidth;
@@ -545,7 +553,10 @@ function restoreGGFCDetailState(){
   ggfcDetailDialog.classList.remove('detail-entering','detail-leaving');
   document.querySelector('#ggfcDetailBody').classList.remove('detail-refreshing');
   ggfcDetailDialog.style.removeProperty('--ggfc-detail-viewport');
-  ggfcDetailDialog.classList.remove('detail-match-fullscreen');releaseMatchDetailNavigation();
+  ggfcDetailDialog.classList.remove('detail-match-fullscreen');
+  const header=ggfcDetailDialog.querySelector('.ggfc-detail-header');
+  if(header.parentElement!==ggfcDetailDialog)ggfcDetailDialog.prepend(header);
+  releaseMatchDetailNavigation();
   const state=ggfcDetailState;ggfcDetailState=null;
   if(!state)return;
   document.body.style.overflow=state.overflow;

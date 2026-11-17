@@ -1900,7 +1900,8 @@ function applyPlayerCardBranding(card,editionYear=latestMatchDate().slice(0,4)){
   card.querySelector('.ggfc-player-card-brand-year').textContent=playerCardYearShort(editionYear);
   brand.style.backgroundImage='url('+JSON.stringify(headerLogo()||logo)+')';
   brand.textContent='';
-  card.querySelector('.ggfc-player-card-watermark').style.backgroundImage='url('+JSON.stringify(logo)+')';
+  const emblem=document.querySelector('link[rel="apple-touch-icon"]').dataset.cardCenterSrc||logo;
+  card.querySelector('.ggfc-player-card-watermark').style.backgroundImage='url('+JSON.stringify(emblem)+')';
 }
 function playerCardAbilityNumber(v){
   const n=parseInt(String(v??"").trim(),10);
@@ -4363,25 +4364,27 @@ function teamInitials(name){
   const chars=Array.from(String(name||"").replace(/\s+/g,""));
   return esc(chars.slice(0,2).join("")||"팀");
 }
-function leagueTeamCard(t){
-  const diff=t.gf-t.ga, logo=teamLogo(t.team);
+function leagueTeamCard(t,outcomes){
+  const logo=teamLogo(t.team),labels={W:'승',D:'무',L:'패'};
+  const sequence=outcomes.length?'<div class="league-team-form" data-export-ignore role="img" aria-label="경기 순서별 결과 '+outcomes.map(r=>labels[r]).join(' · ')+'">'+
+    outcomes.map(r=>'<b data-result="'+r+'">'+labels[r]+'</b>').join('<span aria-hidden="true">-</span>')+'</div>':'';
   return '<div class="league-team-card">'+
     '<div class="league-crest'+(logo?' has-logo':'')+'" style="background:'+teamColor(t.team)+'">'+(logo?'<img src="'+logo+'" alt="">':teamInitials(t.team))+'</div>'+ 
     '<div class="league-team-name" title="'+esc(teamDisplayName(t.team))+'">'+esc(teamDisplayName(t.team))+'</div>'+
-    '<div class="league-team-rule"></div>'+
+    '<div class="league-team-rule"></div>'+sequence+
     '<div class="league-team-wdl">'+t.w+'승 '+t.d+'무 '+t.l+'패</div>'+
     '<div class="league-team-goals">'+t.gf+'득 '+t.ga+'실</div>'+
   '</div>';
 }
 function leagueZone(code,date){
-  const list=groundTeamStats(code,date), ctx=selectedHalfContext(date);
-  const members=new Set(list.map(x=>x.team));
-  const count=leagueMatchesOnDate(date).filter(m=>members.has(m.home)||members.has(m.away)).length;
-  const halfName=ctx.half==="H1"?"상반기":ctx.half==="H2"?"하반기":"선택 기간";
-  const leagueName=leagueGroupLabel(code);
+  const list=groundTeamStats(code,date),leagueName=leagueGroupLabel(code);
+  const matches=leagueMatchesOnDate(date).sort((a,b)=>String(a.no||'').localeCompare(String(b.no||''),undefined,{numeric:true}));
   return '<div class="league-zone '+code.toLowerCase()+'">'+
     '<div class="league-zone-head">'+leagueSymbolHtml(code)+'<div><div class="league-zone-title">'+leagueName+'</div></div></div>'+
-    (list.length?'<div class="league-team-grid">'+list.map(leagueTeamCard).join("")+'</div>':'<div class="league-zone-empty">'+esc(date||"선택 날짜")+'의 '+leagueName+'(그룹 '+code+') 팀 기록이 없습니다.</div>')+
+    (list.length?'<div class="league-team-grid">'+list.map(t=>{
+      const outcomes=matches.filter(m=>m.home===t.team||m.away===t.team).map(m=>matchResult(m,t.team));
+      return leagueTeamCard(t,outcomes);
+    }).join("")+'</div>':'<div class="league-zone-empty">'+esc(date||"선택 날짜")+'의 '+leagueName+'(그룹 '+code+') 팀 기록이 없습니다.</div>')+
   '</div>';
 }
 function roundOrder(label){

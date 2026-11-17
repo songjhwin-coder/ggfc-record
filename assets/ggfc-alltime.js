@@ -52,7 +52,7 @@ function atPhotoError(img){const fallback=img.dataset.atFallback;delete img.data
 function atValue(v){return v==null?'—':Number(v).toLocaleString('ko-KR');}
 function atResultsHtml(){
  const ranked=atRanked(),metric=AT_METRICS.find(m=>m.key===atState.metric),query=normalizePlayerMatchKey(atState.search),filtered=ranked.filter(p=>normalizePlayerMatchKey(p.player).includes(query)),top=ranked.filter(p=>p.rank!==null).slice(0,3);
- return '<div class="at-podium">'+top.map((p,i)=>'<article class="at-podium-card place-'+Math.min(2,p.rank-1)+'"><span class="at-rank">'+atMedal(p.rank)+p.rank+'위</span>'+atPhoto(p)+'<h3>'+esc(p.player)+'</h3><strong>'+atValue(p[metric.key])+' <small>'+metric.unit+'</small></strong><p>'+metric.label+'</p></article>').join('')+'</div><div class="at-table-caption"><h3>'+metric.label+' · 전체 랭킹</h3><span>검색 '+filtered.length+' / 전체 '+ranked.length+'명</span></div><div class="at-table-wrap" tabindex="0" role="region" aria-label="역대기록 랭킹 표, 좌우 스크롤 가능"><table class="at-table"><thead><tr><th scope="col">순위</th><th scope="col">선수</th><th scope="col">입단</th>'+AT_METRICS.map(m=>'<th scope="col" '+(m.key===metric.key?'class="at-active"':'')+'>'+m.label+'</th>').join('')+'</tr></thead><tbody>'+filtered.map(p=>'<tr><td>'+atMedal(p.rank)+'<b>'+ (p.rank===null?'—':p.rank)+'</b></td><th scope="row"><span class="at-player">'+atPhoto(p)+'<span>'+esc(p.player)+'</span></span></th><td>'+esc(p.joined||'—')+'</td>'+AT_METRICS.map(m=>'<td '+(m.key===metric.key?'class="at-active"':'')+'>'+atMetricCell(p,m.key)+'</td>').join('')+'</tr>').join('')+'</tbody></table>'+(filtered.length?'':'<p class="empty">검색 결과가 없습니다.</p>')+'</div>';
+ return '<div class="at-podium">'+top.map((p,i)=>'<article class="at-podium-card place-'+Math.min(2,p.rank-1)+'"><span class="at-rank">'+atMedal(p.rank)+p.rank+'위</span>'+atPhoto(p)+'<h3>'+esc(p.player)+'</h3><strong>'+atValue(p[metric.key])+' <small>'+metric.unit+'</small></strong><p>'+metric.label+'</p></article>').join('')+'</div><div class="at-table-caption"><h3>'+metric.label+' · 전체 랭킹</h3><span>검색 '+filtered.length+' / 전체 '+ranked.length+'명</span></div><div class="at-table-wrap" tabindex="0" role="region" aria-label="역대기록 랭킹 표 · 좌우 스크롤 가능"><table class="at-table"><thead><tr><th scope="col">순위</th><th scope="col">선수</th><th scope="col">입단</th>'+AT_METRICS.map(m=>'<th scope="col" '+(m.key===metric.key?'class="at-active"':'')+'>'+m.label+'</th>').join('')+'</tr></thead><tbody>'+filtered.map(p=>'<tr><td>'+atMedal(p.rank)+'<b>'+ (p.rank===null?'—':p.rank)+'</b></td><th scope="row"><span class="at-player">'+atPhoto(p)+'<span>'+esc(p.player)+'</span></span></th><td>'+esc(p.joined||'—')+'</td>'+AT_METRICS.map(m=>'<td '+(m.key===metric.key?'class="at-active"':'')+'>'+atMetricCell(p,m.key)+'</td>').join('')+'</tr>').join('')+'</tbody></table>'+(filtered.length?'':'<p class="empty">검색 결과가 없습니다.</p>')+'</div>';
 }
 function renderAllTimeRecords(){
  const root=document.getElementById('allTimeContent');if(!root)return;
@@ -171,11 +171,20 @@ function leadershipMemberPhoto(member){
  const archive=allTimeRows().find(r=>normalizePlayerMatchKey(r.player)===normalizePlayerMatchKey(member.player));
  return atPhoto({...archive,player:member.player});
 }
+const LEADERSHIP_ROLE_ICONS={
+ 회장:'m3 7 4.5 4L12 4l4.5 7L21 7l-2 11H5L3 7Zm3 14h12',
+ 단장:'M3 7h18v13H3zM8 7V4h8v3M3 12h18m-11 0v2h4v-2',
+ 총감독:'M3 5h18v13H3zM8 18v3m8-3v3M7 14l4-4 3 2 3-4',
+ 감독:'M3 5h18v14H3zM12 5v14M3 9h3v6H3m18-6h-3v6h3M14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z',
+ 코치:'M14 5h6v6l-7 1-3 6a4 4 0 1 1-5-6l3-1 2-6h4Zm3 0v4m4-7h2',
+ 총무:'M5 3h14v18H5zM8 8h8m-8 4h8m-8 4h5',
+ 부총무:'M6 3h12v18H6zm3 5h6m-6 4h4m-3 4 1.5 1.5L15 14',
+ 부회장:'M12 3 4 6v5c0 5 4 8 8 10 4-2 8-5 8-10V6l-8-3Zm-3 9 2 2 4-4'
+};
 function leadershipRoleHtml(member){
- const role=String(member.role||'');
- const president=/(^|[·/,&\s])회장(?=$|[·/,&\s(])/.test(role.normalize('NFKC'));
- const icon=president?'<svg class="lh-president-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 7l4.5 4L12 4l4.5 7L21 7l-2 11H5Z" fill="#e6b94f" stroke="#9a7123" stroke-width="1.4" stroke-linejoin="round"/><path d="M6 21h12" stroke="#9a7123" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="4" r="1.5" fill="#e6b94f"/></svg>':'';
- return '<span class="lh-role'+(president?' is-president':'')+'">'+icon+esc(role)+'</span>';
+ const role=String(member.role||''),key=role.normalize('NFKC').split(/[·/,&]/).map(value=>value.replace(/\s+/g,'')).find(value=>Object.hasOwn(LEADERSHIP_ROLE_ICONS,value));
+ const path=LEADERSHIP_ROLE_ICONS[key]||'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21v-2a8 5 0 0 1 16 0v2';
+ return '<span class="lh-role'+(key==='회장'?' is-president':'')+'"><svg class="lh-role-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="'+path+'"/></svg>'+esc(role)+'</span>';
 }
 function renderLeadership(){
  const root=document.getElementById('leadershipContent');if(!root)return;
