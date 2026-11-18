@@ -1,4 +1,4 @@
-/* Generated from current core + SLUMP; source SHA256 a4e6724cc18d8d61a51d233f18872ee241a5c9faa4351666133c96370a816110 */
+/* Generated from current core + SLUMP; source SHA256 89168371855a3d6ca7677ca4a155d286bbaa3a5aa279b5f450f6e7073c2395a9 */
 const GGFCSlump=(()=>{
  const defaults={enabled:true,startDate:'2026-10-20',recentGames:10,baselineGames:20,minimumBaselineGames:10,formTrigger:-2,performanceTrigger:75,persistenceRounds:4,interval:4,recoveryPerformance:85,recoveryRounds:3,slumpDrop:.20,severeDrop:.35,criticalDrop:.50,seasonCap:1.5,storyEnabled:false};
  Object.assign(defaults,{recoveryStartDate:'2026-10-27',recoveryPercent:25,severePerformance:70,criticalPerformance:60});
@@ -1281,8 +1281,7 @@ function abilityLatestContext(){
   return abilityHalfInfo(y,h);
 }
 function abilityMatches(info){
-  // Older match data is used only by the legacy prior-year initialization option.
-  const start=info.initialSkillReference?info.start:[info.start,abilityCareerStartDate()].sort().pop();
+  const start=[info.start,abilityCareerStartDate()].sort().pop();
   return verifiedRecords().matches.filter(m=>{const d=normDate(m.date);return d && d>=start && d<=info.end && (!/^(H1|H2)$/.test(info.half)||matchHalfKey(m)===info.half);});
 }
 function normalizePlayerMatchKey(v){
@@ -1352,8 +1351,10 @@ function soccerBeeRelativePercentiles(out,key){
 }
 function soccerBeeAbilityBaseMap(cutoff){
  const cfg=abilityConfig().soccerbee||{},weightCfg=cfg.weights||{},canonical=soccerBeeCanonicalPlayerMap(),out={},keys=['pac','dri','def','phy'];
- for(const raw of soccerBeeDayRows(DB.soccerbee||[])){
-  const name=canonical[normalizePlayerMatchKey(raw.player)],date=normDate(raw.date);if(!name||!date||(cutoff&&date>normDate(cutoff)))continue;
+ const start=abilityCareerStartDate(),limit=normDate(cutoff||'');
+ const measurements=(DB.soccerbee||[]).filter(row=>{const date=normDate(row.date);return date>=start&&(!limit||date<=limit);});
+ for(const raw of soccerBeeDayRows(measurements)){
+  const name=canonical[normalizePlayerMatchKey(raw.player)],date=normDate(raw.date);if(!name)continue;
   const r=out[name]||(out[name]={player:name,date:'',measured:false,index:{},metricScores:{},measurementDates:{},coverage:{},raw,relativePercentile:{},pac:null,dri:null,def:null,phy:null});
   for(const key of keys){let sum=0,den=0,total=0;const detail={};
    for(const [metric,w0] of Object.entries(weightCfg[key]||{})){const w=Math.max(0,num(w0));total+=w;if(!w)continue;const score=soccerBeeMetricAbsoluteScore(raw[metric],metric);if(score===null)continue;sum+=score*w;den+=w;detail[metric]=score;}
@@ -1365,66 +1366,20 @@ function soccerBeeAbilityBaseMap(cutoff){
  for(const k of keys){const valid=Object.fromEntries(Object.entries(out).filter(([,r])=>Number.isFinite(r[k])));const p=soccerBeeRelativePercentiles(valid,k);for(const n of Object.keys(valid))out[n].relativePercentile[k]=p[n]??null;}
  return out;
 }
-let abilityPriorYearPoolCache=null;
 function abilityCareerStartYear(){
   const init=(abilityConfig().initialSkills||{}), y=Math.floor(num(init.careerStartYear)||2026);
   return Math.max(2000,Math.min(2100,y));
 }
 function abilityCareerStartDate(){return abilityCareerStartYear()+'-01-01';}
-function abilityReferenceYear(){return abilityCareerStartYear()-1;}
-function abilityCalendarYearInfo(year){year=String(year);return {start:year+'-01-01',end:year+'-12-31',initialSkillReference:true};}
-function abilityYearPlayerNames(year){
-  const info=abilityCalendarYearInfo(year), list=abilityMatches(info), ids=new Set(list.map(m=>m.id)), names=new Set();
-  (verifiedRecords().attendance||[]).forEach(r=>{if(ids.has(r.id)&&String(r.player||'').trim())names.add(String(r.player).trim());});
-  (verifiedRecords().goals||[]).forEach(r=>{if(ids.has(r.id)&&String(r.player||'').trim())names.add(String(r.player).trim());});
-  playerSaveRows().forEach(r=>{if(ids.has(r.id)&&String(r.player||'').trim())names.add(String(r.player).trim());});
-  (verifiedRecords().fouls||[]).forEach(r=>{if(ids.has(r.id)&&String(r.player||'').trim())names.add(String(r.player).trim());});
-  (verifiedRecords().moms||[]).forEach(r=>{if(ids.has(r.id)&&String(r.player||'').trim())names.add(String(r.player).trim());});
-  return [...names].filter(p=>p&&!isOwnGoalPlayer(p));
-}
-function abilityPercentileRank(entries,key,value){
-  const vals=(entries||[]).map(x=>num(x[key])).filter(Number.isFinite).sort((a,b)=>a-b);
-  if(!vals.length)return 50;
-  if(vals.length===1)return 50;
-  const v=num(value), less=vals.filter(x=>x<v).length, equal=vals.filter(x=>x===v).length;
-  return Math.max(0,Math.min(100,(less+(equal-1)/2)/(vals.length-1)*100));
-}
-function abilityPercentileToSkill(percentile){
-  const init=abilityConfig().initialSkills||{}, p=Math.max(0,Math.min(100,num(percentile)));
-  const lo=num(init.scoreMin), mid=num(init.scoreMid), hi=num(init.scoreMax);
-  return p<=50?lo+(mid-lo)*(p/50):mid+(hi-mid)*((p-50)/50);
-}
-function abilityPriorYearSkillPool(){
-  const year=abilityReferenceYear(), info=abilityCalendarYearInfo(year), init=abilityConfig().initialSkills||{}, reliabilityRounds=Math.max(1,num(init.reliabilityRounds)||5);
-  if(abilityPriorYearPoolCache && abilityPriorYearPoolCache.year===year && abilityPriorYearPoolCache.reliabilityRounds===reliabilityRounds) return abilityPriorYearPoolCache;
-  const entries=abilityYearPlayerNames(year).map(player=>({player,stats:abilitySeasonStats(playerAbilityRoundRows(player,info))})).filter(x=>x.stats.att>0);
-  const total=entries.reduce((a,x)=>({att:a.att+x.stats.att,g:a.g+x.stats.g,a:a.a+x.stats.a}),{att:0,g:0,a:0});
-  const leagueGpr=total.att?total.g/total.att:0, leagueApr=total.att?total.a/total.att:0;
-  entries.forEach(x=>{
-    x.reliability=Math.min(1,x.stats.att/reliabilityRounds);
-    x.adjustedGpr=x.stats.gpr*x.reliability+leagueGpr*(1-x.reliability);
-    x.adjustedApr=x.stats.apr*x.reliability+leagueApr*(1-x.reliability);
-  });
-  abilityPriorYearPoolCache={year,info,reliabilityRounds,leagueGpr,leagueApr,entries};
-  return abilityPriorYearPoolCache;
-}
-function abilityInitialSkillProfile(player){
-  player=String(player||'').trim(); const init=abilityConfig().initialSkills||{};
-  if(init.fixedStart)return {source:'FIXED_START',year:abilityCareerStartYear(),att:0,g:0,a:0,gpr:0,apr:0,reliability:0,sho:num(init.fallbackSho),pas:num(init.fallbackPas),shoPercentile:null,pasPercentile:null};
-  const pool=abilityPriorYearSkillPool();
-  const row=pool.entries.find(x=>x.player===player);
-  if(!row){
-    return {source:'NO_HISTORY',year:pool.year,att:0,g:0,a:0,gpr:0,apr:0,reliability:0,leagueGpr:pool.leagueGpr,leagueApr:pool.leagueApr,adjustedGpr:pool.leagueGpr,adjustedApr:pool.leagueApr,shoPercentile:null,pasPercentile:null,sho:num(init.fallbackSho),pas:num(init.fallbackPas)};
-  }
-  const shoPct=abilityPercentileRank(pool.entries,'adjustedGpr',row.adjustedGpr), pasPct=abilityPercentileRank(pool.entries,'adjustedApr',row.adjustedApr);
-  return {source:'PREVIOUS_YEAR',year:pool.year,att:row.stats.att,g:row.stats.g,a:row.stats.a,gpr:row.stats.gpr,apr:row.stats.apr,reliability:row.reliability,leagueGpr:pool.leagueGpr,leagueApr:pool.leagueApr,adjustedGpr:row.adjustedGpr,adjustedApr:row.adjustedApr,shoPercentile:shoPct,pasPercentile:pasPct,sho:abilityPercentileToSkill(shoPct),pas:abilityPercentileToSkill(pasPct)};
+function abilityInitialSkillProfile(){
+  const init=abilityConfig().initialSkills;
+  return {source:'FIXED_START',year:abilityCareerStartYear(),att:0,g:0,a:0,gpr:0,apr:0,reliability:0,sho:num(init.fallbackSho),pas:num(init.fallbackPas),shoPercentile:null,pasPercentile:null};
 }
 function soccerBeeInitialProfile(player,cutoff){
-  const rows=soccerBeePlayerRows(player,cutoff), start=[abilityCareerStartDate(),playerParticipationStart(player)].sort().pop();
+  const careerStart=abilityCareerStartDate(),start=[careerStart,playerParticipationStart(player)].sort().pop();
+  const rows=soccerBeePlayerRows(player,cutoff,careerStart);
   if(!rows.length)return {row:null,evaluation:null,retests:[]};
-  /* V3.17 수정:
-     - Career 시작일 이전/당일의 최신 SoccerBee 측정이 있으면 시작 능력치로 사용
-     - 첫 측정이 Career 시작 이후라면 그 측정값을 과거에 소급 적용하지 않고 실제 측정일 이벤트로 처리 */
+  // Use only eligible measurements. First measurements after participation apply on their own date.
   const baselineRows=rows.filter(r=>normDate(r.date)<=start);
   const row=baselineRows.length?baselineRows[baselineRows.length-1]:null;
   const evaluation=row?((soccerBeeAbilityBaseMap(normDate(row.date))||{})[player]||null):null;
@@ -1630,15 +1585,18 @@ function soccerBeeDeltaValue(diff){
   const mult=Math.max(0,num((abilityConfig().soccerbee||{}).retestMultiplier));
   return num(diff)*mult;
 }
-function soccerBeePlayerRows(player,cutoff){
-  const key=normalizePlayerMatchKey(player), limit=cutoff?normDate(cutoff):'';
-  return soccerBeeDayRows((DB.soccerbee||[]).filter(r=>normalizePlayerMatchKey(r.player)===key&&(!limit||normDate(r.date)<=limit)));
+function soccerBeePlayerRows(player,cutoff,start=''){
+  const key=normalizePlayerMatchKey(player),limit=normDate(cutoff||'');
+  return soccerBeeDayRows((DB.soccerbee||[]).filter(r=>{
+    const date=normDate(r.date);
+    return normalizePlayerMatchKey(r.player)===key&&date>=start&&(!limit||date<=limit);
+  }));
 }
 function playerAbilityRecordAtDate(player,year,half,cutoffDate,includeCarry=true){
   player=String(player||'').trim();
   const info=abilityHalfInfo(year,half), cfg=abilityConfig(), halfDates=playerAbilityRoundRows(player,info).map(r=>r.date), effectiveCutoff=normDate(cutoffDate||halfDates[halfDates.length-1]||info.end);
   const keys=['pac','sho','pas','dri','def','phy'], ovrProfile=playerOvrProfile(player,year,cfg), ow=ovrProfile.weights||{};
-  const initialSkills=abilityInitialSkillProfile(player), sbInitial=soccerBeeInitialProfile(player,effectiveCutoff), sbBase=sbInitial.evaluation;
+  const initialSkills=abilityInitialSkillProfile(), sbInitial=soccerBeeInitialProfile(player,effectiveCutoff), sbBase=sbInitial.evaluation;
   const start={pac:Number.isFinite(sbBase?.pac)?sbBase.pac:num(cfg.unassessed.pac),sho:num(initialSkills.sho),pas:num(initialSkills.pas),dri:Number.isFinite(sbBase?.dri)?sbBase.dri:num(cfg.unassessed.dri),def:Number.isFinite(sbBase?.def)?sbBase.def:num(cfg.unassessed.def),phy:Number.isFinite(sbBase?.phy)?sbBase.phy:num(cfg.unassessed.phy)};
   const measurementBase={...start},matchGrowth=Object.fromEntries(keys.map(k=>[k,0])),retestGrowth={...matchGrowth},clampAdjustment={...matchGrowth};
   const career=Object.assign({},start), careerGrowth={pac:0,sho:0,pas:0,dri:0,def:0,phy:0};

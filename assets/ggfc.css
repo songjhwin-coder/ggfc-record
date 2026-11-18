@@ -1569,9 +1569,9 @@ body.admin-mode .admin-only-chem-pair{display:block!important}
 .player-card-upper{display:flex;align-items:center;justify-content:center;gap:30px;min-width:0}
 .ggfc-player-card-container{
   width:400px;height:600px;position:relative;flex-shrink:0;perspective:1000px;
-  opacity:0;transform:scale(.76);filter:blur(5px);
 }
-.player-card-mask.on .ggfc-player-card-container{animation:ggfc-card-pop .72s cubic-bezier(.175,.885,.32,1.275) forwards}
+.player-card-mask.on .ggfc-player-card-container.card-waiting{opacity:0}
+.player-card-mask.on .ggfc-player-card-container.card-revealing{animation:ggfc-card-pop .72s cubic-bezier(.175,.885,.32,1.275) both}
 @keyframes ggfc-card-pop{
   0%{opacity:0;transform:scale(.35) rotateY(-12deg);filter:blur(8px)}
   70%{opacity:1;transform:scale(1.04) rotateY(1deg);filter:blur(0)}
@@ -1885,6 +1885,11 @@ body.admin-mode .admin-only-chem-pair{display:block!important}
 .ability-config-title p{margin:3px 0 0;font-size:11.5px;color:var(--text2)}
 .ability-config-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .ability-config-field{min-width:0}
+.ability-start-config{margin-bottom:14px}
+.ability-start-actions{display:flex;flex-wrap:wrap;align-items:end;gap:8px 12px}
+.ability-start-actions .ability-config-field{flex:0 1 260px}
+.ability-start-actions select{width:100%;min-height:44px;border:1px solid var(--border);border-radius:8px;padding:7px 9px;background:var(--card);color:var(--text);font:inherit}
+.ability-start-actions .btn{min-height:44px}
 .ability-config-field label{display:block;margin-bottom:5px;font-size:11px;font-weight:900;color:#695b6d}
 .ability-config-field input{width:100%;min-height:39px;border:1px solid #d9d0dc;border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;font-weight:800;color:#3b2d3e;background:#fff}
 .ability-config-field input:disabled{background:#f2eef3;color:#948897}
@@ -3682,6 +3687,10 @@ body:not(.admin-mode) .squad-export-admin{display:none!important}
 #v-interleague .il-scroll{max-width:100%;overflow-x:auto}#v-interleague table{width:100%;min-width:620px;table-layout:auto}#v-interleague th,#v-interleague td{text-align:center!important;vertical-align:middle;white-space:nowrap;padding:12px 10px}#v-interleague th{font-weight:750}#v-interleague td small{display:block;font-size:11px;color:var(--text2);margin-top:4px}#v-interleague .team-chip{justify-content:center}
 .il-team-link{border:0;background:none;color:inherit;font:inherit;padding:4px;cursor:pointer;border-radius:5px}.il-team-link:hover{background:var(--blue-soft)}.il-result{display:inline-block;min-width:30px;border-radius:6px;padding:4px 8px;font-weight:750;background:var(--surface2)}.il-result.W{color:#246b44;background:var(--green-soft)}.il-result.L{color:#9d3d35;background:var(--red-soft)}
 .il-pagination{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px;margin-top:14px;font-size:13px}.il-history>summary{cursor:pointer}
+.il-size-group{margin-top:14px}
+.il-size-group>h4{display:inline-block;margin:0 0 7px;padding:5px 10px;border-radius:5px;background:var(--canvas);border:1px solid var(--border);color:var(--text);font-size:13px}
+.il-size-group[data-il-size="5"]>h4{background:#f5e8d4;color:#563617;border-color:#e9d4b4}
+.il-size-group .tablewrap{margin:0}
 .il-rules summary{cursor:pointer;font-weight:700}.il-rules p{font-size:13px;line-height:1.7;color:var(--text2)}
 @media(max-width:600px){.il-overview{gap:10px}.il-league.card{padding:14px}.il-league-title h3{font-size:16px}.il-league-title img{width:36px;height:36px}.il-league-title{gap:6px}.il-rate{flex-wrap:wrap;gap:3px}.il-rate strong{font-size:28px}.il-metrics{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.il-metrics b{font-size:18px}.il-filters label{max-width:none;min-width:0}.il-tabs .btn{flex:1}.il-team-summary h3{font-size:18px}}
 
@@ -3890,6 +3899,7 @@ html[data-theme="dark"] #mainContent #v-squad .ts-league-heading[data-league="B"
  #mainContent #v-squad .ts-league-heading h2{font-size:clamp(15px,4.4vw,21px)}
 }
 
+#mainContent :is(#v-alltime,#v-leadership) :is(.head,.at-hero,.lh-hero){border:1px solid var(--border)}
 #v-leadership .lh-role{display:inline-flex;align-items:center;gap:5px}
 #v-leadership .lh-role-icon{width:18px;height:18px;flex:none}
 #v-leadership .lh-role.is-president .lh-role-icon{fill:#dbb76833}

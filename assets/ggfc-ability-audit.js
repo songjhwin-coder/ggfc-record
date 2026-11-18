@@ -262,7 +262,7 @@ window.GGFCAbilityAudit=(()=>{
  }
  function initialHtml(){
   const r=report.result,i=r.initialSkills,b=r.soccerBeeInitial?.evaluation,c=report.cfg;
-  return table(['축','시작 값','근거'],axes.map(k=>[k.toUpperCase(),N(r.start[k]),['sho','pas'].includes(k)?(i.source==='PREVIOUS_YEAR'?i.year+'년 기록 · 보정 경기당 '+N(k==='sho'?i.adjustedGpr:i.adjustedApr)+' · 백분위 '+N(k==='sho'?i.shoPercentile:i.pasPercentile):'현재 기록지 재계산 · 고정 시작값'):(Number.isFinite(b?.[k])?'시작 시점 SoccerBee · '+E(b.measurementDates[k])+' · 측정 지수 '+N(b.index[k]):'유효 측정 없음 · 미측정 초기값')]))+
+  return table(['축','시작 값','근거'],axes.map(k=>[k.toUpperCase(),N(r.start[k]),['sho','pas'].includes(k)?(i.year+'년 1월 1일 · 설정된 시작값'):(Number.isFinite(b?.[k])?'시작 시점 SoccerBee · '+E(b.measurementDates[k])+' · 측정 지수 '+N(b.index[k]):'유효 측정 없음 · 미측정 초기값')]))+
    '<p>SHO/PAS는 설정 시작값에서 현재 기록지의 실제 실적을 순서대로 반영합니다. 이전 연도 백분위 초기 배치는 사용하지 않습니다.</p>'+
    '<p class="note">경기 시작 후 첫 SoccerBee 측정은 실제 측정일의 변동 내역에 표시됩니다. 기존 경기 성장분은 유지됩니다.</p>';
  }

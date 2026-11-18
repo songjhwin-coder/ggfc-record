@@ -183,6 +183,7 @@ window.GGFCManagers=(()=>{
       director.titles.push(title);
       addTeam(director,title.team,title.date);
     }
+    for(const director of directors.values())director.titles.sort((a,b)=>b.date.localeCompare(a.date));
     const result={years:cached.years,hasTitles:!!titles,rows:[...directors.values()].sort((a,b)=>b.games-a.games||compareNamesKo(a.name,b.name))};
     cached.views.set(season,result);
     return result;
@@ -234,13 +235,15 @@ window.GGFCManagers=(()=>{
       '<div><p>GGFC RECORD</p><h2>'+esc(d.name)+'</h2><span>감독'+(team?' · '+esc(team):'')+'</span>'+
       '<small class="manager-season-label">'+(season==='ALL'?'전체 시즌':season+' 시즌')+'</small></div>'+emblem+'</header>'+
       (teams.length>1?'<ul class="manager-teams" aria-label="그 외 담당 팀">'+teams.slice(1).map(([team])=>'<li>'+teamChip(team)+'</li>').join('')+'</ul>':'')+
-      '<dl class="manager-metrics">'+metrics.map(([symbol,label,value,note],i)=>'<div'+(i>=6?' class="manager-score-metric"':'')+'><dt>'+
-      icon(symbol)+label+'</dt><dd><strong>'+value+'</strong>'+(note?'<small>'+esc(note)+'</small>':'')+'</dd></div>').join('')+
+      '<dl class="manager-metrics">'+metrics.map(([symbol,label,value,note],i)=>{
+        const titles=symbol==='trophy'&&d.titles.length?'<ul class="manager-title-names">'+d.titles.map(t=>'<li>'+esc(t.name)+'</li>').join('')+'</ul>':'';
+        return '<div'+(i>=6?' class="manager-score-metric"':'')+'><dt>'+icon(symbol)+label+'</dt><dd'+(titles?' class="manager-win-titles"':'')+'><strong>'+value+'</strong>'+titles+(note?'<small>'+esc(note)+'</small>':'')+'</dd></div>';
+      }).join('')+
       '</dl>'+opponentsHtml(d)+'</article>';
   }
 
   function recordHtml(d,hasTitles){
-    const wins=d.titles.slice().sort((a,b)=>b.date.localeCompare(a.date));
+    const wins=d.titles;
     return '<section class="manager-records"><h2>우승 이력</h2>'+
       (wins.length?'<ul class="manager-titles">'+wins.map(t=>'<li><strong>'+esc(t.name)+'</strong><span>'+esc([t.date,halfLabel(t.half),teamDisplayName(t.team)].join(' · '))+'</span></li>').join('')+'</ul>':
         '<p class="note">'+(hasTitles?'등록된 우승 이력이 없습니다.':'관리자가 엑셀의 우승기록 시트를 등록하면 표시됩니다.')+'</p>')+'</section>';

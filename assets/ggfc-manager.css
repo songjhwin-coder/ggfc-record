@@ -42,6 +42,8 @@
 .manager-metrics dd {margin:2px 0 0;overflow-wrap:anywhere}
 .manager-metrics strong {display:block;color:#edc990;font-size:18px;font-variant-numeric:tabular-nums}
 .manager-metrics small {display:block;color:#dcccb9;font-size:11px;line-height:1.35}
+.manager-win-titles {display:grid;grid-template-columns:max-content minmax(0,1fr);align-items:start;gap:8px}
+.manager-title-names {display:grid;gap:3px;margin:4px 0 0;padding:0;list-style:none;color:#f3dfc2;font-size:11px;line-height:1.35}
 .manager-opponents {
   margin-top:16px;padding:10px 10px 2px;background:#171413;
   border:1px solid #68543a;border-radius:9px;

@@ -112,7 +112,7 @@ const GGFC = (() => {
   }
   function applySnapshot(raw,first=false,fromCache=false){
     const next=merge(raw);
-    DB=Object.assign(blankDB(),next);abilityPriorYearPoolCache=null;if(typeof v319CareerCache!=='undefined')v319CareerCache={key:'',map:null};
+    DB=Object.assign(blankDB(),next);if(typeof v319CareerCache!=='undefined')v319CareerCache={key:'',map:null};
     adoptWire(raw,fromCache);
     window.GGFCStartup?.configure(DB.settings?.startupScreen);
     ensureAbilityData();
