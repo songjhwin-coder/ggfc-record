@@ -1571,7 +1571,7 @@ body.admin-mode .admin-only-chem-pair{display:block!important}
   width:400px;height:600px;position:relative;flex-shrink:0;perspective:1000px;
 }
 .player-card-mask.on .ggfc-player-card-container.card-waiting{opacity:0}
-.player-card-mask.on .ggfc-player-card-container.card-revealing{animation:ggfc-card-pop .72s cubic-bezier(.175,.885,.32,1.275) both}
+.player-card-mask.on .ggfc-player-card-container.card-revealing{animation:ggfc-card-pop 1.08s cubic-bezier(.175,.885,.32,1.275) both}
 @keyframes ggfc-card-pop{
   0%{opacity:0;transform:scale(.35) rotateY(-12deg);filter:blur(8px)}
   70%{opacity:1;transform:scale(1.04) rotateY(1deg);filter:blur(0)}
@@ -3418,6 +3418,35 @@ html:not(.ggfc-mobile) .sidebar-collapsed>main{padding-left:28px}
 @media(max-width:820px){.menu-editor-row{grid-template-columns:32px minmax(0,1fr) 88px;gap:9px;padding:10px 8px}.menu-drag{grid-column:1;grid-row:1/3;width:30px}.menu-editor-name{grid-column:2/4}.menu-move-buttons{grid-column:2}.menu-editor-row .menu-publish-toggle,.menu-locked-badge{grid-column:3}.menu-editor-name input{font-size:16px}.menu-editor-actions{flex-wrap:wrap;bottom:85px;padding:10px}.menu-editor-actions>div{width:100%}.menu-editor-actions .btn{flex:1;padding:8px;font-size:12px}.menu-home-label select{width:100%;min-width:0}.menu-editor-row .menu-publish-toggle{min-width:80px;gap:5px}}
 @media(prefers-reduced-motion:reduce){html:not(.ggfc-mobile) #ggfcSidebar,html:not(.ggfc-mobile) body>main{transition:none}}
 @media print{.ggfc-topbar{display:none!important}body>main{padding-top:0!important}}
+
+/* Shared sidebar controls and administrator preview placement. */
+.sidebar-tools{display:flex;align-items:center;gap:8px;margin-bottom:-8px;color:#c2cddd;flex:none}
+.sidebar-tools>span{margin-right:auto;font-size:10px;font-weight:800;letter-spacing:.12em}
+.sidebar-tools button{display:grid;place-items:center;width:36px;height:36px;flex:none;border:1px solid #ffffff30;border-radius:6px;color:#e3edf6;background:#ffffff0b;cursor:pointer;padding:7px}
+.sidebar-tools svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.sidebar-tools #sidebarDismiss{font-size:24px;line-height:1}
+.sidebar-tools #sidebarPin.is-pinned{background:#dcebf7;color:#153754;border-color:#dcebf7}
+.sidebar-tools #sidebarPin.is-pinned svg{fill:#8eb3d1}
+.sidebar-tools button:focus-visible{outline:2px solid #c39e6d;outline-offset:2px}
+.topbar-admin-actions{display:flex;align-items:center;flex:none}
+.topbar-admin-actions[hidden],#memberPreviewToggle[hidden],#memberPreviewBar[hidden]{display:none!important}
+#memberPreviewToggle{white-space:nowrap;font-size:12px;min-height:38px;padding:8px 12px}
+.member-preview-bar{position:fixed;top:calc(var(--ggfc-topbar-h) + 8px);right:28px;left:calc(var(--ggfc-sidebar-w) + 28px);z-index:1200;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:#eaf4fb;color:#143959;border:1px solid #a8c7df;border-radius:8px;box-shadow:0 3px 12px #09234812;font-size:13px}
+.sidebar-collapsed .member-preview-bar{left:28px}
+.member-preview-bar button{flex:none;font-size:12px}
+body.member-preview>main{padding-top:calc(var(--ggfc-topbar-h) + 94px)!important}
+body.member-preview #lockBtn,body.member-preview #memberLogin,body.member-preview .member-admin{display:none!important}
+.ggfc-mobile #ggfcTopbar{grid-template-columns:minmax(0,1fr) auto;column-gap:8px}
+.ggfc-mobile #ggfcTopbar .topbar-brand-row{grid-column:1;grid-row:1;min-width:0;gap:8px;overflow:hidden}
+.ggfc-mobile #ggfcTopbar .topbar-brand{min-width:0}
+.ggfc-mobile #ggfcTopbar #topBrandLogo{flex:none}
+.ggfc-mobile #ggfcTopbar .topbar-admin-actions{grid-column:2;grid-row:1;justify-self:end}
+.ggfc-mobile #memberPreviewToggle{font-size:11px;padding:7px;min-height:44px;max-width:82px;white-space:normal}
+.ggfc-mobile .sidebar-tools button{width:44px;height:44px}
+.ggfc-mobile .member-preview-bar{left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));gap:8px;font-size:11px;padding:8px 10px}
+.ggfc-mobile .member-preview-bar button{font-size:11px;padding:7px;max-width:128px}
+.ggfc-mobile body.member-preview>#mainContent{padding-top:calc(var(--ggfc-topbar-h) + 94px)!important}
+@media print{.member-preview-bar,.sidebar-tools,.topbar-admin-actions{display:none!important}}
 
 /* Mobile ranking values share the individual ranking's 13px scale. */
 .ggfc-mobile #v-dash :is(#dashScorers,#dashAttendanceRank,#dashTeamPointRank,#dashPlayerPointRank) td{font-size:13px;line-height:1.5}
