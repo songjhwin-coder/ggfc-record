@@ -141,6 +141,7 @@ function renderTeamSquad(){
   if(!renderCalculationCache)return withRenderCalculationCache(renderTeamSquad);
  const root=document.getElementById('teamSquadContent'),filter=document.getElementById('teamSquadComp'),changeSelect=document.getElementById('teamSquadChangeDate');if(!root)return;
  squadCompactObserver?.disconnect();
+ squadGaugeObserver?.disconnect();squadGaugeObserver=null;
  renderSquadAppearanceEditor();
  const exportButton=document.getElementById('squadExportButton');if(exportButton){exportButton.onclick=()=>exportTeamSquadImage(exportButton);exportButton.disabled=squadExportBusy;}
  const today=squadToday();
@@ -230,8 +231,26 @@ function renderTeamSquad(){
   squadCompactObserver=new MutationObserver(()=>updateRosters.forEach(update=>update()));
   squadCompactObserver.observe(html,{attributes:true,attributeFilter:['class','data-theme']});
  }
+ observeSquadGaugeReveal(root);
 }
 let squadCompactObserver=null;
+let squadGaugeObserver=null;
+function observeSquadGaugeReveal(root){
+ if(matchMedia('(prefers-reduced-motion: reduce)').matches||typeof IntersectionObserver==='undefined')return;
+ const observer=new IntersectionObserver(entries=>{
+  for(const entry of entries){
+   if(!entry.isIntersecting||!entry.target.isConnected)continue;
+   entry.target.removeAttribute('data-ring-pending');
+   observer.unobserve(entry.target);
+  }
+ },{threshold:.15});
+ squadGaugeObserver=observer;
+ root.querySelectorAll('.ts-axis-progress').forEach(progress=>{
+  const ring=progress.closest('.ts-axis-ring');
+  ring.setAttribute('data-ring-pending','');
+  observer.observe(ring);
+ });
+}
 
 function squadCompactRoster(members,query,id){
  const heading='<li class="ts-mobile-roster-heading" aria-hidden="true"><span>번호</span><span>선수명</span><span>포지션</span><span>OVR</span></li>';

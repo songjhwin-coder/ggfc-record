@@ -3784,13 +3784,17 @@ body:not(.admin-mode) .squad-export-admin{display:none!important}
 #v-squad .ts-team-summary .ts-team-bars{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-self:start}
 #v-squad .ts-team-bars .ts-axis{display:flex;flex-direction:column;align-items:center;gap:5px}
 #v-squad .ts-axis-ring{
- --ts-ring-progress:var(--ggfc-hybrid-gold,#C39E6D);
  --ts-ring-track:var(--ggfc-hybrid-border,#E5E5E5);
  position:relative;width:min(100%,104px);aspect-ratio:1;
 }
 #v-squad .ts-axis-ring>svg{position:absolute;inset:0;width:100%;height:100%}
 #v-squad .ts-axis-track{stroke:var(--ts-ring-track)}
-#v-squad .ts-axis-progress{stroke:var(--ts-ring-progress)}
+#v-squad .ts-axis-progress{stroke:#C39E6D}
+/* The stored SVG length stays final. Only live, visible rings receive the reveal. */
+@media screen and (prefers-reduced-motion:no-preference){
+ #mainContent #v-squad .ts-axis-progress{transition:stroke-dasharray 600ms ease-out}
+ #mainContent #v-squad .ts-axis-ring[data-ring-pending] .ts-axis-progress{stroke-dasharray:0 100;visibility:hidden}
+}
 #v-squad .ts-axis-value{
  position:absolute;inset:50% auto auto 50%;transform:translate(-50%,-50%);
  color:var(--ggfc-hybrid-gold-text,#8A6640);font-size:26px;font-weight:850;
