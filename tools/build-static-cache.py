@@ -52,6 +52,7 @@ for folder in ['assets','icons']:
 urls[theme_mark]=theme_ref
 for name in ['index.html','mobile.html','install.html','offline.html','manifest.webmanifest','app-version.json']:urls[name]=name
 lazy_names={'assets/ggfc-ability-audit.js','assets/ggfc-ability-audit.css','assets/ggfc-ability-audit-worker.js'}
+lazy_names.update(p.relative_to(root).as_posix() for p in (root/'assets/ggfc-award-photos').glob('*.png'))
 assets=[{'url':url,'sha256':digest(root/name)} for name,url in sorted(urls.items()) if name not in lazy_names]
 lazy_assets=[{'url':url,'sha256':digest(root/name)} for name,url in sorted(urls.items()) if name in lazy_names]
 body=(root/'tools/service-worker.template.js').read_text()

@@ -3988,14 +3988,34 @@ body:not(.admin-mode) #v-interleague :is(.note,.head>p){display:none!important}
 #v-alltime .at-award-caption{margin-top:0}
 #v-alltime .at-award-table{min-width:0;table-layout:auto}
 #v-alltime .at-award-table :is(th:first-child,th:nth-child(2)){width:auto}
-#v-alltime .at-award-table .team-chip{display:inline-flex;align-items:center;gap:6px;text-align:left;white-space:normal}
-#v-alltime .at-award-table .team-logo-sm{width:28px;height:28px;flex:none;object-fit:contain}
+.at-award-person{display:inline-flex;align-items:center;gap:8px;text-align:left;line-height:1.35;font-weight:800}
+.at-award-person .at-avatar{width:40px;height:40px;flex:none;font-size:16px}
+#v-alltime .at-award-table[data-at-award="winningManagers"] :is(th,td):first-child,
+#v-alltime .at-award-table[data-at-award="gallondor"] :is(th,td):nth-child(2){text-align:left!important}
+.at-title-teams{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.at-title-team{min-width:0;overflow:hidden;color:var(--text);background:var(--canvas);border:1px solid var(--border);border-radius:10px}
+.at-title-team>header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 13px;background:var(--soft);border-bottom:1px solid var(--border)}
+.at-title-team>header h4{min-width:0;margin:0}
+.at-title-team>header strong{flex:none;font-size:13px;font-variant-numeric:tabular-nums}
+.at-title-team .team-chip{color:var(--text);font-size:15px;text-align:left}
+.at-title-team .team-logo-sm{width:32px;height:32px;object-fit:contain}
+.at-title-competitions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.at-title-competition{min-width:0;padding:9px 10px;border-inline-end:1px solid var(--border)}
+.at-title-competition:nth-child(3n){border-inline-end:0}
+.at-title-competition h5{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:3px 5px;margin:0;font-size:13px;color:var(--text)}
+.at-title-competition h5 span{padding:2px 5px;border-radius:4px;background:var(--soft);color:var(--text);font-size:11px;white-space:nowrap}
+.at-title-competition ul{list-style:none;margin:7px 0 0;padding:0}
+.at-title-competition li{display:flex;flex-wrap:wrap;align-items:baseline;gap:1px 5px;padding:4px 0;border-top:1px solid var(--border);font-size:12px;line-height:1.4}
+.at-title-competition li span{color:var(--text2);font-size:11px}
 @media(max-width:820px){
  #v-alltime .at-history-nav{grid-template-columns:repeat(6,minmax(0,1fr))}
  #v-alltime .at-history-nav button{grid-column:span 2;padding-inline:8px}
  #v-alltime .at-history-nav button:nth-child(-n+2){grid-column:span 3}
  #v-alltime .at-award-table :is(th,td){padding:8px 4px}
- #v-alltime .at-award-table .team-logo-sm{width:22px;height:22px}
+ .at-award-person{gap:5px}
+ .at-award-person .at-avatar{width:32px;height:32px;font-size:13px}
+ .at-title-teams{grid-template-columns:minmax(0,1fr)}
+ .at-title-competition{padding:8px}
 }
 #playerTable{height:auto;max-height:none;overflow-x:auto;overflow-y:hidden;scrollbar-gutter:auto;isolation:auto}
 #playerTable thead th{position:static!important}
