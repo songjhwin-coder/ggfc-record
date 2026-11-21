@@ -45,14 +45,15 @@ window.GGFCMatchRecords=(()=>{
   }if(eligible(m,r)&&allowed(r,k)){const key=appTeamRecordKey(m,team,r.player);return '<span>'+esc(displayedValue(m,team,r,k))+'</span><small class="match-record-source">'+sourceText(key,r,k)+'</small>';}
   return '<span>'+esc(value??'—')+'</span>'+(teamRecordValuePresent(value)?'<small class="match-record-source'+(app||shared?' app':'')+'">'+(shared?'공유 기록':app?'앱 기록':'DB')+'</small>':k==='saves'&&!r.keeper?'<small class="match-record-source">골키퍼만</small>':'');}
  function playerEditorHtml(m,team,r){
-  if(!eligible(m,r))return '';
+  if(!r.att||r.ownGoal)return '';
+  const editable=eligible(m,r);
   const metrics=Object.entries(fields).map(([key,label])=>
    '<div class="match-player-edit-field"><dt>'+label+'</dt><dd>'+cellHtml(m,team,r,key)+'</dd></div>'
   ).join('');
-  return '<section class="match-player-editor" tabindex="-1" aria-labelledby="matchPlayerEditorTitle"'+matchRecordRowAttrs(m,team,r)+'>'+
+  return '<section class="match-player-editor" tabindex="-1" aria-labelledby="matchPlayerEditorTitle"'+(editable?matchRecordRowAttrs(m,team,r):'')+'>'+
    '<header><button type="button" class="match-detail-back" data-match-player-list>← 선수 목록</button>'+
-   '<div><p class="match-player-editor-team">'+esc(teamDisplayName(team))+'</p><h3 id="matchPlayerEditorTitle">'+esc(r.player)+' 기록 수정</h3></div></header>'+
-   '<p class="match-zero-guide">미기록은 0부터 시작합니다. 이 선수의 모든 항목을 확인한 뒤 공유 저장하세요. 미확정 항목도 0회로 함께 확정됩니다.</p><dl>'+metrics+'</dl>'+rowActionsHtml(m,team,r)+'</section>';
+   '<div><p class="match-player-editor-team">'+esc(teamDisplayName(team))+'</p><h3 id="matchPlayerEditorTitle">'+esc(r.player)+(editable?' 기록 수정':' 기록')+'</h3></div></header>'+
+   '<p class="match-zero-guide">'+(editable?'미기록은 0부터 시작합니다. 이 선수의 모든 항목을 확인한 뒤 공유 저장하세요. 미확정 항목도 0회로 함께 확정됩니다.':'기록 입력 조건을 충족하지 않아 기존 기록만 볼 수 있습니다.')+'</p><dl>'+metrics+'</dl>'+rowActionsHtml(m,team,r)+'</section>';
  }
  function auditEditorHtml(key){
   if(!signedIn())return '';

@@ -51,7 +51,7 @@ window.GGFCHome=(()=>{
 
   function renderShortcuts(){
     const nav=navigationSettings();
-    const cards=orderedMenus(false,nav).filter(({id})=>id!=='home'&&memberMenuOpen(id)).map(({id})=>{
+    const cards=orderedMenus(false,nav).filter(({id})=>id!=='home'&&memberMenuAvailable(id)).map(({id})=>{
       const icon=document.querySelector('#tabs [data-v="'+id+'"] .sidebar-menu-icon')?.outerHTML||'';
       const description=menuDescriptions[id];
       return '<a class="home-shortcut" href="#'+id+'" data-home-menu="'+id+'">'+icon+

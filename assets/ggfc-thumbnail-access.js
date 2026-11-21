@@ -4,7 +4,7 @@ window.GGFCOperator=(()=>{
  const q=id=>document.getElementById(id),copy=v=>JSON.parse(JSON.stringify(v));
  let account=null,accountReady=false,template=null,templateReady=false,revision=0,connected=false,accountError='',templateError='',user=null,verified=false,opAuth=null,opDB=null,mainDB=null,accountRef=null,templateRef=null,working=false,saving=false,loginBusy=false,signature='',started=false,checking=false,checkPromise=null,messageText='',messageBad=false;
  const listeners={};
- let operatorConnected=false,templateSavedAt=0,lastAdminMode=null;
+ let operatorConnected=false,templateSavedAt=0,lastAdminMode=null,lastOperatorMode=false;
  const isAdmin=()=>typeof admin!=='undefined'&&admin&&GGFC.authorized&&window.GGFC_MEMBER_PREVIEW!==true;
  const active=()=>window.GGFC_MEMBER_PREVIEW!==true&&verified&&!!user&&account?.enabled===true&&account.uid===user.uid&&account.email===user.email;
  const canUse=()=>isAdmin()||active();
@@ -38,12 +38,23 @@ window.GGFCOperator=(()=>{
   if(!started&&window.firebase?.apps?.length){start();return;}
   const op=active(),allowed=canUse(),btn=q('operatorLoginBtn');if(btn){btn.textContent=op?'운영진 로그아웃':'운영진 로그인';btn.hidden=isAdmin();}
   const badge=q('operatorModeBadge');if(badge)badge.hidden=!op||isAdmin();
+  const lockBadge=q('lockBadge');if(lockBadge)lockBadge.hidden=op&&!isAdmin();
   const next=JSON.stringify([op,isAdmin(),allowed,accountReady,templateReady,connected,operatorConnected,accountError,templateError,account?.uid,account?.enabled,working,saving,checking]);
   const changed=next!==signature;signature=next;
   const adminMode=isAdmin(),roleChanged=lastAdminMode!==null&&lastAdminMode!==adminMode;lastAdminMode=adminMode;
+  const operatorChanged=op!==lastOperatorMode;lastOperatorMode=op;
   if(roleChanged)window.GGFCThumbnail?.permissionChanged();
   if(changed&&typeof syncMenuNavigation==='function'){
-   syncMenuNavigation();if(typeof activeView!=='undefined'&&activeView==='thumbnail'&&!allowed){window.GGFCThumbnail?.discard();goTab(menuFallbackView());}
+   syncMenuNavigation();
+   if(typeof activeView!=='undefined'){
+    if(activeView==='thumbnail'&&!allowed){
+     window.GGFCThumbnail?.discard();
+     goTab(menuFallbackView());
+    }else if(operatorChanged&&!menuStartupPending){
+     if(activeView==='closed'?op:!menuViewAllowed(activeView))goTab(menuFallbackView());
+     else if(activeView==='home')window.GGFCHome?.render();
+    }
+   }
   }
   if(changed)window.GGFCThumbnail?.syncOverview();
   const panel=q('ytOperatorSettings');if(panel){panel.hidden=!isAdmin();if(isAdmin())renderSettings(panel);else for(const id of ['ytOperatorNewPassword','ytOperatorConfirmPassword'])if(q(id))q(id).value='';}

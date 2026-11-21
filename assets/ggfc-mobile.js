@@ -274,7 +274,7 @@ function initMemberUI(){
   });
   // Reuse the desktop/mobile filter so period changes retain the name query.
   if(typeof bindPlayerRecordSearch==='function')bindPlayerRecordSearch();
-  const media=matchMedia('(max-width: 820px)');
+  const media=matchMedia('(max-width: 820px), (orientation: landscape) and (max-height: 600px) and (pointer: coarse)');
   const update=()=>{
     const desktop=new URLSearchParams(location.search).get('view')==='desktop';
     const mobile=!desktop && (window.GGFC_MOBILE_ENTRY || media.matches);

@@ -4092,10 +4092,10 @@ body:not(.admin-mode) #v-interleague :is(.note,.head>p){display:none!important}
 .ggfc-mobile .detail-match-fullscreen .detail-table tfoot th:first-child{background:#f0f5fb}
 @media(orientation:landscape) and (min-width:400px){
  .ggfc-mobile .detail-match-fullscreen .ggfc-detail-body:has(>.match-video-dock){
-  --match-split-handle-width:24px;
+  --match-split-handle-width:12px;
   --match-split-min-video:150px;
-  --match-split-min-records:174px;
-  --match-split-default:.80;
+  --match-split-min-records:122px;
+  --match-split-default:.86;
   display:grid;
   grid-template-columns:var(--match-split-columns);
   grid-template-rows:minmax(0,1fr);
@@ -4117,13 +4117,21 @@ body:not(.admin-mode) #v-interleague :is(.note,.head>p){display:none!important}
   position:absolute;z-index:2;top:max(6px,env(safe-area-inset-top,0px));left:max(6px,env(safe-area-inset-left,0px));
   padding:3px 6px;border-radius:5px;background:#101722;
  }
- .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-split-handle+.match-record-scroll{grid-area:1 / 3;padding:8px max(8px,env(safe-area-inset-right,0px)) max(8px,env(safe-area-inset-bottom,0px)) 8px}
- .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-split-handle+.match-record-scroll .detail-team-columns{grid-template-columns:minmax(0,1fr)}
- .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-split-handle+.match-record-scroll .detail-scoreboard{grid-template-columns:minmax(0,1fr) minmax(68px,.75fr) minmax(0,1fr);gap:4px;padding:10px 4px}
- .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-split-handle+.match-record-scroll .detail-score b{font-size:28px}
- .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-split-handle+.match-record-scroll .detail-table th,.ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-split-handle+.match-record-scroll .detail-table td{padding:8px 3px;font-size:11px}
- .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-split-handle+.match-record-scroll .detail-table th:first-child{min-width:76px;width:76px;max-width:100px;white-space:normal;overflow-wrap:anywhere}
- .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-split-handle+.match-record-scroll .detail-score-team :is(.fixture-team-logo,.fixture-logo-fallback){max-width:100%;max-height:52px}
+ .ggfc-mobile .detail-match-fullscreen .match-video-dock+.match-split-handle+.match-record-scroll{grid-area:1 / 3;margin-top:max(53px,calc(env(safe-area-inset-top,0px) + 49px));padding:5px max(5px,env(safe-area-inset-right,0px)) max(5px,env(safe-area-inset-bottom,0px)) 5px;scrollbar-gutter:auto}
+ .match-player-list{display:grid;gap:12px}
+ .match-player-list section{display:grid;gap:4px}
+ .match-player-list h3{margin:2px 0 1px;padding:3px 2px;font-size:13px;overflow-wrap:anywhere;color:var(--text)}
+ .match-player-list .match-player-edit-trigger{width:100%;min-height:40px;border-color:var(--border);background:var(--soft);color:var(--text);text-align:left;padding:4px 7px;font-size:13px}
+ .match-player-list .match-player-edit-trigger:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}
+ .match-player-list .detail-note{margin:0;font-size:12px}
+ .ggfc-mobile .match-video-dock~.match-record-scroll .match-player-editor{padding:4px;border:0;background:var(--canvas);color:var(--text);overflow-wrap:anywhere}
+ .ggfc-mobile .match-video-dock~.match-record-scroll .match-player-editor :is(h3,.match-detail-back,.match-player-edit-field dt){color:var(--text)}
+ .ggfc-mobile .match-video-dock~.match-record-scroll .match-player-editor-team{color:var(--text2)}
+ .ggfc-mobile .match-video-dock~.match-record-scroll .match-player-edit-field{display:block;border-color:var(--border)}
+ .ggfc-mobile .match-video-dock~.match-record-scroll .match-player-edit-field dd{margin:4px 0 0}
+ .ggfc-mobile .match-video-dock~.match-record-scroll .match-count-cell{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr) minmax(0,1fr);gap:2px}
+ .ggfc-mobile .match-video-dock~.match-record-scroll .match-count-cell :is(button,input){width:100%;min-width:0;padding:0}
+ .ggfc-mobile .match-video-dock~.match-record-scroll .match-zero-guide{padding:5px;font-size:11px}
 }
 
 /* V3.25.79: goalkeeper indicators and local counter save actions. */

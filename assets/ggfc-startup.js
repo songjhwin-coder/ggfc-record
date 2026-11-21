@@ -36,7 +36,7 @@ window.GGFCStartup=(()=>{
   const current=++showId,settings=normalize(value);if(preview&&!root.contains(document.activeElement))previousFocus=document.activeElement;
   cancelFade();clearTimeout(timer);deadline=0;root.classList.remove('is-leaving');root.hidden=false;setPicture(settings);previewing=preview;isolate(true);
   document.getElementById('ggfcStartupMessage').textContent=preview?'앱 시작 화면 · '+settings.durationSeconds+'초 미리보기':'WELCOME TO GGFC';
-  close.textContent=preview?'미리보기 닫기':'건너뛰기';
+  close.hidden=!preview;
   if(preview)close.focus();
   // Start from the first display frame, never from a DB loading/completion event.
   requestAnimationFrame(()=>{if(current!==showId||root.hidden)return;deadline=performance.now()+settings.durationSeconds*1000;timer=setTimeout(()=>dismiss('duration'),settings.durationSeconds*1000);});
@@ -59,7 +59,11 @@ window.GGFCStartup=(()=>{
  // Shared changes become the next launch's settings; never replace/restart a running intro.
  function configure(value){config=normalize(value);cache(config);}
  close.onclick=()=>dismiss('manual');
- root.addEventListener('keydown',e=>{if(e.key==='Escape')dismiss('manual');if(e.key==='Tab'){e.preventDefault();close.focus();}});
+ root.addEventListener('keydown',e=>{
+  if(!previewing)return;
+  if(e.key==='Escape')dismiss('manual');
+  if(e.key==='Tab'){e.preventDefault();close.focus();}
+ });
  window.addEventListener('pageshow',e=>{if(e.persisted)dismiss('history');});
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&deadline&&performance.now()>=deadline)dismiss('elapsed');});
  function readConfig(){return normalize(typeof DB!=='undefined'?DB.settings?.startupScreen:config);}

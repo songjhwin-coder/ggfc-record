@@ -5,6 +5,7 @@ const GGFC = (() => {
   const state={checking:true,ready:false,serverSeen:false,connected:false,authorized:false,user:null,revision:0,dirty:false,saving:false,busy:0,conflict:false,serial:0,latest:null,hasLatest:false,error:'',status:'공유 기록을 확인하고 있습니다…',savedAt:null,authGeneration:0};
   let database=null,auth=null,dataRef=null,readTimer=null,saveTimer=null,editLease=false;
   let started=false,connectionPromise=null,lastSnapshotText=null,cacheSavedAt=null,cacheWarning='';
+  let initialLoadPending=true;
   let appearanceConflict=false;
   const CACHE_VERSION=2,CACHE_MAX_AGE=180*86400000;
   const hasSettingsDraft=()=>!!((typeof GGFCPlayerPhotos!=='undefined'&&GGFCPlayerPhotos.dirty)||window.GGFCStartup?.dirty||window.GGFCMusicSettings?.dirty||window.GGFCStadiumTheme?.dirty||window.GGFCAppearance?.dirty||window.GGFCSoccerBeeRoster?.dirty||window.GGFCMatchRecords?.cloudEditing||(typeof squadAppearanceDirty!=='undefined'&&squadAppearanceDirty)||(typeof menuSettingsDirty!=='undefined'&&menuSettingsDirty)||(typeof careerFrameSettingsDirty!=='undefined'&&careerFrameSettingsDirty)||(typeof analysisStartSettingsDirty!=='undefined'&&analysisStartSettingsDirty)||(typeof cardDesignSettingsDirty!=='undefined'&&cardDesignSettingsDirty));
@@ -169,10 +170,12 @@ const GGFC = (() => {
       if(state.ready&&JSON.stringify(raw)===lastSnapshotText){
         state.error='';cacheSnapshot(raw);acceptAppearance(raw);status('최신 기록 · 변경 없음');
         try{performance.mark('ggfc-data-ready');}catch(e){}
+        finishInitialLoad();
         return;
       }
       applyIncoming(raw);
-    }catch(e){state.error='공유 기록을 읽지 못했습니다: '+e.message;refreshUI();}
+      finishInitialLoad();
+    }catch(e){state.error='공유 기록을 읽지 못했습니다: '+e.message;finishInitialLoad(true);refreshUI();}
   }
   function resumeAfterAppearanceDraft(){
     const queued=state.hasLatest&&Number(state.latest?.meta?.revision||0)!==state.revision;
@@ -447,6 +450,21 @@ const GGFC = (() => {
       cacheWarning='저장된 기록을 확인할 수 없어 서버에서 다시 받습니다.';
     }
   }
+  function finishInitialLoad(useCache=false){
+    if(!initialLoadPending)return;
+    initialLoadPending=false;
+    clearTimeout(readTimer);
+    try{
+      if(useCache&&!state.ready){
+        const error=state.error;
+        showCachedSnapshot();
+        state.error=error;
+        refreshUI();
+      }
+    }finally{
+      document.documentElement.classList.remove('ggfc-awaiting-data');
+    }
+  }
   async function loadFirebaseModules(){
     async function part(name,available){
       if(available())return;
@@ -476,8 +494,8 @@ const GGFC = (() => {
         database=app.database();auth=app.auth();dataRef=database.ref('ggfc/v3');
         database.ref('.info/connected').on('value',snap=>{state.connected=snap.val()===true;refreshUI();});
         auth.onIdTokenChanged(onUser);
-        dataRef.on('value',snap=>receive(snap.val()),e=>{state.checking=false;state.error='공유 기록 접근 실패 ('+String(e.code||'오류')+'). 관리자는 Realtime Database 규칙과 주소를 확인해 주세요.';refreshUI();});
-      }catch(e){clearTimeout(readTimer);state.checking=false;state.error='Firebase 연결 실패: '+e.message;refreshUI();}
+        dataRef.on('value',snap=>receive(snap.val()),e=>{state.checking=false;state.error='공유 기록 접근 실패 ('+String(e.code||'오류')+'). 관리자는 Realtime Database 규칙과 주소를 확인해 주세요.';finishInitialLoad(true);refreshUI();});
+      }catch(e){clearTimeout(readTimer);state.checking=false;state.error='Firebase 연결 실패: '+e.message;finishInitialLoad(true);refreshUI();}
       finally{connectionPromise=null;}
     })();
     return connectionPromise;
@@ -518,26 +536,32 @@ const GGFC = (() => {
       download('GGFC_미저장기록.json',JSON.stringify(draft,null,2),'application/json');
     };
     const config=window.GGFC_CONFIG||{};
+    // The server result may select a view whose renderer is in a later deferred script.
+    if(document.readyState!=='complete')await new Promise(resolve=>document.addEventListener('DOMContentLoaded',resolve,{once:true}));
     if(!/^https:\/\/[a-z0-9.-]+\.(?:firebaseio\.com|firebasedatabase\.app)\/?$/i.test(config.databaseURL||'')){
       state.error='공유 기록 연결 준비 중입니다. 관리자에게 연결 설정을 요청해 주세요.';
       document.querySelector('#authInfo').textContent='firebase-config.js에 Realtime Database의 databaseURL을 입력해 주세요. 자세한 순서는 배포 안내를 확인해 주세요.';
-      refreshUI();return;
+      finishInitialLoad();refreshUI();return;
     }
-    // All feature scripts must be ready before rendering the configured startup menu.
-    if(document.readyState!=='complete')await new Promise(resolve=>document.addEventListener('DOMContentLoaded',resolve,{once:true}));
-    showCachedSnapshot();
     refreshUI();
+    window.addEventListener('offline',()=>{
+      state.connected=false;
+      state.checking=false;
+      finishInitialLoad(true);
+      refreshUI();
+    });
+    window.addEventListener('online',()=>{refreshUI();connect();});
+    if(navigator.onLine===false){
+      state.checking=false;finishInitialLoad(true);refreshUI();return;
+    }
     readTimer=setTimeout(()=>{
       if(state.serverSeen)return;
       state.checking=false;
+      finishInitialLoad(true);
       if(state.ready)state.status='서버 응답 지연 · 마지막으로 받은 기록입니다.';
       else state.error='공유 기록을 받지 못했습니다. 인터넷 연결과 Firebase 설정을 확인하고 다시 받아 주세요.';
       refreshUI();
     },12000);
-    // Yield so cached records can paint before SDK loading and connection setup.
-    await new Promise(resolve=>setTimeout(resolve,0));
-    window.addEventListener('offline',()=>{state.connected=false;refreshUI();});
-    window.addEventListener('online',()=>{refreshUI();connect();});
     await connect();
 
   }
