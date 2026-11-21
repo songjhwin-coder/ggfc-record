@@ -407,7 +407,7 @@ const TEMPLATE = [
   { name:"팀스쿼드", head:"날짜,대회,반기,그룹,팀,감독,코치,"+Array.from({length:15},(_,i)=>'선수'+(i+1)).join(','), rows:[['2026-03-01','정규리그','상반기','A','A특공대','박감독','','김철수','최민수','이준호','박도윤','장민석'],['2026-03-01','정규리그','상반기','A','풀파워','정감독','','이영호','한지훈','권태현','오세훈'],['2026-03-01','정규리그','상반기','B','어우씨','강감독','','정우성','배진우','신동혁','고상철'],['2026-03-01','정규리그','상반기','B','D져스','윤감독','','윤성민','임재훈','노경환','서지호','문태일']], desc:"날짜부터 다음 변경 전까지 적용할 팀별 전체 명단입니다. 반기·그룹은 필수이며 경기 분류의 기준입니다. 대회는 정규리그(공통 명단)를 그대로 사용해도 됩니다. 감독·코치도 포함하며, 선수1~15를 지원합니다. 실제 출석은 경기기록의 선수 칸으로 판단합니다." },
   { name:"스페셜기록", head:SCHEMA.specials.head, sample:SCHEMA.specials.sample, desc:SHEET_DESC.specials }
 ];
-const LABEL = Object.assign({ unified:"경기기록", roster:"선수명단", rosterDraft:"선수명단", allTime:"역대기록", leadership:"역대 운영진", championships:"우승기록", squads:"팀스쿼드" }, SHEET_OF);
+const LABEL = Object.assign({ unified:"경기기록", roster:"선수명단", rosterDraft:"선수명단", allTime:"역대기록", leadership:"역대 운영진", championships:"우승기록", winningManagers:"18~25 우승감독", gallondor:"갈롱도르", historicTeamTitles:"18~25 팀 우승기록", squads:"팀스쿼드" }, SHEET_OF);
 
 function isOwnGoalPlayer(name){
   const key=String(name??'').normalize('NFKC').toUpperCase().replace(/[\s._-]/g,'');
@@ -649,6 +649,8 @@ function rowsToObjects(rows){
 }
 function detectKind(name, headers){
   const nm=String(name||""); const h=headers.join(",");
+  const award=allTimeAwardSheetKind(nm);
+  if(award)return award;
   if(/우승\s*기록/.test(nm)||(/우승명/.test(h)&&/우승팀/.test(h)&&/감독/.test(h)))return "championships";
   if(/역대\s*운영진/.test(nm)||(/운영년도|운영연도/.test(h)&&/기수/.test(h)&&/이름/.test(h)))return "leadership";
   if(/역대\s*기록/.test(nm)||(/통합\s*경기수/.test(h)&&/통합\s*득점/.test(h)))return "allTime";
@@ -1059,6 +1061,7 @@ function applyUnified(objs){
   return M.length;
 }
 function applyRows(kind, objs){
+  if(Object.hasOwn(AT_AWARD_SHEETS,kind))return applyAllTimeAwardRows(kind,objs);
   if(kind==="leadership")return applyLeadershipRows(objs);
   if(kind==="championships")return window.GGFCManagers.importChampionships(objs);
   if(kind==="allTime")return applyAllTimeRows(objs);
@@ -1159,7 +1162,9 @@ async function importXlsx(buf){
     const rawRows=sheetRows(doc,shared,styles,links),objs=rowsToObjects(rawRows);
     const headers=rawRows[Math.max(0,workbookHeaderRowIndex(rawRows))]||[];
     const kind=detectKind(sh.getAttribute('name'),objs.length?Object.keys(objs[0]):headers);
-    if(!objs.length&&!['allTime','leadership','championships'].includes(kind))continue;
+    const award=Object.hasOwn(AT_AWARD_SHEETS,kind);
+    if(!objs.length&&!award&&!['allTime','leadership','championships'].includes(kind))continue;
+    if(award)validateAllTimeAwardHeaders(kind,headers);
     if(kind==='allTime')validateAllTimeHeaders(headers);
     if(kind==='leadership')validateLeadershipHeaders(headers);
     if(kind==='championships')window.GGFCManagers.validateHeaders(headers);
@@ -6662,6 +6667,7 @@ function buildRecordXlsx(){
   return [
     { name:UNI.name, head:UNI.head, rows:mrows },
     exportAllTimeSheet(),
+    ...exportAllTimeAwardSheets(),
     exportLeadershipSheet(),
     window.GGFCManagers.exportChampionships(),
     { name:"선수명단", head:"연도,팀,등번호,선수,영문이름,포지션,비고,사진(URL),사진(URL) 배경삭제,시즌,시작일자,출석,팀경기수,출석률,득점누계,어시스트누계,개인파울누계,선방누계,MOM누계",
