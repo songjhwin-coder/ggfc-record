@@ -23,6 +23,7 @@
 <link rel="stylesheet" href="assets/ggfc-white-hybrid.css?v=887af1012481fc2b">
 <link rel="stylesheet" href="assets/ggfc-manager.css?v=fd027454138dcc14">
 <link rel="stylesheet" href="assets/ggfc-home.css?v=0800b1079c7cf0be">
+<link rel="stylesheet" href="assets/ggfc-alltime.css?v=13fb35b29812f1a7">
 </head>
 <body class="sidebar-collapsed">
 <section id="ggfcStartup" class="ggfc-startup" aria-label="GGFC 앱 시작 화면" hidden>
@@ -240,7 +241,12 @@
   <section class="view" id="v-closed"><div class="card menu-closed"><h2>GGFC</h2><p id="closedMenuMessage">현재 공개된 메뉴가 없습니다.</p><button class="btn" type="button" onclick="document.getElementById('lockBtn').click()">관리자 로그인</button></div></section>
   <section class="view" id="v-manager" aria-labelledby="managerTitle"><div id="managerRecords"></div></section>
   <section class="view" id="v-leadership"><div class="head"><h2>GG 역대 운영진</h2><p>GGFC를 함께 만들어 온 역대 운영진을 소개합니다.</p></div><div id="leadershipContent"></div></section>
-  <section class="view" id="v-alltime"><div class="head"><h2>GG 역대 기록</h2><p>역대 선수 기록과 우승감독, 갈롱도르, 팀 우승기록을 확인합니다.</p></div><div id="allTimeContent"></div></section>
+  <section class="view" id="v-alltime"><div class="head at-hall-head">
+    <span class="at-hall-kicker">HALL OF FAME</span>
+    <h2>GG 역대 기록</h2>
+    <p class="at-hall-description">역대 선수 기록과 우승 성과</p>
+    <span class="at-hall-decoration" aria-hidden="true"></span>
+  </div><div id="allTimeContent"></div></section>
   <section class="view" id="v-maker"><div class="head"><h2>팀 메이커</h2><p>참석 예정 선수의 능력치·포지션·동행 기록으로 팀을 편성하고 전술별 라인업을 구성합니다.</p></div><div id="teamMakerContent"></div></section>
   <!-- DASHBOARD -->
   <section class="view on" id="v-dash">
@@ -1181,7 +1187,7 @@
 <script defer src="assets/ggfc-details.js?v=a22687b5a528c2cd"></script>
 <script defer src="assets/ggfc-squad.js?v=0ffa1ff075e171b6"></script>
 <script defer src="assets/ggfc-card-design.js?v=fb7adc3809bbdb94"></script>
-<script defer src="assets/ggfc-alltime.js?v=f6a39e8bca79e751"></script>
+<script defer src="assets/ggfc-alltime.js?v=535d30f55263b8be"></script>
 <script defer src="assets/ggfc-maker.js?v=a97229a8dee10780"></script>
 <script defer src="assets/ggfc-slump.js?v=143871985b3a6ab3"></script>
 <script defer src="assets/ggfc-interleague.js?v=fe6252c954574788"></script>
