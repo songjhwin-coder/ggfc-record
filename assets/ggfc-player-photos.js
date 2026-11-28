@@ -17,6 +17,9 @@ const GGFCPlayerPhotos=(()=>{
   (DB.settings?.allTimeRecords?.rows||[]).forEach(r=>add(r.player));
   allTimeAwardRows('winningManagers').forEach(row=>add(row.name));
   allTimeAwardRows('gallondor').forEach(row=>{if(!gallondorRecordNote(row.name))add(row.name);});
+  for(const row of allTimeAwardRows('bestManagers')){
+   for(const name of [row.director,row.coach])if(!bestManagerAwardNote(name))add(name);
+  }
   for(const row of [...(DB.settings?.teamSquads||[]),...(DB.settings?.leadershipHistory?.rows||[])]) (row.members||[]).forEach(m=>add(m.player));
   Object.values(entries()).forEach(r=>add(r?.name));
   return [...found.values()].sort(compareNamesKo);

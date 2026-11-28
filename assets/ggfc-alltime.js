@@ -9,6 +9,9 @@ const AT_AWARD_SHEETS={
  gallondor:{name:'갈롱도르',label:'갈롱도르',subtitle:'연도별 수상 기록',columns:{
   year:['년도','연도'],name:['이름','수상자','선수','선수명']
  }},
+ bestManagers:{name:'감독상',label:'베스트 감독',subtitle:'반기별 감독·코치',columns:{
+  year:['년도','연도'],half:['상하반기','반기'],director:['감독','감독명'],coach:['코치','코치명']
+ }},
  historicTeamTitles:{name:'18~25 팀 우승기록',label:'팀 우승기록',subtitle:'팀별·대회별 우승',columns:{
   title:['우승명','대회'],year:['년도','연도'],segment:['구간'],half:['상하반기','반기'],team:['우승팀','팀']
  }}
@@ -41,6 +44,7 @@ function applyAllTimeAwardRows(kind,objects){
    for(const field of ['league','fa','champs'])row[field]=atCount(row[field],error+sheet.columns[field][0],0);
   }else{
    row.year=allTimeAwardYear(row.year,error);
+   if(kind==='bestManagers'&&!normHalf(row.half))throw Error(error+'상반기 또는 하반기를 입력하세요.');
    if(kind==='gallondor'&&!row.name)throw Error(error+'수상자 이름이나 비고를 입력하세요.');
    if(kind==='historicTeamTitles'&&(!row.title||!row.team))throw Error(error+'우승명과 우승팀을 입력하세요.');
   }
@@ -114,6 +118,10 @@ function historicalPersonPhoto(player,fallbackPhoto=''){
 }
 function gallondorRecordNote(name){
  return /^(코로나(?:19)?|미시상|미개최|취소|없음|[-—])$/.test(atHeader(name));
+}
+function bestManagerAwardNote(name){
+ if(!name||/^\?+$/.test(atHeader(name)))return '미정';
+ return gallondorRecordNote(name)?name:'';
 }
 const AT_AWARD_PORTRAITS=new Set(['신인철','이준일','김범준','김용호','남진전','신성민','이성진','강동훈','진기현','김호진']);
 function allTimeAwardPerson(name){
@@ -201,17 +209,26 @@ function allTimeTeamTitlesHtml(rows){
 }
 function allTimeAwardsHtml(kind){
  const sheet=AT_AWARD_SHEETS[kind],archive=allTimeAwardRows(kind);
- const recent=kind==='gallondor'?[]:allTimeRecentChampionships();
+ const isChampionship=kind==='historicTeamTitles'||kind==='winningManagers';
+ const recent=isChampionship?allTimeRecentChampionships():[];
  const rows=kind==='historicTeamTitles'?[...archive,...recent]:archive;
  const managers=kind==='winningManagers'?allTimeWinningManagers(rows,recent):[];
  if(!rows.length&&!managers.length)return '<section class="at-empty"><b>'+sheet.label+' 기록이 없습니다.</b>'+
-  (admin?'<p>데이터 관리에서 「'+sheet.name+(kind==='gallondor'?'':'」 또는 「우승기록')+'」 시트가 포함된 엑셀을 업로드하세요.</p>':'')+'</section>';
+  (admin?'<p>데이터 관리에서 「'+sheet.name+(isChampionship?'」 또는 「우승기록':'')+'」 시트가 포함된 엑셀을 업로드하세요.</p>':'')+'</section>';
  const head='<div class="at-table-caption at-award-caption at-hall-panel-title"><h3>'+sheet.label+'</h3><span>'+esc(recent.length?(archive.length?sheet.name+' · 우승기록':'우승기록'):sheet.name)+' 시트</span></div>';
  if(kind==='historicTeamTitles')return head+allTimeTeamTitlesHtml(rows);
  let columns,display;
  if(kind==='winningManagers'){
   columns=['감독','정규리그','FA컵','챔스','합계'];
   display=managers.map(row=>[allTimeAwardPerson(row.name),atValue(row.league),atValue(row.fa),atValue(row.champs),'<b>'+atValue(row.total)+'</b>']);
+ }else if(kind==='bestManagers'){
+  columns=['연도','반기','감독','코치'];
+  const recipient=name=>{
+   const note=bestManagerAwardNote(name);
+   return note?'<span class="at-award-pending">'+esc(note)+'</span>':allTimeAwardPerson(name);
+  };
+  display=rows.slice().sort((a,b)=>b.year-a.year||normHalf(b.half).localeCompare(normHalf(a.half))).map(row=>
+   [esc(row.year),esc(halfLabel(normHalf(row.half))),recipient(row.director),recipient(row.coach)]);
  }else{
   columns=['연도','수상자','비고'];
   display=rows.slice().sort((a,b)=>b.year-a.year).map(row=>{
@@ -222,6 +239,7 @@ function allTimeAwardsHtml(kind){
  const table='<div class="at-table-wrap at-award-wrap" tabindex="0" role="region" aria-label="'+sheet.label+' 표"><table class="at-table at-award-table" data-at-award="'+kind+'">'+
   '<thead><tr>'+columns.map(label=>'<th scope="col">'+label+'</th>').join('')+'</tr></thead>'+
   '<tbody>'+display.map(row=>'<tr>'+row.map((cell,index)=>index===0?'<th scope="row">'+cell+'</th>':'<td>'+cell+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+ if(kind==='bestManagers')return head+table;
  const note=kind==='winningManagers'&&display.length<rows.length+recent.filter(row=>row.field).length?'<p class="at-footnote">같은 이름의 감독 기록이 여러 행에 있으면 대회별 횟수를 합산합니다.</p>':'';
  const feature='<article class="at-award-feature" aria-label="'+sheet.label+' 대표 기록">'+
   '<div class="at-award-feature-main"><span class="at-award-feature-tag">'+
@@ -237,12 +255,17 @@ function atResultsHtml(){
 }
 function renderAllTimeRecords(){
  const root=document.getElementById('allTimeContent');if(!root)return;
- const tabs=[['total','전체 누적 기록','2019~2025 + 2026년 이후'],['archive','2019~2025 역대기록','기존 자료 · 별도 보관'],
-  ...Object.entries(AT_AWARD_SHEETS).map(([kind,sheet])=>[kind,sheet.label,sheet.subtitle])];
- const subnav='<div class="at-subnav at-history-nav" role="group" aria-label="GG 역대 기록 종류">'+tabs.map(([kind,label,subtitle])=>
+ if(!admin&&atState.scope==='archive')atState.scope='total';
+ const tabs=['historicTeamTitles','winningManagers','gallondor','bestManagers'].map(kind=>{
+  const {label,subtitle}=AT_AWARD_SHEETS[kind];
+  return [kind,label,subtitle];
+ });
+ tabs.push(['total','전체 누적 기록','2019~2025 + 2026년 이후']);
+ if(admin)tabs.push(['archive','2019~2025 역대기록','기존 자료 · 별도 보관']);
+ const subnav='<div class="at-subnav at-history-nav'+(admin?' at-history-nav-admin':'')+'" role="group" aria-label="GG 역대 기록 종류">'+tabs.map(([kind,label,subtitle])=>
   '<button type="button" data-at-scope="'+kind+'" aria-pressed="'+(atState.scope===kind)+'"><b>'+label+'</b><small>'+subtitle+'</small></button>'
  ).join('')+'</div>';
- root.onclick=e=>{const scopeButton=e.target.closest('[data-at-scope]');if(scopeButton){atState.scope=scopeButton.dataset.atScope;renderAllTimeRecords();root.querySelector('[data-at-scope="'+atState.scope+'"]').focus({preventScroll:true});return;}const b=e.target.closest('[data-at-metric]');if(!b)return;atState.metric=b.dataset.atMetric;renderAllTimeRecords();root.querySelector('[data-at-metric="'+atState.metric+'"]').focus({preventScroll:true});};
+ root.onclick=e=>{const scopeButton=e.target.closest('[data-at-scope]');if(scopeButton){const scope=scopeButton.dataset.atScope;if(scope==='archive'&&!admin)return;atState.scope=scope;renderAllTimeRecords();root.querySelector('[data-at-scope="'+atState.scope+'"]')?.focus({preventScroll:true});return;}const b=e.target.closest('[data-at-metric]');if(!b)return;atState.metric=b.dataset.atMetric;renderAllTimeRecords();root.querySelector('[data-at-metric="'+atState.metric+'"]').focus({preventScroll:true});};
  root.oninput=e=>{if(e.target.id==='atSearch'){atState.search=e.target.value;document.getElementById('atResults').innerHTML=atResultsHtml();}};
  if(Object.hasOwn(AT_AWARD_SHEETS,atState.scope)){root.innerHTML=subnav+allTimeAwardsHtml(atState.scope);return;}
  const data=DB.settings?.allTimeRecords,live=atModernRecords(),rows=atDisplayRows(live),archive=atState.scope==='archive';

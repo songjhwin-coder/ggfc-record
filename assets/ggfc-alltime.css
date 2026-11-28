@@ -92,6 +92,7 @@
     color:#050505;
     border-color:var(--at-gold);
   }
+  #v-alltime .at-history-nav.at-history-nav-admin {grid-template-columns:repeat(6,minmax(0,1fr))}
   #v-alltime .at-history-nav b {font-size:clamp(11px,1.6vw,14px)}
   #v-alltime .at-history-nav small {font-size:clamp(10px,1.2vw,11px);margin-top:2px}
   #v-alltime .at-history-nav button:not([aria-pressed="true"]) small {color:var(--at-muted)}
@@ -272,12 +273,13 @@
     letter-spacing:.04em;
   }
   #v-alltime .at-award-feature .at-award-person {
+    max-width:100%;
     gap:10px;
     font-size:clamp(16px,3vw,23px);
     overflow-wrap:anywhere;
   }
   #v-alltime .at-award-feature .at-avatar {
-    width:clamp(46px,15vw,82px);
+    width:clamp(69px,22.5vw,123px);
     height:auto;
     aspect-ratio:1;
     color:#ffedcc;
@@ -316,6 +318,7 @@
   #v-alltime .at-award-table[data-at-award="gallondor"] tbody th:first-child {color:var(--at-accent)}
   #v-alltime .at-award-table tbody tr:nth-child(1) {background:var(--at-tint)}
   #v-alltime .at-award-table .at-award-person>span:last-child {overflow-wrap:anywhere}
+  #v-alltime .at-award-pending {color:var(--at-muted)}
   #v-alltime .at-title-crests {
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(96px,1fr));
@@ -380,6 +383,8 @@
     }
   }
   @media (max-width:820px) {
+    #v-alltime .at-history-nav.at-history-nav-admin {grid-template-columns:repeat(3,minmax(0,1fr))}
+    #v-alltime .at-history-nav.at-history-nav-admin button:nth-child(n) {grid-column:auto}
     #mainContent #v-alltime>.at-hall-head {min-height:109px;margin-bottom:11px;padding-block:12px}
     #v-alltime .at-filters {grid-template-columns:repeat(3,minmax(0,1fr))}
     #v-alltime #atResults .at-table th:nth-child(2) {width:113px}
