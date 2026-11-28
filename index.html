@@ -5,7 +5,7 @@
 <script>document.documentElement.classList.add('ggfc-awaiting-data');</script>
 <script defer src="assets/ggfc-browser-handoff.js?v=9aa37103839739b5"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>GGFC 기록센터 · 3.25.115</title>
+<title>GGFC 기록센터 · 3.25.116</title>
 <script src="assets/ggfc-appearance.js?v=39b1b66cfbb74bbb"></script>
 <link rel="stylesheet" href="assets/ggfc.css?v=96e72e87835ce57e">
 <link rel="stylesheet" href="assets/ggfc-startup.css?v=b5fd1b48a5b8a90a">
@@ -22,8 +22,8 @@
 <link rel="stylesheet" href="assets/ggfc-theme.css?v=8f6fc8d22495e6cf">
 <link rel="stylesheet" href="assets/ggfc-white-hybrid.css?v=887af1012481fc2b">
 <link rel="stylesheet" href="assets/ggfc-manager.css?v=fd027454138dcc14">
-<link rel="stylesheet" href="assets/ggfc-home.css?v=0800b1079c7cf0be">
-<link rel="stylesheet" href="assets/ggfc-alltime.css?v=13fb35b29812f1a7">
+<link rel="stylesheet" href="assets/ggfc-home.css?v=1b64692db8d56a94">
+<link rel="stylesheet" href="assets/ggfc-alltime.css?v=f948d8d4206ccf49">
 </head>
 <body class="sidebar-collapsed">
 <section id="ggfcStartup" class="ggfc-startup" aria-label="GGFC 앱 시작 화면" hidden>
@@ -90,7 +90,7 @@
     <a class="sidebar-community-link" href="https://cafe.naver.com/ggfcc" target="_blank" rel="noopener noreferrer" title="GGFC 네이버 카페 · 새 창" aria-label="GGFC 네이버 카페 새 창 열기"><span class="community-disc community-cafe"><img src="assets/ggfc-naver-cafe.png" alt="" width="64" height="64"></span></a>
   </div>
   <div class="pwa-menu-actions"><a class="btn sm pwa-guide-link" href="install.html">앱 설치 안내</a><button class="btn sm" id="pwaInstall" hidden>GGFC를 앱으로 설치</button><button class="btn sm" id="pwaCheck">앱 업데이트 확인</button><button class="btn sm" id="lockBtn" type="button">관리자 로그인</button><button class="btn sm" id="operatorLoginBtn" type="button">운영진 로그인</button><span id="operatorModeBadge" class="badge open" hidden>운영진 모드</span><span class="badge locked" id="lockBadge">🔒 열람 모드</span><p id="pwaStatus" role="status" aria-live="polite"></p></div>
-  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.25.115 · 기록센터</span></footer>
+  <footer class="sidebar-footer"><a class="mobile-only" href="index.html?view=desktop">PC 화면 보기</a><span>GGFC 3.25.116 · 기록센터</span></footer>
 </aside>
 <div id="sidebarResizeHandle" data-sidebar-resize role="separator" tabindex="0" aria-label="사이드바 너비 조절" aria-orientation="vertical" aria-controls="ggfcSidebar" aria-valuemin="180" aria-valuemax="420" aria-valuenow="226" title="좌우로 끌어 메뉴 너비 조절 · 두 번 클릭하면 기본 너비"><span aria-hidden="true">↔</span></div>
 <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" tabindex="-1" aria-label="메뉴 닫기" hidden></button>
@@ -661,11 +661,11 @@
 
     <div class="grid g2 ability-rule-grid" id="abilityRulePanels" data-ability-admin hidden style="margin-bottom:16px">
       <div class="card">
-        <div class="sec-t">경기기록 → 성장·감점·FORM · V3.25.115</div>
+        <div class="sec-t">경기기록 → 성장·감점·FORM · V3.25.116</div>
         <div id="abilityGrowthRules"></div>
       </div>
       <div class="card">
-        <div class="sec-t">SoccerBee → 축별 초기값·재측정 · V3.25.115</div>
+        <div class="sec-t">SoccerBee → 축별 초기값·재측정 · V3.25.116</div>
         <div id="abilitySoccerbeeRules"></div>
       </div>
     </div>
@@ -974,7 +974,7 @@
     </div>
   </section>
   <footer class="page-status-footer" aria-label="프로그램 버전 및 공유 기록 상태">
-  <div class="release-version" aria-label="현재 프로그램 버전">GGFC · V3.25.115</div>
+  <div class="release-version" aria-label="현재 프로그램 버전">GGFC · V3.25.116</div>
   <section class="cloud-status" id="cloudStatus" role="status" aria-live="polite"><span id="cloudStatusText">공유 기록을 확인하고 있습니다…</span>
     <div class="cloud-actions"><button id="cloudRetry" class="btn sm" hidden>공유 저장 재시도</button><button id="cloudDownload" class="btn sm" hidden>미저장 내용 내려받기</button><button id="cloudReload" class="btn sm" hidden>서버 기록 다시 받기</button></div>
   </section>
@@ -1182,18 +1182,18 @@
 <input type="file" id="soccerbeeFilepick" accept=".xlsx" hidden>
 
 <script defer src="firebase-config.js"></script>
-<script defer src="assets/ggfc-sync.js?v=93e8002f7cf01599"></script>
+<script defer src="assets/ggfc-sync.js?v=3ce25a6714083b63"></script>
 <script defer src="assets/ggfc-mobile.js?v=2655a463d92759fa"></script>
 <script defer src="assets/ggfc-details.js?v=a22687b5a528c2cd"></script>
 <script defer src="assets/ggfc-squad.js?v=0ffa1ff075e171b6"></script>
 <script defer src="assets/ggfc-card-design.js?v=fb7adc3809bbdb94"></script>
-<script defer src="assets/ggfc-alltime.js?v=535d30f55263b8be"></script>
+<script defer src="assets/ggfc-alltime.js?v=cbdd172cd0bdb668"></script>
 <script defer src="assets/ggfc-maker.js?v=a97229a8dee10780"></script>
 <script defer src="assets/ggfc-slump.js?v=143871985b3a6ab3"></script>
 <script defer src="assets/ggfc-interleague.js?v=fe6252c954574788"></script>
 <script defer src="assets/ggfc-player-photos.js?v=0a8997ee5d95bc65"></script>
 <script defer src="assets/ggfc-soccerbee-roster.js?v=783284d29021f5ac"></script>
-<script defer src="assets/ggfc-manager.js?v=adc4f86194e93a4e"></script>
+<script defer src="assets/ggfc-manager.js?v=5b3e5ede42bc22ff"></script>
 <script defer src="assets/ggfc-home.js?v=6715f7345aa950ff"></script>
 <script defer src="assets/ggfc-app.js?v=7ec4f90068679b33"></script>
 <script defer src="assets/ggfc-public-counters.js?v=8e29a3706a3888dc"></script>

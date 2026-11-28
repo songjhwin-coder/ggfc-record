@@ -295,5 +295,5 @@ window.GGFCManagers=(()=>{
     if(save)save.onclick=()=>saveCard(save,director.name);
   }
 
-  return {render,validateHeaders,importChampionships,exportChampionships,championshipCount};
+  return {render,validateHeaders,importChampionships,exportChampionships,championshipCount,championshipRows:titleRows};
 })();

@@ -316,6 +316,26 @@
   #v-alltime .at-award-table[data-at-award="gallondor"] tbody th:first-child {color:var(--at-accent)}
   #v-alltime .at-award-table tbody tr:nth-child(1) {background:var(--at-tint)}
   #v-alltime .at-award-table .at-award-person>span:last-child {overflow-wrap:anywhere}
+  #v-alltime .at-title-crests {
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(96px,1fr));
+    gap:8px;
+    list-style:none;
+    padding:14px 8px;
+    margin:0 0 14px;
+    border-block:1px solid var(--at-line);
+  }
+  #v-alltime .at-title-crests .team-chip {
+    display:flex;
+    flex-direction:column;
+    gap:7px;
+    justify-content:center;
+    color:var(--at-ink);
+    white-space:normal;
+    text-align:center;
+  }
+  #v-alltime .at-title-crests .team-logo-sm {width:clamp(50px,13vw,100px);height:clamp(50px,13vw,100px);object-fit:contain}
+  #v-alltime .at-title-teams {grid-template-columns:minmax(0,1fr)}
   #v-alltime .at-title-team {
     color:var(--at-ink);
     background:var(--at-paper);
@@ -335,10 +355,10 @@
   }
   #v-alltime .at-title-team>header::after {width:24px;height:24px}
   #v-alltime .at-title-team .team-chip {color:var(--at-ink);white-space:normal;font-size:clamp(14px,2vw,18px)}
-  #v-alltime .at-title-team .team-logo-sm {width:clamp(38px,10vw,60px);height:clamp(38px,10vw,60px)}
+  #v-alltime .at-title-team .team-logo-sm {width:clamp(60px,12vw,80px);height:clamp(60px,12vw,80px)}
   #v-alltime .at-title-competition {border-color:var(--at-line)}
   #v-alltime .at-title-competition h5 {color:var(--at-ink);font-size:12px}
-  #v-alltime .at-title-competition h5 span {color:var(--at-accent);background:var(--at-tint)}
+  #v-alltime .at-title-competition h5 span {color:var(--at-accent);background:var(--at-tint);font-size:clamp(13px,2vw,18px);font-variant-numeric:tabular-nums}
   #v-alltime .at-title-competition li {border-color:var(--at-line);overflow-wrap:anywhere}
   #v-alltime .at-title-competition li span {color:var(--at-muted)}
   #v-alltime .at-empty {color:var(--at-ink);background:var(--at-paper);border-color:var(--at-line)}
@@ -347,10 +367,15 @@
   @media (min-width:821px) {
     #v-alltime {container-type:inline-size}
     @container (min-width:900px) {
-      #v-alltime .at-rank-layout {grid-template-columns:minmax(265px,1fr) minmax(0,2.4fr);align-items:start}
-      #v-alltime .at-podium {margin-top:32px}
-      #v-alltime .at-podium-card {min-height:160px}
-      #v-alltime .at-podium-card:first-child {min-height:195px}
+      #v-alltime .at-podium-card {min-height:180px}
+      #v-alltime .at-podium-card:first-child {min-height:210px}
+      #v-alltime .at-title-team {display:grid;grid-template-columns:minmax(200px,1fr) minmax(0,3fr)}
+      #v-alltime .at-title-team>header {border-bottom:0;border-inline-end:1px solid var(--at-line);flex-wrap:wrap}
+      #v-alltime .at-title-team>header h4 {flex:1 1 100%}
+      #v-alltime .at-title-team>header strong {margin-inline-start:0}
+      #v-alltime .at-title-team>header::after {margin-inline-start:auto}
+      #v-alltime .at-title-competition {padding:12px}
+      #v-alltime .at-title-competition h5 {font-size:14px}
       #v-alltime .at-award-layout {grid-template-columns:minmax(265px,1fr) minmax(0,1.45fr)}
     }
   }
